@@ -13,6 +13,7 @@ use serde_json::Value;
 
 use crate::http::Http;
 use crate::js_date::LocalZone;
+use crate::secrets::{HumbleSecretSource, HumbleSecrets, UnavailableSecretSource};
 
 /// The platform the app runs on, as the shell reports it (the crate never asks the OS).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -98,6 +99,9 @@ pub struct HumbleCtx {
     pub http: Arc<dyn Http>,
     /// The host's time zone: what the classifier reads a zone-less or date-only expiry in.
     pub zone: Arc<dyn HostZone>,
+    /// The session cookie and CSRF token owner (D-18): the cache, dedupe and failure memo over the
+    /// shell's Keychain (or dev vault) source. [`UnavailableSecretSource`] until the shell's is wired in.
+    pub secrets: Arc<HumbleSecrets>,
 }
 
 impl HumbleCtx {
@@ -121,7 +125,15 @@ impl HumbleCtx {
             catalog: None,
             http,
             zone: Arc::new(UtcZone),
+            secrets: Arc::new(HumbleSecrets::new(Arc::new(UnavailableSecretSource))),
         }
+    }
+
+    /// The source the secrets are read from and written to: the Keychain in the shell, a scripted fake in
+    /// a test. Replaces the owner, so its cache starts cold.
+    pub fn with_secrets(mut self, source: Arc<dyn HumbleSecretSource>) -> HumbleCtx {
+        self.secrets = Arc::new(HumbleSecrets::new(source));
+        self
     }
 
     /// The host's zone.

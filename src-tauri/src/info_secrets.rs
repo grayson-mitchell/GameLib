@@ -65,104 +65,125 @@ fn failure_category(error: &str) -> &'static str {
     }
 }
 
+/// One bounded Keychain read of `account` (the shared core, Phase 94 D-18: the Humble source in
+/// `humble_secrets.rs` makes these exact calls too, so the signed binary's ACL sees the same items).
+/// `channel` labels the log line. A failure is the fixed category `timeout` or `unavailable`.
+pub(crate) fn keyring_read_account(
+    channel: &str,
+    account: &'static str,
+) -> Result<Option<String>, String> {
+    let result = bounded_keyring_read(KEYRING_READ_TIMEOUT, move || {
+        keyring_get_result(
+            Entry::new(KEYRING_SERVICE, account).and_then(|entry| entry.get_password()),
+        )
+    });
+    match result {
+        Ok(Value::String(secret)) => {
+            shell_log(&keyring_outcome_message(
+                channel,
+                account,
+                KeyringOutcome::Found,
+            ));
+            Ok(Some(secret))
+        }
+        Ok(_) => {
+            shell_log(&keyring_outcome_message(
+                channel,
+                account,
+                KeyringOutcome::Absent,
+            ));
+            Ok(None)
+        }
+        Err(e) => {
+            let kind = keyring_error_class(&e);
+            shell_log_detail(
+                &format!("keyring {channel} account={account} failed ({kind})"),
+                &e,
+            );
+            Err(failure_category(&e).to_string())
+        }
+    }
+}
+
+/// One Keychain write of `account`, the shared core of the info and Humble sources.
+pub(crate) fn keyring_write_account(
+    channel: &str,
+    account: &'static str,
+    value: &str,
+) -> Result<(), String> {
+    match Entry::new(KEYRING_SERVICE, account).and_then(|entry| entry.set_password(value)) {
+        Ok(()) => {
+            shell_log(&keyring_outcome_message(
+                channel,
+                account,
+                KeyringOutcome::Stored,
+            ));
+            Ok(())
+        }
+        Err(e) => {
+            // The category is the variant's name; the error's own text stays on stderr.
+            let kind = keyring_error_kind(&e);
+            shell_log_detail(
+                &format!("keyring {channel} account={account} failed ({kind})"),
+                &format!("{e:?}"),
+            );
+            Err("unavailable".to_string())
+        }
+    }
+}
+
+/// One Keychain delete of `account`, the shared core of the info and Humble sources. Deleting an empty
+/// slot is success, as in `rpc_keyring_delete`.
+pub(crate) fn keyring_delete_account(channel: &str, account: &'static str) -> Result<(), String> {
+    match Entry::new(KEYRING_SERVICE, account).and_then(|entry| entry.delete_credential()) {
+        Ok(()) => {
+            shell_log(&keyring_outcome_message(
+                channel,
+                account,
+                KeyringOutcome::Deleted,
+            ));
+            Ok(())
+        }
+        Err(keyring::Error::NoEntry) => {
+            shell_log(&keyring_outcome_message(
+                channel,
+                account,
+                KeyringOutcome::Absent,
+            ));
+            Ok(())
+        }
+        Err(e) => {
+            let kind = keyring_error_kind(&e);
+            shell_log_detail(
+                &format!("keyring {channel} account={account} failed ({kind})"),
+                &format!("{e:?}"),
+            );
+            Err("unavailable".to_string())
+        }
+    }
+}
+
 /// The Keychain-backed source: the production [`SecretSource`] unless the dev vault is in use.
 pub(crate) struct KeyringSecretSource;
 
 impl SecretSource for KeyringSecretSource {
     fn get(&self, slot: Slot) -> Result<Option<String>, String> {
-        let account = slot_account(slot)?;
-        let result = bounded_keyring_read(KEYRING_READ_TIMEOUT, move || {
-            keyring_get_result(
-                Entry::new(KEYRING_SERVICE, account).and_then(|entry| entry.get_password()),
-            )
-        });
-        match result {
-            Ok(Value::String(secret)) => {
-                shell_log(&keyring_outcome_message(
-                    CHANNEL_GET,
-                    account,
-                    KeyringOutcome::Found,
-                ));
-                Ok(Some(secret))
-            }
-            Ok(_) => {
-                shell_log(&keyring_outcome_message(
-                    CHANNEL_GET,
-                    account,
-                    KeyringOutcome::Absent,
-                ));
-                Ok(None)
-            }
-            Err(e) => {
-                let kind = keyring_error_class(&e);
-                shell_log_detail(
-                    &format!("keyring {CHANNEL_GET} account={account} failed ({kind})"),
-                    &e,
-                );
-                Err(failure_category(&e).to_string())
-            }
-        }
+        keyring_read_account(CHANNEL_GET, slot_account(slot)?)
     }
 
     fn set(&self, slot: Slot, value: &str) -> Result<(), String> {
-        let account = slot_account(slot)?;
-        match Entry::new(KEYRING_SERVICE, account).and_then(|entry| entry.set_password(value)) {
-            Ok(()) => {
-                shell_log(&keyring_outcome_message(
-                    CHANNEL_SET,
-                    account,
-                    KeyringOutcome::Stored,
-                ));
-                Ok(())
-            }
-            Err(e) => {
-                // The category is the variant's name; the error's own text stays on stderr.
-                let kind = keyring_error_kind(&e);
-                shell_log_detail(
-                    &format!("keyring {CHANNEL_SET} account={account} failed ({kind})"),
-                    &format!("{e:?}"),
-                );
-                Err("unavailable".to_string())
-            }
-        }
+        keyring_write_account(CHANNEL_SET, slot_account(slot)?, value)
     }
 
     fn delete(&self, slot: Slot) -> Result<(), String> {
-        let account = slot_account(slot)?;
-        match Entry::new(KEYRING_SERVICE, account).and_then(|entry| entry.delete_credential()) {
-            Ok(()) => {
-                shell_log(&keyring_outcome_message(
-                    CHANNEL_DELETE,
-                    account,
-                    KeyringOutcome::Deleted,
-                ));
-                Ok(())
-            }
-            // Deleting an empty slot is success, as in `rpc_keyring_delete`.
-            Err(keyring::Error::NoEntry) => {
-                shell_log(&keyring_outcome_message(
-                    CHANNEL_DELETE,
-                    account,
-                    KeyringOutcome::Absent,
-                ));
-                Ok(())
-            }
-            Err(e) => {
-                let kind = keyring_error_kind(&e);
-                shell_log_detail(
-                    &format!("keyring {CHANNEL_DELETE} account={account} failed ({kind})"),
-                    &format!("{e:?}"),
-                );
-                Err("unavailable".to_string())
-            }
-        }
+        keyring_delete_account(CHANNEL_DELETE, slot_account(slot)?)
     }
 }
 
 // ---- The dev vault (D-26) ----
 
 /// The exact-match environment variable that opts a dev run into the vault.
-const DEV_SECRET_VAULT_ENV: &str = "GAMELIB_DEV_SECRET_VAULT";
+pub(crate) const DEV_SECRET_VAULT_ENV: &str = "GAMELIB_DEV_SECRET_VAULT";
 
 /// The vault file name, shared with `devSecretVault.ts`; it sits under the temp directory, never
 /// in the profile.
@@ -183,22 +204,35 @@ fn vault_key(slot: Slot) -> &'static str {
 }
 
 /// `[dev-secret-vault] read key=<slot>`: the slot identifier only, never a value.
+#[cfg(test)]
 fn vault_read_line(slot: Slot) -> String {
-    format!("[dev-secret-vault] read key={}", vault_key(slot))
+    vault_read_line_for(vault_key(slot))
+}
+
+fn vault_read_line_for(key: &str) -> String {
+    format!("[dev-secret-vault] read key={key}")
 }
 
 /// `[dev-secret-vault] write key=<slot> op=<store|wipe>`: the direction is chosen by the call site,
 /// never derived from the value.
+#[cfg(test)]
 fn vault_write_line(slot: Slot, wipe: bool) -> String {
-    let op = if wipe { "wipe" } else { "store" };
-    format!("[dev-secret-vault] write key={} op={op}", vault_key(slot))
+    vault_write_line_for(vault_key(slot), wipe)
 }
 
-/// The plaintext dev vault for the ITAD and SteamGridDB slots.
+fn vault_write_line_for(key: &str, wipe: bool) -> String {
+    let op = if wipe { "wipe" } else { "store" };
+    format!("[dev-secret-vault] write key={key} op={op}")
+}
+
+/// One read-modify-write at a time in this process, across every source over the file (the info and
+/// the Humble source share one vault, and two mutexes would let their writes interleave).
+static VAULT_RMW: Mutex<()> = Mutex::new(());
+
+/// The plaintext dev vault: the ITAD and SteamGridDB slots here, the Humble slots through
+/// `humble_secrets.rs` (Phase 94, D-18), all in the one file.
 pub(crate) struct DevVaultSecretSource {
     path: PathBuf,
-    /// One read-modify-write at a time in this process.
-    rmw: Mutex<()>,
 }
 
 impl DevVaultSecretSource {
@@ -217,10 +251,7 @@ impl DevVaultSecretSource {
             Err(_) => return Err("write-failed".to_string()),
         }
         assert_owner_only(&path)?;
-        Ok(DevVaultSecretSource {
-            path,
-            rmw: Mutex::new(()),
-        })
+        Ok(DevVaultSecretSource { path })
     }
 
     /// The file as a JSON object. A missing file is an empty store; a file that cannot be opened
@@ -252,15 +283,26 @@ impl DevVaultSecretSource {
     }
 
     fn write_slot(&self, slot: Slot, value: &str, wipe: bool) -> Result<(), String> {
-        shell_log(&vault_write_line(slot, wipe));
-        let _guard = self.rmw.lock().unwrap_or_else(|e| e.into_inner());
-        // Every other slot in the file (Steam, Humble) is kept as it is, so a vault that cannot be read
-        // back is refused and never rebuilt from nothing.
+        self.write_key(vault_key(slot), value, wipe)
+    }
+
+    /// The value stored under `key`, with the slot-only log line. Empty (a wipe) reads as "never stored".
+    pub(crate) fn read_key(&self, key: &str) -> Option<String> {
+        shell_log(&vault_read_line_for(key));
+        match self.read_map().get(key) {
+            Some(Value::String(v)) if !v.is_empty() => Some(v.clone()),
+            _ => None,
+        }
+    }
+
+    /// Stores `value` under `key` (a wipe stores the empty string, as the TS vault does). Every other
+    /// key in the file (Steam, Humble, the other info slots) is kept as it is, so a vault that cannot be
+    /// read back is refused and never rebuilt from nothing.
+    pub(crate) fn write_key(&self, key: &str, value: &str, wipe: bool) -> Result<(), String> {
+        shell_log(&vault_write_line_for(key, wipe));
+        let _guard = VAULT_RMW.lock().unwrap_or_else(|e| e.into_inner());
         let mut map = self.read_map_strict()?;
-        map.insert(
-            vault_key(slot).to_string(),
-            Value::String(value.to_string()),
-        );
+        map.insert(key.to_string(), Value::String(value.to_string()));
         let text = serde_json::to_string_pretty(&Value::Object(map))
             .map_err(|_| "unavailable".to_string())?;
         write_owner_only(&self.path, text.as_bytes())?;
@@ -270,11 +312,7 @@ impl DevVaultSecretSource {
 
 impl SecretSource for DevVaultSecretSource {
     fn get(&self, slot: Slot) -> Result<Option<String>, String> {
-        shell_log(&vault_read_line(slot));
-        Ok(match self.read_map().get(vault_key(slot)) {
-            Some(Value::String(v)) if !v.is_empty() => Some(v.clone()),
-            _ => None,
-        })
+        Ok(self.read_key(vault_key(slot)))
     }
 
     fn set(&self, slot: Slot, value: &str) -> Result<(), String> {
@@ -376,7 +414,7 @@ pub(crate) enum SourceKind {
 }
 
 impl SourceKind {
-    fn word(self) -> &'static str {
+    pub(crate) fn word(self) -> &'static str {
         match self {
             SourceKind::Keyring => "keyring",
             SourceKind::DevVault => "dev-vault",
@@ -384,35 +422,50 @@ impl SourceKind {
     }
 }
 
-/// The source for these inputs: the vault when [`use_dev_vault`] allows it and the file can be made
-/// owner-only, the keyring otherwise (a vault that cannot be made safe is refused, never degraded).
-fn choose_source(
+/// The vault when [`use_dev_vault`] allows it and the file can be made owner-only; `None` otherwise (a
+/// vault that cannot be made safe is refused, never degraded). `what` names whose secrets the vault now
+/// holds in the one install line ("info", "humble").
+pub(crate) fn open_vault(
+    env: Option<&str>,
+    is_dev: bool,
+    temp: &Path,
+    what: &str,
+) -> Option<DevVaultSecretSource> {
+    if env == Some("1") && !is_dev {
+        shell_log("[dev-secret-vault] REFUSED: packaged build; GAMELIB_DEV_SECRET_VAULT ignored");
+    }
+    if !use_dev_vault(env, is_dev) {
+        return None;
+    }
+    let path = temp.join(VAULT_FILE_NAME);
+    match DevVaultSecretSource::create(path.clone()) {
+        Ok(vault) => {
+            shell_log_detail(
+                &format!("[dev-secret-vault] INSTALLED: {what} secrets are stored in PLAINTEXT, NEVER use in production"),
+                &path.display(),
+            );
+            Some(vault)
+        }
+        Err(category) => {
+            shell_log_detail(
+                &format!("[dev-secret-vault] REFUSED: could not create an owner-only vault file ({category})"),
+                &path.display(),
+            );
+            None
+        }
+    }
+}
+
+/// The source for these inputs: the vault when [`open_vault`] allows it, the keyring otherwise.
+pub(crate) fn choose_source(
     env: Option<&str>,
     is_dev: bool,
     temp: &Path,
 ) -> (Arc<dyn SecretSource>, SourceKind) {
-    if env == Some("1") && !is_dev {
-        shell_log("[dev-secret-vault] REFUSED: packaged build; GAMELIB_DEV_SECRET_VAULT ignored");
+    match open_vault(env, is_dev, temp, "info") {
+        Some(vault) => (Arc::new(vault), SourceKind::DevVault),
+        None => (Arc::new(KeyringSecretSource), SourceKind::Keyring),
     }
-    if use_dev_vault(env, is_dev) {
-        let path = temp.join(VAULT_FILE_NAME);
-        match DevVaultSecretSource::create(path.clone()) {
-            Ok(vault) => {
-                shell_log_detail(
-                    "[dev-secret-vault] INSTALLED: info secrets are stored in PLAINTEXT, NEVER use in production",
-                    &path.display(),
-                );
-                return (Arc::new(vault), SourceKind::DevVault);
-            }
-            Err(category) => {
-                shell_log_detail(
-                    &format!("[dev-secret-vault] REFUSED: could not create an owner-only vault file ({category})"),
-                    &path.display(),
-                );
-            }
-        }
-    }
-    (Arc::new(KeyringSecretSource), SourceKind::Keyring)
 }
 
 /// The source `install` hands the crate. Reads the variable once, here.

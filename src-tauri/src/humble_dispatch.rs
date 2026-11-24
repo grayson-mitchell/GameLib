@@ -192,7 +192,9 @@ pub(crate) fn install(app: &AppHandle, user_data: &Path) {
         Arc::new(ShellHumbleLog),
         gamelib_core::shutdown::global().clone(),
     )
-    .with_ui(Arc::new(ShellHumbleUi::for_app(app)));
+    .with_ui(Arc::new(ShellHumbleUi::for_app(app)))
+    // D-18: the Keychain (or the dev vault, in a dev run that asks for it) behind the secret owner.
+    .with_secrets(humble_secrets::secret_source());
     // The same locales folder and language the steampoll host renders its notifications from.
     let (app_root, asset_dir) = steampoll_dispatch::app_root_and_asset_dir(app);
     let language = gamelib_steampoll::profile::SidecarProfile::current()

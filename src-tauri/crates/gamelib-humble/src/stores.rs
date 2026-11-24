@@ -497,7 +497,7 @@ pub enum ConfigFlag {
 }
 
 impl ConfigFlag {
-    fn key(self) -> &'static str {
+    pub(crate) fn key(self) -> &'static str {
         match self {
             ConfigFlag::IsLoggedIn => "isLoggedIn",
             ConfigFlag::Expired => "expired",

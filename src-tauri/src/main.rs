@@ -123,6 +123,7 @@ mod dialogs;
 mod engine_dispatch;
 mod engine_log;
 mod humble_dispatch;
+mod humble_secrets;
 mod info_dispatch;
 mod info_secrets;
 mod ipc_contract;

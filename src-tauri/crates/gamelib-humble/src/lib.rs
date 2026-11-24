@@ -16,6 +16,7 @@ pub mod expiration_alerts;
 pub mod http;
 pub mod js_date;
 pub mod js_value;
+pub mod secrets;
 pub mod stores;
 pub mod title_match;
 pub mod user_agent;
