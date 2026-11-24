@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 87
 current_phase_name: Engine, Wine and tools
 status: executing
-stopped_at: Completed 87-62-PLAN.md
-last_updated: "2026-11-24T10:47:28.301Z"
+stopped_at: Completed 87-64-PLAN.md
+last_updated: "2026-11-24T11:05:53.243Z"
 last_activity: 2026-11-24
 last_activity_desc: Phase 87 execution started
-state_head: bd2242a39efbceb1e519a4739be96c7cc3dc318f
+state_head: cc0127008ad4580e7bdc09afdd0e889e84ad197d
 progress:
   total_phases: 22
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 87 (Engine, Wine and tools) — EXECUTING
-Plan: 66 of 73
+Plan: 67 of 73
 Status: Ready to execute
 Last activity: 2026-11-24 — Phase 87 execution started
 Progress: [██████████] 100%
@@ -474,6 +474,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 87 P60 | 4 min | 3 tasks | 7 files |
 | Phase 87 P61 | 12 min | 3 tasks | 6 files |
 | Phase 87 P62 | 20 min | 2 tasks | 8 files |
+| Phase 87 P64 | 75 min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -1026,6 +1027,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 87]: 87-61: gamelib_log::sanitize::truncate_utf16 is now pub so the shell reuses the one cut rule
 - [Phase 87]: 87-62: a never-installed wine entry's three state keys (isInstalled, hasUpdate, installDir) are defaulted at parse, not normalized at the store (store bytes are D-07 state); the install ignores the renderer's installDir (V5)
 - [Phase 87]: 87-62: wineVersionsUpdated is queued behind the store host's pending change events (StoreHost::post in build_ctx), so the renderer snapshot is patched before the Wine Manager list re-reads it (F4 root cause: push/notify ordering)
+- [Phase 87]: 87-64: a CrossOver target's Wine-tool prefix is the bottle directory from direct_child_dir (wine_cmd::prefix::tool_prefix), never the stored winePrefix; the resolver and build_crossover_game_settings are unchanged — The F3 red test showed the resolver answering engine/crossover with CX_BOTTLE correct and build_env overwriting WINEPREFIX with the stored shared prefix. An unsafe bottle name spawns nothing (T-87-112); an empty name keeps the stored prefix (golden GameLibBottle shape).
+- [Phase 87]: 87-64: a winetricks run ends the verb failed on the closed form "regedit: The file '<path>' was not found" even on exit 0 (D-06 gate fix); the exit-code rule stays the TS's (D-16) — Exit 1 already reached the Winetricks tab; the 87-59 silence was the exit-0 class, because w_try does not abort on a failed regedit import. One fixed sentence, not every err: wine line.
 
 ### Pending Todos
 
@@ -1307,8 +1310,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-24T10:47:25.592Z
-Stopped at: Completed 87-62-PLAN.md
+Last session: 2026-11-24T11:05:50.459Z
+Stopped at: Completed 87-64-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
