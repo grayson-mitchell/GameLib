@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 88
 current_phase_name: Launch scaffolding and known fixes
 status: executing
-stopped_at: Completed 88-09-PLAN.md
-last_updated: "2026-11-24T21:36:02.424Z"
+stopped_at: Completed 88-10-PLAN.md
+last_updated: "2026-11-24T22:07:48.942Z"
 last_activity: 2026-11-25
 last_activity_desc: Phase 88 execution started
-state_head: a2e68f797018900541eed374d7a5032356d46b24
+state_head: 2dd48b88ee65499c24478fb45727870896705890
 progress:
   total_phases: 25
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 88 (Launch scaffolding and known fixes) — EXECUTING
-Plan: 10 of 17
+Plan: 11 of 17
 Status: Ready to execute
 Last activity: 2026-11-25 — Phase 88 execution started
 Progress: [█████████░] 92%
@@ -490,6 +490,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 88 P07 | 10 min | 2 tasks | 8 files |
 | Phase 88 P08 | 30 min | 3 tasks | 21 files |
 | Phase 88 P09 | 24 min | 3 tasks | 15 files |
+| Phase 88 P10 | 75min | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -1076,6 +1077,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 88]: KnownFixCtx carries the wine host facts (process environment, Darwin release) beside the Arc<WineCtx>, taken by the shell from wine_dispatch::wine_run_host, because the wine command core reads no environment of its own
 - [Phase 88]: A reg add run reports its own kill (Killed(pid)) and the applier owns the 15 s bound and a 2 s cancel grace; the spawn seam does not report a pid, so the app's timeout line has no pid
 - [Phase 88]: knownfix_launch_overrides, knownfix_apply_profile_registry and knownfix_apply_registry take one strict object arg (decode requires a JSON object, since serde also decodes a struct from an array) and answer fixed bad-args and not-ready literals
+- [Phase 88]: 88-10: the overlay archive download is EngineCtx.fetch.get (the seam has no maxBytes): the install holds the body to the pinned archive size after the seam's 16 MiB cap, and refuses an overlay pinned above 16 MiB
+- [Phase 88]: 88-10: a rejected overlays entry is echoed into the log with any scheme:// run replaced by <url> (prohibition 1 wins over the TS text); the skipped-overlay debug line is not written because EngineLog has no debug level
 
 ### Pending Todos
 
@@ -1357,8 +1360,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-24T21:35:59.573Z
-Stopped at: Completed 88-09-PLAN.md
+Last session: 2026-11-24T22:07:46.116Z
+Stopped at: Completed 88-10-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
