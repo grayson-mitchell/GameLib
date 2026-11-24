@@ -9,6 +9,7 @@
 //!
 //! This crate depends on neither `gamelib-humble` nor `tauri`; `cargo tree` proves it (94-02).
 
+pub mod add;
 pub mod ctx;
 pub mod exists;
 pub mod game;
@@ -38,7 +39,7 @@ use std::task::{Context, Poll};
 use tokio::runtime::{Builder, Handle, Runtime};
 
 /// Ops reachable from the shell. Keep sorted; each plan adds its own.
-pub const OPS: &[&str] = &["shortcuts_exist", "shortcuts_remove"];
+pub const OPS: &[&str] = &["shortcuts_add", "shortcuts_exist", "shortcuts_remove"];
 
 /// The runner names a game can belong to, as the renderer and the sidecar spell them.
 const RUNNERS: &[&str] = &["gog", "legendary", "nile", "sideload", "steam"];
@@ -100,6 +101,17 @@ async fn route(op: &str, args: &[Value], ctx: &ShortcutsCtx) -> Result<Value, St
             Ok(Value::Bool(
                 exists::shortcuts_exist(ctx, args.title.as_deref()).await,
             ))
+        }
+        "shortcuts_add" => {
+            let args: add::AddArgs = decode(op, args)?;
+            // A shortcut file is named from the title and launches the app name under a known runner.
+            if args.game.app_name.is_empty()
+                || args.game.title.is_empty()
+                || !RUNNERS.contains(&args.game.runner.as_str())
+            {
+                return Err(format!("{op}:bad-args"));
+            }
+            to_value(op, add::shortcuts_add(ctx, args).await)
         }
         "shortcuts_remove" => {
             let args: remove::RemoveArgs = decode(op, args)?;
