@@ -30,7 +30,7 @@ jest.mock('backend/logger', () => ({
   LogPrefix: { Backend: 'Backend', Steam: 'Steam' }
 }))
 
-import { buildOverlayTarGz } from 'backend/knownFixOverlayArchive'
+import { buildOverlayTarGz } from 'backend/launchrust/knownFixTwins'
 import { createAbortRegistry } from 'backend/utils/aborthandler/aborthandler'
 import {
   SteamclientLayerCatalogueEntry,

@@ -58,15 +58,16 @@ import type { EnviromentVariable, GameSettings } from 'common/types'
 import type { ManagerDeps } from 'backend/services/types'
 import { winetricksInstallVerbs } from 'backend/enginewine/tools'
 import {
+  lastEnvOption,
+  logKnownFixEnv,
   readKnownFixes,
+  readKnownFixLaunchOverridesSync,
   readKnownFixProfile,
   type KnownFixLocalPathsDeps,
   type KnownFixPathsDeps
-} from 'backend/knownFixes'
-import { readKnownFixLaunchOverrides } from 'backend/knownFixLaunch'
+} from 'backend/launchrust/knownFixTwins'
 import { sendGameStatusUpdate } from 'backend/utils'
 import { logWarning, LogPrefix } from 'backend/logger'
-import { lastEnvOption, logKnownFixEnv } from 'backend/knownFixOverlays'
 import {
   applyRegistryFixes,
   resolveKnownFixOverlayEnv
@@ -74,7 +75,7 @@ import {
 import {
   settleKnownFixOverlayEnv,
   settleKnownFixRegistry
-} from 'backend/knownFixLaunchReply'
+} from '../../knownFixLaunchReply'
 import { KNOWN_FIX_OVERLAY_BASE_ENV_KEYS } from 'common/knownFixOverlayCatalogue'
 import { getBottleDir } from 'backend/enginewine/twin'
 import { detectGameMakerD3d11Runner } from './bridge/gameMakerRunner'
@@ -430,7 +431,12 @@ export function steamBridgeLaunchCommandParts(
   installRoot: string | undefined
 ): string[] {
   try {
-    const fix = readKnownFixLaunchOverrides(deps, appId, 'steam', installRoot)
+    const fix = readKnownFixLaunchOverridesSync(
+      deps,
+      appId,
+      'steam',
+      installRoot
+    )
     return [fix.exeOverride ?? exePath, ...fix.launchArgs]
   } catch (error) {
     logWarning(

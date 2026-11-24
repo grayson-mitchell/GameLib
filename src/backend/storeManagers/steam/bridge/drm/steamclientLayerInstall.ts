@@ -38,7 +38,7 @@ import {
   steamclientLayerArchiveUrl,
   steamclientLayerFileNames
 } from 'common/steamclientLayerCatalogue'
-import { readOverlayTarGz } from 'backend/knownFixOverlayArchive'
+import { readOverlayTarGz } from 'backend/launchrust/knownFixTwins'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type { ProcessRunner } from 'backend/process/types'
 import { createFakeHomeProfile } from 'backend/testUtils/fakeHomeProfile'

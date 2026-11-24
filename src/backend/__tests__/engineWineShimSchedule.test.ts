@@ -181,10 +181,13 @@ const KNOWN_FIX_SHIM_IMPORTERS: readonly string[] = [
 /**
  * Every non-test importer of `launchrust/knownFixTwins.ts` (the check is per file, so every row of that file lists them
  * all): the launcher's `installFixes` and `getKnownFixesEnvVariables` and its env log line, and storeManagerCommon's
- * `withKnownFixEnv` (88-13).
+ * `withKnownFixEnv` (88-13), and the Steam bridge's known-fix application (the profile and launch-override reads, the
+ * env lookup) and the steamclient layer install (the overlay archive reader) (88-14).
  */
 const KNOWN_FIX_TWIN_IMPORTERS: readonly string[] = [
   'src/backend/launcher.ts',
+  'src/backend/storeManagers/steam/bridge/drm/steamclientLayerInstall.ts',
+  'src/backend/storeManagers/steam/bridgeKnownFixes.ts',
   'src/backend/storeManagers/storeManagerCommon/games.ts'
 ]
 /** Every non-test importer of `enginewine/bottles.ts` (the check is per file, so every row of that file lists them all). */
@@ -1164,6 +1167,53 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     vectors: 'src/backend/launchrust/__tests__/knownFixTwins.vectors.test.ts',
     callers: KNOWN_FIX_TWIN_IMPORTERS,
     deletedBy: 92
+  },
+  // 88-14 (87 D-24): the Steam bridge's synchronous known-fix reads, which `applySteamBridgeKnownFixes` and
+  // `steamBridgeLaunchCommandParts` make inline (the tier-2 profile for the shim-feature lines and the registry and
+  // overlay gates, the launch overrides for the wine command, the merged-env lookup for the overlay base values), the
+  // overlay archive reader the steamclient layer install verifies a download with and the writer its test builds
+  // fixture archives with. Each is pinned to the Rust `golden/reader`, `golden/launch_overrides`,
+  // `golden/overlay_install` and `golden/overlay_archive` answers by `knownFixTwins.vectors.test.ts`; 97 deletes the
+  // bridge's TS known-fix modules and these go with it.
+  {
+    name: 'readKnownFixProfile',
+    file: 'src/backend/launchrust/knownFixTwins.ts',
+    shape: 'twin',
+    vectors: 'src/backend/launchrust/__tests__/knownFixTwins.vectors.test.ts',
+    callers: KNOWN_FIX_TWIN_IMPORTERS,
+    deletedBy: 97
+  },
+  {
+    name: 'readKnownFixLaunchOverridesSync',
+    file: 'src/backend/launchrust/knownFixTwins.ts',
+    shape: 'twin',
+    vectors: 'src/backend/launchrust/__tests__/knownFixTwins.vectors.test.ts',
+    callers: KNOWN_FIX_TWIN_IMPORTERS,
+    deletedBy: 97
+  },
+  {
+    name: 'lastEnvOption',
+    file: 'src/backend/launchrust/knownFixTwins.ts',
+    shape: 'twin',
+    vectors: 'src/backend/launchrust/__tests__/knownFixTwins.vectors.test.ts',
+    callers: KNOWN_FIX_TWIN_IMPORTERS,
+    deletedBy: 97
+  },
+  {
+    name: 'readOverlayTarGz',
+    file: 'src/backend/launchrust/knownFixTwins.ts',
+    shape: 'twin',
+    vectors: 'src/backend/launchrust/__tests__/knownFixTwins.vectors.test.ts',
+    callers: KNOWN_FIX_TWIN_IMPORTERS,
+    deletedBy: 97
+  },
+  {
+    name: 'buildOverlayTarGz',
+    file: 'src/backend/launchrust/knownFixTwins.ts',
+    shape: 'twin',
+    vectors: 'src/backend/launchrust/__tests__/knownFixTwins.vectors.test.ts',
+    callers: KNOWN_FIX_TWIN_IMPORTERS,
+    deletedBy: 97
   }
 ]
 
