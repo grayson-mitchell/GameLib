@@ -5,17 +5,17 @@ milestone_name: Node Sidecar Retirement
 current_phase: 87
 current_phase_name: Engine, Wine and tools
 status: executing
-stopped_at: Completed 87-67-PLAN.md
-last_updated: "2026-11-24T12:08:05.664Z"
+stopped_at: Completed 87-68-PLAN.md
+last_updated: "2026-11-24T18:31:58.395Z"
 last_activity: 2026-11-24
 last_activity_desc: Phase 87 execution started
-state_head: 216df4c62bfdc71d6a3856d993bb95d0e298459a
+state_head: 3802937ebecfb9131893aef0620608600c30c428
 progress:
-  total_phases: 22
+  total_phases: 25
   completed_phases: 23
-  total_plans: 220
+  total_plans: 237
   completed_plans: 531
-  percent: 100
+  percent: 92
 ---
 
 # Project State
@@ -77,10 +77,10 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 87 (Engine, Wine and tools) — EXECUTING
-Plan: 72 of 73
+Plan: 73 of 73
 Status: Ready to execute
 Last activity: 2026-11-24 — Phase 87 execution started
-Progress: [██████████] 100%
+Progress: [█████████░] 92%
 
 ## Native-Install Arc Phase Map (21–25)
 
@@ -480,6 +480,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 87 P66 | 15min | 2 tasks | 4 files |
 | Phase 87 P70 | 15 min | 2 tasks | 10 files |
 | Phase 87 P67 | 30 min | 2 tasks | 7 files |
+| Phase 87 P68 | 2h 20m | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -1046,6 +1047,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 87]: 87-70: crate-only bottle refusal words (in-use, unsafe-name) read as bad-reply in the closed remove-bottle notice vocabulary; widening it is left to 87-67
 - [Phase 87]: 87-67: uninstall-dialog catalogue keys live in the gamelib namespace (gamelib:uninstall.removeBottle*), because the churn guard forbids changes to upstream catalogues such as gamepage.json
 - [Phase 87]: 87-67: disabled ToggleSwitch label and box use --border-color (4.36/3.73/3.61 against the dialog surface in midnightMirage/gruvbox_dark/dracula); shared component, so every disabled toggle changes
+- [Phase 87]: 87-68: clean-worktree proof head P 4cf38d88c (main f3a1a361d + a jest.mock baseline fix for 87-67's bottleToggle test); three-OS CI green at 07b194604 after one Windows-only test fixture fix (87-61 engine_log); signed gap build release/v0.13.1 (97d6d2052 = 07b194604 + bump), run 45455431706, draft GameLib v0.13.1, identity byte-identical to 0.13.0 and Phase 86, Gate (gap build): pending
 
 ### Pending Todos
 
@@ -1327,8 +1329,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-24T12:08:02.967Z
-Stopped at: Completed 87-67-PLAN.md
+Last session: 2026-11-24T18:31:55.726Z
+Stopped at: Completed 87-68-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
