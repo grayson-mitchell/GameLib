@@ -121,6 +121,7 @@ mod clipboard;
 mod depot_dispatch;
 mod dialogs;
 mod engine_dispatch;
+mod engine_log;
 mod info_dispatch;
 mod info_secrets;
 mod ipc_contract;
@@ -602,6 +603,29 @@ fn shell_log_to(logger: Option<&gamelib_log::writer::Logger>, message: &str) {
             shell_log_level(message),
             message,
         );
+    }
+}
+
+/// [`shell_log`] with the caller's level instead of the one [`shell_log_level`] reads from the text.
+/// The engine log's one route into `gamelib.log` (87-61): the engine and wine crates choose the level of
+/// each line they write (info, warning, error), and the text, composed by those crates, reaches the
+/// uploadable file only after `EngineLineRedactor::redact` (the 84-17 category-only rule does not apply
+/// to crate-composed text, so the redactor is the rule, and `shellLogCategoryOnly.test.ts` requires
+/// every call here to pass its output).
+pub(crate) fn shell_log_at(level: gamelib_log::Level, message: &str) {
+    shell_eprintln!("[shell] {message}");
+    shell_log_at_to(gamelib_log::global(), level, message);
+}
+
+/// The log half of [`shell_log_at`], with the logger passed in so a test can use its own.
+fn shell_log_at_to(
+    logger: Option<&gamelib_log::writer::Logger>,
+    level: gamelib_log::Level,
+    message: &str,
+) {
+    if let Some(logger) = logger {
+        // `Logger::log` escapes CR and LF itself (IN-07), as for `shell_log_to`.
+        logger.log(gamelib_log::Prefix::Shell, level, message);
     }
 }
 

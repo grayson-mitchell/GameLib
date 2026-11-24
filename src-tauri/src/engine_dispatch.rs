@@ -44,6 +44,8 @@ use gamelib_wine::discovery::default_wine::{default_wine_from_path, is_executabl
 use gamelib_wine::tools::{ToolsHost, WineRunner};
 use gamelib_wine::WineDxvkInstaller;
 
+use crate::engine_log::ShellEngineLog;
+
 /// The one context, set once by [`install`].
 static ENGINE_CTX: OnceLock<Arc<EngineCtx>> = OnceLock::new();
 
@@ -270,6 +272,9 @@ pub(crate) fn build_ctx(
     shutdown: Shutdown,
 ) -> EngineCtx {
     let clock = Arc::new(SystemClock);
+    // 87-61: the context's log (it had none, so every crate line was dropped). Built before `user_home`
+    // moves into the paths: the redactor renders it as `~`.
+    let engine_log = ShellEngineLog::for_home(&user_home);
     let ctx = EngineCtx::new(
         host,
         clock.clone(),
@@ -289,6 +294,7 @@ pub(crate) fn build_ctx(
     .with_fetch(Arc::new(ReqwestFetch::with_clock(clock)))
     .with_emitter(emitter)
     .with_ui(Arc::clone(&ui))
+    .with_log(Arc::new(engine_log))
     .with_app_version(native_handlers::app_version())
     .with_dxvk(Arc::new(ShellDxvk::new()))
     .with_default_wine(default_wine_hook(Arc::new(|| std::env::var("PATH").ok())))
@@ -802,6 +808,14 @@ mod tests {
             Arc::new(ShellEngineUi::silent(emitter)),
             Shutdown::new(),
         )
+    }
+
+    #[test]
+    fn a_built_context_carries_the_engine_log() {
+        // 87-61: `build_ctx` called no `with_log`, so every line the engine and wine crates wrote
+        // through `ctx.log` was dropped.
+        let emitter: Arc<dyn FrontendEmitter> = Arc::new(Pushes::default());
+        assert!(built(emitter).log.is_some());
     }
 
     #[test]
