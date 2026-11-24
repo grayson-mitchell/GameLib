@@ -262,6 +262,11 @@ describe('sidecarRpc UNBOUNDED_RUST_CHANNELS covers every human-gated dialog cha
     // Phase 87 plan 56a: engine_fallback_ensure is the first-need ~228 MB pinned-engine download, ended by its own result, the
     // caller's engine_cancel or the shutdown (D-17). Not a dialog channel.
     'RUST_ENGINE_FALLBACK_ENSURE',
+    // Phase 88 plan 13: knownfix_apply_profile_registry runs a game's tier-2 `reg add` fixes one helper after another (15 s each) and
+    // knownfix_profile_overlay_env installs an overlay on demand (a 120 s download), either of which can pass the sidecar's 60 s
+    // cap. Ended by their own limits or the shutdown. Not dialog channels.
+    'RUST_KNOWNFIX_APPLY_PROFILE_REGISTRY',
+    'RUST_KNOWNFIX_PROFILE_OVERLAY_ENV',
     // Phase 87 plan 35: wine_winetricks_apply and wine_winetricks_available read the catalog, whose first read
     // downloads the winetricks script and lists it; wine_winetricks_install runs one winetricks per verb. None
     // has a limit of its own beyond the shutdown. Not a dialog channel either.

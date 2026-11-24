@@ -41,6 +41,32 @@ export const KNOWN_FIX_OVERLAY_TARGET_ENV = catalogueJson.targetEnv as Record<
   string
 >
 
+/**
+ * The process-env keys an overlay's env is resolved against (Phase 88, 88-13, D-03): every target env var plus
+ * `GST_PLUGIN_PATH_1_0` (which shadows `GST_PLUGIN_PATH`, so the resolver warns about it). Only these cross to
+ * Rust as the base values, never the whole environment (T-88-33).
+ */
+export const KNOWN_FIX_OVERLAY_BASE_ENV_KEYS: readonly string[] = [
+  ...new Set([
+    ...Object.values(KNOWN_FIX_OVERLAY_TARGET_ENV),
+    'GST_PLUGIN_PATH_1_0'
+  ])
+]
+
+/** The base-value keys of `env` that are set, as the overlay env resolver takes them. */
+export function overlayBaseEnv(
+  env: Readonly<Record<string, string | undefined>>
+): Record<string, string> {
+  const base: Record<string, string> = {}
+  for (const key of KNOWN_FIX_OVERLAY_BASE_ENV_KEYS) {
+    const value = Object.prototype.hasOwnProperty.call(env, key)
+      ? env[key]
+      : undefined
+    if (value !== undefined) base[key] = value
+  }
+  return base
+}
+
 export const KNOWN_FIX_OVERLAY_CATALOGUE: Readonly<
   Record<string, KnownFixOverlayCatalogueEntry>
 > = Object.fromEntries(CATALOGUE_ENTRIES.map((entry) => [entry.id, entry]))

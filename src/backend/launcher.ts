@@ -74,8 +74,16 @@ import { getUmuPath, isUmuSupported } from './utils/compatibility_layers'
 import { copyFile } from 'fs/promises'
 import { addRecentGame } from './info/recentGames'
 import { readKnownFixes } from './knownFixes'
-import { applyKnownFixProfileRegistry } from './knownFixesRegistry'
-import { knownFixProfileOverlayEnv, logKnownFixEnv } from './knownFixOverlays'
+import { logKnownFixEnv } from './knownFixOverlays'
+import {
+  applyKnownFixProfileRegistry,
+  knownFixProfileOverlayEnv
+} from './launchrust/knownFixes'
+import {
+  settleKnownFixOverlayEnv,
+  settleKnownFixRegistry
+} from './knownFixLaunchReply'
+import { overlayBaseEnv } from 'common/knownFixOverlayCatalogue'
 import {
   isCLINoGui,
   isLinux,
@@ -103,7 +111,7 @@ export interface LauncherDeps
   extends
     DialogBoxDeps,
     RustInvokeDeps,
-    AppRuntimeSlice<'events' | 'launchFlights' | 'overlayInstalls'> {
+    AppRuntimeSlice<'events' | 'launchFlights'> {
   /** Also the boot's display-ack table (the engine step's refused-launch dialogs, 66.4-18). */
   dialogs: DialogBoxDeps['dialogs'] & Pick<Dialogs, 'displayAcks'>
   /** Late-bound: filled by createStoreManagers after the launcher is built, read at call time only. */
@@ -1038,11 +1046,15 @@ async function prepareWineLaunch(
   }
 
   // Tier-2 profile registry, every launch (Decision 1, quick 261026-j6x).
-  await applyKnownFixProfileRegistry(
-    { commandRunner: deps.commandRunner, paths: deps.paths },
-    gameInfo.app_name,
-    gameInfo.runner,
-    gameSettings
+  // Phase 88 (88-13, D-03): Rust applies it, through the shim; deletedBy 88.1 (prepare_wine_launch calls it in-process).
+  await settleKnownFixRegistry(
+    `${gameInfo.runner} ${gameInfo.app_name}`,
+    applyKnownFixProfileRegistry(
+      deps,
+      gameInfo.app_name,
+      gameInfo.runner,
+      gameSettings
+    )
   )
 
   // Tier-2 overlays (quick 261027-n77): installed on demand, env merged last.
@@ -1050,12 +1062,17 @@ async function prepareWineLaunch(
     opts.mergesTier1Env === false
       ? {}
       : getKnownFixesEnvVariables(deps, gameInfo.app_name, gameInfo.runner)
-  const knownFixEnv = await knownFixProfileOverlayEnv(
-    deps,
-    gameInfo.app_name,
-    gameInfo.runner,
-    gameSettings,
-    tier1Env
+  // The base values cross as data (D-03, T-88-33): only the overlay env keys, read from this process's env.
+  const knownFixEnv = await settleKnownFixOverlayEnv(
+    `${gameInfo.runner} ${gameInfo.app_name}`,
+    knownFixProfileOverlayEnv(
+      deps,
+      gameInfo.app_name,
+      gameInfo.runner,
+      gameSettings,
+      tier1Env,
+      overlayBaseEnv(process.env)
+    )
   )
   const knownFixEnvLine = logKnownFixEnv(
     `${gameInfo.runner} ${gameInfo.app_name}`,

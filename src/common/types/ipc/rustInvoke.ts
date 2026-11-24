@@ -146,8 +146,10 @@ import {
   RUST_ENGINE_RESOLVE_TOOL_SETTINGS,
   RUST_ENGINE_NON_CROSSOVER_ENGINE,
   RUST_ENGINE_FALLBACK_ENSURE,
+  RUST_KNOWNFIX_APPLY_PROFILE_REGISTRY,
   RUST_KNOWNFIX_FETCH_REMOTE,
   RUST_KNOWNFIX_LAUNCH_OVERRIDES,
+  RUST_KNOWNFIX_PROFILE_OVERLAY_ENV,
   RUST_WINE_MANAGER_LIST,
   RUST_WINE_MANAGER_REFRESH,
   RUST_WINE_RELEASES_INFO_READY,
@@ -352,6 +354,23 @@ const wineRelease = z.unknown().meta({ title: 'release', 'x-rust-value': true })
 const wineInstallation = z
   .unknown()
   .meta({ title: 'wine', 'x-rust-value': true })
+
+/**
+ * The game settings a known-fix op acts on, opaque to the generated Rust decode (`x-rust-value`): the crate
+ * checks it is a JSON object before it reads a field.
+ */
+const knownFixGameSettings = z
+  .unknown()
+  .refine(
+    (value) =>
+      typeof value === 'object' && value !== null && !Array.isArray(value),
+    'gameSettings must be an object'
+  )
+  .meta({ title: 'gameSettings', 'x-rust-value': true })
+
+/** A string-to-string env map as the known-fix overlay op takes it, opaque to the generated decode. */
+const knownFixEnvMap = (title: string) =>
+  z.record(z.string(), z.string()).meta({ title, 'x-rust-value': true })
 
 export const rustInvokeArgs = {
   // ---- Keychain
@@ -1021,6 +1040,32 @@ export const rustInvokeArgs = {
       .object({
         appName: z.string(),
         runner: z.enum(['gog', 'legendary', 'nile', 'sideload', 'steam'])
+      })
+      .strict()
+  ]),
+  // Phase 88 (SVC-03, 88-13, D-19): the launcher's tier-2 registry fixes. One strict object; `gameSettings` is the
+  // launch settings, opaque to the generated decode (`x-rust-value`) and checked as a JSON object by the crate
+  // (`deny_unknown_fields` on the wrapper, the object test on the settings).
+  [RUST_KNOWNFIX_APPLY_PROFILE_REGISTRY]: z.tuple([
+    z
+      .object({
+        appName: z.string(),
+        runner: z.enum(['gog', 'legendary', 'nile', 'sideload', 'steam']),
+        gameSettings: knownFixGameSettings
+      })
+      .strict()
+  ]),
+  // Phase 88 (SVC-03, 88-13, D-19): the overlay env of a non-Steam launch. `tier1Env` and `processEnvBase` are
+  // string maps (the crate decodes them as `BTreeMap<String, String>` and bounds their size); the base env holds
+  // only `KNOWN_FIX_OVERLAY_BASE_ENV_KEYS`, never the whole process env (T-88-33).
+  [RUST_KNOWNFIX_PROFILE_OVERLAY_ENV]: z.tuple([
+    z
+      .object({
+        appName: z.string(),
+        runner: z.enum(['gog', 'legendary', 'nile', 'sideload', 'steam']),
+        gameSettings: knownFixGameSettings,
+        tier1Env: knownFixEnvMap('tier1Env'),
+        processEnvBase: knownFixEnvMap('processEnvBase')
       })
       .strict()
   ])

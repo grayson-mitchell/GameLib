@@ -1,5 +1,6 @@
 /**
- * Narrows Rust's answer to a known-fix launch-overrides read (Phase 88, 88-12).
+ * Narrows Rust's answer to a known-fix launch-overrides read (Phase 88, 88-12), and settles the launcher's two
+ * per-launch known-fix calls (88-13).
  *
  * `readKnownFixLaunchOverrides` (`launchrust/knownFixes.ts`) is one typed call whose answer is `unknown`,
  * because the transport is untyped. The TypeScript it replaced never threw: a missing fix, a bad file or an
@@ -55,4 +56,55 @@ export async function settleKnownFixLaunchOverrides(
     )
   }
   return { ...NONE }
+}
+
+/**
+ * Awaits `pending` (an `applyKnownFixProfileRegistry` call). The TypeScript it replaced never threw (a failed
+ * `reg add` was a warning and the launch went on), so a rejected call (the shell not ready, a refused argument)
+ * is a warning here, never a failed launch (88-13).
+ */
+export async function settleKnownFixRegistry(
+  label: string,
+  pending: Promise<unknown>
+): Promise<void> {
+  try {
+    await pending
+  } catch (error) {
+    logWarning(
+      `${label}: known-fix registry step failed: ${String(error)}; launching without it`,
+      LogPrefix.Backend
+    )
+  }
+}
+
+/**
+ * Awaits `pending` (a `knownFixProfileOverlayEnv` call) and answers the env to merge: the reply's string
+ * entries, or `{}`, with a warning, when the call failed or the reply was not a string map. The TypeScript it
+ * replaced answered `{}` and a warning on any failure, so a launch never failed on an overlay (88-13).
+ */
+export async function settleKnownFixOverlayEnv(
+  label: string,
+  pending: Promise<unknown>
+): Promise<Record<string, string>> {
+  try {
+    const reply = await pending
+    if (
+      typeof reply === 'object' &&
+      reply !== null &&
+      !Array.isArray(reply) &&
+      Object.values(reply).every((value) => typeof value === 'string')
+    ) {
+      return { ...(reply as Record<string, string>) }
+    }
+    logWarning(
+      `${label}: overlay env came back in an unexpected shape; launching without it`,
+      LogPrefix.Backend
+    )
+  } catch (error) {
+    logWarning(
+      `${label}: overlay env failed: ${String(error)}; launching without it`,
+      LogPrefix.Backend
+    )
+  }
+  return {}
 }

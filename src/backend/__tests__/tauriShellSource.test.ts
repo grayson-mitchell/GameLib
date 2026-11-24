@@ -508,7 +508,8 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     // Phase 87 plan 56a: 185 -> 188, engine_resolve_tool_settings, engine_non_crossover_engine and engine_fallback_ensure.
     // Phase 87 plan 70: 188 -> 189, engine_bottle_remove_per_game.
     // Phase 88 plan 12: 189 -> 191, knownfix_launch_overrides and knownfix_fetch_remote.
-    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(191)
+    // Phase 88 plan 13: 191 -> 193, knownfix_apply_profile_registry and knownfix_profile_overlay_env.
+    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(193)
     expect(router).not.toContain('_ =>')
   })
 
@@ -1043,7 +1044,11 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       'knownfix_launch_overrides',
       // Phase 88 plan 12: the download manager's install-time remote fixes fetch (`launchrust/knownFixes.ts` shim).
       // PROVEN: `knownfix_dispatch::tests` drives the arm's decode, not-ready and the crate's strict decode.
-      'knownfix_fetch_remote'
+      'knownfix_fetch_remote',
+      // Phase 88 plan 13: the launcher's per-launch registry fixes and overlay env (`launchrust/knownFixes.ts` shims).
+      // PROVEN: `knownfix_dispatch::tests` drives each arm's decode, not-ready and the crate's strict decode.
+      'knownfix_apply_profile_registry',
+      'knownfix_profile_overlay_env'
     ]
     const newArms = armNames.filter(
       (name) => name && !preExistingArms.includes(name)

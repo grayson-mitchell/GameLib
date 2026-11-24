@@ -166,10 +166,12 @@ const TOOLS_SHIM_IMPORTERS: readonly string[] = [
 ]
 /**
  * Every non-test importer of `launchrust/knownFixes.ts` (the check is per file, so every row of that file lists them
- * all): the three managers' `launch()` and the download manager's install-time fetch (88-12).
+ * all): the three managers' `launch()` and the download manager's install-time fetch (88-12), and the shared
+ * launcher's per-launch registry fixes and overlay env (88-13).
  */
 const KNOWN_FIX_SHIM_IMPORTERS: readonly string[] = [
   'src/backend/downloadmanager/utils.ts',
+  'src/backend/launcher.ts',
   'src/backend/storeManagers/gog/games.ts',
   'src/backend/storeManagers/legendary/games.ts',
   'src/backend/storeManagers/nile/games.ts'
@@ -1075,6 +1077,25 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     channel: 'RUST_KNOWNFIX_FETCH_REMOTE',
     callers: KNOWN_FIX_SHIM_IMPORTERS,
     deletedBy: 93
+  },
+  // 88-13 (D-03): the launcher's per-launch tier-2 registry fixes and overlay env. `prepareWineLaunch` awaits both; 88.1
+  // moves `prepare_wine_launch` into Rust, which calls the two ops in-process, so both rows go with it
+  // (`settleKnownFixRegistry` and `settleKnownFixOverlayEnv` keep a rejected call from failing the launch).
+  {
+    name: 'applyKnownFixProfileRegistry',
+    file: 'src/backend/launchrust/knownFixes.ts',
+    shape: 'shim',
+    channel: 'RUST_KNOWNFIX_APPLY_PROFILE_REGISTRY',
+    callers: KNOWN_FIX_SHIM_IMPORTERS,
+    deletedBy: 88.1
+  },
+  {
+    name: 'knownFixProfileOverlayEnv',
+    file: 'src/backend/launchrust/knownFixes.ts',
+    shape: 'shim',
+    channel: 'RUST_KNOWNFIX_PROFILE_OVERLAY_ENV',
+    callers: KNOWN_FIX_SHIM_IMPORTERS,
+    deletedBy: 88.1
   }
 ]
 

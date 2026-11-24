@@ -73,6 +73,8 @@ import {
   RUST_ENGINE_RUN_TOOL,
   RUST_ENGINE_RESOLVE_TOOL_SETTINGS,
   RUST_ENGINE_FALLBACK_ENSURE,
+  RUST_KNOWNFIX_APPLY_PROFILE_REGISTRY,
+  RUST_KNOWNFIX_PROFILE_OVERLAY_ENV,
   RUST_WINE_WINETRICKS_APPLY,
   RUST_WINE_WINETRICKS_AVAILABLE,
   RUST_WINE_WINETRICKS_INSTALL,
@@ -224,6 +226,12 @@ const RUST_INVOKE_TIMEOUT_MS = 60_000
  * Seventeenth (Phase 87, 87-56a): `engine_fallback_ensure` is the first-need download of the pinned engine, a ~228 MB archive
  * the TS reporter let run with no cap of its own beyond the caller's abort. Rust bounds it by its cancel id
  * (`engine_cancel`) and the app shutdown (D-17), so no entry can outlive the sidecar.
+ *
+ * Eighteenth (Phase 88, 88-13): `knownfix_apply_profile_registry` applies a game's tier-2 registry fixes, one `reg add`
+ * helper after another with its own 15 s limit, so several can pass the generic 60 s cap; `knownfix_profile_overlay_env`
+ * installs a known-fix overlay on demand, a download with its own 120 s limit. The TS they replace had no cap of its
+ * own beyond those limits, and a 60 s cut-off here would fail a launch that Rust is still carrying on. Each is ended by
+ * its own limits and the app shutdown, so no entry can outlive the sidecar.
  */
 const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_DIALOG_OPEN,
@@ -265,6 +273,8 @@ const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_ENGINE_RUN_TOOL,
   RUST_ENGINE_RESOLVE_TOOL_SETTINGS,
   RUST_ENGINE_FALLBACK_ENSURE,
+  RUST_KNOWNFIX_APPLY_PROFILE_REGISTRY,
+  RUST_KNOWNFIX_PROFILE_OVERLAY_ENV,
   RUST_WINE_WINETRICKS_APPLY,
   RUST_WINE_WINETRICKS_AVAILABLE,
   RUST_WINE_WINETRICKS_INSTALL,

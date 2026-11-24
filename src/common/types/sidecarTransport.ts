@@ -1436,6 +1436,27 @@ export const RUST_KNOWNFIX_LAUNCH_OVERRIDES =
  * `RUST_INVOKE_TIMEOUT_MS`.
  */
 export const RUST_KNOWNFIX_FETCH_REMOTE = 'knownfix_fetch_remote' as const
+/**
+ * Phase 88 (SVC-03, 88-13, D-03, D-19): the launcher's tier-2 registry fixes, reached through
+ * `applyKnownFixProfileRegistry` in `launchrust/knownFixes.ts`. `knownfix_apply_profile_registry` takes one
+ * object, `{appName, runner, gameSettings}`, applies the game's tier-2 profile `registry` entries to its own
+ * prefix (every `reg add` a helper through the wine command core, 15 s each) and answers `null`; a failed
+ * `reg add` is a warning in the Rust log, never a rejection. Several commands can pass the 60 s
+ * `RUST_INVOKE_TIMEOUT_MS`, so it is in the sidecar's unbounded list.
+ */
+export const RUST_KNOWNFIX_APPLY_PROFILE_REGISTRY =
+  'knownfix_apply_profile_registry' as const
+/**
+ * Phase 88 (SVC-03, 88-13, D-03, D-19): the overlay env of a non-Steam launch, reached through
+ * `knownFixProfileOverlayEnv` in `launchrust/knownFixes.ts`. `knownfix_profile_overlay_env` takes one object,
+ * `{appName, runner, gameSettings, tier1Env, processEnvBase}`: the game's tier-2 `overlays` resolved against
+ * the base values the caller holds (`processEnvBase` is the sidecar's own env reduced to
+ * `KNOWN_FIX_OVERLAY_BASE_ENV_KEYS`), installing an overlay on demand (up to the 120 s download), and answers
+ * the env map `{KEY: value}`. The download can pass the 60 s `RUST_INVOKE_TIMEOUT_MS`, so it is in the
+ * sidecar's unbounded list.
+ */
+export const RUST_KNOWNFIX_PROFILE_OVERLAY_ENV =
+  'knownfix_profile_overlay_env' as const
 export const RUST_ENGINE_STATE_RECORD_DECISION =
   'engine_state_record_decision' as const
 export const RUST_ENGINE_STATE_PUBLISH_OVERLAY_NOTICE =
@@ -1831,7 +1852,9 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_ENGINE_NON_CROSSOVER_ENGINE,
   RUST_ENGINE_FALLBACK_ENSURE,
   RUST_KNOWNFIX_LAUNCH_OVERRIDES,
-  RUST_KNOWNFIX_FETCH_REMOTE
+  RUST_KNOWNFIX_FETCH_REMOTE,
+  RUST_KNOWNFIX_APPLY_PROFILE_REGISTRY,
+  RUST_KNOWNFIX_PROFILE_OVERLAY_ENV
 ] as const
 
 /** Phase 63 (D-03): the scanner channels, a subset of {@link RUST_INVOKE_CHANNELS}. */

@@ -312,5 +312,11 @@ pub(crate) fn dispatch_rust_channel(
         RustInvokeChannel::KnownfixFetchRemote => {
             knownfix_dispatch::rpc_knownfix_fetch_remote(args)
         }
+        RustInvokeChannel::KnownfixApplyProfileRegistry => {
+            knownfix_dispatch::rpc_knownfix_apply_profile_registry(args)
+        }
+        RustInvokeChannel::KnownfixProfileOverlayEnv => {
+            knownfix_dispatch::rpc_knownfix_profile_overlay_env(args)
+        }
     }
 }

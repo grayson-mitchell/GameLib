@@ -214,6 +214,8 @@ pub(crate) enum RustInvokeChannel {
     EngineFallbackEnsure,
     KnownfixLaunchOverrides,
     KnownfixFetchRemote,
+    KnownfixApplyProfileRegistry,
+    KnownfixProfileOverlayEnv,
 }
 
 impl RustInvokeChannel {
@@ -409,6 +411,8 @@ impl RustInvokeChannel {
         RustInvokeChannel::EngineFallbackEnsure,
         RustInvokeChannel::KnownfixLaunchOverrides,
         RustInvokeChannel::KnownfixFetchRemote,
+        RustInvokeChannel::KnownfixApplyProfileRegistry,
+        RustInvokeChannel::KnownfixProfileOverlayEnv,
     ];
 
     pub(crate) fn from_name(name: &str) -> Option<Self> {
@@ -604,6 +608,8 @@ impl RustInvokeChannel {
             "engine_fallback_ensure" => Some(RustInvokeChannel::EngineFallbackEnsure),
             "knownfix_launch_overrides" => Some(RustInvokeChannel::KnownfixLaunchOverrides),
             "knownfix_fetch_remote" => Some(RustInvokeChannel::KnownfixFetchRemote),
+            "knownfix_apply_profile_registry" => Some(RustInvokeChannel::KnownfixApplyProfileRegistry),
+            "knownfix_profile_overlay_env" => Some(RustInvokeChannel::KnownfixProfileOverlayEnv),
             _ => None,
         }
     }
@@ -801,6 +807,8 @@ impl RustInvokeChannel {
             RustInvokeChannel::EngineFallbackEnsure => "engine_fallback_ensure",
             RustInvokeChannel::KnownfixLaunchOverrides => "knownfix_launch_overrides",
             RustInvokeChannel::KnownfixFetchRemote => "knownfix_fetch_remote",
+            RustInvokeChannel::KnownfixApplyProfileRegistry => "knownfix_apply_profile_registry",
+            RustInvokeChannel::KnownfixProfileOverlayEnv => "knownfix_profile_overlay_env",
         }
     }
 }
@@ -4018,5 +4026,69 @@ impl KnownfixFetchRemoteArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let first = args.first().ok_or_else(|| "knownfix_fetch_remote:bad-args".to_string())?;
         serde_json::from_value(first.clone()).map_err(|_| "knownfix_fetch_remote:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct KnownfixApplyProfileRegistryArgs {
+    #[serde(rename = "appName")]
+    pub(crate) app_name: String,
+    pub(crate) runner: KnownfixApplyProfileRegistryArgsRunner,
+    #[serde(rename = "gameSettings")]
+    pub(crate) game_settings: Value,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+pub(crate) enum KnownfixApplyProfileRegistryArgsRunner {
+    #[serde(rename = "gog")]
+    Gog,
+    #[serde(rename = "legendary")]
+    Legendary,
+    #[serde(rename = "nile")]
+    Nile,
+    #[serde(rename = "sideload")]
+    Sideload,
+    #[serde(rename = "steam")]
+    Steam,
+}
+
+impl KnownfixApplyProfileRegistryArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "knownfix_apply_profile_registry:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "knownfix_apply_profile_registry:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct KnownfixProfileOverlayEnvArgs {
+    #[serde(rename = "appName")]
+    pub(crate) app_name: String,
+    pub(crate) runner: KnownfixProfileOverlayEnvArgsRunner,
+    #[serde(rename = "gameSettings")]
+    pub(crate) game_settings: Value,
+    #[serde(rename = "tier1Env")]
+    pub(crate) tier1_env: Value,
+    #[serde(rename = "processEnvBase")]
+    pub(crate) process_env_base: Value,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+pub(crate) enum KnownfixProfileOverlayEnvArgsRunner {
+    #[serde(rename = "gog")]
+    Gog,
+    #[serde(rename = "legendary")]
+    Legendary,
+    #[serde(rename = "nile")]
+    Nile,
+    #[serde(rename = "sideload")]
+    Sideload,
+    #[serde(rename = "steam")]
+    Steam,
+}
+
+impl KnownfixProfileOverlayEnvArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "knownfix_profile_overlay_env:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "knownfix_profile_overlay_env:bad-args".to_string())
     }
 }
