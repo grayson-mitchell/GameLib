@@ -6,7 +6,7 @@ current_phase: 87
 current_phase_name: Engine, Wine and tools
 status: executing
 stopped_at: Completed 87-59-PLAN.md
-last_updated: "2026-11-24T09:13:15.446Z"
+last_updated: "2026-11-24T10:05:42.402Z"
 last_activity: 2026-11-24
 last_activity_desc: Phase 87 execution started
 state_head: 51484af2b91d9774c1207c05443287fa85e8fa18
@@ -76,10 +76,10 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 
 ## Current Position
 
-Phase: 87 (Engine, Wine and tools) — EXECUTING
-Plan: 62 of 62 (87-58 complete 2026-11-24; 87-59 next)
-Status: Ready to execute (87-59 next via /gsd-execute-phase 87; D-12 gate blocked until a signed Phase 87 artifact exists)
-Last activity: 2026-11-24 — Completed 87-58 (clean-worktree proof at 1e586bf8d, three-OS CI green at f9f1cce2e after twelve Windows-found fixes, release dry run 45279091996 built and notarized but uploads no artifact: Gate blocked)
+Phase: 87 (Engine, Wine and tools) — READY TO EXECUTE
+Plan: 62 of 73 (87-01..87-59 complete; gap closure 87-60..87-70 planned 2026-11-24, 87-60 next)
+Status: Ready to execute (gap plans via /gsd-execute-phase 87 --gaps-only; 87-59 live gate scored 1 pass, 2 issue, 1 blocked)
+Last activity: 2026-11-24 — Planned Phase 87 gap closure (11 plans, 8 gap waves: F1-F5, redacted engine log, signed 0.13.1 build, live re-gate)
 Progress: [██████████] 100%
 
 ## Native-Install Arc Phase Map (21–25)

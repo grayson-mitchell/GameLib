@@ -653,7 +653,7 @@ Plans:
   3. Wine, CrossOver and Staging downloads, Winetricks and DXVK/DXMT/vkd3d tools install and report progress as before
   4. `wine/`, `tools/` and engine TypeScript and their sidecar registrations are deleted in this phase, except scheduled resolvers listed in the schedule test (D-23)
 
-**Plans:** 62/62 plans executed in 41 waves; planned 2026-11-23, revised the same day so every plan fits the 100k smart-zone budget (executes after Phase 86 closes); 87-56a/b/c added 2026-11-24 for the 87-56 remainder
+**Plans:** 62/73 plans executed in 41 waves; planned 2026-11-23, revised the same day so every plan fits the 100k smart-zone budget (executes after Phase 86 closes); 87-56a/b/c added 2026-11-24 for the 87-56 remainder; 87-60..87-70 added 2026-11-24 as gap closure for the 87-59 live gate (F1-F5 and the engine-log gap) in 8 gap waves
 
 Plans:
 **Wave 1**
@@ -814,6 +814,40 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. For native, Wine/Proton/CrossOver, gamescope/mangohud, known-fix overlay and pre/post-script launches, the Rust command line and environment match golden traces recorded from the TypeScript
   2. A game launched from the UI starts and runs on macOS, Windows and Linux with a single in-flight launch per game
+**Gap closure (87-59 gate findings; user decisions 2026-11-24)**
+
+**Gap wave 1**
+- [ ] 87-60-PLAN.md — Author the re-run gate contract 87-RERUN-1-HUMAN-UAT.md (7 items, before any fix, D-21/D-E) and file the non-gate observations as todos
+
+**Gap wave 2** *(blocked on gap wave 1)*
+- [ ] 87-61-PLAN.md — Wire the shell's EngineLog with redaction (home as ~, no account names, tokens or args lines) into gamelib.log
+- [ ] 87-62-PLAN.md — Wine manager: never-installed entries install (parse defaults, F2) and the list follows install and remove (F4)
+- [ ] 87-64-PLAN.md — Winetricks, Run EXE and wine commands act on the game's own CrossOver bottle; a Winetricks failure shows (F3, 56a-1)
+- [ ] 87-65-PLAN.md — Stop ends a non-Steam game on CrossOver through the guarded bottle wineserver kill (F3)
+
+**Gap wave 3** *(blocked on 87-61, 87-64)*
+- [ ] 87-63-PLAN.md — Locate and fix the offline refusal that did not fire (F1), crate, shell and TS regression tests
+
+**Gap wave 4** *(blocked on 87-63)*
+- [ ] 87-66-PLAN.md — Rust op that removes a non-Steam game's own bottle through gamelib-safety, with the refusal arms and the sibling table (F5, D-19)
+
+**Gap wave 5** *(blocked on 87-61, 87-63, 87-65, 87-66)*
+- [ ] 87-70-PLAN.md — The removal op's rustInvoke channel, the removeGameBottle shim with its schedule rows, and the uninstaller route with the default-prefix refusal (F5)
+
+**Gap wave 6** *(blocked on 87-66, 87-70)*
+- [ ] 87-67-PLAN.md — Uninstall dialog offers the game's bottle with a risk warning; legible disabled toggle in the three themes (F5)
+
+**Gap wave 7** *(blocked on 87-61..87-67, 87-70)*
+- [ ] 87-68-PLAN.md — Clean-worktree proof, push checkpoint, three-OS CI and the signed 0.13.1 gap build (D-12, D-13)
+
+**Gap wave 8** *(blocked on 87-60, 87-68)*
+- [ ] 87-69-PLAN.md — Run the live macOS re-run gate on the signed gap build (not its author, D-E)
+
+**Cross-cutting constraints:** <!-- gsd:generated -->
+- Memory-note shape: any offline step turns the network off only for the action (off, act, on, report)
+- Two-profile rule: every golden runs on an isolated createFakeHomeProfile(); no case reads the real HOME
+- D-25 (c): `callTool` (winecfg, runExe) and `runWineCommandForGame` spawn in Rust as `SpawnClass::Helper`; the GOG offline-installer check, `pushGameToLibrary` and the final `gameStatusUpdate done` stay in the TS registration glue after the resolver returns, in the TS order
+
   3. Anti-cheat handling at launch and the remaining `utils.ts` pieces behave as before
   4. `launcher.ts`, `commandRunner`, known-fixes and the replaced `utils.ts` code and their registrations are deleted in this phase
 
