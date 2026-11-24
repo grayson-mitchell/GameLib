@@ -7,9 +7,11 @@
 import { rustInvokeArgs } from 'common/types/ipc/rustInvoke'
 import {
   RUST_KNOWNFIX_APPLY_PROFILE_REGISTRY,
+  RUST_KNOWNFIX_APPLY_REGISTRY,
   RUST_KNOWNFIX_FETCH_REMOTE,
   RUST_KNOWNFIX_LAUNCH_OVERRIDES,
-  RUST_KNOWNFIX_PROFILE_OVERLAY_ENV
+  RUST_KNOWNFIX_PROFILE_OVERLAY_ENV,
+  RUST_KNOWNFIX_RESOLVE_OVERLAY_ENV
 } from 'common/types/sidecarTransport'
 import type { GameSettings } from 'common/types'
 import {
@@ -20,9 +22,11 @@ import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 
 import {
   applyKnownFixProfileRegistry,
+  applyRegistryFixes,
   fetchRemoteKnownFixes,
   knownFixProfileOverlayEnv,
-  readKnownFixLaunchOverrides
+  readKnownFixLaunchOverrides,
+  resolveKnownFixOverlayEnv
 } from '../knownFixes'
 
 function fakeTransport(answer: unknown): RustInvokeDeps & {
@@ -218,6 +222,131 @@ describe('knownFixProfileOverlayEnv', () => {
         }
       ])
     ).toThrow()
+  })
+})
+
+describe('applyRegistryFixes (the Steam bridge, 88-14)', () => {
+  it('sends one knownfix_apply_registry call carrying the app, the label, the bridge settings and the bottle folder', async () => {
+    const deps = fakeTransport(null)
+    expect(
+      await applyRegistryFixes(
+        deps,
+        '480',
+        'Steam 480',
+        SETTINGS,
+        '/Bottles/GameLibSteamBridge-480'
+      )
+    ).toBeNull()
+    expect(deps.calls).toEqual([
+      [
+        RUST_KNOWNFIX_APPLY_REGISTRY,
+        [
+          {
+            appId: '480',
+            label: 'Steam 480',
+            gameSettings: SETTINGS,
+            bottleDir: '/Bottles/GameLibSteamBridge-480'
+          }
+        ]
+      ]
+    ])
+    expect(RUST_KNOWNFIX_APPLY_REGISTRY).toBe('knownfix_apply_registry')
+  })
+
+  it('the arguments pass the channel schema, a null bottle folder included, and a settings value that is not an object does not', async () => {
+    const deps = fakeTransport(null)
+    await applyRegistryFixes(deps, '480', 'Steam 480', SETTINGS, null)
+    const schema = rustInvokeArgs[RUST_KNOWNFIX_APPLY_REGISTRY]
+    expect(() => schema.parse(deps.calls[0]?.[1])).not.toThrow()
+    expect(deps.calls[0]?.[1]).toEqual([
+      {
+        appId: '480',
+        label: 'Steam 480',
+        gameSettings: SETTINGS,
+        bottleDir: null
+      }
+    ])
+    const ok = {
+      appId: '480',
+      label: 'Steam 480',
+      gameSettings: {},
+      bottleDir: null
+    }
+    for (const bad of [null, [], 'x', 1]) {
+      expect(() => schema.parse([{ ...ok, gameSettings: bad }])).toThrow()
+    }
+    expect(() => schema.parse([{ ...ok, extra: 1 }])).toThrow()
+    expect(() => schema.parse([{ ...ok, bottleDir: 1 }])).toThrow()
+    expect(() => schema.parse([ok, ok])).toThrow()
+    // The Steam profile is read in Rust, so a caller-supplied profile is refused.
+    expect(() => schema.parse([{ ...ok, profile: {} }])).toThrow()
+  })
+
+  it('rejects with what the transport rejected with', async () => {
+    const deps = fakeTransport(new Error('knownfix_apply_registry:not-ready'))
+    await expect(
+      applyRegistryFixes(deps, '1', 'Steam 1', SETTINGS, null)
+    ).rejects.toThrow('not-ready')
+  })
+})
+
+describe('resolveKnownFixOverlayEnv (the Steam bridge, 88-14)', () => {
+  it('sends one knownfix_resolve_overlay_env call carrying the app, the label, the wine type and the base values', async () => {
+    const reply = { GST_PLUGIN_PATH: '/t1:/ov' }
+    const deps = fakeTransport(reply)
+    const base = { GST_PLUGIN_PATH: '/t1' }
+    expect(
+      await resolveKnownFixOverlayEnv(
+        deps,
+        '480',
+        'Steam 480',
+        'crossover',
+        base
+      )
+    ).toBe(reply)
+    expect(deps.calls).toEqual([
+      [
+        RUST_KNOWNFIX_RESOLVE_OVERLAY_ENV,
+        [
+          {
+            appId: '480',
+            label: 'Steam 480',
+            wineType: 'crossover',
+            baseValues: base
+          }
+        ]
+      ]
+    ])
+    expect(RUST_KNOWNFIX_RESOLVE_OVERLAY_ENV).toBe(
+      'knownfix_resolve_overlay_env'
+    )
+  })
+
+  it('the arguments pass the channel schema, a null wine type included, and a non-string base value does not', async () => {
+    const deps = fakeTransport({})
+    await resolveKnownFixOverlayEnv(deps, '480', 'Steam 480', null, {})
+    const schema = rustInvokeArgs[RUST_KNOWNFIX_RESOLVE_OVERLAY_ENV]
+    expect(() => schema.parse(deps.calls[0]?.[1])).not.toThrow()
+    const ok = {
+      appId: '480',
+      label: 'Steam 480',
+      wineType: null,
+      baseValues: {}
+    }
+    expect(() => schema.parse([{ ...ok, baseValues: { A: 1 } }])).toThrow()
+    expect(() => schema.parse([{ ...ok, extra: 1 }])).toThrow()
+    expect(() => schema.parse([{ ...ok, wineType: 1 }])).toThrow()
+    // The Steam profile's overlays are read in Rust, so a caller-supplied list is refused.
+    expect(() => schema.parse([{ ...ok, overlays: [] }])).toThrow()
+  })
+
+  it('rejects with what the transport rejected with', async () => {
+    const deps = fakeTransport(
+      new Error('knownfix_resolve_overlay_env:not-ready')
+    )
+    await expect(
+      resolveKnownFixOverlayEnv(deps, '1', 'Steam 1', null, {})
+    ).rejects.toThrow('not-ready')
   })
 })
 

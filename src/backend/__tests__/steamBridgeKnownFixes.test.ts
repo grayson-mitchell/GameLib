@@ -2,22 +2,20 @@
  * quick 261024-tny: applySteamBridgeKnownFixes -- the Steam bridge launch's
  * known-fixes hook. Uses the REAL readKnownFixes (fixes file written under a
  * tmp-redirected fixesPath) so the `<appId>-steam.json` name is proven end to
- * end. The Rust Winetricks install (`requestRustInvoke`), runWineCommand, the status sender and the bottle
- * helper are mocked; no child process is spawned.
+ * end. Every Rust call (`requestRustInvoke`) is a fake that answers per channel: the Winetricks install, and
+ * since 88-14 the registry fixes and the overlay env, whose application the Rust goldens cover. runWineCommand,
+ * the status sender and the bottle helper are mocked; no child process is spawned.
  */
 
 import { createTestAppPaths } from 'backend/testUtils/testAppPaths'
-import { yieldUntil } from 'backend/testUtils/yieldUntil'
-import {
-  mkdirSync,
-  mkdtempSync,
-  promises as fsPromises,
-  rmSync,
-  writeFileSync
-} from 'fs'
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
-import { RUST_WINE_WINETRICKS_INSTALL } from 'common/types/sidecarTransport'
+import {
+  RUST_KNOWNFIX_APPLY_REGISTRY,
+  RUST_KNOWNFIX_RESOLVE_OVERLAY_ENV,
+  RUST_WINE_WINETRICKS_INSTALL
+} from 'common/types/sidecarTransport'
 
 jest.mock('os', () => {
   const actual = jest.requireActual('os')
@@ -32,13 +30,16 @@ jest.mock('os', () => {
 // Under jest app.getAppPath() resolves to the repo root, so the real
 // bundledFixesPath is the repo's own public/fixes. Point it at a tmp dir so the
 // tests can never write to or delete the shipped profiles.
-// The one Rust call the Winetricks verbs go through (87-35): `[target, verbs]` on RUST_WINE_WINETRICKS_INSTALL.
+// Every Rust call goes through this one fake. The Winetricks verbs (87-35) send `[target, verbs]` on
+// RUST_WINE_WINETRICKS_INSTALL; the registry fixes (88-14) send `[{appId, label, gameSettings, bottleDir}]` on
+// RUST_KNOWNFIX_APPLY_REGISTRY and the overlay env `[{appId, label, wineType, baseValues}]` on
+// RUST_KNOWNFIX_RESOLVE_OVERLAY_ENV.
 const mockRustInvoke = jest.fn()
 const mockRunWineCommand = jest.fn()
 const mockSendGameStatusUpdate = jest.fn()
 const mockLogWarning = jest.fn()
 const mockLogInfo = jest.fn()
-let mockBottleRoot = '/mock/Bottles'
+const mockBottleRoot = '/mock/Bottles'
 
 jest.mock('backend/utils', () => ({
   sendGameStatusUpdate: (...args: unknown[]) =>
@@ -48,17 +49,14 @@ jest.mock('backend/logger', () => ({
   logWarning: (...args: unknown[]) => mockLogWarning(...args),
   logInfo: (...args: unknown[]) => mockLogInfo(...args),
   logDebug: jest.fn(),
-  LogPrefix: { Steam: 'Steam' }
+  LogPrefix: { Steam: 'Steam', Backend: 'Backend' }
 }))
-const mockResolveOverlayEnv = jest.fn()
+// What Rust answers on the two known-fix channels (the golden-pinned crate computes them; here they are the answers).
+const mockRegistryAnswer = jest.fn()
+const mockOverlayEnvAnswer = jest.fn()
 const mockDetectGameMaker = jest.fn()
 jest.mock('../storeManagers/steam/bridge/gameMakerRunner', () => ({
   detectGameMakerD3d11Runner: (...a: unknown[]) => mockDetectGameMaker(...a)
-}))
-jest.mock('backend/knownFixOverlays', () => ({
-  ...jest.requireActual('backend/knownFixOverlays'),
-  resolveKnownFixOverlayEnv: (...args: unknown[]) =>
-    mockResolveOverlayEnv(...args)
 }))
 jest.mock('backend/enginewine/twin', () => ({
   ...jest.requireActual<typeof import('backend/enginewine/twin')>(
@@ -71,10 +69,8 @@ jest.mock('../storeManagers/steam/bottle', () => ({}))
 import type { GameSettings } from 'common/types'
 import {
   applySteamBridgeKnownFixes,
-  buildRegistryFixCommandParts,
   steamBridgeLaunchCommandParts,
-  steamShimFeatureCfgLines,
-  validateRegistryFixes
+  steamShimFeatureCfgLines
 } from '../storeManagers/steam/bridgeKnownFixes'
 import { defined } from './helpers/defined'
 
@@ -141,13 +137,20 @@ beforeEach(() => {
   rmSync(join(fixesPath, `${APP_ID}-steam.profile.json`), { force: true })
   rmSync(localFixesPath, { recursive: true, force: true })
   rmSync(bundledFixesPath, { recursive: true, force: true })
-  // The Winetricks seam is observed at the one Rust call the verbs go through: it answers one outcome per verb.
+  // Each Rust channel is observed at the one call that crosses to it. The Winetricks install answers one outcome
+  // per verb; the registry step answers `null`; the overlay env answers what `mockOverlayEnvAnswer` holds.
   mockRustInvoke.mockImplementation(
-    async (_channel: string, [, verbs]: [unknown, string[]]) =>
-      verbs.map(() => 'installed')
+    async (channel: string, args: [unknown, string[]]) => {
+      if (channel === RUST_KNOWNFIX_APPLY_REGISTRY)
+        return await mockRegistryAnswer()
+      if (channel === RUST_KNOWNFIX_RESOLVE_OVERLAY_ENV)
+        return await mockOverlayEnvAnswer()
+      return args[1].map(() => 'installed')
+    }
   )
+  mockRegistryAnswer.mockReturnValue(null)
+  mockOverlayEnvAnswer.mockReturnValue({})
   mockRunWineCommand.mockResolvedValue({ stdout: '', stderr: '', code: 0 })
-  mockResolveOverlayEnv.mockResolvedValue({})
   mockDetectGameMaker.mockResolvedValue(NO_MATCH)
 })
 
@@ -157,21 +160,35 @@ afterAll(() => {
   void tmpdir
 })
 
+/** The calls the bridge made on one Rust channel, as `[args]` tuples. */
+function callsOn(channel: string): unknown[][] {
+  return mockRustInvoke.mock.calls
+    .filter((call) => call[0] === channel)
+    .map((call) => call[1] as unknown[])
+}
+
 describe('applySteamBridgeKnownFixes overlays', () => {
   const OVERLAY = { id: 'gst-libav-1.24.13', target: 'gstreamer-plugin-path' }
 
-  it('computes the overlay env from the tier-1 value and appends it last', async () => {
+  it('asks Rust for the overlay env with the tier-1 value as the base and appends the answer last', async () => {
     writeFixes({ envVariables: { GST_PLUGIN_PATH: '/t1', OTHER: 'o' } })
     writeLocal({ overlays: [OVERLAY] })
-    mockResolveOverlayEnv.mockResolvedValue({ GST_PLUGIN_PATH: '/t1:/ov' })
+    mockOverlayEnvAnswer.mockReturnValue({ GST_PLUGIN_PATH: '/t1:/ov' })
 
     const result = await applySteamBridgeKnownFixes(DEPS, APP_ID, BRIDGE, ROOT)
 
-    expect(mockResolveOverlayEnv).toHaveBeenCalledTimes(1)
-    const [raw, opts] = mockResolveOverlayEnv.mock.calls[0]
-    expect(raw).toEqual([OVERLAY])
-    expect(opts.wineType).toBe('crossover')
-    expect(opts.baseValue('GST_PLUGIN_PATH')).toBe('/t1')
+    // One call, one object: the profile's overlays are read in Rust, so only the app, the label, the wine type and
+    // the base values cross.
+    expect(callsOn(RUST_KNOWNFIX_RESOLVE_OVERLAY_ENV)).toEqual([
+      [
+        {
+          appId: APP_ID,
+          label: 'Steam 480',
+          wineType: 'crossover',
+          baseValues: { GST_PLUGIN_PATH: '/t1' }
+        }
+      ]
+    ])
     expect(result.enviromentOptions).toEqual([
       { key: 'USER', value: 'x' },
       { key: 'GST_PLUGIN_PATH', value: '/t1' },
@@ -183,15 +200,133 @@ describe('applySteamBridgeKnownFixes overlays', () => {
     expect(line).toContain('GST_PLUGIN_PATH=/t1:/ov (overlay)')
   })
 
-  it('leaves settings untouched when a profile has no overlays', async () => {
+  describe('the base values', () => {
+    const KEYS = ['GST_PLUGIN_PATH', 'GST_PLUGIN_PATH_1_0'] as const
+    const saved: Record<string, string | undefined> = {}
+    beforeEach(() => {
+      for (const key of [...KEYS, 'GAMELIB_BRIDGE_TEST_SECRET']) {
+        saved[key] = process.env[key]
+        delete process.env[key]
+      }
+    })
+    afterEach(() => {
+      for (const [key, value] of Object.entries(saved)) {
+        if (value === undefined) delete process.env[key]
+        else process.env[key] = value
+      }
+    })
+
+    it('fall back to the sidecar env for a key the merged env lacks, and the merged env wins when both have it', async () => {
+      process.env.GST_PLUGIN_PATH = '/from-process'
+      process.env.GST_PLUGIN_PATH_1_0 = '/from-process-1-0'
+      writeFixes({ envVariables: { GST_PLUGIN_PATH: '/t1' } })
+      writeLocal({ overlays: [OVERLAY] })
+
+      await applySteamBridgeKnownFixes(DEPS, APP_ID, BRIDGE, ROOT)
+
+      expect(callsOn(RUST_KNOWNFIX_RESOLVE_OVERLAY_ENV)[0]).toEqual([
+        {
+          appId: APP_ID,
+          label: 'Steam 480',
+          wineType: 'crossover',
+          baseValues: {
+            GST_PLUGIN_PATH: '/t1',
+            GST_PLUGIN_PATH_1_0: '/from-process-1-0'
+          }
+        }
+      ])
+    })
+
+    it('take the last matching merged entry, the user env included', async () => {
+      writeLocal({ overlays: [OVERLAY] })
+      const user = {
+        ...BRIDGE,
+        enviromentOptions: [
+          { key: 'GST_PLUGIN_PATH', value: '/user-first' },
+          { key: 'GST_PLUGIN_PATH', value: '/user-last' }
+        ]
+      } as unknown as GameSettings
+
+      await applySteamBridgeKnownFixes(DEPS, APP_ID, user, ROOT)
+
+      expect(callsOn(RUST_KNOWNFIX_RESOLVE_OVERLAY_ENV)[0]).toEqual([
+        expect.objectContaining({
+          baseValues: { GST_PLUGIN_PATH: '/user-last' }
+        })
+      ])
+    })
+
+    it('hold only the overlay env keys, never the rest of the environment (T-88-33)', async () => {
+      process.env.GAMELIB_BRIDGE_TEST_SECRET = 'secret'
+      writeFixes({ envVariables: { DXVK_ASYNC: '1' } })
+      writeLocal({ overlays: [OVERLAY] })
+
+      await applySteamBridgeKnownFixes(DEPS, APP_ID, BRIDGE, ROOT)
+
+      expect(callsOn(RUST_KNOWNFIX_RESOLVE_OVERLAY_ENV)[0]).toEqual([
+        expect.objectContaining({ baseValues: {} })
+      ])
+    })
+  })
+
+  it('sends a null wine type when the bridge settings carry none', async () => {
+    writeLocal({ overlays: [OVERLAY] })
+    const bare = {
+      ...BRIDGE,
+      wineVersion: undefined
+    } as unknown as GameSettings
+
+    await applySteamBridgeKnownFixes(DEPS, APP_ID, bare, ROOT)
+
+    expect(callsOn(RUST_KNOWNFIX_RESOLVE_OVERLAY_ENV)[0]).toEqual([
+      expect.objectContaining({ wineType: null })
+    ])
+  })
+
+  it('leaves settings untouched and asks Rust nothing when a profile has no overlays', async () => {
     writeLocal({ title: 't' })
     const result = await applySteamBridgeKnownFixes(DEPS, APP_ID, BRIDGE, ROOT)
-    expect(mockResolveOverlayEnv).toHaveBeenCalledWith(
-      undefined,
-      expect.anything()
-    )
+    expect(callsOn(RUST_KNOWNFIX_RESOLVE_OVERLAY_ENV)).toEqual([])
     expect(result).toBe(BRIDGE)
   })
+
+  it.each([
+    [
+      'rejects',
+      () =>
+        mockOverlayEnvAnswer.mockImplementation(() => {
+          throw new Error('knownfix_resolve_overlay_env:not-ready')
+        })
+    ],
+    [
+      'answers a value that is not a string map',
+      () => mockOverlayEnvAnswer.mockReturnValue({ GST_PLUGIN_PATH: 1 })
+    ],
+    ['answers null', () => mockOverlayEnvAnswer.mockReturnValue(null)]
+  ])(
+    'when Rust %s the overlay is skipped with a warning and the tier-1 env still applies',
+    async (_name, arm) => {
+      writeFixes({ envVariables: { OTHER: 'o' } })
+      writeLocal({ overlays: [OVERLAY] })
+      arm()
+
+      const result = await applySteamBridgeKnownFixes(
+        DEPS,
+        APP_ID,
+        BRIDGE,
+        ROOT
+      )
+
+      expect(result.enviromentOptions).toEqual([
+        { key: 'USER', value: 'x' },
+        { key: 'OTHER', value: 'o' }
+      ])
+      expect(mockLogWarning).toHaveBeenCalledWith(
+        expect.stringContaining('overlay env'),
+        'Backend'
+      )
+    }
+  )
 })
 
 describe('applySteamBridgeKnownFixes', () => {
@@ -365,165 +500,74 @@ const WMP = {
   value: 1
 }
 
-describe('buildRegistryFixCommandParts', () => {
-  const fix = {
-    key: WMP_KEY,
-    name: 'IsInstalled',
-    type: 'REG_DWORD' as const,
-    data: '1',
-    views: [32 as const, 64 as const]
-  }
-  it('builds the exact argv for view 32', () => {
-    expect(buildRegistryFixCommandParts(fix, 32)).toEqual([
-      'reg',
-      'add',
-      WMP_KEY,
-      '/v',
-      'IsInstalled',
-      '/t',
-      'REG_DWORD',
-      '/d',
-      '1',
-      '/reg:32',
-      '/f'
-    ])
-  })
-  it('ends /reg:64 /f for view 64', () => {
-    expect(buildRegistryFixCommandParts(fix, 64).slice(-2)).toEqual([
-      '/reg:64',
-      '/f'
-    ])
-  })
-})
-
-/** The 30 s per-test timeout is only the outer bound for the registry-timeout tests. Test run
- * 44858803823 exceeded jest's 5 s default here (G-82-2-r3): a turn-counted wait ran out before the
- * real prefix .reg read landed, so the 15 s timer was never armed and `await p` never settled. The
- * wait inside is bounded by real time through yieldUntil; neither a retry nor a skip is the fix. */
-const REGISTRY_TIMEOUT_TEST_TIMEOUT_MS = 30_000
-
-/** Real-clock capture, taken at file load before any test installs fake timers. Under this file's
- * `doNotFake: ['setImmediate']` the slowed-path test needs a real timer to hold the prefix .reg read
- * back. */
-const realSetTimeout = setTimeout
-
-/** How long the slowed-path regression test holds the prefix .reg read back, in real time. */
-const SLOW_REG_READ_MS = 250
-
-describe('registry fixes application', () => {
-  it('bundled profile without views applies 32 then 64', async () => {
+// 88-14 (D-03): the registry step is Rust's. The bridge sends one `knownfix_apply_registry` call when the Steam
+// tier-2 profile carries a `registry` or `dllOverrides` key, and Rust reads the profile itself, validates it,
+// applies it into the bottle and skips what is already set. What Rust does is covered by the `golden/registry`
+// replay in `gamelib-knownfix` (`tests/golden_registry.rs`); these cases pin what crosses and what a failure does.
+describe('registry fixes through Rust', () => {
+  it('sends one call carrying the app, the label, the bridge settings and the bottle folder for a bundled registry profile', async () => {
     writeBundled({ title: 't', registry: [WMP] })
+
     await applySteamBridgeKnownFixes(DEPS, APP_ID, BRIDGE, ROOT)
-    expect(mockRunWineCommand).toHaveBeenCalledTimes(2)
-    for (const [i, view] of ['/reg:32', '/reg:64'].entries()) {
-      const arg = mockRunWineCommand.mock.calls[i][0]
-      expect(arg.commandParts).toContain(view)
-      expect(arg.gameSettings).toBe(BRIDGE)
-      expect(arg.wait).toBe(false)
-      expect(arg.protonVerb).toBe('run')
-      expect(arg.skipPrefixCheckIKnowWhatImDoing).toBe(true)
-      expect(typeof arg.onSpawn).toBe('function')
-    }
+
+    expect(callsOn(RUST_KNOWNFIX_APPLY_REGISTRY)).toEqual([
+      [
+        {
+          appId: APP_ID,
+          label: 'Steam 480',
+          gameSettings: BRIDGE,
+          bottleDir: '/mock/Bottles/GameLibSteamBridge-480'
+        }
+      ]
+    ])
+    // Nothing is spawned from TS: the `reg add` helpers are Rust's.
+    expect(mockRunWineCommand).not.toHaveBeenCalled()
   })
 
-  it('skips reg add for values already in the bottle system.reg', async () => {
-    const root = join(tmpdir(), `gamelib-bridge-bottles-${process.pid}`)
-    try {
-      const bottle = join(root, 'GameLibSteamBridge-480')
-      mkdirSync(bottle, { recursive: true })
-      const k64 = String.raw`Software\\Microsoft\\Active Setup\\Installed Components\\{22d6f312-b0f6-11d0-94ab-0080c74c7e95}`
-      const k32 = k64.replace(
-        String.raw`Software\\`,
-        String.raw`Software\\Wow6432Node\\`
-      )
-      const sec = (k: string) =>
-        `[${k}] 1\n#time=1\n"IsInstalled"=dword:00000001\n\n`
-      writeFileSync(
-        join(bottle, 'system.reg'),
-        'WINE REGISTRY Version 2\n\n#arch=win64\n\n' + sec(k64) + sec(k32)
-      )
-      mockBottleRoot = root
-      writeBundled({ title: 't', registry: [WMP] })
-      await applySteamBridgeKnownFixes(DEPS, APP_ID, BRIDGE, ROOT)
-      expect(
-        mockRunWineCommand.mock.calls.filter((c) =>
-          c[0].commandParts.includes('reg')
-        )
-      ).toHaveLength(0)
-      const infos = mockLogInfo.mock.calls.map((c) => c[0] as string)
-      expect(infos.filter((m) => m.includes('already set'))).toHaveLength(2)
-    } finally {
-      mockBottleRoot = '/mock/Bottles'
-      rmSync(root, { recursive: true, force: true })
-    }
-  })
-
-  it('dllOverrides-only profile writes the AppDefaults value', async () => {
+  it('sends the call for a dllOverrides-only profile', async () => {
     writeBundled({
       dllOverrides: [{ exe: 'Game.exe', dlls: { nvapi64: 'disabled' } }]
     })
     await applySteamBridgeKnownFixes(DEPS, APP_ID, BRIDGE, ROOT)
-    expect(mockRunWineCommand).toHaveBeenCalledTimes(1)
-    const arg = mockRunWineCommand.mock.calls[0][0]
-    expect(arg.commandParts).toEqual([
-      'reg',
-      'add',
-      'HKCU\\Software\\Wine\\AppDefaults\\Game.exe\\DllOverrides',
-      '/v',
-      'nvapi64',
-      '/t',
-      'REG_SZ',
-      '/d',
-      '',
-      '/reg:64',
-      '/f'
-    ])
-    expect(arg.protonVerb).toBe('run')
-    expect(arg.skipPrefixCheckIKnowWhatImDoing).toBe(true)
+    expect(callsOn(RUST_KNOWNFIX_APPLY_REGISTRY)).toHaveLength(1)
   })
 
-  it('skips a dllOverrides value already in the bottle user.reg', async () => {
-    const root = join(tmpdir(), `gamelib-bridge-bottles-dllo-${process.pid}`)
-    try {
-      const bottle = join(root, 'GameLibSteamBridge-480')
-      mkdirSync(bottle, { recursive: true })
-      writeFileSync(
-        join(bottle, 'user.reg'),
-        'WINE REGISTRY Version 2\n\n#arch=win64\n\n' +
-          String.raw`[Software\\Wine\\AppDefaults\\Game.exe\\DllOverrides] 1` +
-          '\n#time=1\n"nvapi64"=""\n\n'
-      )
-      mockBottleRoot = root
-      writeBundled({
-        dllOverrides: [{ exe: 'Game.exe', dlls: { nvapi64: 'disabled' } }]
-      })
-      await applySteamBridgeKnownFixes(DEPS, APP_ID, BRIDGE, ROOT)
-      expect(
-        mockRunWineCommand.mock.calls.filter((c) =>
-          c[0].commandParts.includes('reg')
-        )
-      ).toHaveLength(0)
-      const infos = mockLogInfo.mock.calls.map((c) => c[0] as string)
-      expect(infos.filter((m) => m.includes('already set'))).toHaveLength(1)
-    } finally {
-      mockBottleRoot = '/mock/Bottles'
-      rmSync(root, { recursive: true, force: true })
-    }
-  })
-
-  it('views [64] applies once', async () => {
-    writeBundled({ title: 't', registry: [{ ...WMP, views: [64] }] })
+  it('sends the call for a local profile too (the layers are read in Rust, the gate here)', async () => {
+    writeLocal({ title: 't', registry: [WMP] })
     await applySteamBridgeKnownFixes(DEPS, APP_ID, BRIDGE, ROOT)
-    expect(mockRunWineCommand).toHaveBeenCalledTimes(1)
-    expect(mockRunWineCommand.mock.calls[0][0].commandParts).toContain(
-      '/reg:64'
-    )
+    expect(callsOn(RUST_KNOWNFIX_APPLY_REGISTRY)).toHaveLength(1)
   })
 
-  it('ignores a .profile.json that sits only in the remote directory', async () => {
+  it('sends a null bottle folder when the bridge settings name no bottle', async () => {
+    writeBundled({ title: 't', registry: [WMP] })
+    const noBottle = {
+      ...BRIDGE,
+      wineCrossoverBottle: undefined
+    } as unknown as GameSettings
+
+    await applySteamBridgeKnownFixes(DEPS, APP_ID, noBottle, ROOT)
+
+    expect(callsOn(RUST_KNOWNFIX_APPLY_REGISTRY)[0]).toEqual([
+      expect.objectContaining({ bottleDir: null })
+    ])
+  })
+
+  it('sends no call for a profile with neither registry nor dllOverrides', async () => {
+    writeBundled({ title: 't', overlays: [] })
+    await applySteamBridgeKnownFixes(DEPS, APP_ID, BRIDGE, ROOT)
+    expect(callsOn(RUST_KNOWNFIX_APPLY_REGISTRY)).toEqual([])
+  })
+
+  it('sends no call without a profile', async () => {
+    writeFixes({ title: 't', envVariables: { A: '1' } })
+    await applySteamBridgeKnownFixes(DEPS, APP_ID, BRIDGE, ROOT)
+    expect(callsOn(RUST_KNOWNFIX_APPLY_REGISTRY)).toEqual([])
+  })
+
+  it('sends no call for a .profile.json that sits only in the remote directory', async () => {
     writeIn(fixesPath, { title: 't', registry: [WMP] }, '.profile.json')
     await applySteamBridgeKnownFixes(DEPS, APP_ID, BRIDGE, ROOT)
-    expect(mockRunWineCommand).not.toHaveBeenCalled()
+    expect(callsOn(RUST_KNOWNFIX_APPLY_REGISTRY)).toEqual([])
   })
 
   it.each([
@@ -531,205 +575,84 @@ describe('registry fixes application', () => {
     ['bundled', () => bundledFixesPath],
     ['local', () => localFixesPath]
   ])(
-    'ignores registry placed in a tier-1 .json (%s) and warns',
+    'sends no call for registry placed in a tier-1 .json (%s), and warns',
     async (_n, dir) => {
       writeIn(dir(), { title: 't', registry: [WMP] })
       await applySteamBridgeKnownFixes(DEPS, APP_ID, BRIDGE, ROOT)
-      expect(mockRunWineCommand).not.toHaveBeenCalled()
+      expect(callsOn(RUST_KNOWNFIX_APPLY_REGISTRY)).toEqual([])
       expect(mockLogWarning).toHaveBeenCalledWith(
         expect.stringContaining('registry')
       )
     }
   )
 
-  it('applies remote tier-1 envVariables and the bundled tier-2 registry in the same launch', async () => {
+  it('applies remote tier-1 envVariables and sends the bundled tier-2 registry in the same launch', async () => {
     writeFixes({ title: 't', envVariables: { A: '1' } })
     writeBundled({ title: 'p', registry: [WMP] })
     const result = await applySteamBridgeKnownFixes(DEPS, APP_ID, BRIDGE, ROOT)
-    expect(mockRunWineCommand).toHaveBeenCalledTimes(2)
+    expect(callsOn(RUST_KNOWNFIX_APPLY_REGISTRY)).toHaveLength(1)
     expect(result.enviromentOptions).toEqual([
       { key: 'USER', value: 'x' },
       { key: 'A', value: '1' }
     ])
   })
 
-  it('local overrides bundled', async () => {
+  it('runs the registry step before winetricks, so a later fix step sees the marker', async () => {
     writeBundled({ title: 't', registry: [WMP] })
-    writeLocal({ title: 't', registry: [{ ...WMP, value: 0 }] })
+    writeFixes({ title: 't', winetricks: ['vcrun2019'] })
     await applySteamBridgeKnownFixes(DEPS, APP_ID, BRIDGE, ROOT)
-    const parts = mockRunWineCommand.mock.calls[0][0].commandParts
-    expect(parts[parts.indexOf('/d') + 1]).toBe('0')
+    const channels = mockRustInvoke.mock.calls.map((c) => c[0])
+    expect(channels).toEqual([
+      RUST_KNOWNFIX_APPLY_REGISTRY,
+      RUST_WINE_WINETRICKS_INSTALL
+    ])
   })
 
-  describe('failures never reject and env still applies', () => {
-    const arms: [string, () => void][] = [
-      [
-        'non-zero code',
-        () =>
-          mockRunWineCommand.mockResolvedValue({
-            stdout: '',
-            stderr: '',
-            code: 2
-          })
-      ],
-      [
-        'undefined code',
-        () => mockRunWineCommand.mockResolvedValue({ stdout: '', stderr: '' })
-      ],
-      ['rejection', () => mockRunWineCommand.mockRejectedValue(new Error('x'))]
-    ]
-    it.each(arms)('%s', async (_n, arm) => {
-      writeBundled({ title: 't', registry: [WMP] })
-      writeFixes({ title: 't', envVariables: { A: 'b' } })
-      arm()
-      const result = await applySteamBridgeKnownFixes(
-        DEPS,
-        APP_ID,
-        BRIDGE,
-        ROOT
-      )
-      expect(mockLogWarning).toHaveBeenCalledWith(
-        expect.stringContaining('IsInstalled'),
-        'Steam'
-      )
-      expect(result.enviromentOptions).toHaveLength(2)
+  it('awaits the registry call before it goes on', async () => {
+    writeBundled({ title: 't', registry: [WMP] })
+    writeFixes({ title: 't', winetricks: ['vcrun2019'] })
+    let release: () => void = () => undefined
+    mockRegistryAnswer.mockReturnValue(
+      new Promise<null>((resolve) => {
+        release = () => resolve(null)
+      })
+    )
+    const pending = applySteamBridgeKnownFixes(DEPS, APP_ID, BRIDGE, ROOT)
+    // The registry call is out and unanswered, so winetricks has not started.
+    await new Promise((resolve) => setImmediate(resolve))
+    expect(mockRustInvoke.mock.calls.map((c) => c[0])).toEqual([
+      RUST_KNOWNFIX_APPLY_REGISTRY
+    ])
+    release()
+    await pending
+    expect(mockRustInvoke.mock.calls.map((c) => c[0])).toEqual([
+      RUST_KNOWNFIX_APPLY_REGISTRY,
+      RUST_WINE_WINETRICKS_INSTALL
+    ])
+  })
+
+  it('a rejected registry call warns and the env still applies', async () => {
+    writeBundled({ title: 't', registry: [WMP] })
+    writeFixes({ title: 't', envVariables: { A: 'b' } })
+    mockRegistryAnswer.mockImplementation(() => {
+      throw new Error('knownfix_apply_registry:not-ready')
     })
-  })
 
-  it(
-    'times out a never-settling call after 15s and warns',
-    async () => {
-      // setImmediate stays real so yieldUntil can let the real prefix .reg read
-      // land before the 15 s timer is armed; the wait is bounded by real time,
-      // not a turn count (G-82-2-r3, Test run 44858803823).
-      jest.useFakeTimers({ doNotFake: ['setImmediate'] })
-      try {
-        writeBundled({ title: 't', registry: [{ ...WMP, views: [32] }] })
-        mockRunWineCommand.mockReturnValue(new Promise(() => undefined))
-        const p = applySteamBridgeKnownFixes(DEPS, APP_ID, BRIDGE, ROOT)
-        await yieldUntil(() => mockRunWineCommand.mock.calls.length > 0)
-        expect(mockRunWineCommand).toHaveBeenCalledTimes(1)
-        await jest.advanceTimersByTimeAsync(15_000)
-        await p
-        expect(mockLogWarning).toHaveBeenCalledWith(
-          expect.stringContaining('timed out'),
-          'Steam'
-        )
-      } finally {
-        jest.useRealTimers()
-      }
-    },
-    REGISTRY_TIMEOUT_TEST_TIMEOUT_MS
-  )
+    const result = await applySteamBridgeKnownFixes(DEPS, APP_ID, BRIDGE, ROOT)
 
-  it(
-    'times out a never-settling call after 15s even when the prefix .reg read is slow',
-    async () => {
-      jest.useFakeTimers({ doNotFake: ['setImmediate'] })
-      const actualReadFile = fsPromises.readFile.bind(fsPromises)
-      const readFileSpy = jest
-        .spyOn(fsPromises, 'readFile')
-        .mockImplementation((async (...args: unknown[]) => {
-          await new Promise((r) => realSetTimeout(r, SLOW_REG_READ_MS))
-          return (actualReadFile as (...a: unknown[]) => unknown)(...args)
-        }) as unknown as typeof fsPromises.readFile)
-      try {
-        writeBundled({ title: 't', registry: [{ ...WMP, views: [32] }] })
-        mockRunWineCommand.mockReturnValue(new Promise(() => undefined))
-        const p = applySteamBridgeKnownFixes(DEPS, APP_ID, BRIDGE, ROOT)
-        await yieldUntil(() => mockRunWineCommand.mock.calls.length > 0)
-        expect(mockRunWineCommand).toHaveBeenCalledTimes(1)
-        await jest.advanceTimersByTimeAsync(15_000)
-        await p
-        expect(mockLogWarning).toHaveBeenCalledWith(
-          expect.stringContaining('timed out'),
-          'Steam'
-        )
-        expect(readFileSpy).toHaveBeenCalled()
-      } finally {
-        readFileSpy.mockRestore()
-        jest.useRealTimers()
-      }
-    },
-    REGISTRY_TIMEOUT_TEST_TIMEOUT_MS
-  )
-})
-
-describe('validateRegistryFixes', () => {
-  const ok = {
-    key: 'HKLM\\Software\\Ok',
-    name: 'V',
-    type: 'REG_SZ',
-    value: 'v'
-  }
-  const bad: [string, unknown][] = [
-    ['root HKCR', { ...ok, key: 'HKCR\\x' }],
-    ['root HKU', { ...ok, key: 'HKU\\x' }],
-    ['no root', { ...ok, key: 'Software\\x' }],
-    ['empty path after root', { ...ok, key: 'HKLM\\' }],
-    ['empty segment', { ...ok, key: 'HKLM\\A\\\\B' }],
-    ['trailing backslash', { ...ok, key: 'HKLM\\A\\' }],
-    ['quote in key', { ...ok, key: 'HKLM\\A"B' }],
-    ['CR in key', { ...ok, key: 'HKLM\\A\rB' }],
-    ['LF in name', { ...ok, name: 'a\nb' }],
-    ['NUL in name', { ...ok, name: 'a\0b' }],
-    ['quote in value', { ...ok, value: 'a"b' }],
-    ['NUL in value', { ...ok, value: 'a\0b' }],
-    ['empty name', { ...ok, name: '' }],
-    ['slash name', { ...ok, name: '/v' }],
-    ['REG_BINARY', { ...ok, type: 'REG_BINARY' }],
-    ['dword float', { key: ok.key, name: 'V', type: 'REG_DWORD', value: 1.5 }],
-    [
-      'dword negative',
-      { key: ok.key, name: 'V', type: 'REG_DWORD', value: -1 }
-    ],
-    [
-      'dword too big',
-      { key: ok.key, name: 'V', type: 'REG_DWORD', value: 0x100000000 }
-    ],
-    ['dword string', { key: ok.key, name: 'V', type: 'REG_DWORD', value: '1' }],
-    ['sz number', { ...ok, value: 1 }],
-    ['views empty', { ...ok, views: [] }],
-    ['views 16', { ...ok, views: [16] }],
-    ['views not array', { ...ok, views: 32 }],
-    ['not an object', 'str']
-  ]
-  it.each(bad)(
-    'skips %s with a warning and keeps the valid sibling',
-    (_n, entry) => {
-      const out = validateRegistryFixes(APP_ID, [entry, ok])
-      expect(out).toHaveLength(1)
-      expect(defined(out[0], 'first registry fix').key).toBe(ok.key)
-      expect(mockLogWarning).toHaveBeenCalledTimes(1)
-    }
-  )
-
-  it('warns on a non-array registry', () => {
-    expect(validateRegistryFixes(APP_ID, { a: 1 })).toEqual([])
-    expect(mockLogWarning).toHaveBeenCalled()
-  })
-
-  it('dedupes and orders views', () => {
-    const out = validateRegistryFixes(APP_ID, [{ ...ok, views: [64, 32, 64] }])
-    expect(defined(out[0], 'first registry fix').views).toEqual([32, 64])
-  })
-
-  it('stringifies REG_DWORD data and defaults to both views', () => {
-    const out = validateRegistryFixes(APP_ID, [WMP])
-    expect(out).toEqual([
-      {
-        key: WMP_KEY,
-        name: 'IsInstalled',
-        type: 'REG_DWORD',
-        data: '1',
-        views: [32, 64]
-      }
+    expect(mockLogWarning).toHaveBeenCalledWith(
+      expect.stringContaining('registry step failed'),
+      'Backend'
+    )
+    expect(result.enviromentOptions).toEqual([
+      { key: 'USER', value: 'x' },
+      { key: 'A', value: 'b' }
     ])
   })
 })
 
 describe('bundled 284100 profile', () => {
-  it('validates to one entry with both views and cites the todo', () => {
+  it('carries the one registry entry Rust validates, cites the todo, and has no tier-1 file', () => {
     const path = jest.requireActual('path')
     const fs = jest.requireActual('fs')
     const parsed = JSON.parse(
@@ -746,10 +669,12 @@ describe('bundled 284100 profile', () => {
         'utf8'
       )
     )
-    const out = validateRegistryFixes('284100', parsed.registry)
-    expect(out).toHaveLength(1)
-    expect(defined(out[0], 'first registry fix').views).toEqual([32, 64])
-    expect(defined(out[0], 'first registry fix').key).toContain(
+    // The entry names no `views`, so Rust's validator defaults it to both (`golden/registry`, validate cases).
+    expect(parsed.registry).toHaveLength(1)
+    expect(defined(parsed.registry[0], 'first registry fix').views).toBe(
+      undefined
+    )
+    expect(defined(parsed.registry[0], 'first registry fix').key).toContain(
       '22d6f312-b0f6-11d0-94ab-0080c74c7e95'
     )
     expect(parsed.evidence).toContain(

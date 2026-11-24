@@ -17,8 +17,9 @@
  * `<appId>-steam.profile.json`, honoured only from the bundled
  * (`public/fixes/`) and local (`fixes/local/`) sources, never the remote layer
  * (decision 6 of per-game-compat-fixes-architecture.md); the layering lives in
- * `readKnownFixProfile`. Validation and application now live in
- * `knownFixesRegistry.ts`, shared with the non-Steam Wine path. The applied-fix ledger and
+ * `readKnownFixProfile`. Validation and application live in Rust (Phase 88, 88-14):
+ * `applyRegistryFixes` (`launchrust/knownFixes.ts`) sends the app id, the settings and
+ * the bottle folder, and Rust reads the Steam tier-2 profile itself. The applied-fix ledger and
  * reversal (decision 5) are deferred, like D2: turning a profile off does not
  * remove a value already written.
  *
@@ -27,8 +28,9 @@
  *
  * `overlays` (quick 261027-n77): tier-2 entries naming a catalogue overlay (a
  * GStreamer plugin dir) are installed on demand and appended to
- * `GST_PLUGIN_PATH` after the tier-1 entries, on darwin + CrossOver only; see
- * `knownFixOverlays.ts`. Every known-fix env var applied is logged.
+ * `GST_PLUGIN_PATH` after the tier-1 entries, on darwin + CrossOver only; Rust resolves
+ * them (`resolveKnownFixOverlayEnv`, 88-14) from the base values this file holds.
+ * Every known-fix env var applied is logged.
  *
  * GameMaker D3D11 default (quick 261028-k7l): when `CX_GRAPHICS_BACKEND` is
  * set by neither the user env nor tier-1, a launch exe that passes the
@@ -64,34 +66,18 @@ import {
 import { readKnownFixLaunchOverrides } from 'backend/knownFixLaunch'
 import { sendGameStatusUpdate } from 'backend/utils'
 import { logWarning, LogPrefix } from 'backend/logger'
-import {
-  lastEnvOption,
-  logKnownFixEnv,
-  resolveKnownFixOverlayEnv
-} from 'backend/knownFixOverlays'
+import { lastEnvOption, logKnownFixEnv } from 'backend/knownFixOverlays'
 import {
   applyRegistryFixes,
-  buildRegistryFixCommandParts,
-  knownFixProfileRegistryFixes,
-  validateRegistryFixes as sharedValidateRegistryFixes,
-  type ValidRegistryFix
-} from 'backend/knownFixesRegistry'
+  resolveKnownFixOverlayEnv
+} from 'backend/launchrust/knownFixes'
+import {
+  settleKnownFixOverlayEnv,
+  settleKnownFixRegistry
+} from 'backend/knownFixLaunchReply'
+import { KNOWN_FIX_OVERLAY_BASE_ENV_KEYS } from 'common/knownFixOverlayCatalogue'
 import { getBottleDir } from 'backend/enginewine/twin'
 import { detectGameMakerD3d11Runner } from './bridge/gameMakerRunner'
-
-export type { ValidRegistryFix }
-export { buildRegistryFixCommandParts }
-
-/** Steam-labelled wrapper over the shared validator. */
-export function validateRegistryFixes(
-  appId: string,
-  raw: unknown
-): ValidRegistryFix[] {
-  return sharedValidateRegistryFixes(raw, {
-    label: `Steam ${appId}`,
-    logPrefix: LogPrefix.Steam
-  })
-}
 
 // The shim's feature catalogue (spike 034). Every entry is generic: a feature
 // name the shim implements and a validator for its parameters. The shim reads
@@ -229,31 +215,26 @@ export async function applySteamBridgeKnownFixes(
   try {
     const { runWineCommand } = deps.commandRunner
 
-    const registryCtx = { label: `Steam ${appId}`, logPrefix: LogPrefix.Steam }
-    const registryRaw = profile
-      ? knownFixProfileRegistryFixes(profile, registryCtx)
-      : undefined
-    if (registryRaw !== undefined) {
-      // First (registry then dllOverrides), so later fix steps see the marker. wait: false follows
-      // drm/stageDrmBottle.ts: reg.exe's exit code proves the write and
-      // `wineserver --wait` can block forever. Values already present in the
-      // bottle's system.reg/user.reg are skipped, and a timed-out reg add is
-      // killed (quick 261027-m1m).
-      await applyRegistryFixes(
-        registryRaw,
-        registryCtx,
-        (commandParts, onSpawn) =>
-          runWineCommand({
-            commandParts,
-            gameSettings: bridgeBottleSettings,
-            wait: false,
-            protonVerb: 'run',
-            skipPrefixCheckIKnowWhatImDoing: true,
-            onSpawn
-          }),
-        bridgeBottleSettings.wineCrossoverBottle
-          ? getBottleDir(deps.paths, bridgeBottleSettings.wineCrossoverBottle)
-          : undefined
+    // First (registry then dllOverrides), so later fix steps see the marker. Rust reads the Steam tier-2 profile
+    // itself and applies it into the bottle with `wait: false` and the prefix check skipped (88-14); values
+    // already present in the bottle's system.reg/user.reg are skipped there and a timed-out reg add is killed.
+    // A profile with neither key is nothing to apply, so no call is made for it.
+    if (
+      profile?.registry !== undefined ||
+      profile?.dllOverrides !== undefined
+    ) {
+      const label = `Steam ${appId}`
+      await settleKnownFixRegistry(
+        label,
+        applyRegistryFixes(
+          deps,
+          appId,
+          label,
+          bridgeBottleSettings,
+          bridgeBottleSettings.wineCrossoverBottle
+            ? getBottleDir(deps.paths, bridgeBottleSettings.wineCrossoverBottle)
+            : null
+        )
       )
     }
 
@@ -371,17 +352,26 @@ export async function applySteamBridgeKnownFixes(
       ...(bridgeBottleSettings.enviromentOptions ?? []),
       ...tier1Entries
     ]
-    const overlayEnv = await resolveKnownFixOverlayEnv(profile?.overlays, {
-      deps: {
-        aborts: deps.aborts,
-        paths: deps.paths,
-        appRuntime: deps.appRuntime
-      },
-      label: `Steam ${appId}`,
-      logPrefix: LogPrefix.Steam,
-      wineType: bridgeBottleSettings.wineVersion?.type,
-      baseValue: (k) => lastEnvOption(merged, k) ?? process.env[k]
-    })
+    // The base values Rust resolves the overlays against: the merged env first, the sidecar's own env second, for
+    // the overlay env keys only (T-88-33).
+    const baseValues: Record<string, string> = {}
+    for (const key of KNOWN_FIX_OVERLAY_BASE_ENV_KEYS) {
+      const value = lastEnvOption(merged, key) ?? process.env[key]
+      if (value !== undefined) baseValues[key] = value
+    }
+    const overlayEnv =
+      profile?.overlays === undefined
+        ? {}
+        : await settleKnownFixOverlayEnv(
+            `Steam ${appId}`,
+            resolveKnownFixOverlayEnv(
+              deps,
+              appId,
+              `Steam ${appId}`,
+              bridgeBottleSettings.wineVersion?.type ?? null,
+              baseValues
+            )
+          )
     const overlayEntries = Object.entries(overlayEnv).map(([key, value]) => ({
       key,
       value

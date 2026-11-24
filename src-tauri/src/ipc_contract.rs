@@ -216,6 +216,8 @@ pub(crate) enum RustInvokeChannel {
     KnownfixFetchRemote,
     KnownfixApplyProfileRegistry,
     KnownfixProfileOverlayEnv,
+    KnownfixApplyRegistry,
+    KnownfixResolveOverlayEnv,
 }
 
 impl RustInvokeChannel {
@@ -413,6 +415,8 @@ impl RustInvokeChannel {
         RustInvokeChannel::KnownfixFetchRemote,
         RustInvokeChannel::KnownfixApplyProfileRegistry,
         RustInvokeChannel::KnownfixProfileOverlayEnv,
+        RustInvokeChannel::KnownfixApplyRegistry,
+        RustInvokeChannel::KnownfixResolveOverlayEnv,
     ];
 
     pub(crate) fn from_name(name: &str) -> Option<Self> {
@@ -610,6 +614,8 @@ impl RustInvokeChannel {
             "knownfix_fetch_remote" => Some(RustInvokeChannel::KnownfixFetchRemote),
             "knownfix_apply_profile_registry" => Some(RustInvokeChannel::KnownfixApplyProfileRegistry),
             "knownfix_profile_overlay_env" => Some(RustInvokeChannel::KnownfixProfileOverlayEnv),
+            "knownfix_apply_registry" => Some(RustInvokeChannel::KnownfixApplyRegistry),
+            "knownfix_resolve_overlay_env" => Some(RustInvokeChannel::KnownfixResolveOverlayEnv),
             _ => None,
         }
     }
@@ -809,6 +815,8 @@ impl RustInvokeChannel {
             RustInvokeChannel::KnownfixFetchRemote => "knownfix_fetch_remote",
             RustInvokeChannel::KnownfixApplyProfileRegistry => "knownfix_apply_profile_registry",
             RustInvokeChannel::KnownfixProfileOverlayEnv => "knownfix_profile_overlay_env",
+            RustInvokeChannel::KnownfixApplyRegistry => "knownfix_apply_registry",
+            RustInvokeChannel::KnownfixResolveOverlayEnv => "knownfix_resolve_overlay_env",
         }
     }
 }
@@ -4090,5 +4098,41 @@ impl KnownfixProfileOverlayEnvArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let first = args.first().ok_or_else(|| "knownfix_profile_overlay_env:bad-args".to_string())?;
         serde_json::from_value(first.clone()).map_err(|_| "knownfix_profile_overlay_env:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct KnownfixApplyRegistryArgs {
+    #[serde(rename = "appId")]
+    pub(crate) app_id: String,
+    pub(crate) label: String,
+    #[serde(rename = "gameSettings")]
+    pub(crate) game_settings: Value,
+    #[serde(rename = "bottleDir")]
+    pub(crate) bottle_dir: Option<String>,
+}
+
+impl KnownfixApplyRegistryArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "knownfix_apply_registry:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "knownfix_apply_registry:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct KnownfixResolveOverlayEnvArgs {
+    #[serde(rename = "appId")]
+    pub(crate) app_id: String,
+    pub(crate) label: String,
+    #[serde(rename = "wineType")]
+    pub(crate) wine_type: Option<String>,
+    #[serde(rename = "baseValues")]
+    pub(crate) base_values: Value,
+}
+
+impl KnownfixResolveOverlayEnvArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "knownfix_resolve_overlay_env:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "knownfix_resolve_overlay_env:bad-args".to_string())
     }
 }

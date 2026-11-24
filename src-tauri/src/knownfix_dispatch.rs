@@ -283,6 +283,55 @@ pub(crate) fn rpc_knownfix_profile_overlay_env(args: &[Value]) -> Result<Value, 
     profile_overlay_env_over(knownfix_ctx(), args)
 }
 
+/// The body of the `knownfix_apply_registry` arm over a given context: the generated decode (one object,
+/// `{appId, label, gameSettings, bottleDir}`) and an arity check first, so a bad call is rejected the same
+/// fixed `<op>:bad-args` literal before and after the install and never echoes the sidecar's value, then the
+/// crate, which decodes the object strictly again, bounds the app id and the label and requires the settings to
+/// be an object (T-88-35). The Steam tier-2 profile is read in the crate, never sent.
+fn apply_registry_over(ctx: Option<&Arc<KnownFixCtx>>, args: &[Value]) -> Result<Value, String> {
+    KnownfixApplyRegistryArgs::from_args(args)?;
+    if args.len() != 1 {
+        return Err("knownfix_apply_registry:bad-args".to_string());
+    }
+    rpc_knownfix_op(ctx, "knownfix_apply_registry", args)
+}
+
+/// The `knownfix_apply_registry` `rustInvoke` arm (the Steam bridge's `applyRegistryFixes` shim, 88-14): the
+/// Steam tier-2 profile's `registry` then `dllOverrides` applied into the bridge's bottle, answering `null`.
+/// Each `reg add` is a `gamelib-proc` helper with its own 15 s limit and several can run in turn, so the
+/// sidecar lists the channel as unbounded; the crate's registrant and the shutdown token end it at exit.
+pub(crate) fn rpc_knownfix_apply_registry(args: &[Value]) -> Result<Value, String> {
+    apply_registry_over(knownfix_ctx(), args)
+}
+
+/// The body of the `knownfix_resolve_overlay_env` arm over a given context: the generated decode (one object,
+/// `{appId, label, wineType, baseValues}`) and an arity check first, the same fixed `<op>:bad-args` literal
+/// before and after the install, then the crate, which decodes `baseValues` as a string map and bounds its size
+/// (T-88-35). The Steam tier-2 profile's `overlays` are read in the crate, never sent.
+fn resolve_overlay_env_over(
+    ctx: Option<&Arc<KnownFixCtx>>,
+    args: &[Value],
+) -> Result<Value, String> {
+    let decoded = KnownfixResolveOverlayEnvArgs::from_args(args)?;
+    // The generated decode keeps the map opaque, so the string-map shape is checked here, before the context is
+    // looked at, and a wrong shape is the same fixed literal before and after the install.
+    let is_string_map = decoded
+        .base_values
+        .as_object()
+        .is_some_and(|map| map.values().all(Value::is_string));
+    if args.len() != 1 || !is_string_map {
+        return Err("knownfix_resolve_overlay_env:bad-args".to_string());
+    }
+    rpc_knownfix_op(ctx, "knownfix_resolve_overlay_env", args)
+}
+
+/// The `knownfix_resolve_overlay_env` `rustInvoke` arm (the Steam bridge's `resolveKnownFixOverlayEnv` shim,
+/// 88-14): the bridge's overlay env, `{KEY: value}`, an overlay installed on demand (up to the 120 s download),
+/// so the sidecar lists the channel as unbounded; the crate's registrant and the shutdown token end it at exit.
+pub(crate) fn rpc_knownfix_resolve_overlay_env(args: &[Value]) -> Result<Value, String> {
+    resolve_overlay_env_over(knownfix_ctx(), args)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -728,5 +777,121 @@ mod tests {
             ),
             Ok(json!({}))
         );
+    }
+
+    #[test]
+    fn apply_registry_answers_not_ready_before_install_and_rejects_a_bad_call_with_a_fixed_literal()
+    {
+        let good = json!({
+            "appId": "480", "label": "Steam 480", "gameSettings": {}, "bottleDir": null
+        });
+        assert_eq!(
+            apply_registry_over(None, std::slice::from_ref(&good)),
+            Err("knownfix_apply_registry:not-ready".to_string())
+        );
+        let secret = "SECRET-LABEL-".repeat(30);
+        let home = FakeHome::new("knownfix-shell-");
+        let ctx = ctx_over(&home);
+        for ctx in [None, Some(&ctx)] {
+            for bad in [
+                vec![],
+                vec![good.clone(), good.clone()],
+                vec![json!("480"), json!("Steam 480")],
+                vec![json!({"appId": "480", "label": "Steam 480", "bottleDir": null})],
+                vec![json!({"appId": 480, "label": secret, "gameSettings": {}, "bottleDir": null})],
+                vec![json!({"appId": "480", "label": "l", "gameSettings": {}, "bottleDir": 1})],
+            ] {
+                let error = apply_registry_over(ctx, &bad).unwrap_err();
+                assert_eq!(error, "knownfix_apply_registry:bad-args", "{bad:?}");
+                assert!(!error.contains("SECRET"), "{error}");
+            }
+        }
+        // The crate's strict decode, bounds and object test refuse what the generated decode lets through.
+        for bad in [
+            json!({"appId": "480", "label": "l", "gameSettings": {}, "bottleDir": null, "extra": 1}),
+            json!({"appId": "", "label": "l", "gameSettings": {}, "bottleDir": null}),
+            json!({"appId": "480", "label": "", "gameSettings": {}, "bottleDir": null}),
+            json!({"appId": "x".repeat(257), "label": "l", "gameSettings": {}, "bottleDir": null}),
+            json!({"appId": "480", "label": "x".repeat(257), "gameSettings": {}, "bottleDir": null}),
+            json!({"appId": "480", "label": "l", "gameSettings": [1], "bottleDir": null}),
+        ] {
+            assert_eq!(
+                apply_registry_over(Some(&ctx), &[bad]),
+                Err("knownfix_apply_registry:bad-args".to_string())
+            );
+        }
+        // An absent `bottleDir` is the same as `null` (the crate defaults it), as an absent `installPath` is.
+        assert_eq!(
+            apply_registry_over(
+                Some(&ctx),
+                &[json!({"appId": "480", "label": "l", "gameSettings": {}})]
+            ),
+            Err("knownfix_apply_registry:not-ready".to_string())
+        );
+        // A good call over a context without the wine core is not ready, never a partial application.
+        assert_eq!(
+            apply_registry_over(Some(&ctx), &[good]),
+            Err("knownfix_apply_registry:not-ready".to_string())
+        );
+    }
+
+    #[test]
+    fn resolve_overlay_env_answers_not_ready_before_install_and_rejects_a_bad_call_with_a_fixed_literal(
+    ) {
+        let good = json!({
+            "appId": "480", "label": "Steam 480", "wineType": "crossover", "baseValues": {}
+        });
+        assert_eq!(
+            resolve_overlay_env_over(None, std::slice::from_ref(&good)),
+            Err("knownfix_resolve_overlay_env:not-ready".to_string())
+        );
+        let secret = "SECRET-LABEL-".repeat(30);
+        let home = FakeHome::new("knownfix-shell-");
+        let ctx = ctx_over(&home);
+        for ctx in [None, Some(&ctx)] {
+            for bad in [
+                vec![],
+                vec![good.clone(), good.clone()],
+                vec![json!("480"), json!("Steam 480")],
+                vec![json!({"appId": "480", "label": "Steam 480", "wineType": null})],
+                vec![json!({"appId": 480, "label": secret, "wineType": null, "baseValues": {}})],
+                vec![
+                    json!({"appId": "480", "label": "l", "wineType": null, "baseValues": {"A": 1}}),
+                ],
+                vec![json!({"appId": "480", "label": "l", "wineType": null, "baseValues": []})],
+            ] {
+                let error = resolve_overlay_env_over(ctx, &bad).unwrap_err();
+                assert_eq!(error, "knownfix_resolve_overlay_env:bad-args", "{bad:?}");
+                assert!(!error.contains("SECRET"), "{error}");
+            }
+        }
+        for bad in [
+            json!({"appId": "480", "label": "l", "wineType": null, "baseValues": {}, "extra": 1}),
+            json!({"appId": "", "label": "l", "wineType": null, "baseValues": {}}),
+            json!({"appId": "480", "label": "", "wineType": null, "baseValues": {}}),
+        ] {
+            assert_eq!(
+                resolve_overlay_env_over(Some(&ctx), &[bad]),
+                Err("knownfix_resolve_overlay_env:bad-args".to_string())
+            );
+        }
+    }
+
+    #[test]
+    fn resolve_overlay_env_answers_an_empty_env_for_a_game_without_a_steam_profile() {
+        let home = FakeHome::new("knownfix-shell-");
+        let ctx = ctx_over(&home);
+        for wine_type in [json!("crossover"), Value::Null] {
+            assert_eq!(
+                resolve_overlay_env_over(
+                    Some(&ctx),
+                    &[json!({
+                        "appId": "480", "label": "Steam 480", "wineType": wine_type,
+                        "baseValues": {"GST_PLUGIN_PATH": "/a"}
+                    })]
+                ),
+                Ok(json!({}))
+            );
+        }
     }
 }

@@ -167,14 +167,16 @@ const TOOLS_SHIM_IMPORTERS: readonly string[] = [
 /**
  * Every non-test importer of `launchrust/knownFixes.ts` (the check is per file, so every row of that file lists them
  * all): the three managers' `launch()` and the download manager's install-time fetch (88-12), and the shared
- * launcher's per-launch registry fixes and overlay env (88-13).
+ * launcher's per-launch registry fixes and overlay env (88-13), and the Steam bridge's registry fixes and overlay env
+ * (88-14).
  */
 const KNOWN_FIX_SHIM_IMPORTERS: readonly string[] = [
   'src/backend/downloadmanager/utils.ts',
   'src/backend/launcher.ts',
   'src/backend/storeManagers/gog/games.ts',
   'src/backend/storeManagers/legendary/games.ts',
-  'src/backend/storeManagers/nile/games.ts'
+  'src/backend/storeManagers/nile/games.ts',
+  'src/backend/storeManagers/steam/bridgeKnownFixes.ts'
 ]
 /**
  * Every non-test importer of `launchrust/knownFixTwins.ts` (the check is per file, so every row of that file lists them
@@ -1105,6 +1107,26 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     channel: 'RUST_KNOWNFIX_PROFILE_OVERLAY_ENV',
     callers: KNOWN_FIX_SHIM_IMPORTERS,
     deletedBy: 88.1
+  },
+  // 88-14 (D-03): the Steam bridge's registry fixes and overlay env. `applySteamBridgeKnownFixes` awaits both inside its
+  // existing async body (`settleKnownFixRegistry` and `settleKnownFixOverlayEnv` keep a rejected call from failing a
+  // launch). The bridge's known-fix application is TS until 97 deletes the bridge's TS known-fix modules, so both rows go
+  // with it.
+  {
+    name: 'applyRegistryFixes',
+    file: 'src/backend/launchrust/knownFixes.ts',
+    shape: 'shim',
+    channel: 'RUST_KNOWNFIX_APPLY_REGISTRY',
+    callers: KNOWN_FIX_SHIM_IMPORTERS,
+    deletedBy: 97
+  },
+  {
+    name: 'resolveKnownFixOverlayEnv',
+    file: 'src/backend/launchrust/knownFixes.ts',
+    shape: 'shim',
+    channel: 'RUST_KNOWNFIX_RESOLVE_OVERLAY_ENV',
+    callers: KNOWN_FIX_SHIM_IMPORTERS,
+    deletedBy: 97
   },
   // 88-13 (87 D-24): the synchronous known-fix twins, for callers 88 cannot make async. `installFixes` and
   // `getKnownFixesEnvVariables` read the tier-1 fix inline in the launcher until 88.1/97 move them; the env log line goes

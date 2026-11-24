@@ -147,9 +147,11 @@ import {
   RUST_ENGINE_NON_CROSSOVER_ENGINE,
   RUST_ENGINE_FALLBACK_ENSURE,
   RUST_KNOWNFIX_APPLY_PROFILE_REGISTRY,
+  RUST_KNOWNFIX_APPLY_REGISTRY,
   RUST_KNOWNFIX_FETCH_REMOTE,
   RUST_KNOWNFIX_LAUNCH_OVERRIDES,
   RUST_KNOWNFIX_PROFILE_OVERLAY_ENV,
+  RUST_KNOWNFIX_RESOLVE_OVERLAY_ENV,
   RUST_WINE_MANAGER_LIST,
   RUST_WINE_MANAGER_REFRESH,
   RUST_WINE_RELEASES_INFO_READY,
@@ -1066,6 +1068,33 @@ export const rustInvokeArgs = {
         gameSettings: knownFixGameSettings,
         tier1Env: knownFixEnvMap('tier1Env'),
         processEnvBase: knownFixEnvMap('processEnvBase')
+      })
+      .strict()
+  ]),
+  // Phase 88 (SVC-03, 88-14, D-03, D-19): the Steam bridge's registry fixes. One strict object; the crate reads the
+  // Steam tier-2 profile itself, so only the app id, the log label, the bridge settings (opaque to the generated
+  // decode, checked as a JSON object by the crate) and the bottle folder the caller computes cross. `bottleDir` is
+  // null when the bottle's folder is unknown.
+  [RUST_KNOWNFIX_APPLY_REGISTRY]: z.tuple([
+    z
+      .object({
+        appId: z.string(),
+        label: z.string(),
+        gameSettings: knownFixGameSettings,
+        bottleDir: z.string().nullable()
+      })
+      .strict()
+  ]),
+  // Phase 88 (SVC-03, 88-14, D-03, D-19): the Steam bridge's overlay env. `baseValues` is a string map holding only
+  // `KNOWN_FIX_OVERLAY_BASE_ENV_KEYS` that have a value (never the whole process env, T-88-33); `wineType` is null
+  // when the bridge settings carry none.
+  [RUST_KNOWNFIX_RESOLVE_OVERLAY_ENV]: z.tuple([
+    z
+      .object({
+        appId: z.string(),
+        label: z.string(),
+        wineType: z.string().nullable(),
+        baseValues: knownFixEnvMap('baseValues')
       })
       .strict()
   ])

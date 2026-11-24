@@ -1,9 +1,11 @@
 import type { GameSettings, Runner } from 'common/types'
 import {
   RUST_KNOWNFIX_APPLY_PROFILE_REGISTRY,
+  RUST_KNOWNFIX_APPLY_REGISTRY,
   RUST_KNOWNFIX_FETCH_REMOTE,
   RUST_KNOWNFIX_LAUNCH_OVERRIDES,
-  RUST_KNOWNFIX_PROFILE_OVERLAY_ENV
+  RUST_KNOWNFIX_PROFILE_OVERLAY_ENV,
+  RUST_KNOWNFIX_RESOLVE_OVERLAY_ENV
 } from 'common/types/sidecarTransport'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 
@@ -87,5 +89,47 @@ export async function knownFixProfileOverlayEnv(
 ): Promise<unknown> {
   return deps.requestRustInvoke(RUST_KNOWNFIX_PROFILE_OVERLAY_ENV, [
     { appName, runner, gameSettings, tier1Env, processEnvBase }
+  ])
+}
+
+/**
+ * The Steam bridge's registry step: the Steam tier-2 profile's `registry` then `dllOverrides` applied into the
+ * bridge's bottle (88-14). Rust reads the profile itself, so only the app id, the log `label` (`Steam <appId>`),
+ * the bridge settings and the bottle folder cross; `bottleDir` is `null` when the folder is unknown (the values
+ * already in the bottle's registry files are then not skipped). Each `reg add` is a helper in Rust, the prefix
+ * check skipped. Resolves `null` whatever a command did (a failed `reg add` is a warning in the Rust log).
+ * Rejects with Rust's category word when the call could not be made (an argument the crate refused, the shell not
+ * ready). The channel is unbounded on the sidecar side: several 15 s commands can pass the 60 s cap.
+ */
+export async function applyRegistryFixes(
+  deps: RustInvokeDeps,
+  appId: string,
+  label: string,
+  gameSettings: GameSettings,
+  bottleDir: string | null
+): Promise<unknown> {
+  return deps.requestRustInvoke(RUST_KNOWNFIX_APPLY_REGISTRY, [
+    { appId, label, gameSettings, bottleDir }
+  ])
+}
+
+/**
+ * The Steam bridge's overlay env: the Steam tier-2 profile's `overlays` resolved against `baseValues`, an overlay
+ * installed on demand in Rust (88-14). `baseValues` holds only `KNOWN_FIX_OVERLAY_BASE_ENV_KEYS` that have a value,
+ * each read as the bridge's merged env first and the sidecar's own env second, so Rust computes the game
+ * environment from the same values the TS callback read; `wineType` is `null` when the bridge settings carry none.
+ * Resolves the env map `{KEY: value}` as `unknown`, because the transport is untyped. Rejects with Rust's category
+ * word when the call could not be made. The channel is unbounded on the sidecar side: the overlay download can take
+ * 120 s.
+ */
+export async function resolveKnownFixOverlayEnv(
+  deps: RustInvokeDeps,
+  appId: string,
+  label: string,
+  wineType: string | null,
+  baseValues: Record<string, string>
+): Promise<unknown> {
+  return deps.requestRustInvoke(RUST_KNOWNFIX_RESOLVE_OVERLAY_ENV, [
+    { appId, label, wineType, baseValues }
   ])
 }

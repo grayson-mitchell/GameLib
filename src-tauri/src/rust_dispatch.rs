@@ -318,5 +318,11 @@ pub(crate) fn dispatch_rust_channel(
         RustInvokeChannel::KnownfixProfileOverlayEnv => {
             knownfix_dispatch::rpc_knownfix_profile_overlay_env(args)
         }
+        RustInvokeChannel::KnownfixApplyRegistry => {
+            knownfix_dispatch::rpc_knownfix_apply_registry(args)
+        }
+        RustInvokeChannel::KnownfixResolveOverlayEnv => {
+            knownfix_dispatch::rpc_knownfix_resolve_overlay_env(args)
+        }
     }
 }

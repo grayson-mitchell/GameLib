@@ -75,6 +75,8 @@ import {
   RUST_ENGINE_FALLBACK_ENSURE,
   RUST_KNOWNFIX_APPLY_PROFILE_REGISTRY,
   RUST_KNOWNFIX_PROFILE_OVERLAY_ENV,
+  RUST_KNOWNFIX_APPLY_REGISTRY,
+  RUST_KNOWNFIX_RESOLVE_OVERLAY_ENV,
   RUST_WINE_WINETRICKS_APPLY,
   RUST_WINE_WINETRICKS_AVAILABLE,
   RUST_WINE_WINETRICKS_INSTALL,
@@ -232,6 +234,11 @@ const RUST_INVOKE_TIMEOUT_MS = 60_000
  * installs a known-fix overlay on demand, a download with its own 120 s limit. The TS they replace had no cap of its
  * own beyond those limits, and a 60 s cut-off here would fail a launch that Rust is still carrying on. Each is ended by
  * its own limits and the app shutdown, so no entry can outlive the sidecar.
+ *
+ * Nineteenth (Phase 88, 88-14): `knownfix_apply_registry` is the Steam bridge's registry step, the same chain of 15 s
+ * `reg add` helpers as the launcher's, and `knownfix_resolve_overlay_env` is the bridge's overlay install, the same
+ * 120 s download. The TS they replace had no cap of its own beyond those limits either, and a 60 s cut-off would drop
+ * a fix Rust is still applying. Each is ended by its own limits and the app shutdown.
  */
 const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_DIALOG_OPEN,
@@ -275,6 +282,8 @@ const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_ENGINE_FALLBACK_ENSURE,
   RUST_KNOWNFIX_APPLY_PROFILE_REGISTRY,
   RUST_KNOWNFIX_PROFILE_OVERLAY_ENV,
+  RUST_KNOWNFIX_APPLY_REGISTRY,
+  RUST_KNOWNFIX_RESOLVE_OVERLAY_ENV,
   RUST_WINE_WINETRICKS_APPLY,
   RUST_WINE_WINETRICKS_AVAILABLE,
   RUST_WINE_WINETRICKS_INSTALL,

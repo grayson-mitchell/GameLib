@@ -267,6 +267,11 @@ describe('sidecarRpc UNBOUNDED_RUST_CHANNELS covers every human-gated dialog cha
     // cap. Ended by their own limits or the shutdown. Not dialog channels.
     'RUST_KNOWNFIX_APPLY_PROFILE_REGISTRY',
     'RUST_KNOWNFIX_PROFILE_OVERLAY_ENV',
+    // Phase 88 plan 14: the Steam bridge's counterparts, knownfix_apply_registry (the same chain of 15 s `reg add` helpers) and
+    // knownfix_resolve_overlay_env (the same on-demand 120 s overlay download). Ended by their own limits or the shutdown. Not
+    // dialog channels.
+    'RUST_KNOWNFIX_APPLY_REGISTRY',
+    'RUST_KNOWNFIX_RESOLVE_OVERLAY_ENV',
     // Phase 87 plan 35: wine_winetricks_apply and wine_winetricks_available read the catalog, whose first read
     // downloads the winetricks script and lists it; wine_winetricks_install runs one winetricks per verb. None
     // has a limit of its own beyond the shutdown. Not a dialog channel either.
