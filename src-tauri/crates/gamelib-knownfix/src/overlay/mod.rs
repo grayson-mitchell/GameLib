@@ -7,3 +7,4 @@
 //! URL or a path (prohibition 1).
 
 pub mod archive;
+pub mod install;

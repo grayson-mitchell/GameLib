@@ -2,12 +2,15 @@
 //! only this crate needs and the two values the shell resolves for it. The crate reads no environment
 //! variable and no profile path of its own.
 
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use gamelib_engine::ctx::EngineCtx;
 use gamelib_wine::ctx::WineCtx;
 use gamelib_wine::wine_cmd::WineHost;
+use tokio::sync::OnceCell;
 
 /// The deployed known-fix relay (`GAMELIB_FIX_RELAY_URL` of `src/backend/knownFixReport.ts`). The shell
 /// hands this to [`KnownFixCtx`] unless `GAMELIB_FIX_RELAY_URL` is set, so the crate itself reads no
@@ -41,6 +44,74 @@ impl KnownFixPaths {
     }
 }
 
+/// How long an overlay download may take, connect and body together (`OVERLAY_DOWNLOAD_TIMEOUT_MS`).
+pub const OVERLAY_DOWNLOAD_TIMEOUT: Duration = Duration::from_millis(120_000);
+
+/// What one in-flight overlay install answers: the verified install directory, or `None` (fail-open).
+type InstallCell = Arc<OnceCell<Option<PathBuf>>>;
+
+/// The overlay installs in flight, by install directory (88-10, `createKnownFixOverlayInstalls`): concurrent
+/// callers for one overlay join one download. One table per context, so a second context (a second
+/// boot) has its own, as the TS's per-boot table did. Cloning gives another handle on the same table.
+#[derive(Clone)]
+pub struct OverlayInstalls {
+    in_flight: Arc<Mutex<HashMap<PathBuf, InstallCell>>>,
+    timeout: Duration,
+}
+
+impl Default for OverlayInstalls {
+    fn default() -> OverlayInstalls {
+        OverlayInstalls {
+            in_flight: Arc::default(),
+            timeout: OVERLAY_DOWNLOAD_TIMEOUT,
+        }
+    }
+}
+
+impl OverlayInstalls {
+    /// An empty table with the 120 s download bound.
+    pub fn new() -> OverlayInstalls {
+        OverlayInstalls::default()
+    }
+
+    /// The same, with another download bound (the TS `timeoutMs` dependency, which a test sets).
+    pub fn with_timeout(mut self, timeout: Duration) -> OverlayInstalls {
+        self.timeout = timeout;
+        self
+    }
+
+    /// The download bound.
+    pub fn timeout(&self) -> Duration {
+        self.timeout
+    }
+
+    /// How many installs are in flight right now.
+    pub fn in_flight(&self) -> usize {
+        self.table().len()
+    }
+
+    fn table(&self) -> std::sync::MutexGuard<'_, HashMap<PathBuf, InstallCell>> {
+        self.in_flight.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
+    /// The cell the install of `target` runs in: a caller that finds one already there joins it.
+    pub(crate) fn cell_for(&self, target: &Path) -> InstallCell {
+        self.table()
+            .entry(target.to_path_buf())
+            .or_default()
+            .clone()
+    }
+
+    /// Forgets `cell` once its install has answered (the TS `.finally(() => inFlight.delete(target))`),
+    /// unless a later install of the same target already replaced it.
+    pub(crate) fn forget(&self, target: &Path, cell: &InstallCell) {
+        let mut table = self.table();
+        if table.get(target).is_some_and(|c| Arc::ptr_eq(c, cell)) {
+            table.remove(target);
+        }
+    }
+}
+
 /// The shell (or the CLI) builds one `KnownFixCtx` and every op takes `&KnownFixCtx`. Cloning gives
 /// another handle on the same engine context.
 #[derive(Clone)]
@@ -58,6 +129,8 @@ pub struct KnownFixCtx {
     /// The process facts the wine command core reads and this crate may not (the process environment, the
     /// Darwin release), as the shell took them. Empty until [`KnownFixCtx::with_wine`].
     pub wine_host: WineHost,
+    /// The overlay installs in flight (88-10, D-21): one download per overlay however many launches ask.
+    pub overlay_installs: OverlayInstalls,
 }
 
 impl KnownFixCtx {
@@ -90,6 +163,7 @@ impl KnownFixCtx {
             app_version: app_version.into(),
             wine: None,
             wine_host: WineHost::default(),
+            overlay_installs: OverlayInstalls::new(),
         }
     }
 
