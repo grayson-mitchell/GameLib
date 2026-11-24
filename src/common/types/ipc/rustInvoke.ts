@@ -72,7 +72,12 @@ import {
   RUST_INFO_UMU_GET,
   RUST_INFO_WIKI_CACHE_CLEAR,
   RUST_INFO_WIKI_GET,
+  RUST_SHORTCUTS_ADD,
   RUST_SHORTCUTS_EXIST,
+  RUST_SHORTCUTS_REMOVE,
+  RUST_SHORTCUTS_STEAM_ADD,
+  RUST_SHORTCUTS_STEAM_IS_ADDED,
+  RUST_SHORTCUTS_STEAM_REMOVE,
   RUST_STEAMCM_ANON_CLOSE,
   RUST_STEAMCM_ANON_PRODUCT_INFO,
   RUST_STEAMCM_CONFIGURE,
@@ -351,6 +356,43 @@ const wineRelease = z.unknown().meta({ title: 'release', 'x-rust-value': true })
 const wineInstallation = z
   .unknown()
   .meta({ title: 'wine', 'x-rust-value': true })
+
+/**
+ * Phase 94 (94-22): the game a shortcut op is told about, as `gamelib-shortcuts` `ShortcutGame` reads it. The title
+ * names the files; the app name and runner are what a shortcut launches. Optional fields are absent when the
+ * library holds no value.
+ */
+const shortcutGame = z
+  .object({
+    appName: z.string(),
+    runner: z.enum(['gog', 'legendary', 'nile', 'sideload', 'steam']),
+    title: z.string(),
+    isDlc: z.boolean(),
+    artSquare: z.string().optional(),
+    artCover: z.string().optional(),
+    artLogo: z.string().optional(),
+    installPath: z.string().optional(),
+    executable: z.string().optional(),
+    canAddSteamShortcut: z.boolean(),
+    gogExecutable: z.string().optional(),
+    gogProductIcon: z.string().optional()
+  })
+  .strict()
+
+/** Phase 94 (94-22): the slice of the global settings a shortcut op reads (`ShortcutSettings`). */
+const shortcutSettings = z
+  .object({
+    addDesktopShortcuts: z.boolean(),
+    addStartMenuShortcuts: z.boolean(),
+    addSteamShortcuts: z.boolean(),
+    defaultSteamPath: z.string().optional()
+  })
+  .strict()
+
+/** Phase 94 (94-22): the one argument of the three Steam shortcut ops. */
+const shortcutSteamArgs = z
+  .object({ game: shortcutGame, settings: shortcutSettings })
+  .strict()
 
 export const rustInvokeArgs = {
   // ---- Keychain
@@ -885,6 +927,26 @@ export const rustInvokeArgs = {
       })
       .strict()
   ]),
+  // Phase 94 (SVC-05, 94-22): the shortcut write ops. `game` and `settings` are the inputs a TS resolver gathers
+  // (`humbleshortcuts/shortcuts.ts`); the crate re-validates them (deny_unknown_fields, the runner table, a
+  // non-empty app name and, but for the is-added check, a non-empty title). Optional strings are absent when the
+  // library has no value. `notify` is required: it says who shows the result, never a default.
+  [RUST_SHORTCUTS_ADD]: z.tuple([
+    z
+      .object({
+        game: shortcutGame,
+        settings: shortcutSettings,
+        fromMenu: z.boolean().optional(),
+        notify: z.boolean()
+      })
+      .strict()
+  ]),
+  [RUST_SHORTCUTS_REMOVE]: z.tuple([
+    z.object({ game: shortcutGame, notify: z.boolean() }).strict()
+  ]),
+  [RUST_SHORTCUTS_STEAM_ADD]: z.tuple([shortcutSteamArgs]),
+  [RUST_SHORTCUTS_STEAM_REMOVE]: z.tuple([shortcutSteamArgs]),
+  [RUST_SHORTCUTS_STEAM_IS_ADDED]: z.tuple([shortcutSteamArgs]),
   [RUST_STEAM_API_PIN_RESOLVE]: empty,
   // Phase 87 (SVC-02, 87-18): the wine runtime ops. One positional string, one of the three runtime
   // names; the shell decodes the same set again (T-87-65) and the crate validates the name a third time.

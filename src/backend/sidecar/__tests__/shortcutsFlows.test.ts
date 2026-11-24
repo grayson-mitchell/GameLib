@@ -123,14 +123,7 @@ jest.mock('backend/shortcuts/utils', () => ({
 import { createTestAbortRegistry } from 'backend/testUtils/testAbortRegistry'
 import { defined } from 'backend/testUtils/indexed'
 import { readTauriShellProductionSource } from 'backend/testUtils/tauriShellSource'
-import {
-  existsSync,
-  readFileSync,
-  mkdirSync,
-  rmSync,
-  statSync,
-  symlinkSync
-} from 'fs'
+import { existsSync, mkdirSync, rmSync, symlinkSync } from 'fs'
 import { homedir, tmpdir } from 'os'
 import { dirname, join } from 'path'
 import { dirSync, type DirResult } from 'tmp'
@@ -150,16 +143,12 @@ import {
   createTestStores
 } from 'backend/testUtils/testServices'
 const sendFrontendMessage = jest.fn()
-import { logWarning, logError } from 'backend/logger'
+import { logWarning } from 'backend/logger'
 import { getIcon } from 'backend/shortcuts/utils'
 import { notify } from 'backend/dialog/dialog'
 import { execFileSync } from 'node:child_process'
-import {
-  addShortcuts as realAddShortcuts,
-  shortcutFiles
-} from 'backend/shortcuts/shortcuts/shortcuts'
+import { shortcutFiles } from 'backend/shortcuts/shortcuts/shortcuts'
 import type { GameInfo, AppSettings } from 'common/types'
-import type { Game } from 'common/types/game_manager'
 
 function overrideProcessPlatform(os: string): string {
   const original = process.platform
@@ -185,28 +174,6 @@ function makeGameInfo(overrides: Partial<GameInfo> = {}): GameInfo {
     title: 'Shortcuts Test Game',
     canRunOffline: true,
     ...overrides
-  }
-}
-
-/** A minimal `Game`-shaped fake whose `addShortcuts` calls the REAL exported `addShortcuts`
- * (`shortcuts.ts`), so `getGame(appName, runner).addShortcuts(fromMenu)` inside the registration
- * module reaches the real darwin `.app`/`run.sh` write path, not a re-implementation. */
-function makeFakeGame(gameInfo: GameInfo) {
-  const fakeGame = { getGameInfo: () => gameInfo } as unknown as Game
-  return {
-    getGameInfo: () => gameInfo,
-    addShortcuts: (fromMenu?: boolean) =>
-      realAddShortcuts(
-        {
-          libraryManagers: { gog: {} },
-          config: { getSettings: () => mockGlobalConfigGet().getSettings() },
-          paths: createContainedHomeAppPaths(),
-          imageTools: sipsImageTools
-        } as unknown as Parameters<typeof realAddShortcuts>[0],
-        fakeGame,
-        fromMenu
-      ),
-    removeShortcuts: jest.fn()
   }
 }
 
@@ -246,7 +213,6 @@ function programShortcutsRust() {
 const mockHandleExit = jest.fn()
 const mockSendFrontendMessage = sendFrontendMessage
 const mockLogWarning = logWarning as jest.Mock
-const mockLogError = logError as jest.Mock
 // The config slice reads through this (`the global config` is no longer in the module graph).
 const mockGlobalConfigGet = jest.fn()
 const pathDeps = { paths: createContainedHomeAppPaths() }
@@ -269,7 +235,6 @@ const mockNotify = notify as jest.Mock
 // FIXTURE_ICON_PATH's contents; it is gated too, so on a non-darwin host the path is computed but
 // never read.
 const HOST_IS_DARWIN = process.platform === 'darwin'
-const describeOnDarwin = HOST_IS_DARWIN ? describe : describe.skip
 
 const FIXTURE_ICON_PATH = join(
   tmpdir(),
@@ -360,9 +325,8 @@ afterAll(() => {
 // cluster at 7 (4 handle, 3 send). Quick 261012-ca6 then moved `addShortcut` and `removeShortcut`
 // from send to invoke so the renderer can learn the outcome: 6 handle, 1 send (`processShortcut`).
 // Phase 94 Plan 11 moved `shortcutsExists` to the scheduled resolver `resolveShortcutsExists`: 5 handle, 1 send.
-describe('registration kind — the 6 channels are registered with the correct kind, both directions', () => {
+describe('registration kind — the 5 channels are registered with the correct kind, both directions', () => {
   const HANDLE_CHANNELS = [
-    'addShortcut',
     'removeShortcut',
     'addToSteam',
     'removeFromSteam',
@@ -370,8 +334,8 @@ describe('registration kind — the 6 channels are registered with the correct k
   ]
   const SEND_CHANNELS = ['processShortcut']
 
-  it('the cluster is complete at 6: 5 handle + 1 send', () => {
-    expect(HANDLE_CHANNELS).toHaveLength(5)
+  it('the cluster is complete at 5: 4 handle + 1 send (Phase 94 plan 22: addShortcut is a scheduled resolver)', () => {
+    expect(HANDLE_CHANNELS).toHaveLength(4)
     expect(SEND_CHANNELS).toHaveLength(1)
   })
 
@@ -494,63 +458,6 @@ describe('261012-ca6 add/remove resolve whether shortcuts exist once the work ha
     }
   }
 
-  it('261012-ca6 addShortcut: addShortcuts rejects and nothing is on disk -> resolves false, logs, shows the error toast', async () => {
-    const title = '261012-ca6 Add Rejects Game'
-    containedApp(title)
-    mockGetGame.mockReturnValue(
-      outcomeGame(title, {
-        add: () => Promise.reject(new Error('boom-addShortcuts'))
-      })
-    )
-
-    const handler = handlerRegistry.get('addShortcut')
-    expect(handler).toBeDefined()
-    await expect(handler?.(null, 'app', 'legendary', true)).resolves.toBe(false)
-
-    expect(
-      mockLogWarning.mock.calls.some((call) =>
-        JSON.stringify(call).includes('addShortcut')
-      )
-    ).toBe(true)
-    expect(mockNotify).toHaveBeenCalledTimes(1)
-    expect(mockNotify.mock.calls[0][0].body).toBe('box.shortcuts.error')
-  })
-
-  it('261012-ca6 addShortcut: addShortcuts creates the .app -> resolves true and shows the success toast', async () => {
-    const title = '261012-ca6 Add Succeeds Game'
-    const app = containedApp(title)
-    mockGetGame.mockReturnValue(
-      outcomeGame(title, {
-        add: () => {
-          mkdirSync(app, { recursive: true })
-          return Promise.resolve()
-        }
-      })
-    )
-
-    await expect(
-      handlerRegistry.get('addShortcut')?.(null, 'app', 'legendary', true)
-    ).resolves.toBe(true)
-
-    expect(mockNotify).toHaveBeenCalledTimes(1)
-    expect(['box.shortcuts.message', 'box.shortcuts.message-mac']).toContain(
-      mockNotify.mock.calls[0][0].body
-    )
-  })
-
-  it('261012-ca6 addShortcut: addShortcuts resolves but writes nothing -> resolves false and shows the error toast, not the success one', async () => {
-    const title = '261012-ca6 Add Writes Nothing Game'
-    containedApp(title)
-    mockGetGame.mockReturnValue(outcomeGame(title, {}))
-
-    await expect(
-      handlerRegistry.get('addShortcut')?.(null, 'app', 'legendary', true)
-    ).resolves.toBe(false)
-
-    expect(mockNotify).toHaveBeenCalledTimes(1)
-    expect(mockNotify.mock.calls[0][0].body).toBe('box.shortcuts.error')
-  })
-
   it('261012-ca6 removeShortcut: removeShortcuts deletes the .app -> resolves false', async () => {
     const title = '261012-ca6 Remove Succeeds Game'
     const app = containedApp(title)
@@ -623,7 +530,6 @@ describe('261012-ca6 add/remove resolve whether shortcuts exist once the work ha
 describe('261027-c4g mac toast names the Desktop', () => {
   let originalPlatform: string
   const created: string[] = []
-  const DESKTOP_ADD = 'gamelib:box.shortcuts.messageMacDesktop'
   const DESKTOP_REMOVE = 'gamelib:box.shortcuts.messageRemoveMacDesktop'
 
   beforeEach(() => {
@@ -671,24 +577,6 @@ describe('261027-c4g mac toast names the Desktop', () => {
     }
   }
 
-  async function runAdd(title: string, toggle: boolean) {
-    const { menu } = contained(title)
-    setDesktopSetting(toggle)
-    mockGetGame.mockReturnValue(
-      fakeGame(title, {
-        add: () => {
-          mkdirSync(menu, { recursive: true })
-          return Promise.resolve()
-        }
-      })
-    )
-    await expect(
-      handlerRegistry.get('addShortcut')?.(null, 'app', 'legendary', true)
-    ).resolves.toBe(true)
-    expect(mockNotify).toHaveBeenCalledTimes(1)
-    return mockNotify.mock.calls[0][0].body
-  }
-
   async function runRemove(
     title: string,
     toggle: boolean,
@@ -717,16 +605,6 @@ describe('261027-c4g mac toast names the Desktop', () => {
     return mockNotify.mock.calls[0][0].body
   }
 
-  it('add, Desktop setting on -> the Applications-and-Desktop key', async () => {
-    expect(await runAdd('261027-c4g Add On', true)).toBe(DESKTOP_ADD)
-  })
-
-  it('add, Desktop setting off -> the unchanged message-mac key', async () => {
-    expect(await runAdd('261027-c4g Add Off', false)).toBe(
-      'box.shortcuts.message-mac'
-    )
-  })
-
   it('remove, Desktop link on disk and setting now OFF -> the Desktop key (disk decides)', async () => {
     expect(await runRemove('261027-c4g Remove Link Off', false, true)).toBe(
       DESKTOP_REMOVE
@@ -739,12 +617,8 @@ describe('261027-c4g mac toast names the Desktop', () => {
     )
   })
 
-  it('not macOS -> the generic keys whatever the setting', async () => {
+  it('not macOS -> the generic remove key whatever the setting', async () => {
     mockEnv.isMac = false
-    expect(await runAdd('261027-c4g Generic Add', true)).toBe(
-      'box.shortcuts.message'
-    )
-    mockNotify.mockClear()
     expect(await runRemove('261027-c4g Generic Remove', true, true)).toBe(
       'box.shortcuts.message-remove'
     )
@@ -799,183 +673,13 @@ describe('processShortcut — six-case switch behaviour', () => {
   })
 })
 
-// ── Describe 5: addShortcut's darwin GAMELIB_SHELL_EXE pin ─────────────────────────────────────
+// ── Describe 5: addShortcut's darwin GAMELIB_SHELL_EXE pin (removed by Phase 94 plan 22) ───────
 //
-// This is the security-relevant test of this plan, and the `addShortcut` counterpart to plan
-// 34.5-11's `addToSteam` pin. The CONTROL case (a) is written and MUST PASS FIRST: `:227` is only
-// reached when `convertPngToICNS` returns true, and that function is module-private, wraps
-// everything in try/catch, and returns false on ANY failure — so if the CONTROL case fails, cases
-// (b)/(c) would pass for the wrong reason (run.sh never written regardless of GAMELIB_SHELL_EXE).
-// A DIFFERENT game title is used per case so each gets its own `.app` folder — reusing one folder
-// across cases would let an earlier case's run.sh/plist leak into a later case's assertions.
-//
-// Gated on describeOnDarwin (quick-260921-o95): this describe drives the REAL darwin `.app`/
-// `run.sh`/`.icns` write path through the real sips-backed shim (via FIXTURE_ICON_PATH above).
-// `generateMacOsApp` (`shortcuts.ts:181`) is darwin-only production code, so the surface it pins
-// does not exist on Linux. The other six describes in this file are deliberately left ungated —
-// they do not reach sips and their coverage is platform-independent.
-describeOnDarwin(
-  "addShortcut's darwin GAMELIB_SHELL_EXE pin (T-34.5-65/66, D-10 rejects process.execPath)",
-  () => {
-    let originalPlatform: string
-    let savedShellExe: string | undefined
-
-    beforeEach(() => {
-      originalPlatform = overrideProcessPlatform('darwin')
-      savedShellExe = process.env.GAMELIB_SHELL_EXE
-      mockGetGame.mockImplementation((appName: string) =>
-        // fromMenu is NOT passed by the caller in these cases — addStartMenuShortcuts: true
-        // (this file's shared beforeEach) is the darwin gate that reaches generateMacOsApp instead.
-        makeFakeGame(makeGameInfo({ title: appName }))
-      )
-    })
-
-    afterEach(() => {
-      overrideProcessPlatform(originalPlatform)
-      if (savedShellExe === undefined) {
-        delete process.env.GAMELIB_SHELL_EXE
-      } else {
-        process.env.GAMELIB_SHELL_EXE = savedShellExe
-      }
-    })
-
-    it('CONTROL (must run and pass first): a plausible absolute GAMELIB_SHELL_EXE containing a space produces a run.sh with that exact value, never process.execPath', async () => {
-      process.env.GAMELIB_SHELL_EXE =
-        '/Applications/GameLib Test.app/Contents/MacOS/GameLib'
-      const title = 'Exe Pin Control Game'
-
-      await handlerRegistry.get('addShortcut')?.(
-        null,
-        title,
-        'legendary',
-        undefined
-      )
-
-      const menuFile = defined(shortcutFiles(pathDeps, title)[1], 'menu file')
-      const runShPath = `${menuFile}/Contents/MacOS/run.sh`
-      const icnsPath = `${menuFile}/Contents/Resources/shortcut.icns`
-
-      // F-34.5-G6-07: with the real nativeImage shim + real IconIcns, convertPngToICNS's
-      // downstream artifact (shortcut.icns) exists alongside run.sh -- both files, not one.
-      expect(existsSync(icnsPath)).toBe(true)
-      expect(statSync(icnsPath).size).toBeGreaterThan(0)
-
-      expect(existsSync(runShPath)).toBe(true)
-      const contents = readFileSync(runShPath, 'utf-8')
-      // T-34.5-C6-17 (plan 34.5-45): exe path double-quoted, gamelib:// URL single-quoted.
-      expect(contents).toContain(
-        '"/Applications/GameLib Test.app/Contents/MacOS/GameLib" --no-gui \'gamelib://launch?appName='
-      )
-      expect(contents).not.toContain(process.execPath)
-
-      // F-34.5-G6-07: convertPngToICNS succeeded for real -- no swallowed-throw failure line.
-      const sawFailure = mockLogError.mock.calls.some((call) =>
-        JSON.stringify(call).includes('Error generating MacOS App')
-      )
-      expect(sawFailure).toBe(false)
-    })
-
-    // Injection proof (T-34.5-C6-17, F-34.5-G6-07 follow-on) — plan 34.5-45's Task 1 makes
-    // generateMacOsApp reachable for the first time, which makes the injection this template opens
-    // reachable too. Proven RED first: with the encodeURIComponent calls temporarily reverted
-    // (`shortcuts.ts`'s `gamelibUrl` built from the raw, un-encoded `app_name`/`runner`), this exact
-    // test FAILED -- see 34.5-45-SUMMARY.md for the verbatim failure output. Restored, it passes.
-    it('a malicious app_name cannot inject a shell command into run.sh (RED-proven, see SUMMARY for the failing-run transcript)', async () => {
-      process.env.GAMELIB_SHELL_EXE =
-        '/Applications/GameLib.app/Contents/MacOS/GameLib'
-      const maliciousAppName = 'x&runner=gog;touch /tmp/gamelib-pwned'
-      const title = 'Injection Pin Game'
-
-      mockGetGame.mockImplementation(() =>
-        makeFakeGame(
-          makeGameInfo({
-            title,
-            app_name: maliciousAppName,
-            runner: 'legendary'
-          })
-        )
-      )
-
-      await handlerRegistry.get('addShortcut')?.(
-        null,
-        title,
-        'legendary',
-        undefined
-      )
-
-      const menuFile = defined(shortcutFiles(pathDeps, title)[1], 'menu file')
-      const runShPath = `${menuFile}/Contents/MacOS/run.sh`
-      expect(existsSync(runShPath)).toBe(true)
-      const contents = readFileSync(runShPath, 'utf-8')
-
-      const urlMatch = /'(gamelib:\/\/[^']*)'/.exec(contents)
-      expect(urlMatch).not.toBeNull()
-      const parsedAppName = new URL(
-        defined(urlMatch?.[1], 'gamelib url capture')
-      ).searchParams.get('appName')
-      expect(parsedAppName).toBe(maliciousAppName)
-
-      // No bare `;` or `&` outside the single-quoted URL region -- strip that region and assert
-      // what remains (the launch command's exe/flag portion) contains neither. Once percent-encoded,
-      // the malicious payload lives entirely inside the single-quoted URL, so a passing assertion
-      // here means nothing of it escaped into unquoted shell syntax.
-      const withoutUrl = contents.replace(/'gamelib:\/\/[^']*'/, "''")
-      expect(withoutUrl).not.toContain(';')
-      expect(withoutUrl).not.toContain('&')
-    })
-
-    it('UNSET: deleting GAMELIB_SHELL_EXE writes no run.sh, does not reject the listener, and logs the failure', async () => {
-      delete process.env.GAMELIB_SHELL_EXE
-      const title = 'Exe Pin Unset Game'
-      const menuFile = defined(shortcutFiles(pathDeps, title)[1], 'menu file')
-      const runShPath = `${menuFile}/Contents/MacOS/run.sh`
-
-      await handlerRegistry.get('addShortcut')?.(
-        null,
-        title,
-        'legendary',
-        undefined
-      )
-
-      // PLAN-TIME CORRECTION: `generateMacOsApp` creates the `.app`/Resources/MacOS folders and
-      // writes `Info.plist` BEFORE the `getPath('exe')` throw (the throw happens while building
-      // `launchCommand`, the line immediately before the run.sh write) — so the directory is NOT
-      // byte-for-byte unchanged; the plist/icon scaffold IS written regardless. The
-      // security-relevant guarantee this plan's threat model actually needs (T-34.5-65) is
-      // specifically that `run.sh` — the file whose contents would embed an empty/absent launch
-      // command — is never written, which is what this assertion pins.
-      expect(existsSync(runShPath)).toBe(false)
-      const found = mockLogWarning.mock.calls.some(
-        (call) =>
-          JSON.stringify(call).includes('addShortcut') &&
-          JSON.stringify(call).includes('GAMELIB_SHELL_EXE was not set')
-      )
-      expect(found).toBe(true)
-    })
-
-    it('EMPTY: an empty-string GAMELIB_SHELL_EXE behaves identically to unset — no run.sh, no reject, logged failure', async () => {
-      process.env.GAMELIB_SHELL_EXE = ''
-      const title = 'Exe Pin Empty Game'
-      const menuFile = defined(shortcutFiles(pathDeps, title)[1], 'menu file')
-      const runShPath = `${menuFile}/Contents/MacOS/run.sh`
-
-      await handlerRegistry.get('addShortcut')?.(
-        null,
-        title,
-        'legendary',
-        undefined
-      )
-
-      expect(existsSync(runShPath)).toBe(false)
-      const found = mockLogWarning.mock.calls.some(
-        (call) =>
-          JSON.stringify(call).includes('addShortcut') &&
-          JSON.stringify(call).includes('GAMELIB_SHELL_EXE was not set')
-      )
-      expect(found).toBe(true)
-    })
-  }
-)
+// `addShortcut` is the scheduled resolver `resolveAddShortcut`, answered by Rust. The property this described (a
+// macOS bundle is written with the exact shell executable, quoted, never `process.execPath`, an `app_name` cannot
+// inject into `run.sh`, and no bundle is written when the executable is unknown) is carried by the
+// `gamelib-shortcuts` goldens and named tests: `golden_add.rs`
+// (`a_macos_bundle_is_not_written_when_the_executable_it_would_launch_is_unknown` and the `run.sh` replays).
 
 // ── Describe 6: addToSteam's GAMELIB_SHELL_EXE pin (plan 34.5-11) ─────────────────────────────
 //

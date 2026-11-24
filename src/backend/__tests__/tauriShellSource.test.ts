@@ -508,7 +508,8 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     // Phase 87 plan 56a: 185 -> 188, engine_resolve_tool_settings, engine_non_crossover_engine and engine_fallback_ensure.
     // Phase 87 plan 70: 188 -> 189, engine_bottle_remove_per_game.
     // Phase 94 plan 11: 189 -> 190, shortcuts_exist.
-    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(190)
+    // Phase 94 plan 22: 190 -> 195, shortcuts_add, shortcuts_remove and the three shortcuts_steam_* ops.
+    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(195)
     expect(router).not.toContain('_ =>')
   })
 
@@ -1040,7 +1041,15 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       'engine_bottle_remove_per_game',
       // Phase 94 plan 11: the shortcut exists check (`shortcutsResolvers.ts` resolver). PROVEN: `shortcuts_dispatch::tests`
       // drives the arm's decode, not-ready and a real exists answer on a FakeHome; `golden_paths.rs` replays the TS goldens.
-      'shortcuts_exist'
+      'shortcuts_exist',
+      // Phase 94 plan 22: the shortcut writes (`humbleshortcuts/shortcuts.ts` resolvers). PROVEN: `shortcuts_dispatch::tests` drives each
+      // arm's decode and not-ready, and the real add, remove and Steam round trips on a FakeHome; `golden_add.rs`, `golden_remove.rs`
+      // and `golden_steam.rs` replay the TS goldens.
+      'shortcuts_add',
+      'shortcuts_remove',
+      'shortcuts_steam_add',
+      'shortcuts_steam_remove',
+      'shortcuts_steam_is_added'
     ]
     const newArms = armNames.filter(
       (name) => name && !preExistingArms.includes(name)

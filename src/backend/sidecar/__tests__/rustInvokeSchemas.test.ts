@@ -12,7 +12,12 @@ import {
   RUST_INFO_WIKI_CACHE_CLEAR,
   RUST_INFO_WIKI_GET,
   RUST_INVOKE_CHANNELS,
-  RUST_SHORTCUTS_EXIST
+  RUST_SHORTCUTS_ADD,
+  RUST_SHORTCUTS_EXIST,
+  RUST_SHORTCUTS_REMOVE,
+  RUST_SHORTCUTS_STEAM_ADD,
+  RUST_SHORTCUTS_STEAM_IS_ADDED,
+  RUST_SHORTCUTS_STEAM_REMOVE
 } from 'common/types/sidecarTransport'
 
 const fixture = (name: string): Record<string, unknown> =>
@@ -55,7 +60,8 @@ describe('rustInvokeArgs', () => {
     // Phase 87 plan 56a: 185 -> 188, engine_resolve_tool_settings, engine_non_crossover_engine and engine_fallback_ensure.
     // Phase 87 plan 70: 188 -> 189, engine_bottle_remove_per_game.
     // Phase 94 plan 11: 189 -> 190, shortcuts_exist.
-    expect(RUST_INVOKE_CHANNELS).toHaveLength(190)
+    // Phase 94 plan 22: 190 -> 195, shortcuts_add, shortcuts_remove and the three shortcuts_steam_* ops.
+    expect(RUST_INVOKE_CHANNELS).toHaveLength(195)
   })
 
   it('parses the store-embed wire fixtures', () => {
@@ -114,6 +120,76 @@ describe('rustInvokeArgs', () => {
       [game, game]
     ]) {
       expect(exist.safeParse(bad).success).toBe(false)
+    }
+  })
+
+  it('accepts the shortcut write args and rejects drift (Phase 94 plan 22)', () => {
+    const game = {
+      appName: 'g1',
+      runner: 'gog',
+      title: 'Game One',
+      isDlc: false,
+      canAddSteamShortcut: true
+    }
+    const settings = {
+      addDesktopShortcuts: true,
+      addStartMenuShortcuts: false,
+      addSteamShortcuts: false
+    }
+    const full = {
+      ...game,
+      artSquare: 'a',
+      artCover: 'c',
+      artLogo: 'l',
+      installPath: '/i',
+      executable: 'e',
+      gogExecutable: 'g',
+      gogProductIcon: '//x'
+    }
+    const add = rustInvokeArgs[RUST_SHORTCUTS_ADD]
+    expect(add.safeParse([{ game, settings, notify: true }]).success).toBe(true)
+    expect(
+      add.safeParse([
+        {
+          game: full,
+          settings: { ...settings, defaultSteamPath: '/s' },
+          fromMenu: false,
+          notify: false
+        }
+      ]).success
+    ).toBe(true)
+    for (const bad of [
+      [],
+      [{ game, settings }],
+      [{ game, notify: true }],
+      [{ game: { ...game, extra: 1 }, settings, notify: true }],
+      [{ game: { ...game, runner: 'epic' }, settings, notify: true }],
+      [{ game: { ...game, isDlc: undefined }, settings, notify: true }],
+      [{ game, settings: { ...settings, extra: 1 }, notify: true }],
+      [{ game, settings, notify: true, fromMenu: null }]
+    ]) {
+      expect(add.safeParse(bad).success).toBe(false)
+    }
+    expect(
+      rustInvokeArgs[RUST_SHORTCUTS_REMOVE].safeParse([{ game, notify: false }])
+        .success
+    ).toBe(true)
+    expect(
+      rustInvokeArgs[RUST_SHORTCUTS_REMOVE].safeParse([
+        { game, settings, notify: false }
+      ]).success
+    ).toBe(false)
+    for (const channel of [
+      RUST_SHORTCUTS_STEAM_ADD,
+      RUST_SHORTCUTS_STEAM_REMOVE,
+      RUST_SHORTCUTS_STEAM_IS_ADDED
+    ]) {
+      const steam = rustInvokeArgs[channel]
+      expect(steam.safeParse([{ game, settings }]).success).toBe(true)
+      expect(steam.safeParse([{ game, settings, notify: true }]).success).toBe(
+        false
+      )
+      expect(steam.safeParse([{ game }]).success).toBe(false)
     }
   })
 

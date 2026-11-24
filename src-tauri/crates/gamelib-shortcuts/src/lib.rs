@@ -119,7 +119,18 @@ async fn route(op: &str, args: &[Value], ctx: &ShortcutsCtx) -> Result<Value, St
             {
                 return Err(format!("{op}:bad-args"));
             }
-            to_value(op, add::shortcuts_add(ctx, args).await)
+            let notify = args.notify;
+            let outcome = add::shortcuts_add(ctx, args).await;
+            // The renderer path (`notify: true`) answers the outcome, whose `existsAfter` it sets its state
+            // from, and has the notice raised for it. A store manager (`notify: false`) has no one to show a
+            // failure to: it rejects with the TS's own `Could not write shortcuts: ...` text, as the TS
+            // `addShortcuts` did, so its caller logs it (94-22).
+            if !notify {
+                if let Some(message) = outcome.message() {
+                    return Err(message);
+                }
+            }
+            to_value(op, outcome)
         }
         "shortcuts_remove" => {
             let args: remove::RemoveArgs = decode(op, args)?;

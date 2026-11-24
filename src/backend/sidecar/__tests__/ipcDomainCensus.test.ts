@@ -81,6 +81,8 @@ const NO_REGISTRATION_OWNER: Record<string, string> = {
   // Phase 94 Plan 11 (86 D-24): `shortcutsExists` is a scheduled resolver (`shortcutsResolvers.ts`), answered by Rust,
   // not a `*FlowRegistration.ts` handle.
   'Async:shortcutsExists': 'shortcuts',
+  // Phase 94 Plan 22 (86 D-24): `addShortcut` is a scheduled resolver (`humbleshortcuts/shortcuts.ts`), answered by Rust.
+  'Async:addShortcut': 'shortcuts',
   'Async:gamepadAction': 'testStubs',
   'Async:get-connectivity-status': 'mainProcess',
   'Async:getSignInProbeOutcomes': 'mainProcess',
@@ -377,7 +379,8 @@ describe('ipc per-domain declarations (D-09/D-10/D-11)', () => {
     // Phase 87 Plan 36 (D-23): +3 Async (runWineCommandForGame, runWineCommand, callTool, now scheduled resolvers); 67 -> 70.
     // Phase 87 Plan 52 (D-23): +1 Async (getEngineState, now a scheduled resolver); 70 -> 71.
     // Phase 94 Plan 11 (86 D-24): +1 Async (shortcutsExists, now a scheduled resolver); 71 -> 72.
-    expect(Object.keys(NO_REGISTRATION_OWNER)).toHaveLength(72)
+    // Phase 94 Plan 22 (86 D-24): +1 Async (addShortcut, now a scheduled resolver); 72 -> 73.
+    expect(Object.keys(NO_REGISTRATION_OWNER)).toHaveLength(73)
   })
 
   it('(d) near-miss: a manifest-owned channel leaves the computed owner-less set', () => {

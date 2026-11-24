@@ -213,6 +213,11 @@ pub(crate) enum RustInvokeChannel {
     EngineNonCrossoverEngine,
     EngineFallbackEnsure,
     ShortcutsExist,
+    ShortcutsAdd,
+    ShortcutsRemove,
+    ShortcutsSteamAdd,
+    ShortcutsSteamRemove,
+    ShortcutsSteamIsAdded,
 }
 
 impl RustInvokeChannel {
@@ -407,6 +412,11 @@ impl RustInvokeChannel {
         RustInvokeChannel::EngineNonCrossoverEngine,
         RustInvokeChannel::EngineFallbackEnsure,
         RustInvokeChannel::ShortcutsExist,
+        RustInvokeChannel::ShortcutsAdd,
+        RustInvokeChannel::ShortcutsRemove,
+        RustInvokeChannel::ShortcutsSteamAdd,
+        RustInvokeChannel::ShortcutsSteamRemove,
+        RustInvokeChannel::ShortcutsSteamIsAdded,
     ];
 
     pub(crate) fn from_name(name: &str) -> Option<Self> {
@@ -601,6 +611,11 @@ impl RustInvokeChannel {
             "engine_non_crossover_engine" => Some(RustInvokeChannel::EngineNonCrossoverEngine),
             "engine_fallback_ensure" => Some(RustInvokeChannel::EngineFallbackEnsure),
             "shortcuts_exist" => Some(RustInvokeChannel::ShortcutsExist),
+            "shortcuts_add" => Some(RustInvokeChannel::ShortcutsAdd),
+            "shortcuts_remove" => Some(RustInvokeChannel::ShortcutsRemove),
+            "shortcuts_steam_add" => Some(RustInvokeChannel::ShortcutsSteamAdd),
+            "shortcuts_steam_remove" => Some(RustInvokeChannel::ShortcutsSteamRemove),
+            "shortcuts_steam_is_added" => Some(RustInvokeChannel::ShortcutsSteamIsAdded),
             _ => None,
         }
     }
@@ -797,6 +812,11 @@ impl RustInvokeChannel {
             RustInvokeChannel::EngineNonCrossoverEngine => "engine_non_crossover_engine",
             RustInvokeChannel::EngineFallbackEnsure => "engine_fallback_ensure",
             RustInvokeChannel::ShortcutsExist => "shortcuts_exist",
+            RustInvokeChannel::ShortcutsAdd => "shortcuts_add",
+            RustInvokeChannel::ShortcutsRemove => "shortcuts_remove",
+            RustInvokeChannel::ShortcutsSteamAdd => "shortcuts_steam_add",
+            RustInvokeChannel::ShortcutsSteamRemove => "shortcuts_steam_remove",
+            RustInvokeChannel::ShortcutsSteamIsAdded => "shortcuts_steam_is_added",
         }
     }
 }
@@ -3985,5 +4005,356 @@ impl ShortcutsExistArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let first = args.first().ok_or_else(|| "shortcuts_exist:bad-args".to_string())?;
         serde_json::from_value(first.clone()).map_err(|_| "shortcuts_exist:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct ShortcutsAddArgs {
+    pub(crate) game: ShortcutsAddArgsGame,
+    pub(crate) settings: ShortcutsAddArgsSettings,
+    #[serde(rename = "fromMenu")]
+    #[serde(default)]
+    pub(crate) from_menu: Option<bool>,
+    pub(crate) notify: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+pub(crate) enum ShortcutsAddArgsGameRunner {
+    #[serde(rename = "gog")]
+    Gog,
+    #[serde(rename = "legendary")]
+    Legendary,
+    #[serde(rename = "nile")]
+    Nile,
+    #[serde(rename = "sideload")]
+    Sideload,
+    #[serde(rename = "steam")]
+    Steam,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct ShortcutsAddArgsGame {
+    #[serde(rename = "appName")]
+    pub(crate) app_name: String,
+    pub(crate) runner: ShortcutsAddArgsGameRunner,
+    pub(crate) title: String,
+    #[serde(rename = "isDlc")]
+    pub(crate) is_dlc: bool,
+    #[serde(rename = "artSquare")]
+    #[serde(default)]
+    pub(crate) art_square: Option<String>,
+    #[serde(rename = "artCover")]
+    #[serde(default)]
+    pub(crate) art_cover: Option<String>,
+    #[serde(rename = "artLogo")]
+    #[serde(default)]
+    pub(crate) art_logo: Option<String>,
+    #[serde(rename = "installPath")]
+    #[serde(default)]
+    pub(crate) install_path: Option<String>,
+    #[serde(default)]
+    pub(crate) executable: Option<String>,
+    #[serde(rename = "canAddSteamShortcut")]
+    pub(crate) can_add_steam_shortcut: bool,
+    #[serde(rename = "gogExecutable")]
+    #[serde(default)]
+    pub(crate) gog_executable: Option<String>,
+    #[serde(rename = "gogProductIcon")]
+    #[serde(default)]
+    pub(crate) gog_product_icon: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct ShortcutsAddArgsSettings {
+    #[serde(rename = "addDesktopShortcuts")]
+    pub(crate) add_desktop_shortcuts: bool,
+    #[serde(rename = "addStartMenuShortcuts")]
+    pub(crate) add_start_menu_shortcuts: bool,
+    #[serde(rename = "addSteamShortcuts")]
+    pub(crate) add_steam_shortcuts: bool,
+    #[serde(rename = "defaultSteamPath")]
+    #[serde(default)]
+    pub(crate) default_steam_path: Option<String>,
+}
+
+impl ShortcutsAddArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "shortcuts_add:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "shortcuts_add:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct ShortcutsRemoveArgs {
+    pub(crate) game: ShortcutsRemoveArgsGame,
+    pub(crate) notify: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+pub(crate) enum ShortcutsRemoveArgsGameRunner {
+    #[serde(rename = "gog")]
+    Gog,
+    #[serde(rename = "legendary")]
+    Legendary,
+    #[serde(rename = "nile")]
+    Nile,
+    #[serde(rename = "sideload")]
+    Sideload,
+    #[serde(rename = "steam")]
+    Steam,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct ShortcutsRemoveArgsGame {
+    #[serde(rename = "appName")]
+    pub(crate) app_name: String,
+    pub(crate) runner: ShortcutsRemoveArgsGameRunner,
+    pub(crate) title: String,
+    #[serde(rename = "isDlc")]
+    pub(crate) is_dlc: bool,
+    #[serde(rename = "artSquare")]
+    #[serde(default)]
+    pub(crate) art_square: Option<String>,
+    #[serde(rename = "artCover")]
+    #[serde(default)]
+    pub(crate) art_cover: Option<String>,
+    #[serde(rename = "artLogo")]
+    #[serde(default)]
+    pub(crate) art_logo: Option<String>,
+    #[serde(rename = "installPath")]
+    #[serde(default)]
+    pub(crate) install_path: Option<String>,
+    #[serde(default)]
+    pub(crate) executable: Option<String>,
+    #[serde(rename = "canAddSteamShortcut")]
+    pub(crate) can_add_steam_shortcut: bool,
+    #[serde(rename = "gogExecutable")]
+    #[serde(default)]
+    pub(crate) gog_executable: Option<String>,
+    #[serde(rename = "gogProductIcon")]
+    #[serde(default)]
+    pub(crate) gog_product_icon: Option<String>,
+}
+
+impl ShortcutsRemoveArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "shortcuts_remove:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "shortcuts_remove:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct ShortcutsSteamAddArgs {
+    pub(crate) game: ShortcutsSteamAddArgsGame,
+    pub(crate) settings: ShortcutsSteamAddArgsSettings,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+pub(crate) enum ShortcutsSteamAddArgsGameRunner {
+    #[serde(rename = "gog")]
+    Gog,
+    #[serde(rename = "legendary")]
+    Legendary,
+    #[serde(rename = "nile")]
+    Nile,
+    #[serde(rename = "sideload")]
+    Sideload,
+    #[serde(rename = "steam")]
+    Steam,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct ShortcutsSteamAddArgsGame {
+    #[serde(rename = "appName")]
+    pub(crate) app_name: String,
+    pub(crate) runner: ShortcutsSteamAddArgsGameRunner,
+    pub(crate) title: String,
+    #[serde(rename = "isDlc")]
+    pub(crate) is_dlc: bool,
+    #[serde(rename = "artSquare")]
+    #[serde(default)]
+    pub(crate) art_square: Option<String>,
+    #[serde(rename = "artCover")]
+    #[serde(default)]
+    pub(crate) art_cover: Option<String>,
+    #[serde(rename = "artLogo")]
+    #[serde(default)]
+    pub(crate) art_logo: Option<String>,
+    #[serde(rename = "installPath")]
+    #[serde(default)]
+    pub(crate) install_path: Option<String>,
+    #[serde(default)]
+    pub(crate) executable: Option<String>,
+    #[serde(rename = "canAddSteamShortcut")]
+    pub(crate) can_add_steam_shortcut: bool,
+    #[serde(rename = "gogExecutable")]
+    #[serde(default)]
+    pub(crate) gog_executable: Option<String>,
+    #[serde(rename = "gogProductIcon")]
+    #[serde(default)]
+    pub(crate) gog_product_icon: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct ShortcutsSteamAddArgsSettings {
+    #[serde(rename = "addDesktopShortcuts")]
+    pub(crate) add_desktop_shortcuts: bool,
+    #[serde(rename = "addStartMenuShortcuts")]
+    pub(crate) add_start_menu_shortcuts: bool,
+    #[serde(rename = "addSteamShortcuts")]
+    pub(crate) add_steam_shortcuts: bool,
+    #[serde(rename = "defaultSteamPath")]
+    #[serde(default)]
+    pub(crate) default_steam_path: Option<String>,
+}
+
+impl ShortcutsSteamAddArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "shortcuts_steam_add:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "shortcuts_steam_add:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct ShortcutsSteamRemoveArgs {
+    pub(crate) game: ShortcutsSteamRemoveArgsGame,
+    pub(crate) settings: ShortcutsSteamRemoveArgsSettings,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+pub(crate) enum ShortcutsSteamRemoveArgsGameRunner {
+    #[serde(rename = "gog")]
+    Gog,
+    #[serde(rename = "legendary")]
+    Legendary,
+    #[serde(rename = "nile")]
+    Nile,
+    #[serde(rename = "sideload")]
+    Sideload,
+    #[serde(rename = "steam")]
+    Steam,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct ShortcutsSteamRemoveArgsGame {
+    #[serde(rename = "appName")]
+    pub(crate) app_name: String,
+    pub(crate) runner: ShortcutsSteamRemoveArgsGameRunner,
+    pub(crate) title: String,
+    #[serde(rename = "isDlc")]
+    pub(crate) is_dlc: bool,
+    #[serde(rename = "artSquare")]
+    #[serde(default)]
+    pub(crate) art_square: Option<String>,
+    #[serde(rename = "artCover")]
+    #[serde(default)]
+    pub(crate) art_cover: Option<String>,
+    #[serde(rename = "artLogo")]
+    #[serde(default)]
+    pub(crate) art_logo: Option<String>,
+    #[serde(rename = "installPath")]
+    #[serde(default)]
+    pub(crate) install_path: Option<String>,
+    #[serde(default)]
+    pub(crate) executable: Option<String>,
+    #[serde(rename = "canAddSteamShortcut")]
+    pub(crate) can_add_steam_shortcut: bool,
+    #[serde(rename = "gogExecutable")]
+    #[serde(default)]
+    pub(crate) gog_executable: Option<String>,
+    #[serde(rename = "gogProductIcon")]
+    #[serde(default)]
+    pub(crate) gog_product_icon: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct ShortcutsSteamRemoveArgsSettings {
+    #[serde(rename = "addDesktopShortcuts")]
+    pub(crate) add_desktop_shortcuts: bool,
+    #[serde(rename = "addStartMenuShortcuts")]
+    pub(crate) add_start_menu_shortcuts: bool,
+    #[serde(rename = "addSteamShortcuts")]
+    pub(crate) add_steam_shortcuts: bool,
+    #[serde(rename = "defaultSteamPath")]
+    #[serde(default)]
+    pub(crate) default_steam_path: Option<String>,
+}
+
+impl ShortcutsSteamRemoveArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "shortcuts_steam_remove:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "shortcuts_steam_remove:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct ShortcutsSteamIsAddedArgs {
+    pub(crate) game: ShortcutsSteamIsAddedArgsGame,
+    pub(crate) settings: ShortcutsSteamIsAddedArgsSettings,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+pub(crate) enum ShortcutsSteamIsAddedArgsGameRunner {
+    #[serde(rename = "gog")]
+    Gog,
+    #[serde(rename = "legendary")]
+    Legendary,
+    #[serde(rename = "nile")]
+    Nile,
+    #[serde(rename = "sideload")]
+    Sideload,
+    #[serde(rename = "steam")]
+    Steam,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct ShortcutsSteamIsAddedArgsGame {
+    #[serde(rename = "appName")]
+    pub(crate) app_name: String,
+    pub(crate) runner: ShortcutsSteamIsAddedArgsGameRunner,
+    pub(crate) title: String,
+    #[serde(rename = "isDlc")]
+    pub(crate) is_dlc: bool,
+    #[serde(rename = "artSquare")]
+    #[serde(default)]
+    pub(crate) art_square: Option<String>,
+    #[serde(rename = "artCover")]
+    #[serde(default)]
+    pub(crate) art_cover: Option<String>,
+    #[serde(rename = "artLogo")]
+    #[serde(default)]
+    pub(crate) art_logo: Option<String>,
+    #[serde(rename = "installPath")]
+    #[serde(default)]
+    pub(crate) install_path: Option<String>,
+    #[serde(default)]
+    pub(crate) executable: Option<String>,
+    #[serde(rename = "canAddSteamShortcut")]
+    pub(crate) can_add_steam_shortcut: bool,
+    #[serde(rename = "gogExecutable")]
+    #[serde(default)]
+    pub(crate) gog_executable: Option<String>,
+    #[serde(rename = "gogProductIcon")]
+    #[serde(default)]
+    pub(crate) gog_product_icon: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct ShortcutsSteamIsAddedArgsSettings {
+    #[serde(rename = "addDesktopShortcuts")]
+    pub(crate) add_desktop_shortcuts: bool,
+    #[serde(rename = "addStartMenuShortcuts")]
+    pub(crate) add_start_menu_shortcuts: bool,
+    #[serde(rename = "addSteamShortcuts")]
+    pub(crate) add_steam_shortcuts: bool,
+    #[serde(rename = "defaultSteamPath")]
+    #[serde(default)]
+    pub(crate) default_steam_path: Option<String>,
+}
+
+impl ShortcutsSteamIsAddedArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "shortcuts_steam_is_added:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "shortcuts_steam_is_added:bad-args".to_string())
     }
 }

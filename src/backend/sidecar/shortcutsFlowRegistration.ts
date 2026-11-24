@@ -92,7 +92,6 @@ import type { AppPaths } from '../process/context'
 import type { HostServices } from '../host'
 import {
   macDesktopShortcutPresent,
-  macDesktopShortcutWanted,
   shortcutFiles,
   windowsDesktopDir,
   shortcutPathPresent
@@ -201,7 +200,7 @@ export async function shortcutsExistOnDisk(
 }
 
 /**
- * Registers all 6 of this cluster's channels (5 invoke + 1 send). Called once from `handlers.ts`
+ * Registers all 5 of this cluster's channels (4 invoke + 1 send; Phase 94 plan 22 moved `addShortcut` to a resolver). Called once from `handlers.ts`
  * -- this module owns no side effects at import time beyond the imports above; the caller decides
  * when registration onto the handler registry happens.
  *
@@ -220,82 +219,9 @@ export function registerShortcutsFlows(deps: ShortcutsFlowDeps): void {
   // `resolveShortcutsExists` (`shortcutsResolvers.ts`), answered by Rust. The two handlers below keep this
   // module's TypeScript disk re-check (`shortcutsExistOnDisk`) until 94-22 moves them.
 
-  // Quick task 261012-ca6 (todo `gamesubmenu-shows-remove-shortcuts-before-the-write-is-known`):
-  // invoke-kind, no longer send-kind. GameSubMenu used to flip its "Add shortcut"/"Remove
-  // shortcuts" entry the moment it fired this channel, before the write had happened or failed. A
-  // send-kind channel cannot report an outcome: the Tauri transport resolves a send once the shell
-  // has accepted the frame, and the sidecar runs listeners fire-and-forget. This handler therefore
-  // resolves the `shortcutsExists` predicate, evaluated AFTER `addShortcuts` has settled, so the
-  // renderer sets its state from what is actually on disk. A partial write (one of two files
-  // written, so `addShortcuts` rejects) still resolves true: a removable shortcut exists. A call
-  // that resolves without writing anything (a DLC, or no shortcut paths) resolves false.
-  //
-  // Failure path (T-34.5-26, T-34.5-65, T-34.5-66): `getGame().addShortcuts()` reaches
-  // `shortcuts.ts`'s `addShortcuts`, which on darwin calls `generateMacOsApp` -> `getPath('exe')`.
-  // That throws when `GAMELIB_SHELL_EXE` is unset or empty, and also when a shortcut file could not
-  // be written (a missing desktop folder, a failed Windows `.lnk`, or a win32 Desktop folder the
-  // registry could not resolve, which still leaves the Start Menu `.lnk` written so this handler
-  // answers true from disk). No catch, fallback or default
-  // launch command is added upstream -- a failure that writes nothing is the correct outcome, and
-  // a `.app` pointing at an empty exe path would be worse. It is caught here, logged, and shown to
-  // the user as the error toast instead of the success one; the handler still answers with the disk
-  // state, so the call never rejects the renderer.
-  deps.ipc.handle(
-    'addShortcut',
-    async (_event: unknown, ...args: unknown[]) => {
-      const appName = args[0] as string
-      const runner = args[1] as Runner
-      const fromMenu = (args[2] ?? undefined) as boolean | undefined
-
-      try {
-        await deps.managers.library[runner]
-          .getGame(appName)
-          .addShortcuts(fromMenu)
-      } catch (error) {
-        logChannelFailure('addShortcut', error)
-        notify(deps, {
-          body: t(
-            'box.shortcuts.error',
-            'Shortcuts could not be created. See the log for details.'
-          ),
-          title: t('box.shortcuts.title', 'Shortcuts')
-        })
-        return shortcutsExistOnDisk(deps, appName, runner)
-      }
-
-      const exists = await shortcutsExistOnDisk(deps, appName, runner)
-      if (exists) {
-        const body = i18next.t(
-          'box.shortcuts.message',
-          'Shortcuts were created on Desktop and Start Menu'
-        )
-        // 261027-c4g: name the Desktop when the Desktop link was also made.
-        const bodyMac = macDesktopShortcutWanted(deps)
-          ? i18next.t(
-              'gamelib:box.shortcuts.messageMacDesktop',
-              'Shortcuts were created in the Applications folder and on the Desktop'
-            )
-          : i18next.t(
-              'box.shortcuts.message-mac',
-              'Shortcuts were created on the Applications folder'
-            )
-        notify(deps, {
-          body: isMac ? bodyMac : body,
-          title: i18next.t('box.shortcuts.title', 'Shortcuts')
-        })
-      } else {
-        // Resolving without writing anything is not a success.
-        notify(deps, {
-          body: t(
-            'box.shortcuts.error',
-            'Shortcuts could not be created. See the log for details.'
-          ),
-          title: t('box.shortcuts.title', 'Shortcuts')
-        })
-      }
-      return exists
-    }
-  )
+  // `addShortcut` is no longer registered here: 94-22 moved it to the scheduled resolver `resolveAddShortcut`
+  // (`humbleshortcuts/shortcuts.ts`, registered by `registerShortcutsResolvers`), answered by Rust, which writes the
+  // files, raises the result notification and answers the disk re-check (`existsAfter`).
 
   // Quick task 261012-ca6: invoke-kind for the same reason as `addShortcut` above. Resolves the
   // `shortcutsExists` predicate after `removeShortcuts` has settled, so the renderer keeps showing

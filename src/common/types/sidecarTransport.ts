@@ -1378,6 +1378,44 @@ export const RUST_ENGINE_CX_RESOLVE_BIN_DIR =
  * the one caller is the resolver `resolveShortcutsExists` (`sidecar/shortcutsResolvers.ts`, 86 D-24).
  */
 export const RUST_SHORTCUTS_EXIST = 'shortcuts_exist' as const
+
+/**
+ * Phase 94 (SVC-05, 94-22): add the game's desktop shortcut files, served by `gamelib-shortcuts` `add`. One object
+ * arg `{ game, settings, fromMenu?, notify }`: `game` and `settings` are the TS-only inputs a resolver gathers
+ * (`humbleshortcuts/shortcuts.ts`, 86 D-24) and the crate re-validates them with deny_unknown_fields. `notify: true`
+ * (the renderer's `addShortcut`) makes Rust raise the result notification; `notify: false` (a store manager's
+ * `addShortcuts`) shows nothing and rejects with the TS's `Could not write shortcuts: ...` message when a requested
+ * file could not be written. Resolves `{ written, failed, refused, existsAfter }`; `existsAfter` is the disk re-check
+ * the renderer sets its state from. The Add-to-Steam step is started, not awaited, when the settings ask for it.
+ */
+export const RUST_SHORTCUTS_ADD = 'shortcuts_add' as const
+
+/**
+ * Phase 94 (SVC-05, 94-22): remove the game's desktop shortcut files, served by `gamelib-shortcuts` `remove`. One
+ * object arg `{ game, notify }`. Only an item GameLib can prove it wrote is deleted (D-22). Resolves
+ * `{ removed, refused, existsAfter }`; `notify` is as for {@link RUST_SHORTCUTS_ADD}, and a removal never rejects
+ * for a file it could not delete (the TS never did).
+ */
+export const RUST_SHORTCUTS_REMOVE = 'shortcuts_remove' as const
+
+/**
+ * Phase 94 (SVC-05, 94-22): add the game to Steam as a non-Steam shortcut (`shortcuts.vdf` and grid art), served by
+ * `gamelib-shortcuts` `steam`. One object arg `{ game, settings }` (only `settings.defaultSteamPath` is read). Resolves
+ * whether a shortcut was added; the result notification or error dialog is raised by Rust.
+ */
+export const RUST_SHORTCUTS_STEAM_ADD = 'shortcuts_steam_add' as const
+
+/**
+ * Phase 94 (SVC-05, 94-22): remove the game's non-Steam shortcut and its five grid files from every Steam user
+ * folder. One object arg `{ game, settings }`. Resolves null.
+ */
+export const RUST_SHORTCUTS_STEAM_REMOVE = 'shortcuts_steam_remove' as const
+
+/**
+ * Phase 94 (SVC-05, 94-22): whether the game is already a non-Steam shortcut in Steam. One object arg
+ * `{ game, settings }`. Resolves a boolean; a game with no title resolves `false`.
+ */
+export const RUST_SHORTCUTS_STEAM_IS_ADDED = 'shortcuts_steam_is_added' as const
 /**
  * Phase 87 (87-54, D-03, D-15): the Steam bridge's engine-state writes, reached through the shims in
  * `enginewine/state.ts`. `engine_state_record_decision` takes `{runner, appName, bottleName, override, selection?,
@@ -1824,7 +1862,12 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_ENGINE_RESOLVE_TOOL_SETTINGS,
   RUST_ENGINE_NON_CROSSOVER_ENGINE,
   RUST_ENGINE_FALLBACK_ENSURE,
-  RUST_SHORTCUTS_EXIST
+  RUST_SHORTCUTS_EXIST,
+  RUST_SHORTCUTS_ADD,
+  RUST_SHORTCUTS_REMOVE,
+  RUST_SHORTCUTS_STEAM_ADD,
+  RUST_SHORTCUTS_STEAM_REMOVE,
+  RUST_SHORTCUTS_STEAM_IS_ADDED
 ] as const
 
 /** Phase 63 (D-03): the scanner channels, a subset of {@link RUST_INVOKE_CHANNELS}. */
@@ -1958,7 +2001,14 @@ export const RUST_INFO_CHANNELS = [
 ] as const
 
 /** Phase 94: the Rust desktop and Steam shortcut channels, a subset of {@link RUST_INVOKE_CHANNELS}. */
-export const RUST_SHORTCUTS_CHANNELS = [RUST_SHORTCUTS_EXIST] as const
+export const RUST_SHORTCUTS_CHANNELS = [
+  RUST_SHORTCUTS_EXIST,
+  RUST_SHORTCUTS_ADD,
+  RUST_SHORTCUTS_REMOVE,
+  RUST_SHORTCUTS_STEAM_ADD,
+  RUST_SHORTCUTS_STEAM_REMOVE,
+  RUST_SHORTCUTS_STEAM_IS_ADDED
+] as const
 
 /** The set of channel names `requestRustInvoke()` is allowed to target. */
 export type RustInvokeChannel = (typeof RUST_INVOKE_CHANNELS)[number]

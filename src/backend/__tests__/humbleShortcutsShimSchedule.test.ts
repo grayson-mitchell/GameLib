@@ -133,6 +133,11 @@ const LOGIN_SEAM_CALLERS: readonly string[] = [
   'src/backend/testUtils/testServices.ts'
 ]
 
+/** The non-test importers of `src/backend/humbleshortcuts/shortcuts.ts` (94-22): every shortcut resolver's callers. */
+const SHORTCUT_RESOLVER_CALLERS: readonly string[] = [
+  'src/backend/sidecar/shortcutsResolvers.ts'
+]
+
 export const SCHEDULE: readonly ScheduleRow[] = [
   // The Phase 91 login-window seam implementation (D-03). 94-04 moved the factory verbatim to
   // `src/backend/sidecar/loginSeamRegistration.ts` and repointed this row at the new file, deletedBy 92.
@@ -187,15 +192,37 @@ export const SCHEDULE: readonly ScheduleRow[] = [
   // 94-11, the shortcuts tracer: `shortcutsExists` is a RESOLVER (D-24), not a shim. The path rules, the
   // sanitize port and the registry Desktop read are Rust; the one input Rust cannot gather is the game's
   // title, which lives in a TypeScript library manager's memory, so the resolver reads it (`const title`) and
-  // makes the one call. `registerShortcutsResolvers` only installs its `ipc.handle`. Phase 92 ports the last
-  // store whose game data is TypeScript, after which Rust holds the library itself and the handle goes native.
+  // makes the one call. Phase 92 ports the last store whose game data is TypeScript, after which Rust holds
+  // the library itself and the handle goes native. 94-22 moved it from `sidecar/shortcutsResolvers.ts` to
+  // `humbleshortcuts/shortcuts.ts`, where every shortcut resolver lives.
   {
     name: 'resolveShortcutsExists',
-    file: 'src/backend/sidecar/shortcutsResolvers.ts',
+    file: 'src/backend/humbleshortcuts/shortcuts.ts',
     shape: 'resolver',
     inputs: ['title'],
     channel: 'RUST_SHORTCUTS_EXIST',
-    wiring: ['registerShortcutsResolvers'],
+    callers: SHORTCUT_RESOLVER_CALLERS,
+    deletedBy: 92
+  },
+  // 94-22, the renderer's `addShortcut` (D-04, D-24): the game and the settings are the inputs only TypeScript
+  // holds (`const game`, then `const inputs` from the one non-exported input helper), and Rust writes the files
+  // and raises the notification (`notify: true`). The registered handle answers `existsAfter`.
+  {
+    name: 'resolveAddShortcut',
+    file: 'src/backend/humbleshortcuts/shortcuts.ts',
+    shape: 'resolver',
+    inputs: ['game', 'inputs'],
+    channel: 'RUST_SHORTCUTS_ADD',
+    callers: SHORTCUT_RESOLVER_CALLERS,
+    deletedBy: 92
+  },
+  // 94-22: the renderer-facing handles of every shortcut resolver. It holds no logic of its own (each handle
+  // calls its resolver and projects the answer), so it is scheduled with the resolvers it installs and goes with
+  // them when Rust holds the library (92).
+  {
+    name: 'registerShortcutsResolvers',
+    file: 'src/backend/sidecar/shortcutsResolvers.ts',
+    shape: 'relocated',
     callers: ['src/backend/sidecar/handlers.ts'],
     deletedBy: 92
   }

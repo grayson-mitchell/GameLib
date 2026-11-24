@@ -390,6 +390,45 @@ pub(crate) fn rpc_shortcuts_exist(args: &[Value]) -> Result<Value, String> {
     exist_with(installed("shortcuts_exist")?, args)
 }
 
+/// `shortcuts_add`: validated by the generated args struct, then the crate (which validates again with its own
+/// `deny_unknown_fields` structs and the runner and name checks). `notify: true` is the renderer's `addShortcut`
+/// (Rust raises the result notice); `notify: false` is a store manager's `addShortcuts` (nothing is shown and a
+/// partial failure rejects).
+pub(crate) fn rpc_shortcuts_add(args: &[Value]) -> Result<Value, String> {
+    let ctx = installed("shortcuts_add")?;
+    ShortcutsAddArgs::from_args(args)?;
+    gamelib_shortcuts::dispatch_sync("shortcuts_add", args, ctx)
+}
+
+/// `shortcuts_remove`: as [`rpc_shortcuts_add`].
+pub(crate) fn rpc_shortcuts_remove(args: &[Value]) -> Result<Value, String> {
+    let ctx = installed("shortcuts_remove")?;
+    ShortcutsRemoveArgs::from_args(args)?;
+    gamelib_shortcuts::dispatch_sync("shortcuts_remove", args, ctx)
+}
+
+/// `shortcuts_steam_add`: as [`rpc_shortcuts_add`]; the crate answers `not-ready` when the shell's
+/// `shortcuts.vdf` seam is missing.
+pub(crate) fn rpc_shortcuts_steam_add(args: &[Value]) -> Result<Value, String> {
+    let ctx = installed("shortcuts_steam_add")?;
+    ShortcutsSteamAddArgs::from_args(args)?;
+    gamelib_shortcuts::dispatch_sync("shortcuts_steam_add", args, ctx)
+}
+
+/// `shortcuts_steam_remove`: as [`rpc_shortcuts_steam_add`].
+pub(crate) fn rpc_shortcuts_steam_remove(args: &[Value]) -> Result<Value, String> {
+    let ctx = installed("shortcuts_steam_remove")?;
+    ShortcutsSteamRemoveArgs::from_args(args)?;
+    gamelib_shortcuts::dispatch_sync("shortcuts_steam_remove", args, ctx)
+}
+
+/// `shortcuts_steam_is_added`: as [`rpc_shortcuts_steam_add`].
+pub(crate) fn rpc_shortcuts_steam_is_added(args: &[Value]) -> Result<Value, String> {
+    let ctx = installed("shortcuts_steam_is_added")?;
+    ShortcutsSteamIsAddedArgs::from_args(args)?;
+    gamelib_shortcuts::dispatch_sync("shortcuts_steam_is_added", args, ctx)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -431,6 +470,96 @@ mod tests {
             rpc_shortcuts_exist(&args(Some("Game"))),
             Err("shortcuts_exist:not-ready".to_string())
         );
+    }
+
+    /// The five write ops' args as the TS resolvers send them (Phase 94 plan 22).
+    fn game_json() -> Value {
+        json!({
+            "appName": "App", "runner": "legendary", "title": "Plain Game", "isDlc": false,
+            "canAddSteamShortcut": true
+        })
+    }
+
+    fn settings_json() -> Value {
+        json!({
+            "addDesktopShortcuts": false, "addStartMenuShortcuts": true, "addSteamShortcuts": false
+        })
+    }
+
+    #[test]
+    fn the_write_ops_answer_not_ready_before_install_whatever_their_args() {
+        // The test binary never installs the process-wide context.
+        let good = [json!({ "game": game_json(), "settings": settings_json(), "notify": false })];
+        let steam = [json!({ "game": game_json(), "settings": settings_json() })];
+        let remove = [json!({ "game": game_json(), "notify": false })];
+        assert_eq!(
+            rpc_shortcuts_add(&good),
+            Err("shortcuts_add:not-ready".to_string())
+        );
+        assert_eq!(
+            rpc_shortcuts_remove(&remove),
+            Err("shortcuts_remove:not-ready".to_string())
+        );
+        assert_eq!(
+            rpc_shortcuts_steam_add(&steam),
+            Err("shortcuts_steam_add:not-ready".to_string())
+        );
+        assert_eq!(
+            rpc_shortcuts_steam_remove(&steam),
+            Err("shortcuts_steam_remove:not-ready".to_string())
+        );
+        assert_eq!(
+            rpc_shortcuts_steam_is_added(&steam),
+            Err("shortcuts_steam_is_added:not-ready".to_string())
+        );
+    }
+
+    #[test]
+    fn the_generated_args_decode_what_the_resolvers_send_and_refuse_drift() {
+        let add = |value: Value| ShortcutsAddArgs::from_args(&[value]);
+        assert!(
+            add(json!({ "game": game_json(), "settings": settings_json(), "notify": true }))
+                .is_ok()
+        );
+        assert_eq!(
+            add(json!({ "game": game_json(), "settings": settings_json() })).err(),
+            Some("shortcuts_add:bad-args".to_string()),
+            "notify is required: it says who shows the result"
+        );
+        let mut game = game_json();
+        game["runner"] = json!("epic");
+        assert!(add(json!({ "game": game, "settings": settings_json(), "notify": true })).is_err());
+        assert!(
+            ShortcutsRemoveArgs::from_args(&[json!({ "game": game_json(), "notify": false })])
+                .is_ok()
+        );
+        assert!(ShortcutsRemoveArgs::from_args(&[]).is_err());
+        let steam = json!({ "game": game_json(), "settings": settings_json() });
+        assert!(ShortcutsSteamAddArgs::from_args(&[steam.clone()]).is_ok());
+        assert!(ShortcutsSteamRemoveArgs::from_args(&[steam.clone()]).is_ok());
+        assert!(ShortcutsSteamIsAddedArgs::from_args(&[steam]).is_ok());
+    }
+
+    #[test]
+    fn add_then_exist_then_remove_round_trips_on_a_fake_home() {
+        let home = FakeHome::new("gamelib-shortcuts-dispatch-");
+        let ctx = test_ctx(&home, Platform::Mac);
+        let bundle = home.root().join("Applications").join("Plain Game.app");
+        let add = json!({ "game": game_json(), "settings": settings_json(), "notify": false });
+        let added = gamelib_shortcuts::dispatch_sync("shortcuts_add", &[add], &ctx).expect("added");
+        assert_eq!(added["failed"], json!([]));
+        assert_eq!(added["existsAfter"], json!(true));
+        assert!(bundle
+            .join("Contents")
+            .join("MacOS")
+            .join("run.sh")
+            .is_file());
+        assert_eq!(exist_with(&ctx, &args(Some("Plain Game"))), Ok(json!(true)));
+        let remove = json!({ "game": game_json(), "notify": false });
+        let removed =
+            gamelib_shortcuts::dispatch_sync("shortcuts_remove", &[remove], &ctx).expect("removed");
+        assert_eq!(removed["existsAfter"], json!(false));
+        assert!(!bundle.exists());
     }
 
     #[test]

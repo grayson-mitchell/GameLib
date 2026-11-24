@@ -149,7 +149,9 @@ const EXPECTED: Record<string, { invoke: number; send: number }> = {
   // `removeShortcut` moved from send to invoke so the renderer can learn the write's outcome.
   // Phase 94 Plan 11: invoke 6 -> 5 -- `shortcutsExists` is the scheduled resolver `resolveShortcutsExists`
   // (`shortcutsResolvers.ts`), answered by Rust.
-  'shortcutsFlowRegistration.ts': { invoke: 5, send: 1 },
+  // Phase 94 Plan 22: invoke 5 -> 4 -- `addShortcut` is the scheduled resolver `resolveAddShortcut`
+  // (`humbleshortcuts/shortcuts.ts`, registered by `registerShortcutsResolvers`), answered by Rust.
+  'shortcutsFlowRegistration.ts': { invoke: 4, send: 1 },
   // Phase 51 Plan 13 (2026-10-21): invoke 18 -> 20 -- `getSteamBridgeRoute` and
   // `setSteamBridgeUserRoute` registered for the bridge-routing notice dialog.
   // Quick 261024-h5y (2026-10-24): invoke 20 -> 21 -- the bottled-Steam "finish install" channel

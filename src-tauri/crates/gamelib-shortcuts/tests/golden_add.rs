@@ -1636,6 +1636,48 @@ async fn the_dispatch_validates_the_game_before_writing_anything() {
     assert_eq!(done["written"].as_array().map(Vec::len), Some(2));
 }
 
+/// Phase 94 plan 22: the store managers' path (`notify: false`) rejects on a partial failure with the TS's own
+/// message, as `addShortcuts` did; the renderer's path (`notify: true`) resolves the outcome and has the notice raised.
+#[tokio::test]
+async fn the_dispatch_rejects_a_failed_write_for_a_store_manager_and_resolves_it_for_the_renderer()
+{
+    let (_profile, ctx, ui) = linux_rig();
+    // The Desktop and applications folders are absent, so each requested file fails to write.
+    let call = |notify: bool| {
+        let args = json!({
+            "game": outcome_game(),
+            "settings": { "addDesktopShortcuts": true, "addStartMenuShortcuts": true, "addSteamShortcuts": false },
+            "notify": notify
+        });
+        let ctx = &ctx;
+        async move { gamelib_shortcuts::dispatch("shortcuts_add", &[args], ctx).await }
+    };
+
+    let rejected = call(false)
+        .await
+        .expect_err("a store manager's failed add rejects");
+    assert!(
+        rejected.starts_with("Could not write shortcuts: "),
+        "{rejected}"
+    );
+    assert!(
+        ui.notices().is_empty(),
+        "notify false shows nothing: {:?}",
+        ui.notices()
+    );
+
+    let resolved = call(true)
+        .await
+        .expect("the renderer's failed add resolves");
+    assert_ne!(resolved["failed"], json!([]));
+    assert_eq!(resolved["existsAfter"], json!(false));
+    assert_eq!(
+        ui.notices().len(),
+        1,
+        "notify true raises exactly one notice"
+    );
+}
+
 // ----------------------------------------------------------------------- the twin guard
 
 /// Every `it('...')` title in the TS outcome test, mapped to the Rust twin here. A title with no row, or a

@@ -43,7 +43,9 @@ const MODULES: ModuleSpec[] = [
     // Phase 94 Plan 11: 6 -> 5. `shortcutsExists` is the scheduled resolver `resolveShortcutsExists`
     // (`shortcutsResolvers.ts`), answered by Rust; it is no longer an `ipc.handle` of this module.
     path: join(__dirname, '../shortcutsFlowRegistration.ts'),
-    expectedCount: 5
+    // Phase 94 Plan 22: 5 -> 4. `addShortcut` is the scheduled resolver `resolveAddShortcut`
+    // (`humbleshortcuts/shortcuts.ts`), answered by Rust.
+    expectedCount: 4
   },
   {
     name: 'runnerMisc',
@@ -179,8 +181,10 @@ describe('invoke-return-value sweep anti-rot gate (F-34.5-G6-08 / U-34.5-15)', (
   // Phase 87 Plan 36 (D-23): 30 -> 27, `runWineCommandForGame`, `runWineCommand` and `callTool` are scheduled resolvers.
   // Phase 94 Plan 11: 27 -> 26, the -1 recorded on the `shortcuts` module spec above (`shortcutsExists` is a
   // scheduled resolver).
-  it('extracts exactly 26 channels total', () => {
-    expect(allChannels).toHaveLength(26)
+  // Phase 94 Plan 22: 26 -> 25, the -1 recorded on the `shortcuts` module spec above (`addShortcut` is a
+  // scheduled resolver).
+  it('extracts exactly 25 channels total', () => {
+    expect(allChannels).toHaveLength(25)
   })
 
   it.each(MODULES)('$name has exactly $expectedCount channels', (spec) => {

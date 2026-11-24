@@ -307,5 +307,12 @@ pub(crate) fn dispatch_rust_channel(
         }
         RustInvokeChannel::EngineFallbackEnsure => engine_dispatch::rpc_fallback_ensure(args),
         RustInvokeChannel::ShortcutsExist => shortcuts_dispatch::rpc_shortcuts_exist(args),
+        RustInvokeChannel::ShortcutsAdd => shortcuts_dispatch::rpc_shortcuts_add(args),
+        RustInvokeChannel::ShortcutsRemove => shortcuts_dispatch::rpc_shortcuts_remove(args),
+        RustInvokeChannel::ShortcutsSteamAdd => shortcuts_dispatch::rpc_shortcuts_steam_add(args),
+        RustInvokeChannel::ShortcutsSteamRemove => shortcuts_dispatch::rpc_shortcuts_steam_remove(args),
+        RustInvokeChannel::ShortcutsSteamIsAdded => {
+            shortcuts_dispatch::rpc_shortcuts_steam_is_added(args)
+        }
     }
 }

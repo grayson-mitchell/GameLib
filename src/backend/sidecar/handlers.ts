@@ -429,10 +429,12 @@ export function registerHandlers(deps: {
     sendFrontendMessage: deps.services.host.sendFrontendMessage,
     requestRustInvoke: deps.services.host.requestRustInvoke
   })
-  // Phase 94 (94-11, 86 D-24): `shortcutsExists` is answered by Rust; the resolver gathers the game's title.
+  // Phase 94 (94-11, 94-22, 86 D-24): `shortcutsExists` and `addShortcut` are answered by Rust; each resolver gathers
+  // the game's and the settings' TypeScript-only inputs.
   registerShortcutsResolvers({
     ipc,
     managers: deps.services.managers,
+    config: deps.services.config,
     requestRustInvoke: deps.services.host.requestRustInvoke
   })
   registerRunnerMiscFlows({

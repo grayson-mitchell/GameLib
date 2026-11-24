@@ -928,9 +928,12 @@ const IN_SCOPE_SUITES = [
  * resolvers over a fake `requestRustInvoke` and an in-memory `createIpcRegistry()`, and reaches no path
  * module, `homedir()`, filesystem or child process.
  *
- * `shortcutsResolvers.test.ts` (Phase 94 Plan 11) is structurally contained: it drives the scheduled
- * `resolveShortcutsExists` over fake managers and a fake `requestRustInvoke` and an in-memory
- * `createIpcRegistry()`, and reaches no path module, `homedir()`, filesystem or child process.
+ * `shortcutsResolvers.test.ts` (Phase 94 Plans 11 and 22) is structurally contained: it drives the scheduled
+ * shortcut resolvers over fake library managers and a fake `requestRustInvoke` and an in-memory
+ * `createIpcRegistry()`, and reaches no `homedir()` or child process. Its one filesystem read is the GOG
+ * lazy-icon check (`existsSync` of `goggame-<id>.ico` and `support/icon.png` under an install path), driven over
+ * a path that does not exist and over a temp directory it creates and removes under `os.tmpdir()`; it writes
+ * nothing outside that directory.
  *
  * `ipcRegistry.test.ts` (Phase 66.3 Plan 03) is structurally contained: it exercises
  * `createIpcRegistry()` instances with in-memory handlers, and reaches no path module, `homedir()`,
