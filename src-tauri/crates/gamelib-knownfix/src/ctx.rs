@@ -48,7 +48,7 @@ impl KnownFixPaths {
 pub const OVERLAY_DOWNLOAD_TIMEOUT: Duration = Duration::from_millis(120_000);
 
 /// What one in-flight overlay install answers: the verified install directory, or `None` (fail-open).
-type InstallCell = Arc<OnceCell<Option<PathBuf>>>;
+pub(crate) type InstallCell = Arc<OnceCell<Option<PathBuf>>>;
 
 /// The overlay installs in flight, by install directory (88-10, `createKnownFixOverlayInstalls`): concurrent
 /// callers for one overlay join one download. One table per context, so a second context (a second

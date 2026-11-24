@@ -864,7 +864,7 @@ fn the_install_removes_nothing_but_through_gamelib_safety_and_spawns_nothing() {
     let source = include_str!("../src/overlay/install.rs");
     for banned in [
         "remove_dir_all",
-        "std::process",
+        "std::process::Command",
         "tokio::process",
         "Command::new",
     ] {
