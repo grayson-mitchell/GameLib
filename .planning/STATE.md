@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 87
 current_phase_name: Engine, Wine and tools
 status: executing
-stopped_at: Completed 87-58-PLAN.md
-last_updated: "2026-11-24T02:34:13.144Z"
-last_activity: 2026-11-23
+stopped_at: Completed 87-59-PLAN.md
+last_updated: "2026-11-24T09:13:15.446Z"
+last_activity: 2026-11-24
 last_activity_desc: Phase 87 execution started
-state_head: 6c5bfa0a3d2040e6a44c068e1612ebcbe162364b
+state_head: 51484af2b91d9774c1207c05443287fa85e8fa18
 progress:
   total_phases: 20
   completed_phases: 23
@@ -470,6 +470,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 87 P56c | not recorded | 3 tasks | 138 files |
 | Phase 87 P57 | not recorded | 2 tasks | 12 files |
 | Phase 87 P58 | 280min | 3 tasks | 21 files |
+| Phase 87 P59 | 6h25m | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -1010,6 +1011,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 87]: 87-57: EXPECTED_SURVIVORS holds 77 rows (the plan's 70 plus the five 87-56a/b rows, cancelFallbackBottle and bridgeDeadlines); compared with SCHEDULE by (file, name, shape, wiring) in both directions, deletedBy held to 88..98 but outside the key
 - [Phase 87]: 87-58: push-and-build with dry_run=true; D-10 accepted as met by the operator; D-12 gate blocked (a dry run uploads no artifact)
 - [Phase 87]: 87-58: Windows-only test reds (twelve CI runs) fixed by #[cfg(unix)] gating and a leading-tilde fix in tools/dxvk.rs, not by loosening assertions
+- [Phase 87]: 87-59: the live gate scored item 1 issue, item 2 pass, item 3 blocked, item 4 issue; the offline refusal, Winetricks target prefix and wine-manager install of never-installed releases go to /gsd-plan-phase 87 --gaps; the engine-log wiring is the deferred decision
 
 ### Pending Todos
 
@@ -1291,8 +1293,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-24T02:34:10.480Z
-Stopped at: Completed 87-58-PLAN.md
+Last session: 2026-11-24T09:13:12.653Z
+Stopped at: Completed 87-59-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
