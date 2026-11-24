@@ -12,7 +12,7 @@ const REGISTRATIONS = [
   'registerDevEpicCookieSweepFlow',
   'registerRunnerAuthFlows',
   'registerEngineWineResolvers',
-  // Phase 94 Plan 22: `registerShortcutsFlows` is deleted; the `processShortcut` hotkey listener is the once-only
+  // Phase 94 Plan 22: the shortcuts registration is deleted; the `processShortcut` hotkey listener is the once-only
   // registration that moved (`appShellFlowRegistration.ts`), and handlers.ts calls it exactly once.
   'registerProcessShortcut',
   'registerStoreWriteHandlers'
