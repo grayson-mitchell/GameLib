@@ -863,7 +863,7 @@ Plans:
   3. The `launchOracle` harness, pairwise generator, and the `gamelib-launch` / `gamelib-knownfix` crates exist and run in three-OS CI
   4. The known-fixes TypeScript and its registrations are deleted, leaving only scheduled shims; closes on goldens and three-OS CI, no signed build
 
-**Plans:** 2/17 plans executed in 14 waves; planned 2026-11-25 (88-02 waits for 88-01 so the live gate is committed before any code, D-25)
+**Plans:** 3/17 plans executed in 14 waves; planned 2026-11-25 (88-02 waits for 88-01 so the live gate is committed before any code, D-25)
 
 Plans:
 **Wave 1**
@@ -873,7 +873,7 @@ Plans:
 - [x] 88-02-PLAN.md — 87 prerequisite check, the 13 schedule rows re-targeted (roadmap-derived decimal deletedBy), launchrust discovery, launchPortComplete with the no-rollback scan
 
 **Wave 3** *(blocked on Wave 2 completion)*
-- [ ] 88-03-PLAN.md — gamelib-knownfix and gamelib-launch (+cli) crates, CI wiring, the shared overlay catalogue JSON (tracer: knownfix_overlay_catalogue through the CLI)
+- [x] 88-03-PLAN.md — gamelib-knownfix and gamelib-launch (+cli) crates, CI wiring, the shared overlay catalogue JSON (tracer: knownfix_overlay_catalogue through the CLI)
 - [ ] 88-04-PLAN.md — The shared launchOracle harness: pinned base env, injected platform and probes, pairwise generator, spawn-class column, incident-title census
 
 **Wave 4** *(blocked on Wave 3 completion)*
