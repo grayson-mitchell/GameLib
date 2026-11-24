@@ -7,7 +7,10 @@
 //!   own single-flight table and overlays folder);
 //! - `damage`, `verify`: break the installed tree the way the TS incident tests do, and ask
 //!   `verify_installed_overlay`;
-//! - `catalogue`: the real catalogue's pins.
+//! - `catalogue`: the real catalogue's pins;
+//! - `validate`, `resolveEnv`, `profileEnv` and the pure helpers (`appendPathList`, `lastEnvOption`,
+//!   `formatLine`, `logLine`, `withEnv`, `filterTier1`): the overlay env, with a scripted installer in
+//!   place of the real one, so the catalogue's archive is never fetched.
 //!
 //! `expected/<case>/result.json` and `events.json` (step, level, text) are compared whole, and `tree.json`
 //! is the fake HOME afterwards, so the `overlays/` layout is pinned: the staging names never survive, the
@@ -19,6 +22,7 @@
 
 #![cfg_attr(not(unix), allow(dead_code, unused_imports))]
 
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
@@ -37,10 +41,18 @@ use gamelib_knownfix::catalogue::{
     archive_url, lookup, OverlayCatalogueEntry, OverlayFile, OverlayPlatform, OverlayRelease,
 };
 use gamelib_knownfix::ctx::{KnownFixCtx, OverlayInstalls};
+use gamelib_knownfix::jsvalue::JsValue;
 use gamelib_knownfix::overlay::archive::{build_overlay_tar_gz, OverlayArchiveFile};
+use gamelib_knownfix::overlay::env::{
+    append_path_list, env_options_of, format_known_fix_env_line, last_env_option,
+    log_known_fix_env, profile_overlay_env_with, resolve_overlay_env, validate_overlay_entries,
+    with_known_fix_env, EnvLine, OverlayInstaller,
+};
 use gamelib_knownfix::overlay::install::{
     ensure_overlay_installed, verify_installed_overlay, VerifyError,
 };
+use gamelib_knownfix::reader::filter_tier1_known_fixes;
+use gamelib_knownfix::types::Runner;
 use gamelib_store::host::StoreHost;
 use gamelib_testutil::FakeHome;
 use serde_json::{json, Value};
@@ -48,14 +60,16 @@ use sha2::{Digest, Sha256};
 use tokio::sync::Notify;
 use tokio_util::sync::CancellationToken;
 
-/// `golden/overlay_install` holds 41 cases; this run replays the 18 install cases. A later edit may raise
-/// this, never lower it.
-const OVERLAY_INSTALL_FLOOR: usize = 18;
+/// `golden/overlay_install` holds 41 cases: 18 install cases and 23 env and pure-helper cases. A later edit
+/// may raise this, never lower it.
+const OVERLAY_INSTALL_FLOOR: usize = 41;
 
 const FIXTURE_ID: &str = "test-overlay-1";
 const DEFAULT_DEADLINE_MS: u64 = 120_000;
 /// The ops of an install case; every other op is an env or pure-helper step.
 const INSTALL_OPS: [&str; 4] = ["ensure", "damage", "verify", "catalogue"];
+/// The one kind of line the TS wrote at debug level and the Rust log has no level for (`deltas.json`).
+const SKIPPED_DEBUG_MARKER: &str = " skipped: ";
 
 fn golden_dir() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/golden/overlay_install")
@@ -82,6 +96,16 @@ fn load_cases() -> Vec<Value> {
     }
 }
 
+/// The same file as the order-preserving value (see [`Run::js_case`]).
+fn load_js_cases() -> Vec<JsValue> {
+    let text = std::fs::read_to_string(golden_dir().join("cases.json")).unwrap();
+    match JsValue::parse(&text).unwrap() {
+        JsValue::Array(cases) => cases,
+        _ => panic!("cases.json is not an array"),
+    }
+}
+
+#[allow(dead_code)]
 fn is_install_case(case: &Value) -> bool {
     case["steps"]
         .as_array()
@@ -358,12 +382,23 @@ impl Rig {
 
     /// A context over this HOME with `fetch` as its network, and the overlays folder of `boot`.
     fn ctx(&self, boot: &str, fetch: Arc<dyn Fetch>, timeout: Option<Duration>) -> KnownFixCtx {
+        self.ctx_on(Platform::Mac, boot, fetch, timeout)
+    }
+
+    /// The same on another platform (the env cases run `darwin`, `linux` and `win32`).
+    fn ctx_on(
+        &self,
+        platform: Platform,
+        boot: &str,
+        fetch: Arc<dyn Fetch>,
+        timeout: Option<Duration>,
+    ) -> KnownFixCtx {
         let root = self.root().to_path_buf();
         let app_folder = self.app_folder();
         let engine = EngineCtx::new(
             Arc::new(StoreHost::new()),
             Arc::new(SystemClock),
-            Platform::Mac,
+            platform,
             EnginePaths {
                 tools_path: app_folder.join("tools"),
                 user_data: root
@@ -432,6 +467,42 @@ impl Rig {
                     .collect(),
             ),
             other => other,
+        }
+    }
+}
+
+impl Rig {
+    /// A placeholder path as a real one.
+    fn expand(&self, text: &str) -> String {
+        text.replace("<APPFOLDER>", &self.app_folder().to_string_lossy())
+            .replace("<HOME>", &self.root().to_string_lossy())
+    }
+
+    fn expand_value(&self, value: &Value) -> Value {
+        match value {
+            Value::String(s) => Value::String(self.expand(s)),
+            Value::Array(items) => {
+                Value::Array(items.iter().map(|v| self.expand_value(v)).collect())
+            }
+            Value::Object(map) => Value::Object(
+                map.iter()
+                    .map(|(k, v)| (k.clone(), self.expand_value(v)))
+                    .collect(),
+            ),
+            other => other.clone(),
+        }
+    }
+
+    /// Writes one seed file, inside the fake HOME.
+    fn seed(&self, entries: &Value) {
+        for entry in entries.as_array().into_iter().flatten() {
+            let target = PathBuf::from(self.expand(entry["path"].as_str().unwrap()));
+            assert!(
+                target.starts_with(self.root()),
+                "seed {target:?} is outside the profile"
+            );
+            std::fs::create_dir_all(target.parent().unwrap()).unwrap();
+            std::fs::write(&target, entry["text"].as_str().unwrap()).unwrap();
         }
     }
 }
@@ -533,6 +604,117 @@ fn snapshot_tree(rig: &Rig) -> Value {
 struct Run<'a> {
     rig: &'a Rig,
     fixture: &'a Fixture,
+    /// The case as the order-preserving value: a warning that echoes a profile entry lists its keys in the
+    /// order the file has them, which `serde_json::Value` would sort.
+    js_case: &'a JsValue,
+}
+
+/// What a scripted installer answers (`install` in the case).
+#[derive(Clone, Copy)]
+enum InstallMode {
+    Dir,
+    Null,
+    Reject,
+}
+
+/// The installer the env cases use: it answers `<overlays>/<id>`, `None` or an error, and records what it
+/// was asked.
+struct ScriptedInstaller {
+    mode: InstallMode,
+    root: PathBuf,
+    calls: Mutex<Vec<(String, String)>>,
+}
+
+impl ScriptedInstaller {
+    fn new(mode: &str, root: PathBuf) -> ScriptedInstaller {
+        ScriptedInstaller {
+            mode: match mode {
+                "dir" => InstallMode::Dir,
+                "null" => InstallMode::Null,
+                "reject" => InstallMode::Reject,
+                other => panic!("unknown install mode {other}"),
+            },
+            root,
+            calls: Mutex::new(Vec::new()),
+        }
+    }
+
+    fn calls(&self) -> Value {
+        Value::Array(
+            self.calls
+                .lock()
+                .unwrap()
+                .iter()
+                .map(|(id, label)| json!({"id": id, "label": label}))
+                .collect(),
+        )
+    }
+}
+
+impl OverlayInstaller for ScriptedInstaller {
+    fn ensure<'a>(
+        &'a self,
+        entry: &'a gamelib_knownfix::catalogue::OverlayCatalogueEntry,
+        label: &'a str,
+    ) -> std::pin::Pin<
+        Box<dyn std::future::Future<Output = Result<Option<PathBuf>, String>> + Send + 'a>,
+    > {
+        self.calls
+            .lock()
+            .unwrap()
+            .push((entry.id.clone(), label.to_string()));
+        let answer = match self.mode {
+            InstallMode::Dir => Ok(Some(self.root.join(&entry.id))),
+            InstallMode::Null => Ok(None),
+            InstallMode::Reject => Err("boom".to_string()),
+        };
+        Box::pin(async move { answer })
+    }
+}
+
+/// A member of step `index` of the case, as the order-preserving value.
+fn js_step<'a>(js_case: &'a JsValue, index: usize, key: &str) -> Option<&'a JsValue> {
+    let JsValue::Object(case) = js_case else {
+        return None;
+    };
+    let JsValue::Array(steps) = &case.iter().find(|(k, _)| k == "steps")?.1 else {
+        return None;
+    };
+    let JsValue::Object(step) = steps.get(index)? else {
+        return None;
+    };
+    step.iter().find(|(k, _)| k == key).map(|(_, v)| v)
+}
+
+fn strings_of(value: &Value) -> BTreeMap<String, String> {
+    value
+        .as_object()
+        .into_iter()
+        .flatten()
+        .map(|(k, v)| (k.clone(), v.as_str().unwrap().to_string()))
+        .collect()
+}
+
+fn env_lines(value: &Value) -> Vec<EnvLine> {
+    value
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|e| EnvLine {
+            key: e["key"].as_str().unwrap().to_string(),
+            value: e["value"].as_str().unwrap().to_string(),
+            source: e["source"].as_str().unwrap().to_string(),
+        })
+        .collect()
+}
+
+fn platform_of(name: &str) -> Platform {
+    match name {
+        "darwin" => Platform::Mac,
+        "linux" => Platform::Linux,
+        "win32" => Platform::Windows,
+        other => panic!("unknown platform {other}"),
+    }
 }
 
 impl Run<'_> {
@@ -686,6 +868,148 @@ impl Run<'_> {
         }
     }
 
+    /// A context for the env cases: nothing in them reaches the network.
+    fn env_ctx(&self, platform: Platform) -> KnownFixCtx {
+        self.rig
+            .ctx_on(platform, "A", ScriptedFetch::new(Answer::Never), None)
+    }
+
+    fn raw_of(&self, index: usize, step: &Value) -> (Option<&JsValue>, Value) {
+        (
+            js_step(self.js_case, index, "raw"),
+            step.get("raw").cloned().unwrap_or(Value::Null),
+        )
+    }
+
+    fn validate(&self, index: usize, step: &Value) -> Value {
+        let (raw, echo) = self.raw_of(index, step);
+        let ctx = self.env_ctx(Platform::Mac);
+        let ids: Vec<&str> = validate_overlay_entries(&ctx, raw, "test")
+            .iter()
+            .map(|e| e.id.as_str())
+            .collect();
+        json!({"op": "validate", "raw": echo, "ids": ids})
+    }
+
+    async fn resolve_env(&self, index: usize, step: &Value) -> Value {
+        let (raw, echo) = self.raw_of(index, step);
+        let ctx = self.env_ctx(platform_of(step["platform"].as_str().unwrap()));
+        let base = strings_of(&self.rig.expand_value(&step["base"]));
+        let asked: Mutex<BTreeMap<String, Option<String>>> = Mutex::new(BTreeMap::new());
+        let lookup = |key: &str| -> Option<String> {
+            let value = base.get(key).cloned();
+            asked.lock().unwrap().insert(key.to_string(), value.clone());
+            value
+        };
+        let installer =
+            ScriptedInstaller::new(step["install"].as_str().unwrap(), self.rig.root_a());
+        let result = resolve_overlay_env(
+            &ctx,
+            raw,
+            "test",
+            step["wineType"].as_str(),
+            &lookup,
+            &installer,
+        )
+        .await;
+        json!({
+            "op": "resolveEnv", "raw": echo, "platform": step["platform"],
+            "wineType": step.get("wineType").cloned().unwrap_or(Value::Null),
+            "base": step["base"], "install": step["install"],
+            "result": result,
+            "baseAsked": asked.into_inner().unwrap(),
+            "ensureCalls": installer.calls(),
+        })
+    }
+
+    async fn profile_env(&self, step: &Value) -> Value {
+        let ctx = self.env_ctx(Platform::Mac);
+        let settings = self.rig.expand_value(&step["settings"]);
+        let tier1 = strings_of(&self.rig.expand_value(&step["tier1Env"]));
+        let process = strings_of(&step["processEnv"]);
+        let installer =
+            ScriptedInstaller::new(step["install"].as_str().unwrap(), self.rig.root_a());
+        let runner = Runner::parse(step["runner"].as_str().unwrap()).unwrap();
+        let result = profile_overlay_env_with(
+            &ctx,
+            step["appName"].as_str().unwrap(),
+            runner,
+            &settings,
+            &tier1,
+            &process,
+            &installer,
+        )
+        .await;
+        json!({
+            "op": "profileEnv", "appName": step["appName"], "runner": step["runner"],
+            "settings": step["settings"], "tier1Env": step["tier1Env"],
+            "processEnv": step["processEnv"],
+            "result": result, "ensureCalls": installer.calls(),
+        })
+    }
+
+    fn pure(&self, index: usize, step: &Value) -> Value {
+        let op = step["op"].as_str().unwrap();
+        match op {
+            "appendPathList" => json!({
+                "op": op, "existing": step.get("existing").cloned().unwrap_or(Value::Null),
+                "dir": step["dir"],
+                "result": append_path_list(step["existing"].as_str(), step["dir"].as_str().unwrap()),
+            }),
+            "lastEnvOption" => {
+                let options = env_options_of(&json!({"enviromentOptions": step["options"]}));
+                json!({
+                    "op": op, "options": step.get("options").cloned().unwrap_or(Value::Null),
+                    "key": step["key"],
+                    "result": last_env_option(&options, step["key"].as_str().unwrap()),
+                })
+            }
+            "formatLine" => json!({
+                "op": op, "entries": step["entries"],
+                "result": format_known_fix_env_line(&env_lines(&step["entries"])),
+            }),
+            "logLine" => {
+                let ctx = self.env_ctx(Platform::Mac);
+                json!({
+                    "op": op, "label": step["label"], "entries": step["entries"],
+                    "result": log_known_fix_env(
+                        &ctx, step["label"].as_str().unwrap(), &env_lines(&step["entries"])),
+                })
+            }
+            "withEnv" => {
+                let env: Vec<(String, String)> = strings_of(&step["env"]).into_iter().collect();
+                let count = |v: &Value| v["enviromentOptions"].as_array().map(Vec::len);
+                let before = count(&step["settings"]);
+                let out = with_known_fix_env(&step["settings"], &env);
+                json!({
+                    "op": op, "settings": step["settings"], "env": step["env"],
+                    "result": out.clone().into_owned(),
+                    "isTheSameObject": matches!(out, std::borrow::Cow::Borrowed(_)),
+                    "originalOptionCountAfter": count(&step["settings"]),
+                    "originalOptionCountBefore": before,
+                })
+            }
+            "filterTier1" => {
+                let ctx = self.env_ctx(Platform::Mac);
+                let parsed = js_step(self.js_case, index, "parsed").expect("parsed");
+                let out = filter_tier1_known_fixes(
+                    &ctx,
+                    step["appName"].as_str().unwrap(),
+                    step["layer"].as_str().unwrap(),
+                    parsed,
+                )
+                .map(|f| serde_json::to_value(f).unwrap());
+                json!({
+                    "op": op, "appName": step["appName"], "layer": step["layer"],
+                    "parsed": step["parsed"],
+                    "hasOverlays": out.as_ref().is_some_and(|v| v.get("overlays").is_some()),
+                    "result": out,
+                })
+            }
+            other => panic!("unknown step op {other}"),
+        }
+    }
+
     fn catalogue(&self) -> Value {
         let real = lookup("gst-libav-1.24.13").expect("gst-libav-1.24.13 is not in the catalogue");
         let table = gamelib_knownfix::catalogue::catalogue().unwrap();
@@ -725,23 +1049,28 @@ fn expected_reason(rig: &Rig, golden: &str) -> String {
 
 /// Runs one case on a fresh fake HOME; `(result, events, tree)` normalised like the golden.
 #[cfg(unix)]
-async fn run_case(case: &Value) -> (Value, Value, Value) {
+async fn run_case(case: &Value, js_case: &JsValue) -> (Value, Value, Value) {
     let rig = Rig::new();
     let fixture = Fixture::new(case);
     let run = Run {
         rig: &rig,
         fixture: &fixture,
+        js_case,
     };
     let mut steps = Vec::new();
     let mut events = Vec::new();
     for (index, step) in case["steps"].as_array().unwrap().iter().enumerate() {
+        rig.seed(&step["seed"]);
         let before = rig.log.lines().len();
         let answer = match step["op"].as_str().unwrap() {
             "ensure" => run.ensure(step).await,
             "damage" => run.damage(step["kind"].as_str().unwrap()),
             "verify" => run.verify(step),
             "catalogue" => run.catalogue(),
-            other => panic!("unknown step op {other}"),
+            "validate" => run.validate(index, step),
+            "resolveEnv" => run.resolve_env(index, step).await,
+            "profileEnv" => run.profile_env(step).await,
+            _ => run.pure(index, step),
         };
         steps.push(answer);
         for (level, line) in rig.log.lines().into_iter().skip(before) {
@@ -776,10 +1105,12 @@ async fn every_install_golden_replays() {
     let cases = load_cases();
     let mut compared = 0usize;
     let mut failures = Vec::new();
-    for case in cases.iter().filter(|c| is_install_case(c)) {
+    let js_cases = load_js_cases();
+    let mut skipped_debug = 0usize;
+    for (case, js_case) in cases.iter().zip(&js_cases) {
         let id = case["id"].as_str().unwrap();
         let dir = golden_dir().join("expected").join(id);
-        let (result, events, tree) = run_case(case).await;
+        let (result, events, tree) = run_case(case, js_case).await;
         let rig = Rig::new();
         let want_result = expected_result(&rig, &read_json(&dir.join("result.json")));
         let want_events = Value::Array(
@@ -787,6 +1118,19 @@ async fn every_install_golden_replays() {
                 .as_array()
                 .unwrap()
                 .iter()
+                .filter(|e| {
+                    // The TS wrote the `skipped` line at debug level; the Rust log has no such level
+                    // (`deltas.json`), so the line is dropped, and nothing else is.
+                    if e["level"] == "debug" {
+                        assert!(
+                            e["text"].as_str().unwrap().contains(SKIPPED_DEBUG_MARKER),
+                            "{id}: a debug line that is not a skipped-overlay line: {e}"
+                        );
+                        skipped_debug += 1;
+                        return false;
+                    }
+                    true
+                })
                 .map(|e| {
                     json!({"step": e["step"], "level": e["level"],
                            "text": expected_line(e["text"].as_str().unwrap())})
@@ -821,7 +1165,9 @@ async fn every_install_golden_replays() {
         OVERLAY_INSTALL_FLOOR,
     )
     .unwrap();
-    println!("compared {compared} overlay install cases");
+    println!(
+        "compared {compared} overlay install and env cases, dropped {skipped_debug} debug lines"
+    );
 }
 
 #[test]

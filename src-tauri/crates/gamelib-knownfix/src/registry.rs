@@ -140,7 +140,7 @@ fn utf16_len(s: &str) -> usize {
 
 /// `s.slice(0, SHOWN_MAX_UNITS)` for text: a character that straddles the cut is dropped (a lone
 /// surrogate cannot be written into a Rust string).
-fn slice_units(s: &str) -> String {
+pub(crate) fn slice_units(s: &str) -> String {
     let mut units = 0usize;
     let mut out = String::new();
     for c in s.chars() {
@@ -154,7 +154,7 @@ fn slice_units(s: &str) -> String {
 }
 
 /// `String(JSON.stringify(v)).slice(0, 200)`; `undefined` for an absent value.
-fn shown(value: Option<&JsValue>) -> String {
+pub(crate) fn shown(value: Option<&JsValue>) -> String {
     match value {
         None => "undefined".to_string(),
         Some(v) => slice_units(&v.stringify()),
@@ -162,7 +162,7 @@ fn shown(value: Option<&JsValue>) -> String {
 }
 
 /// An object's value under `key`, when the value is an object that has it.
-fn member<'a>(value: &'a JsValue, key: &str) -> Option<&'a JsValue> {
+pub(crate) fn member<'a>(value: &'a JsValue, key: &str) -> Option<&'a JsValue> {
     match value {
         JsValue::Object(entries) => entries.iter().find(|(k, _)| k == key).map(|(_, v)| v),
         _ => None,
