@@ -26,17 +26,85 @@ import { findRollbackFlag, walkStripped } from 'backend/testUtils/infoPortGate'
 import {
   BACKEND_FILES_FLOOR,
   flagWalk,
+  runSlice,
   rustWalk,
   RUST_FILES_FLOOR,
   SCANNED_FILES_FLOOR,
   tsWalk
 } from 'backend/testUtils/portSliceGate'
+import type { SliceSpec } from 'backend/testUtils/portSliceGate'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 
 /** The rollback flag D-15 forbids; named here once so the scan and its self-tests agree. */
 const FORBIDDEN_FLAG = 'GAMELIB_SHORTCUTS'
+
+/**
+ * 94-24, D-15, D-23 and SC4: the non-Steam shortcuts service is Rust's (`gamelib-shortcuts`) and every caller reaches it
+ * through the scheduled resolvers. The TypeScript service, its TS oracle and the oracle harness are deleted. The golden
+ * fixtures stay: the Rust replays hold the writers to them, and the redaction scan over them stays too. Their provenance
+ * is the TS that wrote them, so a golden is never re-recorded from a deleted file. The one exception is the four macOS
+ * `icon_geometry` goldens, which 94-07 could not record on its Windows host: the oracle that records them is kept as a
+ * scheduled survivor (`testUtils/shortcutsIconGeometry`, deletedBy 99 in the Phase 94 schedule) until a Mac records them.
+ */
+const SHORTCUTS: SliceSpec = {
+  deleted: [
+    'src/backend/shortcuts/__tests__/addShortcutsOutcome.test.ts',
+    'src/backend/shortcuts/__tests__/getIcon.test.ts',
+    'src/backend/shortcuts/__tests__/oracle/hostileNames.ts',
+    'src/backend/shortcuts/__tests__/oracle/pathsExists.oracle.test.ts',
+    'src/backend/shortcuts/__tests__/oracle/removeIcons.oracle.test.ts',
+    'src/backend/shortcuts/__tests__/oracle/steam.oracle.test.ts',
+    'src/backend/shortcuts/__tests__/oracle/text.oracle.test.ts',
+    'src/backend/shortcuts/__tests__/oracle/windows.oracle.test.ts',
+    'src/backend/shortcuts/__tests__/oracle/windowsInputs.ts',
+    'src/backend/shortcuts/__tests__/removeShortcutsOutcome.test.ts',
+    'src/backend/shortcuts/__tests__/shortcutsExistsFallback.test.ts',
+    'src/backend/shortcuts/__tests__/windowsShortcut.test.ts',
+    'src/backend/shortcuts/__tests__/windowsShortcut.win32.test.ts',
+    'src/backend/shortcuts/__tests__/windowsShortcutIcon.test.ts',
+    'src/backend/shortcuts/nonesteamgame/__tests__/nonesteamgame.test.ts',
+    'src/backend/shortcuts/nonesteamgame/__tests__/test_data/shortcuts_commandmc.vdf',
+    'src/backend/shortcuts/nonesteamgame/__tests__/test_data/shortcuts_felipecrs.vdf',
+    'src/backend/shortcuts/nonesteamgame/__tests__/test_data/shortcuts_missing_appname.vdf',
+    'src/backend/shortcuts/nonesteamgame/__tests__/test_data/shortcuts_missing_exe.vdf',
+    'src/backend/shortcuts/nonesteamgame/__tests__/test_data/shortcuts_missing_launchoptions.vdf',
+    'src/backend/shortcuts/nonesteamgame/__tests__/test_data/shortcuts_redromnon.vdf',
+    'src/backend/shortcuts/nonesteamgame/__tests__/test_data/shortcuts_valid.vdf',
+    'src/backend/shortcuts/nonesteamgame/constants.ts',
+    'src/backend/shortcuts/nonesteamgame/nonesteamgame.ts',
+    'src/backend/shortcuts/nonesteamgame/steamhelper.ts',
+    'src/backend/shortcuts/shortcuts/shortcuts.ts',
+    'src/backend/shortcuts/shortcuts/windowsShortcut.ts',
+    'src/backend/shortcuts/shortcuts/windowsShortcutIcon.ts',
+    'src/backend/shortcuts/types.ts',
+    'src/backend/shortcuts/utils.ts',
+    'src/backend/testUtils/shortcutsOracle/__tests__/harness.test.ts',
+    'src/backend/testUtils/shortcutsOracle/harness.ts'
+  ],
+  kept: [
+    'src-tauri/crates/gamelib-shortcuts/tests/fixtures/golden',
+    'src/backend/__tests__/shortcutsFixtureRedaction.test.ts',
+    'src/backend/testUtils/shortcutsIconGeometry/iconGeometryGoldens.ts',
+    'src/backend/testUtils/shortcutsIconGeometry/__tests__/iconGeometry.oracle.test.ts'
+  ],
+  forbiddenIdentifiers: [
+    'addNonSteamGame',
+    'generateMacOsApp',
+    'convertPngToICNS',
+    'writeWindowsShortcut',
+    'resolveWindowsShortcutIcon',
+    'shortcutFiles',
+    'ShortcutsDeps'
+  ],
+  identifierRoot: 'src',
+  flag: FORBIDDEN_FLAG
+}
+
+describe('shortcutsPortComplete', () => {
+  runSlice(SHORTCUTS)
+})
 
 describe('noRollbackFlag', () => {
   it('anti-vacuity: the walks read real trees', () => {
