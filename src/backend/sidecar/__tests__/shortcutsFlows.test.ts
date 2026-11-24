@@ -359,9 +359,9 @@ afterAll(() => {
 // plan 34.5-08, plus addToSteam/removeFromSteam/isAddedToSteam from that plan), completing the
 // cluster at 7 (4 handle, 3 send). Quick 261012-ca6 then moved `addShortcut` and `removeShortcut`
 // from send to invoke so the renderer can learn the outcome: 6 handle, 1 send (`processShortcut`).
-describe('registration kind — the 7 channels are registered with the correct kind, both directions', () => {
+// Phase 94 Plan 11 moved `shortcutsExists` to the scheduled resolver `resolveShortcutsExists`: 5 handle, 1 send.
+describe('registration kind — the 6 channels are registered with the correct kind, both directions', () => {
   const HANDLE_CHANNELS = [
-    'shortcutsExists',
     'addShortcut',
     'removeShortcut',
     'addToSteam',
@@ -370,8 +370,8 @@ describe('registration kind — the 7 channels are registered with the correct k
   ]
   const SEND_CHANNELS = ['processShortcut']
 
-  it('the cluster is complete at 7: 6 handle + 1 send', () => {
-    expect(HANDLE_CHANNELS).toHaveLength(6)
+  it('the cluster is complete at 6: 5 handle + 1 send', () => {
+    expect(HANDLE_CHANNELS).toHaveLength(5)
     expect(SEND_CHANNELS).toHaveLength(1)
   })
 
@@ -392,82 +392,16 @@ describe('registration kind — the 7 channels are registered with the correct k
   )
 })
 
-// ── Describe 1b: shortcutsExists fallback (260905-mv5, site 4) ─────────────────────────────────
+// ── Describe 1b: shortcutsExists moved (Phase 94 Plan 11) ─────────────────────────────────────
 //
-// `shortcutsExists` (`shortcutsFlowRegistration.ts`) re-reads `game.getGameInfo()` itself, exactly
-// like the install-failure surfaces 260905-luf already fixed, and exactly like site 3's Electron
-// counterpart (`backend/shortcuts/ipc_handler.ts`, same channel name, same shape) just above it in
-// the census. Steam's `getGameInfo()` can return `{} as GameInfo` on a double cache miss (D-01,
-// kept as the cross-runner sentinel, not relitigated here) -- this pins that the sidecar's
-// `shortcutsExists` handler resolves `false` instead of throwing in that case, per D-03 (a title
-// feeding a filesystem path component must never fabricate a path from a synthesized fallback).
-//
-// Drives the REAL registered handler via `handlerRegistry` (the same registry Describe 6's
-// `addToSteam` tests already use), reusing this file's own `mockGetGame`/`makeGameInfo` fixtures.
-describe("shortcutsExists' fallback on an empty getGameInfo() (260905-mv5, site 4)", () => {
-  it('260905-mv5: resolves false instead of throwing when getGameInfo() returns {} (D-01 sentinel)', async () => {
-    mockGetGame.mockReturnValue({ getGameInfo: () => ({}) })
-
-    const handler = handlerRegistry.get('shortcutsExists')
-    expect(handler).toBeDefined()
-
-    await expect(handler?.(undefined, 'AppName', 'legendary')).resolves.toBe(
-      false
-    )
-  })
-
-  // 260905-mv5 Task 3: the falsy-title branch must not fail SILENTLY -- a
-  // missing shortcut check is a behavior change from before this fix (it
-  // used to throw), so it must be observable in the logs exactly once.
-  it('260905-mv5: logs exactly one warning when getGameInfo() returns {} (D-01 sentinel)', async () => {
-    mockGetGame.mockReturnValue({ getGameInfo: () => ({}) })
-
-    const handler = handlerRegistry.get('shortcutsExists')
-    expect(handler).toBeDefined()
-
-    await handler?.(undefined, 'AppName', 'legendary')
-
-    expect(mockLogWarning).toHaveBeenCalledTimes(1)
-    expect(mockLogWarning.mock.calls[0][0]).toContain('AppName')
-  })
-
-  // 260905-mv5 Task 3 (no regression): the D-03 early return must not
-  // swallow the normal path -- with a POPULATED title, the handler must
-  // still call the real `shortcutFiles` and return the real `existsSync`
-  // result, not an unconditional `false`. This suite's `shortcutFiles` and
-  // `existsSync` are both real (see the file's own header on this), so a
-  // real `.app` bundle directory is created on disk (under the structurally
-  // redirected home from `jest.setupContainment`, per the containment rule
-  // this file already follows above) at the exact path `shortcutFiles`
-  // computes for the title used below -- only a reverted, unconditional
-  // `return false` guard would turn this RED, since existsSync would
-  // otherwise genuinely see the created path.
-  it('260905-mv5 (no regression): still calls shortcutFiles/existsSync and returns true when a real title is present', async () => {
-    const title = '260905-mv5 Site 4 No-Regression Game'
-    mockGetGame.mockReturnValue({ getGameInfo: () => ({ title }) })
-    // 261012-ca6: forced to the darwin path (`<home>/Applications/<title>.app`) so the directory
-    // below lands under the containment home on every host. With no override this test used to
-    // create an empty directory on the real OneDrive Desktop on Windows, where the known-folder
-    // lookup resolves `getPath('desktop')` outside the containment home.
-    const originalPlatform = overrideProcessPlatform('darwin')
-    try {
-      const desktopFile = defined(
-        shortcutFiles(pathDeps, title)[0],
-        'desktop file'
-      )
-      expect(desktopFile.startsWith(homedir())).toBe(true)
-      mkdirSync(desktopFile, { recursive: true })
-
-      const handler = handlerRegistry.get('shortcutsExists')
-      expect(handler).toBeDefined()
-
-      await expect(handler?.(undefined, 'AppName', 'legendary')).resolves.toBe(
-        true
-      )
-      expect(mockLogWarning).not.toHaveBeenCalled()
-    } finally {
-      overrideProcessPlatform(originalPlatform)
-    }
+// `shortcutsExists` is no longer registered by `shortcutsFlowRegistration.ts`: it is the scheduled resolver
+// `resolveShortcutsExists` (`shortcutsResolvers.ts`), answered by Rust. The empty-`getGameInfo()` fallback
+// (260905-mv5, site 4: no title, no lookup, `false`) is pinned by `shortcutsResolvers.test.ts` (the title
+// reaches Rust as absent) and by the `exists` golden replay in `gamelib-shortcuts` (`no-title`, `empty-title`);
+// the path and presence rules by the `paths` and `exists` replays.
+describe('shortcutsExists is not registered by this module any more (94-11)', () => {
+  it('has no handler here, so the resolver is the one owner of the channel', () => {
+    expect(handlerRegistry.has('shortcutsExists')).toBe(false)
   })
 })
 

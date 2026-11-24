@@ -183,6 +183,21 @@ export const SCHEDULE: readonly ScheduleRow[] = [
       'src/backend/storeManagers/legendary/user.ts'
     ],
     deletedBy: 92
+  },
+  // 94-11, the shortcuts tracer: `shortcutsExists` is a RESOLVER (D-24), not a shim. The path rules, the
+  // sanitize port and the registry Desktop read are Rust; the one input Rust cannot gather is the game's
+  // title, which lives in a TypeScript library manager's memory, so the resolver reads it (`const title`) and
+  // makes the one call. `registerShortcutsResolvers` only installs its `ipc.handle`. Phase 92 ports the last
+  // store whose game data is TypeScript, after which Rust holds the library itself and the handle goes native.
+  {
+    name: 'resolveShortcutsExists',
+    file: 'src/backend/sidecar/shortcutsResolvers.ts',
+    shape: 'resolver',
+    inputs: ['title'],
+    channel: 'RUST_SHORTCUTS_EXIST',
+    wiring: ['registerShortcutsResolvers'],
+    callers: ['src/backend/sidecar/handlers.ts'],
+    deletedBy: 92
   }
 ]
 

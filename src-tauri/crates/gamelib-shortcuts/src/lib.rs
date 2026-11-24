@@ -10,6 +10,11 @@
 //! This crate depends on neither `gamelib-humble` nor `tauri`; `cargo tree` proves it (94-02).
 
 pub mod ctx;
+pub mod exists;
+pub mod paths;
+pub mod sanitize;
+#[cfg(any(test, feature = "testing"))]
+pub mod testing;
 
 use ctx::ShortcutsCtx;
 use serde_json::Value;
@@ -21,7 +26,22 @@ use std::task::{Context, Poll};
 use tokio::runtime::{Builder, Handle, Runtime};
 
 /// Ops reachable from the shell. Keep sorted; each plan adds its own.
-pub const OPS: &[&str] = &[];
+pub const OPS: &[&str] = &["shortcuts_exist"];
+
+/// The runner names a game can belong to, as the renderer and the sidecar spell them.
+const RUNNERS: &[&str] = &["gog", "legendary", "nile", "sideload", "steam"];
+
+/// The arguments of `shortcuts_exist`: the game's own `appName` and `runner` (validated, not used to
+/// build a path) and its `title`, the one input the TS library managers hold and Rust cannot gather.
+/// A game with no title (the library's `{}` sentinel) arrives with no `title` or a `null` one.
+#[derive(Debug, serde::Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+pub struct ExistArgs {
+    pub app_name: String,
+    pub runner: String,
+    #[serde(default)]
+    pub title: Option<String>,
+}
 
 /// Ops that exist only in this crate's own unit tests, to pin the dispatch contract. Never part of
 /// a release [`OPS`].
@@ -54,18 +74,27 @@ pub async fn dispatch(op: &str, args: &[Value], ctx: &ShortcutsCtx) -> Result<Va
 }
 
 /// Each plan adds its arms here, in step with `OPS`.
-#[allow(unused_variables)]
 async fn route(op: &str, args: &[Value], ctx: &ShortcutsCtx) -> Result<Value, String> {
     #[cfg(test)]
     if let Some(done) = test_route(op, args) {
         return done;
     }
-    Err(format!("unknown op: {op}"))
+    match op {
+        "shortcuts_exist" => {
+            let args: ExistArgs = decode(op, args)?;
+            if args.app_name.is_empty() || !RUNNERS.contains(&args.runner.as_str()) {
+                return Err(format!("{op}:bad-args"));
+            }
+            Ok(Value::Bool(
+                exists::shortcuts_exist(ctx, args.title.as_deref()).await,
+            ))
+        }
+        _ => Err(format!("unknown op: {op}")),
+    }
 }
 
 /// The one object argument of an op, decoded strictly (the arg structs deny unknown fields). The
 /// error is a fixed `<op>:bad-args`: a renderer or sidecar string never reaches it.
-#[allow(dead_code)]
 fn decode<T: serde::de::DeserializeOwned>(op: &str, args: &[Value]) -> Result<T, String> {
     let [arg] = args else {
         return Err(format!("{op}:bad-args"));

@@ -10,7 +10,7 @@
  *               well as text so a lone surrogate survives JSON.
  *   paths/      `shortcutFiles` per OS and hostile title; Windows once with a registry Desktop folder and
  *               once without (no Desktop path).
- *   exists/     what the registered `shortcutsExists` channel (`shortcutsExistOnDisk`) answers over a
+ *   exists/     what the `shortcutsExists` predicate (`shortcutsExistOnDisk`) answers over a
  *               disk matrix: none, Desktop only, menu only, both, and a dangling Desktop symlink, a
  *               symlink to the bundle and a legacy real bundle on macOS, plus `macDesktopShortcutPresent`
  *               and `macDesktopShortcutWanted` alongside.
@@ -32,9 +32,10 @@ import {
   macDesktopShortcutWanted,
   shortcutFiles
 } from '../../shortcuts/shortcuts'
-import { registerShortcutsFlows } from 'backend/sidecar/shortcutsFlowRegistration'
-import { createIpcRegistry } from 'backend/sidecar/ipcRegistry'
-import { ipcViews } from 'backend/testUtils/ipcViews'
+import {
+  shortcutsExistOnDisk,
+  type ShortcutsFlowDeps
+} from 'backend/sidecar/shortcutsFlowRegistration'
 import {
   assertManifest,
   expectEmptyCasesToFail,
@@ -293,10 +294,8 @@ async function existsGolden(c: ExistsCase): Promise<unknown> {
         : null
     try {
       const gameInfo = c.title === null ? {} : { title: c.title }
-      const ipc = createIpcRegistry()
       const settings = { addDesktopShortcuts: true }
       const flowDeps = {
-        ipc,
         managers: {
           library: {
             legendary: { getGame: () => ({ getGameInfo: () => gameInfo }) }
@@ -317,8 +316,7 @@ async function existsGolden(c: ExistsCase): Promise<unknown> {
               timedOut: false
             })
         }
-      } as unknown as Parameters<typeof registerShortcutsFlows>[0]
-      registerShortcutsFlows(flowDeps)
+      } as unknown as ShortcutsFlowDeps
 
       if (c.title) {
         const [desktopFile, menuFile] = shortcutFiles(
@@ -329,11 +327,13 @@ async function existsGolden(c: ExistsCase): Promise<unknown> {
         seedTree(c, profile, desktopFile, menuFile as string)
       }
 
-      const handler = ipcViews(ipc).handlerRegistry.get('shortcutsExists')
-      if (!handler) throw new Error('shortcutsExists is not registered')
-      const exists = await (
-        handler as (e: unknown, appName: string, runner: string) => unknown
-      )(undefined, 'oracle-app', 'legendary')
+      // The TypeScript predicate behind the renderer's `shortcutsExists` channel, called directly: the
+      // channel itself is the Rust-answered resolver since 94-11, so this is the recorded oracle.
+      const exists = await shortcutsExistOnDisk(
+        flowDeps,
+        'oracle-app',
+        'legendary'
+      )
       const macDeps = { paths: profile.paths, config: flowDeps.config }
       return {
         platform: c.platform,

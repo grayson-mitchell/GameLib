@@ -78,6 +78,9 @@ const NO_REGISTRATION_OWNER: Record<string, string> = {
   // Phase 87 Plan 52 (D-23): `getEngineState` is a scheduled resolver (`engineWineResolvers.ts`); `engineFlowRegistration.ts`
   // is gone (87-53).
   'Async:getEngineState': 'engine',
+  // Phase 94 Plan 11 (86 D-24): `shortcutsExists` is a scheduled resolver (`shortcutsResolvers.ts`), answered by Rust,
+  // not a `*FlowRegistration.ts` handle.
+  'Async:shortcutsExists': 'shortcuts',
   'Async:gamepadAction': 'testStubs',
   'Async:get-connectivity-status': 'mainProcess',
   'Async:getSignInProbeOutcomes': 'mainProcess',
@@ -373,7 +376,8 @@ describe('ipc per-domain declarations (D-09/D-10/D-11)', () => {
     // resolvers); owner-less allowlist 64 -> 67. winetricksQueueState and winetricksCancelRemaining became native channels.
     // Phase 87 Plan 36 (D-23): +3 Async (runWineCommandForGame, runWineCommand, callTool, now scheduled resolvers); 67 -> 70.
     // Phase 87 Plan 52 (D-23): +1 Async (getEngineState, now a scheduled resolver); 70 -> 71.
-    expect(Object.keys(NO_REGISTRATION_OWNER)).toHaveLength(71)
+    // Phase 94 Plan 11 (86 D-24): +1 Async (shortcutsExists, now a scheduled resolver); 71 -> 72.
+    expect(Object.keys(NO_REGISTRATION_OWNER)).toHaveLength(72)
   })
 
   it('(d) near-miss: a manifest-owned channel leaves the computed owner-less set', () => {

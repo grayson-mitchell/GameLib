@@ -145,7 +145,9 @@ const EXPECTED: Record<string, { invoke: number; send: number }> = {
   'shellFilesFlowRegistration.ts': { invoke: 3, send: 10 },
   // Quick 261012-ca6 (2026-10-12): invoke 4 -> 6, send 3 -> 1 -- `addShortcut` and
   // `removeShortcut` moved from send to invoke so the renderer can learn the write's outcome.
-  'shortcutsFlowRegistration.ts': { invoke: 6, send: 1 },
+  // Phase 94 Plan 11: invoke 6 -> 5 -- `shortcutsExists` is the scheduled resolver `resolveShortcutsExists`
+  // (`shortcutsResolvers.ts`), answered by Rust.
+  'shortcutsFlowRegistration.ts': { invoke: 5, send: 1 },
   // Phase 51 Plan 13 (2026-10-21): invoke 18 -> 20 -- `getSteamBridgeRoute` and
   // `setSteamBridgeUserRoute` registered for the bridge-routing notice dialog.
   // Quick 261024-h5y (2026-10-24): invoke 20 -> 21 -- the bottled-Steam "finish install" channel

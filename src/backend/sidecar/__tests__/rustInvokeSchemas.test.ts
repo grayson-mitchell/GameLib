@@ -11,7 +11,8 @@ import { rustInvokeArgs } from 'common/types/ipc/rustInvoke'
 import {
   RUST_INFO_WIKI_CACHE_CLEAR,
   RUST_INFO_WIKI_GET,
-  RUST_INVOKE_CHANNELS
+  RUST_INVOKE_CHANNELS,
+  RUST_SHORTCUTS_EXIST
 } from 'common/types/sidecarTransport'
 
 const fixture = (name: string): Record<string, unknown> =>
@@ -53,7 +54,8 @@ describe('rustInvokeArgs', () => {
     // Phase 87 plan 55: 183 -> 185, engine_run_tool and engine_cancel.
     // Phase 87 plan 56a: 185 -> 188, engine_resolve_tool_settings, engine_non_crossover_engine and engine_fallback_ensure.
     // Phase 87 plan 70: 188 -> 189, engine_bottle_remove_per_game.
-    expect(RUST_INVOKE_CHANNELS).toHaveLength(189)
+    // Phase 94 plan 11: 189 -> 190, shortcuts_exist.
+    expect(RUST_INVOKE_CHANNELS).toHaveLength(190)
   })
 
   it('parses the store-embed wire fixtures', () => {
@@ -95,6 +97,24 @@ describe('rustInvokeArgs', () => {
     expect(clear.safeParse([{}]).success).toBe(true)
     expect(clear.safeParse([]).success).toBe(false)
     expect(clear.safeParse([{ x: 1 }]).success).toBe(false)
+  })
+
+  it('accepts the shortcut exists args with or without a title, and rejects drift (Phase 94 plan 11)', () => {
+    const exist = rustInvokeArgs[RUST_SHORTCUTS_EXIST]
+    const game = { appName: '620', runner: 'steam' }
+    expect(exist.safeParse([game]).success).toBe(true)
+    expect(exist.safeParse([{ ...game, title: 'Portal 2' }]).success).toBe(true)
+    for (const bad of [
+      [],
+      [{ ...game, runner: 'epic' }],
+      [{ ...game, title: 7 }],
+      [{ ...game, title: null }],
+      [{ ...game, extra: 1 }],
+      [{ runner: 'steam' }],
+      [game, game]
+    ]) {
+      expect(exist.safeParse(bad).success).toBe(false)
+    }
   })
 
   it('rejects a payload that omits a required field', () => {

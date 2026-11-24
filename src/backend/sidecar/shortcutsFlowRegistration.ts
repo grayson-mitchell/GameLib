@@ -7,13 +7,14 @@
  * the cluster at 7 with the Steam-add/remove trio (`addToSteam`/`removeFromSteam`/
  * `isAddedToSteam`). Quick task 261012-ca6 then moved `addShortcut` and `removeShortcut` from
  * send-kind to invoke-kind (see the comment on their registrations below), so the cluster is now
- * 6 invoke + 1 send; the total stays 7.
+ * 6 invoke + 1 send; the total stays 7. Phase 94 plan 11 then moved `shortcutsExists` out of this module:
+ * it is the scheduled resolver `resolveShortcutsExists` (`shortcutsResolvers.ts`), answered by Rust, so 6
+ * channels (5 invoke + 1 send) are registered here.
  *
- * Declared channel list, all 7 (verified against `shortcuts/ipc_handler.ts` and `main.ts` by
+ * Declared channel list, the 6 that remain (verified against `shortcuts/ipc_handler.ts` and `main.ts` by
  * 34.5-RESEARCH.md and each plan's own `<interfaces>` block):
  *
- *   invoke (deps.ipc.handle, 6):
- *     - `shortcutsExists`  -> shortcuts/ipc_handler.ts (plan 34.5-08)
+ *   invoke (deps.ipc.handle, 5):
  *     - `addShortcut`      -> shortcuts/ipc_handler.ts (plan 34.5-08; invoke since 261012-ca6)
  *     - `removeShortcut`   -> shortcuts/ipc_handler.ts (plan 34.5-08; invoke since 261012-ca6)
  *     - `addToSteam`       -> shortcuts/ipc_handler.ts (plan 34.5-11)
@@ -156,8 +157,14 @@ function logChannelFailure(channel: string, error: unknown): void {
  * Whether a shortcut for the game exists on disk right now. Shared by `shortcutsExists` and by the
  * `addShortcut`/`removeShortcut` handlers, which evaluate it AFTER their work has settled so the
  * renderer sets its state from the disk and never from an assumption (quick task 261012-ca6).
+ *
+ * Exported for the 94-05 oracle (`pathsExists.oracle.test.ts`), which records what this decides as the goldens the
+ * Rust `shortcuts_exist` is held to. The renderer's `shortcutsExists` channel no longer reaches it (94-11); 94-22
+ * deletes it with the add and remove handlers.
+ *
+ * @public Consumed by the oracle test.
  */
-async function shortcutsExistOnDisk(
+export async function shortcutsExistOnDisk(
   deps: ShortcutsFlowDeps,
   appName: string,
   runner: Runner
@@ -194,7 +201,7 @@ async function shortcutsExistOnDisk(
 }
 
 /**
- * Registers all 7 of this cluster's channels (6 invoke + 1 send). Called once from `handlers.ts`
+ * Registers all 6 of this cluster's channels (5 invoke + 1 send). Called once from `handlers.ts`
  * -- this module owns no side effects at import time beyond the imports above; the caller decides
  * when registration onto the handler registry happens.
  *
@@ -208,16 +215,10 @@ async function shortcutsExistOnDisk(
  * `registrationOncePerBoot.test.ts`; a second boot in one process throws in `bootSidecar()`.
  */
 export function registerShortcutsFlows(deps: ShortcutsFlowDeps): void {
-  // ── invoke (6) ──────────────────────────────────────────────────────────
-
-  deps.ipc.handle(
-    'shortcutsExists',
-    async (_event: unknown, ...args: unknown[]) => {
-      const appName = args[0] as string
-      const runner = args[1] as Runner
-      return shortcutsExistOnDisk(deps, appName, runner)
-    }
-  )
+  // ── invoke (5) ──────────────────────────────────────────────────────────
+  // `shortcutsExists` is no longer registered here: 94-11 moved it to the scheduled resolver
+  // `resolveShortcutsExists` (`shortcutsResolvers.ts`), answered by Rust. The two handlers below keep this
+  // module's TypeScript disk re-check (`shortcutsExistOnDisk`) until 94-22 moves them.
 
   // Quick task 261012-ca6 (todo `gamesubmenu-shows-remove-shortcuts-before-the-write-is-known`):
   // invoke-kind, no longer send-kind. GameSubMenu used to flip its "Add shortcut"/"Remove

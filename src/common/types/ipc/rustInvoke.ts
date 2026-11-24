@@ -72,6 +72,7 @@ import {
   RUST_INFO_UMU_GET,
   RUST_INFO_WIKI_CACHE_CLEAR,
   RUST_INFO_WIKI_GET,
+  RUST_SHORTCUTS_EXIST,
   RUST_STEAMCM_ANON_CLOSE,
   RUST_STEAMCM_ANON_PRODUCT_INFO,
   RUST_STEAMCM_CONFIGURE,
@@ -872,6 +873,18 @@ export const rustInvokeArgs = {
       .strict()
   ]),
   [RUST_INFO_WIKI_CACHE_CLEAR]: z.tuple([z.object({}).strict()]),
+  // Phase 94 (SVC-05, 94-11): the shortcut exists check. The crate re-validates (deny_unknown_fields, the runner
+  // table, a non-empty app name). `title` is absent or `null` for a game the library holds no title for, which
+  // resolves false without a lookup.
+  [RUST_SHORTCUTS_EXIST]: z.tuple([
+    z
+      .object({
+        appName: z.string(),
+        runner: z.enum(['gog', 'legendary', 'nile', 'sideload', 'steam']),
+        title: z.string().optional()
+      })
+      .strict()
+  ]),
   [RUST_STEAM_API_PIN_RESOLVE]: empty,
   // Phase 87 (SVC-02, 87-18): the wine runtime ops. One positional string, one of the three runtime
   // names; the shell decodes the same set again (T-87-65) and the crate validates the name a third time.

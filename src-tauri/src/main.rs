@@ -138,6 +138,7 @@ mod safety_dispatch;
 mod scan_dispatch;
 mod shell_open;
 mod shell_state;
+mod shortcuts_dispatch;
 mod sidecar;
 mod single_instance;
 mod steam_window;
@@ -1938,6 +1939,11 @@ fn run_setup(
         engine_dispatch::install(app.handle(), std::path::Path::new(&paths.user_data));
         wine_dispatch::install(info_dispatch::bundled_public_dir(app.handle()));
     }
+    // Phase 94 (SVC-05, D-20): the one shortcuts context, built right after the host opened. Nothing here
+    // spawns a process or waits; an op before this answers not-ready.
+    if let Some(paths) = log_paths.as_ref() {
+        shortcuts_dispatch::install(std::path::Path::new(&paths.user_data));
+    }
     // Where the sidecar's store frames are resolved: the directory this boot opened.
     if let Some(paths) = log_paths.as_ref() {
         store_dispatch::configure(std::path::PathBuf::from(&paths.user_data));
@@ -2458,6 +2464,7 @@ mod tests {
         "steam_window.rs",
         "shell_state.rs",
         "shell_open.rs",
+        "shortcuts_dispatch.rs",
         "sidecar.rs",
         "single_instance.rs",
         "single_instance/windows_pipe.rs",
@@ -2522,6 +2529,7 @@ mod tests {
         include_str!("steam_window.rs"),
         include_str!("shell_state.rs"),
         include_str!("shell_open.rs"),
+        include_str!("shortcuts_dispatch.rs"),
         include_str!("sidecar.rs"),
         include_str!("single_instance.rs"),
         include_str!("single_instance/windows_pipe.rs"),

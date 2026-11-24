@@ -40,8 +40,10 @@ const MODULES: ModuleSpec[] = [
     name: 'shortcuts',
     // Quick 261012-ca6 (2026-10-12): 4 -> 6. `addShortcut` and `removeShortcut` moved from
     // send-kind to invoke-kind and now resolve whether shortcuts exist on disk.
+    // Phase 94 Plan 11: 6 -> 5. `shortcutsExists` is the scheduled resolver `resolveShortcutsExists`
+    // (`shortcutsResolvers.ts`), answered by Rust; it is no longer an `ipc.handle` of this module.
     path: join(__dirname, '../shortcutsFlowRegistration.ts'),
-    expectedCount: 6
+    expectedCount: 5
   },
   {
     name: 'runnerMisc',
@@ -175,8 +177,10 @@ describe('invoke-return-value sweep anti-rot gate (F-34.5-G6-08 / U-34.5-15)', (
   // Phase 87 Plan 34 (D-23): 38 -> 35, the three DXVK toggles are scheduled resolvers, not the modules' handles.
   // Phase 87 Plan 35 (D-23, D-14): 35 -> 30, the five Winetricks channels are resolvers or native channels.
   // Phase 87 Plan 36 (D-23): 30 -> 27, `runWineCommandForGame`, `runWineCommand` and `callTool` are scheduled resolvers.
-  it('extracts exactly 27 channels total', () => {
-    expect(allChannels).toHaveLength(27)
+  // Phase 94 Plan 11: 27 -> 26, the -1 recorded on the `shortcuts` module spec above (`shortcutsExists` is a
+  // scheduled resolver).
+  it('extracts exactly 26 channels total', () => {
+    expect(allChannels).toHaveLength(26)
   })
 
   it.each(MODULES)('$name has exactly $expectedCount channels', (spec) => {

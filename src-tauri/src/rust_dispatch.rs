@@ -306,5 +306,6 @@ pub(crate) fn dispatch_rust_channel(
             engine_dispatch::rpc_non_crossover_engine(args)
         }
         RustInvokeChannel::EngineFallbackEnsure => engine_dispatch::rpc_fallback_ensure(args),
+        RustInvokeChannel::ShortcutsExist => shortcuts_dispatch::rpc_shortcuts_exist(args),
     }
 }

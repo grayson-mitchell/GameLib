@@ -1367,6 +1367,17 @@ export const RUST_ENGINE_IS_CROSSOVER_MISSING =
  */
 export const RUST_ENGINE_CX_RESOLVE_BIN_DIR =
   'engine_cx_resolve_bin_dir' as const
+
+/**
+ * Phase 94 (SVC-05, 94-11): whether a game's desktop shortcut exists on disk right now, served by
+ * `gamelib-shortcuts` `exists` (the read-only tracer for the shortcuts port). Args
+ * `{ appName, runner, title? }` with `runner` one of the five runner names. Resolves a boolean: `true`
+ * when the Desktop item or the Applications / Start Menu item exists or is a symlink (a dangling Desktop
+ * link counts). A game with no title (the library's `{}` sentinel) is never looked up and resolves
+ * `false`. The title is the one input Rust cannot gather: it lives in a TS library manager's memory, so
+ * the one caller is the resolver `resolveShortcutsExists` (`sidecar/shortcutsResolvers.ts`, 86 D-24).
+ */
+export const RUST_SHORTCUTS_EXIST = 'shortcuts_exist' as const
 /**
  * Phase 87 (87-54, D-03, D-15): the Steam bridge's engine-state writes, reached through the shims in
  * `enginewine/state.ts`. `engine_state_record_decision` takes `{runner, appName, bottleName, override, selection?,
@@ -1812,7 +1823,8 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_ENGINE_CANCEL,
   RUST_ENGINE_RESOLVE_TOOL_SETTINGS,
   RUST_ENGINE_NON_CROSSOVER_ENGINE,
-  RUST_ENGINE_FALLBACK_ENSURE
+  RUST_ENGINE_FALLBACK_ENSURE,
+  RUST_SHORTCUTS_EXIST
 ] as const
 
 /** Phase 63 (D-03): the scanner channels, a subset of {@link RUST_INVOKE_CHANNELS}. */
@@ -1944,6 +1956,9 @@ export const RUST_INFO_CHANNELS = [
   RUST_INFO_WIKI_GET,
   RUST_INFO_WIKI_CACHE_CLEAR
 ] as const
+
+/** Phase 94: the Rust desktop and Steam shortcut channels, a subset of {@link RUST_INVOKE_CHANNELS}. */
+export const RUST_SHORTCUTS_CHANNELS = [RUST_SHORTCUTS_EXIST] as const
 
 /** The set of channel names `requestRustInvoke()` is allowed to target. */
 export type RustInvokeChannel = (typeof RUST_INVOKE_CHANNELS)[number]
