@@ -718,14 +718,15 @@ describe('wikiPortComplete', () => {
     expect(generator?.code).toContain("'umu'")
   })
 
-  it('info/wiki.ts holds the shims and the resolver and reaches Rust only through the two wiki constants', () => {
+  // Phase 94 plan 24: the `getWikiGameInfo` resolver (RUST_INFO_WIKI_GET) is deleted; the Rust shortcuts crate reaches the
+  // wiki lookup in-process through the shell's `WikiLookup`, so only the two shims remain.
+  it('info/wiki.ts holds the two shims and reaches Rust only through the umu and wiki-cache constants', () => {
     const calls = findRustInfoCalls(tsWalk.files).filter((c) =>
       c.path.endsWith('src/backend/info/wiki.ts')
     )
     expect(calls.map((c) => c.constant).sort()).toEqual([
       'RUST_INFO_UMU_GET',
-      'RUST_INFO_WIKI_CACHE_CLEAR',
-      'RUST_INFO_WIKI_GET'
+      'RUST_INFO_WIKI_CACHE_CLEAR'
     ])
     const wiki = tsWalk.files.find((f) => f.path === 'src/backend/info/wiki.ts')
     expect(wiki?.code).not.toMatch(/axios|fetch\(|URLSearchParams/)

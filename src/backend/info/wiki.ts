@@ -1,10 +1,8 @@
 import {
   RUST_INFO_UMU_GET,
-  RUST_INFO_WIKI_CACHE_CLEAR,
-  RUST_INFO_WIKI_GET
+  RUST_INFO_WIKI_CACHE_CLEAR
 } from 'common/types/sidecarTransport'
 import type { Runner } from 'common/types'
-import type { Game } from 'common/types/game_manager'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 
 /**
@@ -26,25 +24,6 @@ export async function getUmuId(
   runner: Runner
 ): Promise<unknown> {
   return deps.requestRustInvoke(RUST_INFO_UMU_GET, [{ appName, runner }])
-}
-
-/**
- * The non-Steam shortcut flow's wiki lookup (D-24 resolver). The one input Rust cannot gather is the
- * game itself, which lives in a library manager's memory, so the resolver reads its title, app name and
- * runner (`const`) and makes the one call. Rust cleans the title and owns the cache key.
- *
- * Resolves `unknown`: the `WikiInfo` object, or `null` when the lookup failed (Rust catches every source
- * failure; only a bad argument rejects, with the text of what failed).
- */
-export async function getWikiGameInfo(
-  deps: RustInvokeDeps,
-  game: Game,
-  forceRefresh?: boolean
-): Promise<unknown> {
-  const { title, app_name: appName, runner } = game.getGameInfo()
-  return deps.requestRustInvoke(RUST_INFO_WIKI_GET, [
-    { title, appName, runner, forceRefresh }
-  ])
 }
 
 /**

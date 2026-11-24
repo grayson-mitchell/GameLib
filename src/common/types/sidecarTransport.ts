@@ -1035,8 +1035,8 @@ export const RUST_INFO_UMU_GET = 'info_umu_get' as const
  * `{ title, appName, runner, forceRefresh? }` with `runner` one of the five runner names. Resolves the
  * wiki object (`pcgamingwiki`, `applegamingwiki`, `codeweavers`, `howlongtobeat`, `gamesdb`, `steamInfo`,
  * `umuId`, `fetchStatus`) from the 30 day `wikigameinfo` cache, or `null` when the lookup failed (a
- * failure is logged, never thrown). The title is the caller's own. The one caller is the non-Steam
- * shortcut resolver (`nonesteamgame.ts`), whose shim 86-23 writes.
+ * failure is logged, never thrown). The title is the caller's own. The one caller is the Rust
+ * non-Steam shortcuts crate (Phase 94 plan 24 deleted the TS resolver), which reaches it in-process through the shell.
  */
 export const RUST_INFO_WIKI_GET = 'info_wiki_get' as const
 

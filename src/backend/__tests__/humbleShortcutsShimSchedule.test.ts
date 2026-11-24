@@ -325,6 +325,19 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     shape: 'relocated',
     callers: ['src/backend/sidecar/handlers.ts'],
     deletedBy: 92
+  },
+  // 94-24, D-23, D-25: the one piece of the deleted TS shortcuts oracle that stays. The four macOS `icon_geometry`
+  // goldens (the shipped `sips` crop) could not be recorded on the Windows host that ran 94-07, and the Rust replay
+  // (`icon_geometry_goldens_replay`, #[ignore]d) waits for them. This is the cut-down golden writer, PNG codec and
+  // four inputs, driven by `testUtils/shortcutsIconGeometry/__tests__/iconGeometry.oracle.test.ts` (a test, so the
+  // file has no non-test importer). It is deleted in the commit that records the goldens (the todo
+  // `2026-11-24-record-macos-icon-geometry-goldens-on-a-mac` carries the steps), and Phase 99 at the latest.
+  {
+    name: 'writeOrCompareIconGeometryGolden',
+    file: 'src/backend/testUtils/shortcutsIconGeometry/iconGeometryGoldens.ts',
+    shape: 'relocated',
+    callers: [],
+    deletedBy: 99
   }
 ]
 

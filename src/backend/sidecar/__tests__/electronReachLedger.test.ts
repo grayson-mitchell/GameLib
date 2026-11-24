@@ -638,7 +638,7 @@ describe('electronReachLedger (Phase 34.2 Plan 11 — REQ-34.2-03, gap #3 / WR-0
       // modules independently require them.
       // Phase 94 Plan 22: the two `src/backend/shortcuts/...` lines anchored to `shortcutsFlowRegistration.ts` died
       // with it. Nothing in the entry-point graph imports the TypeScript shortcut modules any more (the store
-      // managers import `humbleshortcuts/shortcuts.ts`, which reaches no electron module); 94-24 deletes them.
+      // managers import `humbleshortcuts/shortcuts.ts`, which reaches no electron module); 94-24 deleted them.
       'src/backend/storeManagers/legendary/user.ts', // direct: runnerAuthFlowRegistration.ts
       'src/backend/storeManagers/gog/user.ts' // direct: runnerAuthFlowRegistration.ts
     ]

@@ -160,7 +160,7 @@ interface ShortcutEntrySummary {
   hasLaunchOptions: boolean
 }
 
-export interface ShortcutsReadResult {
+interface ShortcutsReadResult {
   exists: boolean
   parsed: boolean
   readError: string | null
@@ -169,7 +169,7 @@ export interface ShortcutsReadResult {
   entries: ShortcutEntrySummary[]
 }
 
-export interface ShortcutsApplyResult {
+interface ShortcutsApplyResult {
   written: boolean
   readError: string | null
   alreadyPresent: boolean
@@ -179,7 +179,7 @@ export interface ShortcutsApplyResult {
   removedAppName: string | null
 }
 
-export type EntryField =
+type EntryField =
   | { kind: 'string'; key: string; value: string }
   | { kind: 'int32'; key: string; value: number }
 

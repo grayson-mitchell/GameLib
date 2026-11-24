@@ -6,7 +6,7 @@
  * in non-test code, a TS `ipc.handle` or `ipc.on` registers one of the slice's native channels, or a
  * rollback flag string appears under src/ or src-tauri/src.
  *
- * The one sub-slice, `shortcuts`, is added red by 94-24. A sub-slice with no describe yet has none because a `SliceSpec` with nothing deleted would pass
+ * The one sub-slice, `shortcuts`, was added red by 94-24 and went green when it deleted the TypeScript. A sub-slice with no describe yet has none because a `SliceSpec` with nothing deleted would pass
  * vacuously, so the plan that deletes it adds its `describe('<name>PortComplete', () => runSlice(SPEC))`
  * here RED first (the files and identifiers still exist), then deletes the TS and watches it go green.
  * Never lower a floor or widen an allow-list to turn a red run green.
