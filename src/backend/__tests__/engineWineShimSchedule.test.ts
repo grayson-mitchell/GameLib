@@ -59,8 +59,20 @@ import { dirname, join } from 'path'
 
 const BACKEND_FILES_FLOOR = 400
 const ENGINEWINE_DIR = 'src/backend/enginewine'
+/**
+ * Directories whose exported values and typed Rust calls are discovered as schedule rows. 88 adds
+ * `launchrust`, so every launch shim and twin is a row from the commit that creates it. A missing
+ * directory contributes no files (the second does not exist until a 88 plan creates it).
+ */
+const SHIM_DIRS = [ENGINEWINE_DIR, 'src/backend/launchrust'] as const
 const RESOLVERS_FILE = 'src/backend/sidecar/engineWineResolvers.ts'
-const CHANNEL_PREFIXES = ['RUST_ENGINE_', 'RUST_WINE_'] as const
+const CHANNEL_PREFIXES = [
+  'RUST_ENGINE_',
+  'RUST_WINE_',
+  'RUST_KNOWNFIX_',
+  'RUST_LAUNCH_',
+  'RUST_RUNNER_'
+] as const
 
 interface ScheduleRow extends ShimRow {
   /** The exported name (a function, or a const for a view). */
@@ -245,7 +257,8 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     shape: 'shim',
     channel: 'RUST_WINE_RUNTIME_IS_INSTALLED',
     callers: ['src/backend/launcher.ts'],
-    deletedBy: 88
+    // Last call site: launcher.ts:859-862, `prepareLaunch`'s umu step, ported in 88.1 (D-30).
+    deletedBy: 88.1
   },
   {
     name: 'downloadRuntime',
@@ -253,7 +266,8 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     shape: 'shim',
     channel: 'RUST_WINE_RUNTIME_DOWNLOAD',
     callers: ['src/backend/launcher.ts'],
-    deletedBy: 88
+    // Last call site: launcher.ts:1142-1152 (umu in `prepareLaunch`, EAC/BattlEye in `prepareWineLaunch`), ported in 88.1 (D-30).
+    deletedBy: 88.1
   },
   // 87-20 (D-15): the wine manager. utils.ts's default-wine download (checkWineBeforeLaunch, reached from the
   // launch path and the bottle provisioning) and the `releasesInfoReady` listener go with Phase 88's launch
@@ -280,7 +294,8 @@ export const SCHEDULE: readonly ScheduleRow[] = [
       'src/backend/sidecar/engineWineResolvers.ts',
       'src/backend/utils.ts'
     ],
-    deletedBy: 88
+    // Last call site: utils.ts:1131, `downloadDefaultWine`, which 88.1 ports (D-28, D-30); the resolver caller goes with the same sub-phase.
+    deletedBy: 88.1
   },
   {
     name: 'listWineReleases',
@@ -291,7 +306,8 @@ export const SCHEDULE: readonly ScheduleRow[] = [
       'src/backend/sidecar/engineWineResolvers.ts',
       'src/backend/utils.ts'
     ],
-    deletedBy: 88
+    // Last call site: utils.ts:1107, `downloadDefaultWine`, which 88.1 ports (D-28, D-30).
+    deletedBy: 88.1
   },
   {
     name: 'wineReleasesInfoReady',
@@ -302,7 +318,8 @@ export const SCHEDULE: readonly ScheduleRow[] = [
       'src/backend/sidecar/engineWineResolvers.ts',
       'src/backend/utils.ts'
     ],
-    deletedBy: 88
+    // Only caller: the `releasesInfoReady` listener in engineWineResolvers.ts:426, emitted by utils/releases.ts; not a launch path, so it goes with the resolvers in 98 (88-02, RESEARCH open question 8).
+    deletedBy: 98
   },
   // 87-24 (D-15, D-22): the wine core. `validWine` is the one async TS reach (the launcher's wine check,
   // checkWineBeforeLaunch and the command runner's binding); Phase 88 moves launch into Rust and deletes it.
@@ -316,7 +333,8 @@ export const SCHEDULE: readonly ScheduleRow[] = [
       'src/backend/sidecar/bootstrap.ts',
       'src/backend/utils.ts'
     ],
-    deletedBy: 88
+    // Last reach: the command runner's `validWine` binding (commandRunner.ts:302, sidecar/bootstrap.ts:1893), ported in 88.2 (D-30).
+    deletedBy: 88.2
   },
   // 87-26 (D-15, D-22): wine discovery. `discoverAlternativeWine` is the one async TS reach into the Rust discovery
   // (config.ts's `getAlternativeWine`, which utils.ts and the Steam install form call), deleted with the config in
@@ -722,7 +740,8 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     shape: 'shim',
     channel: 'RUST_WINE_DXVK_INSTALL_REMOVE',
     callers: TOOLS_SHIM_IMPORTERS,
-    deletedBy: 88
+    // Launcher-only callers (launcher.ts:1117-1131, `prepareWineLaunch`), ported in 88.1 (D-30); no bridge caller.
+    deletedBy: 88.1
   },
   // 87-35 (D-15): the Winetricks shims. The launcher's known-fix install and its installed-packages log line, and the
   // Steam bridge's known fixes, reach the Rust Winetricks ops through them with the settings they already hold; Phase
@@ -733,7 +752,8 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     shape: 'shim',
     channel: 'RUST_WINE_WINETRICKS_INSTALL',
     callers: TOOLS_SHIM_IMPORTERS,
-    deletedBy: 88
+    // The Steam bridge still calls it (bridgeKnownFixes.ts:290), so it outlives 88.1's launcher.ts:1198 caller and goes with the bridge in 97 (88-02).
+    deletedBy: 97
   },
   {
     name: 'winetricksListInstalled',
@@ -741,7 +761,8 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     shape: 'shim',
     channel: 'RUST_WINE_WINETRICKS_LIST_INSTALLED',
     callers: TOOLS_SHIM_IMPORTERS,
-    deletedBy: 88
+    // Launcher-only caller (launcher.ts:966, `prepareWineLaunch`), ported in 88.1 (D-30); no bridge caller.
+    deletedBy: 88.1
   },
   // 87-35 (D-23): the Winetricks family's resolvers, registered by the same `registerEngineWineResolvers`. The
   // TS-only input is the Wine environment a game's tools act on (`target`: the tool settings or the reason there are
@@ -836,7 +857,8 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     shape: 'twin',
     vectors: 'src/backend/wine/__tests__/oracle/wineCore.oracle.test.ts',
     callers: LAUNCHER_IMPORTERS,
-    deletedBy: 88
+    // Twin of the launcher's env builder, ported to Rust in 88.1 (D-30).
+    deletedBy: 88.1
   },
   {
     name: 'setupWineEnvVars',
@@ -844,7 +866,8 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     shape: 'twin',
     vectors: 'src/backend/wine/__tests__/oracle/wineCore.oracle.test.ts',
     callers: LAUNCHER_IMPORTERS,
-    deletedBy: 88
+    // Twin of the launcher's wine env builder, ported to Rust in 88.1 (D-30).
+    deletedBy: 88.1
   },
   {
     name: 'createCommandRunner',
@@ -852,7 +875,8 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     shape: 'twin',
     vectors: 'src/backend/wine/__tests__/oracle/wineCore.oracle.test.ts',
     callers: COMMAND_RUNNER_IMPORTERS,
-    deletedBy: 88
+    // Twin of the command runner, ported to Rust in 88.2 (D-30).
+    deletedBy: 88.2
   },
   // 87-28 (D-24 extended, for the checker and the operator): the non-bridge sync pure helpers of the engine
   // configuration. They are called synchronously from the launch paths (`engineKeyFor`: launcher.ts and the five
@@ -1025,9 +1049,13 @@ export const SCHEDULE: readonly ScheduleRow[] = [
 
 const key = (file: string, name: string): string => `${file}#${name}`
 
-/** True for the files discovery reads exports from: the enginewine directory and the resolvers file. */
+/** True for a file under one of the shim directories (enginewine, and launchrust from 88). */
+const inShimDir = (path: string): boolean =>
+  SHIM_DIRS.some((dir) => path.startsWith(`${dir}/`))
+
+/** True for the files discovery reads exports from: the shim directories and the resolvers file. */
 const inScopeFile = (path: string): boolean =>
-  path.startsWith(`${ENGINEWINE_DIR}/`) || path === RESOLVERS_FILE
+  inShimDir(path) || path === RESOLVERS_FILE
 
 /** `file#name` for every survivor the schedule must list, found in `files`. */
 function discover(files: readonly StrippedFile[]): string[] {
@@ -1040,7 +1068,7 @@ function discover(files: readonly StrippedFile[]): string[] {
     }
   }
   for (const call of findRustCalls(
-    files.filter((f) => !f.path.startsWith(`${ENGINEWINE_DIR}/`)),
+    files.filter((f) => !inShimDir(f.path)),
     CHANNEL_PREFIXES
   )) {
     found.add(key(call.path, call.fn))
@@ -1178,6 +1206,17 @@ export function noIntraPhaseRowsLeft(
       `intra-phase rows (deletedBy 87) still scheduled: ${left.join(', ')}`
     )
   }
+}
+
+/**
+ * The rows `phase` deletes (`deletedBy === phase`). Each 88.x sub-phase finds its own rows with this,
+ * so a plan deleting a slice names exactly the rows it owes (D-30).
+ */
+export function rowsDueIn<T extends Pick<ScheduleRow, 'deletedBy'>>(
+  schedule: readonly T[],
+  phase: number
+): T[] {
+  return schedule.filter((r) => r.deletedBy === phase)
 }
 
 const planted = (path: string, code: string): StrippedFile => ({
@@ -1438,6 +1477,40 @@ describe('engineWineShimSchedule detector (planted fixtures)', () => {
       })
     })
 
+    it('88 discovery: launchrust exports are rows, and RUST_KNOWNFIX_, RUST_LAUNCH_ and RUST_RUNNER_ calls outside the shim directories are discovered', () => {
+      const shim = planted(
+        'src/backend/launchrust/prepare.ts',
+        'export function prepareRust(deps) { return deps.requestRustInvoke(RUST_LAUNCH_PREPARE, []) }'
+      )
+      expect(discover([shim])).toEqual([
+        'src/backend/launchrust/prepare.ts#prepareRust'
+      ])
+      expect(diff(discover([shim]), scheduledKeys([])).unscheduled).toEqual([
+        'src/backend/launchrust/prepare.ts#prepareRust'
+      ])
+      for (const prefix of ['KNOWNFIX', 'LAUNCH', 'RUNNER']) {
+        const outside = planted(
+          `src/backend/other/${prefix.toLowerCase()}.ts`,
+          `export function use${prefix}(deps) { return deps.requestRustInvoke(RUST_${prefix}_Z, []) }`
+        )
+        expect(discover([outside])).toEqual([
+          `src/backend/other/${prefix.toLowerCase()}.ts#use${prefix}`
+        ])
+      }
+      const scheduled: ScheduleRow = {
+        name: 'prepareRust',
+        file: 'src/backend/launchrust/prepare.ts',
+        shape: 'shim',
+        channel: 'RUST_LAUNCH_PREPARE',
+        callers: [],
+        deletedBy: 88.1
+      }
+      expect(diff(discover([shim]), scheduledKeys([scheduled]))).toEqual({
+        unscheduled: [],
+        orphaned: []
+      })
+    })
+
     it('every export of the resolvers file is discovered, and a sibling sidecar file is not', () => {
       const resolvers = planted(
         RESOLVERS_FILE,
@@ -1484,7 +1557,7 @@ describe('engineWineShimSchedule detector (planted fixtures)', () => {
         checkShimShape(info, 'f', { shape: 'shim' }, CHANNEL_PREFIXES)
       ).toEqual([
         expect.stringContaining(
-          'the first argument must be a RUST_ENGINE_* or RUST_WINE_* constant'
+          'the first argument must be a RUST_ENGINE_* or RUST_WINE_* or RUST_KNOWNFIX_* or RUST_LAUNCH_* or RUST_RUNNER_* constant'
         )
       ])
     })
@@ -1662,6 +1735,17 @@ describe('engineWineShimSchedule detector (planted fixtures)', () => {
       }
       expect(ALLOWED_DELETED_BY.has(34.7)).toBe(false)
       expect(ALLOWED_DELETED_BY.has(999.2)).toBe(false)
+    })
+
+    it('rowsDueIn returns the rows whose deletedBy equals the phase, and only those', () => {
+      const rows = [row(88.1), row(88.2), row(88.1), row(98)]
+      expect(rowsDueIn(rows, 88.1)).toHaveLength(2)
+      expect(rowsDueIn(rows, 88.2)).toHaveLength(1)
+      expect(rowsDueIn(rows, 88)).toEqual([])
+      expect(rowsDueIn([], 98)).toEqual([])
+      expect(rowsDueIn(SCHEDULE, 88)).toEqual([])
+      expect(rowsDueIn(SCHEDULE, 88.1).length).toBeGreaterThanOrEqual(9)
+      expect(rowsDueIn(SCHEDULE, 88.2).length).toBeGreaterThanOrEqual(2)
     })
 
     it('noIntraPhaseRowsLeft fails while a row has deletedBy 87 and passes once none does', () => {
