@@ -1,0 +1,17 @@
+[
+  {
+    "id": "tracer-gamelib-feed-200-gog-written",
+    "steps": [
+      {
+        "appName": "1207658930",
+        "runner": "gog",
+        "replies": {
+          "https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/gog/1207658930-gog.json": {
+            "status": 200,
+            "data": "{\"title\":\"Oracle Tracer\",\"envVariables\":{\"WINEDEBUG\":\"-all\"},\"winetricks\":[\"vcrun2019\"],\"extraKey\":1}"
+          }
+        }
+      }
+    ]
+  }
+]

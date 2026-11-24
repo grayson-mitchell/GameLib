@@ -1,0 +1,1 @@
+{"title":"Oracle Tracer","envVariables":{"WINEDEBUG":"-all"},"winetricks":["vcrun2019"],"extraKey":1}
