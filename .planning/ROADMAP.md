@@ -1093,7 +1093,7 @@ Plans:
   3. The Humble and shortcut test oracles are ported as Rust tests or recorded fixtures
   4. The Humble and shortcuts TypeScript and their sidecar registrations are deleted in this phase, except scheduled survivors listed in the schedule test (D-03, D-04, D-24, D-27)
 
-**Plans:** 9/32 plans executed (94-07 partial, awaiting macOS icon_geometry goldens) in 18 waves; planned 2026-11-24 (runs in `.claude/worktrees/phase-94`, rebased onto main before each wave, D-02)
+**Plans:** 10/32 plans executed (94-07 partial, awaiting macOS icon_geometry goldens) in 18 waves; planned 2026-11-24 (runs in `.claude/worktrees/phase-94`, rebased onto main before each wave, D-02)
 
 Plans:
 **Wave 1**
@@ -1114,7 +1114,7 @@ Plans:
 - [x] 94-12-PLAN.md — Classifier in Rust with JS regex and date parity, classify.test.ts as named Rust tests
 
 **Wave 4** *(blocked on Wave 3 completion)*
-- [ ] 94-11-PLAN.md — Tracer: `shortcutsExists` end to end (sanitize, paths, hidden reg.exe, shell dispatch, one TS resolver)
+- [x] 94-11-PLAN.md — Tracer: `shortcutsExists` end to end (sanitize, paths, hidden reg.exe, shell dispatch, one TS resolver)
 
 **Wave 5** *(blocked on Wave 4 completion)*
 - [ ] 94-13-PLAN.md — Tracer: native `humble` slice with two StoreHost reads; the Humble context seams

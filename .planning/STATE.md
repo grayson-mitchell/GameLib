@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 94
 current_phase_name: Humble Bundle and shortcuts
 status: executing
-stopped_at: Completed 94-12-PLAN.md
-last_updated: "2026-11-23T23:42:50.171Z"
+stopped_at: Completed 94-11-PLAN.md
+last_updated: "2026-11-24T00:21:12.605Z"
 last_activity: 2026-11-24
 last_activity_desc: Phase 94 execution started
-state_head: 9217ad0c64c5f7c7d4d14b51426072d37821e5b4
+state_head: 1c0b4bca7f7eef4779686a98e954759d1c1a95eb
 progress:
   total_phases: 22
   completed_phases: 23
@@ -77,9 +77,9 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 94 (Humble Bundle and shortcuts) — EXECUTING
-Plan: 10 of 32
-Status: Ready to execute (94-12 complete; 94-11 next, wave 4; 94-07 is open, awaiting four macOS icon_geometry goldens that need a Mac; 94-10, the live Humble capture, is deferred by the user until after 94-24; worktree-local STATE, D-02)
-Last activity: 2026-11-24 — Completed 94-12 (the Humble classifier in Rust: classify, a V8 date-parser port and an order-preserving JSON value replay all 492 recorded TS vectors; classify.test.ts's 116 tests carried over as named Rust tests; two copied-quirk todos)
+Plan: 11 of 32
+Status: Ready to execute (94-11 complete; 94-13 next, wave 5; 94-14 is held until the four macOS icon_geometry goldens exist; 94-07 is open, awaiting those goldens, which need a Mac; 94-10, the live Humble capture, is deferred by the user until after 94-24; worktree-local STATE, D-02)
+Last activity: 2026-11-24 — Completed 94-11 (the shortcutsExists tracer: sanitize, paths, exists and the hidden reg.exe Desktop read replay every recorded TS golden; one TS resolver supplies the title; the TS handle is deleted and six census counts move by one; three copied-quirk todos)
 Progress: [██████████] 100%
 
 ## Native-Install Arc Phase Map (21–25)
@@ -480,6 +480,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 94 P08 | 190min | 3 tasks | 14 files |
 | Phase 94 P09 | 45min | 3 tasks | 314 files |
 | Phase 94 P12 | 75min | 2 tasks | 7 files |
+| Phase 94 P11 | 37min | 2 tasks | 32 files |
 
 ## Accumulated Context
 
@@ -1037,6 +1038,9 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 94]: 94-09: Catalog::t_unescaped is for the one dialog row the TS renders with escapeValue false, flagged per row in rendered.json; plural suffixes stay unported because the en count keys equal the base key
 - [Phase 94]: 94-12: classifier time values are i64 ms with a caller-supplied fixed-offset LocalZone (jiff::Timestamp cannot hold V8's range); host-zone source is for 94-15
 - [Phase 94]: 94-12: classify reads an order-preserving JsValue because Object.keys order is asserted and serde_json preserve_order is forbidden
+- [Phase 94]: 94-11: shortcutsExists is answered by Rust through resolveShortcutsExists; the TS handle is deleted in the same commit and the oracle now drives the exported shortcutsExistOnDisk, so the exists goldens still compare against the TS predicate until 94-22
+- [Phase 94]: 94-11: the Linux Desktop folder and the Windows %VAR% environment are snapshotted at shell install (the TS re-read user-dirs.dirs per call); a title with a lone UTF-16 surrogate cannot cross JSON and answers shortcuts_exist:bad-args
+- [Phase 94]: 94-11: the registry Desktop read copies the TS expansion of REG_SZ and the U+FFFD refusal; three todos filed (percent pairs in REG_SZ, path outside the console code page, a title that sanitizes to nothing)
 
 ### Pending Todos
 
@@ -1318,8 +1322,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-23T23:42:50.035Z
-Stopped at: Completed 94-12-PLAN.md
+Last session: 2026-11-24T00:21:12.469Z
+Stopped at: Completed 94-11-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
