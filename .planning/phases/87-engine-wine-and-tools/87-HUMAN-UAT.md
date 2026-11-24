@@ -182,15 +182,89 @@ would log.
 
 | Literal | Emitter at authoring | Sink | Status |
 |---|---|---|---|
-| `engine=crossover build=<b> reason=cx-healthy` (the healthy-CrossOver selection) | `engineLogLabel`, `src/backend/engine/engineTypes.ts:48`, unshifted into the decision's log lines at `engineDecision.ts:533`; reason set at `engineDecision.ts:725` | `gamelib.log` (Rust line or mapped crate prefix after the port) | CONDITIONAL, re-check: 87-59 Task 1 |
-| `reason=cx-inconclusive` (an inconclusive pre-flight; marker-preserving, no toast, WR-01 as fixed) | `engineLogLabel` as above; reason set at `engineDecision.ts:646`, `:667`, `:690` | `gamelib.log` | CONDITIONAL, re-check: 87-59 Task 1 |
-| `engine=pinned name="<label>" version=<v> reason=cx-missing` (and `cx-expired`, `cx-broken`), the fallback selection | `engineLogLabel`, `engineTypes.ts:50`; reasons at `engineDecision.ts:734-739` | `gamelib.log` | CONDITIONAL, re-check: 87-59 Task 1 |
-| fallback toast key `gamelib:steam.engine.toast.cxMissing` / `cxExpired` / `cxBroken` | `notifyEngineFallback`, `src/backend/engine/engineDialogs.ts:82-103`, a system notification with no log line | none: scored by the operator seeing the notification text and the badge on the game page (`EngineBadge.tsx`); the key is read by re-check from the Rust source | CONDITIONAL, re-check: 87-59 Task 1 (an observation row, not a log row) |
-| `[engine-notice] key=<k> tag=launch-deadline-unconfirmed dispatched=notify raise=false` (the 180 s no-match notice, must show `raise=false`) | `showEngineNotice`, `engineDialogs.ts:75-77`, with the deadline lines `Engine: <key> launch deadline fired (` `launchEngine.ts:581` and `launch deadline notice surface=in-app pushed=<b> raise=false` `launchEngine.ts:606-608` | `gamelib.log` | CONDITIONAL, re-check: 87-59 Task 1 |
-| `[engine-notice] key=<k> tag=<t> dispatched=in-app-dialog+notify dialog-frame-sent=<b> display=pending`, then `display=confirmed` (or `unconfirmed`) (the offline refusal dialog and its display acknowledgement) | `showEngineDialog`, `engineDialogs.ts:44-48` and `:57-59` | `gamelib.log` | CONDITIONAL, re-check: 87-59 Task 1 |
-| `Engine: downloading <kind> <version>`, `Engine: verifying <kind>`, `Engine: extracting <kind>` (the pinned engine's first-need download) | `src/backend/engine/fallbackEngine.ts:237`, `:272`, `:282` | `gamelib.log` | CONDITIONAL, re-check: 87-59 Task 1 |
-| a progress event observed in the renderer (the engine-download status and percentage on the game page, the Winetricks progress lines in the Wine settings log panel, the wine-manager row's progress) | `sendGameStatusUpdate` with status `engine-download`, `pinnedEngineProgress.ts:55-60`; after the port Rust emits the same events through `FrontendEmitter` (D-10) | the renderer, observed by the operator and reported; the matching `gamelib.log` line is the download line above | CONDITIONAL, re-check: 87-59 Task 1 (an observation row, not a log row) |
-| `store frame rejected` and `refused a store write:` (each must be ABSENT; the engine notices and the wine-downloader store are written through the same host) | `src-tauri/src/store_dispatch.rs` and `src-tauri/src/store_native.rs` per the 86 gate's re-check | `gamelib.log` as `[Shell]` | CONDITIONAL, re-check: 87-59 Task 1 |
+| `engine=crossover build=<b> reason=cx-healthy` (the healthy-CrossOver selection) | `engineLogLabel`, `src/backend/engine/engineTypes.ts:48`, unshifted into the decision's log lines at `engineDecision.ts:533`; reason set at `engineDecision.ts:725` | `gamelib.log` (Rust line or mapped crate prefix after the port) | REACHABLE as amended (87-59 re-check): Rust `EngineSelection::log_label` (`registry.rs:55-64`), first of the decision's `log_lines` (`decision/launch.rs:213`, reason `:436`); written to `gamelib.log` as `[Backend] Engine: <key> engine=crossover ...` by the TS caller (`launchEngineStep.ts:84`) and, for a Steam title, `SteamGame: appId <id> engine=...` (`gameLaunch.ts:675`). Not through `ctx.log` |
+| `reason=cx-inconclusive` (an inconclusive pre-flight; marker-preserving, no toast, WR-01 as fixed) | `engineLogLabel` as above; reason set at `engineDecision.ts:646`, `:667`, `:690` | `gamelib.log` | REACHABLE as amended: `decision/launch.rs:319`, `:338`, `:364`, `:392`; same `logLines` path and sink as the row above |
+| `engine=pinned name="<label>" version=<v> reason=cx-missing` (and `cx-expired`, `cx-broken`), the fallback selection | `engineLogLabel`, `engineTypes.ts:50`; reasons at `engineDecision.ts:734-739` | `gamelib.log` | REACHABLE as amended: `registry.rs:66-68`; reasons `decision/launch.rs:40-42`, `:485`; same `logLines` path and sink |
+| fallback toast key `gamelib:steam.engine.toast.cxMissing` / `cxExpired` / `cxBroken` | `notifyEngineFallback`, `src/backend/engine/engineDialogs.ts:82-103`, a system notification with no log line | none: scored by the operator seeing the notification text and the badge on the game page (`EngineBadge.tsx`); the key is read by re-check from the Rust source | REACHABLE as an observation row: `notify_engine_fallback`, `launch/dialogs.rs:215-235` (keys at `:220`, `:225`, `:230`), called from `launch/step.rs:762`; no log line. The shell wires no i18n catalog, so the toast body is the inline English default (`CrossOver not found \u2014 using built-in engine` and the two siblings) |
+| `[engine-notice] key=<k> tag=launch-deadline-unconfirmed dispatched=notify raise=false` (the 180 s no-match notice, must show `raise=false`) | `showEngineNotice`, `engineDialogs.ts:75-77`, with the deadline lines `Engine: <key> launch deadline fired (` `launchEngine.ts:581` and `launch deadline notice surface=in-app pushed=<b> raise=false` `launchEngine.ts:606-608` | `gamelib.log` | IMPOSSIBLE as a log row (87-59 re-check): the emitters (`dialogs.rs:207`, `deadline.rs:250`, `:288`) write through `ctx.log`, which is `None` in the shell (`engine_dispatch.rs` `build_ctx` has no `with_log`; 87-48, 87-50, 87-51 recorded it). Amended to an observation row: the notification, the in-app notice and the window-focus watch across the 180 s. Never scored from `gamelib.log` |
+| `[engine-notice] key=<k> tag=<t> dispatched=in-app-dialog+notify dialog-frame-sent=<b> display=pending`, then `display=confirmed` (or `unconfirmed`) (the offline refusal dialog and its display acknowledgement) | `showEngineDialog`, `engineDialogs.ts:44-48` and `:57-59` | `gamelib.log` | IMPOSSIBLE as a log row (87-59 re-check): `dialogs.rs:188` and `settled_line` `:71` write through `ctx.log` (`None`). Amended to an observation row: the operator sees the modal refusal dialog and reports its text; scored from that, never from `gamelib.log` |
+| `Engine: downloading <kind> <version>`, `Engine: verifying <kind>`, `Engine: extracting <kind>` (the pinned engine's first-need download) | `src/backend/engine/fallbackEngine.ts:237`, `:272`, `:282` | `gamelib.log` | IMPOSSIBLE as a log row (87-59 re-check): `fallback/ensure.rs:608`, `:644`, `:666` write through `ctx.log` (`None`). Amended to evidence the shell does produce: the renderer's `engine-download` progress (the next row), the `tools/steam-engines/wine-staging-11.20` directory appearing (`ls -la`, size, no `.tmp-*` sibling left) and the process list during the download |
+| a progress event observed in the renderer (the engine-download status and percentage on the game page, the Winetricks progress lines in the Wine settings log panel, the wine-manager row's progress) | `sendGameStatusUpdate` with status `engine-download`, `pinnedEngineProgress.ts:55-60`; after the port Rust emits the same events through `FrontendEmitter` (D-10) | the renderer, observed by the operator and reported; the matching `gamelib.log` line is the download line above | REACHABLE as an observation row: `fallback/progress.rs:131`, `:157` and `launch/step.rs:666` emit `gameStatusUpdate` status `engine-download` through the `FrontendEmitter` the shell installs (`TauriFrontendEmitter`, `engine_dispatch.rs` `install`) |
+| `store frame rejected` and `refused a store write:` (each must be ABSENT; the engine notices and the wine-downloader store are written through the same host) | `src-tauri/src/store_dispatch.rs` and `src-tauri/src/store_native.rs` per the 86 gate's re-check | `gamelib.log` as `[Shell]` | REACHABLE (absence confirmed falsifiable): `store_dispatch.rs:449` logs `WARN: store frame rejected: <reason>` and `store_native.rs:423` logs `WARN: native <channel> refused a store write: <kind>`, both through `shell_log` to `gamelib.log` as `[Shell]`; the presence case is pinned by `store_dispatch.rs:1037` |
+
+## Pre-run re-check
+
+Run by 87-59 Task 1 on 2026-11-24, at `main` `65b47bfa1` (the source of the build under test; `release/v0.13` adds only the version bump), against the
+shipped Rust and TS source. Nothing was launched, copied or edited on the operator's profile, bottles or licence.
+
+**Build gate line (copied from `87-VALIDATION.md` under "## Signed builds (D-12)"):**
+`Gate: pending (identities match: signed Phase 87 build v0.13.0, run 45314401170, release/v0.13 at 8a0096bae, same Identifier, Developer ID leaf, TeamIdentifier S7U223QWXJ and byte-identical designated requirement as the signed Phase 86 build v0.12.0, run 45056179067; both notarized and stapled)`.
+Installed now: `/Applications/GameLib.app` is 0.12.0, CDHash `06c8dcf06883e6e2ad44d47616b93e9eca7f685b` (the signed Phase 86 build). The 87 build is
+the draft release `GameLib v0.13.0`; the extracted `GameLib.app` and the dmg are in the session scratchpad (see the checkpoint message). Items are scorable.
+
+### Required literals (resolved in the table above)
+
+| Row | Result | Reason |
+|---|---|---|
+| `engine=crossover ... reason=cx-healthy` | REACHABLE as amended | Rust `log_label` (`registry.rs:55-64`) is first of the reply's `logLines` (`decision/launch.rs:213`); the TS caller writes it to `gamelib.log` as `[Backend] Engine: <key> engine=crossover build=<b> reason=cx-healthy` (`launchEngineStep.ts:84`; Steam: `SteamGame: appId <id> ...`, `gameLaunch.ts:675`) |
+| `reason=cx-inconclusive` | REACHABLE as amended | `decision/launch.rs:319`, `:338`, `:364`, `:392`; same path and sink |
+| `engine=pinned ... reason=cx-missing/-expired/-broken` | REACHABLE as amended | `registry.rs:66-68`, `decision/launch.rs:40-42`; same path and sink |
+| fallback toast keys | REACHABLE (observation) | `dialogs.rs:215-235`, called at `step.rs:762`; no log line; inline English text because the shell wires no i18n catalog |
+| 180 s `[engine-notice] ... raise=false` | **IMPOSSIBLE as a log row** | written through `ctx.log`, `None` in the shell |
+| refusal `[engine-notice] ... display=pending/confirmed` | **IMPOSSIBLE as a log row** | same |
+| `Engine: downloading / verifying / extracting` | **IMPOSSIBLE as a log row** | same (`fallback/ensure.rs:608`, `:644`, `:666`) |
+| renderer progress (`engine-download`, Winetricks, wine-manager) | REACHABLE (observation) | `fallback/progress.rs:131`, `:157`; `launch/step.rs:666`; emitted through the installed `TauriFrontendEmitter` |
+| `store frame rejected` / `refused a store write:` ABSENT | REACHABLE | `store_dispatch.rs:449`, `store_native.rs:423` via `shell_log`; the presence case is pinned at `store_dispatch.rs:1037` |
+
+**Why three rows are IMPOSSIBLE.** The shell's `build_ctx` (`src-tauri/src/engine_dispatch.rs`) calls no `with_log`, and no type outside `testing.rs`
+implements `EngineLog` for the engine context, so `ctx.log` is `None` in the app. Every Rust line written through it reaches no log. 87-48, 87-50,
+87-51, 87-52, 87-54, 87-55 and 87-56 each recorded this as an open privacy decision ("wiring an engine log into the uploaded `gamelib.log`"), owned by
+no plan. The same gap also drops, silently: the `Not creating DXMT copy of ...` skip line (`gamelib-wine` `tools/dxmt.rs:147`), every `Engine: ... engine
+override unavailable` / `cannot switch engine` warning, and the `launch blocked before pre-flight while offline` warning. Per this file's own rule an
+IMPOSSIBLE row is amended and never scored from the log.
+
+**Amended evidence (what scores those halves instead).** Nothing here changes an item's `expected:` line; it changes how each half is evidenced:
+
+- 180 s notice: the operator reports the system notification "Couldn't confirm the game started" and the in-app notice, and which application is
+  frontmost for the whole 180 s (`raise=false` is unscored). No `[engine-notice]` line is expected in `gamelib.log`; its absence is NOT a finding.
+- Offline refusal: the operator reports that the modal refusal dialog appeared and its text; no `display=confirmed` line is expected.
+- Pinned engine download: renderer progress (reported), then `ls -la` and `du -sk` of `tools/steam-engines/wine-staging-11.20` and no `.tmp-*` sibling;
+  the process list (`pgrep -fl 'tar|xz'`) during extraction. No `Engine: downloading` line is expected.
+- DXMT: a missing `<installDir>-DXMT` copy cannot be told from a skipped one by the log. If it is missing, the runner checks the downloaded
+  `winemac.so` directly (`nm -gU .../winemac.so | grep -c macdrv_view`) and scores the half `blocked` with that count if the export check could not pass,
+  `issue` if it could.
+
+This is surfaced as a decision at the checkpoint: score the gate on the amended evidence, or stop and plan the engine-log wiring first
+(`/gsd-plan-phase 87 --gaps`, which would need a new signed build).
+
+### State found before the run (read-only)
+
+- **P1** session directory created; **P7** `no-crossover.sb`, `nolicence.sb` and `backdate.py` copied unchanged into it. `backdate.py` accepts
+  `0xHEX` or `sub:<seconds>` only; the `xor-days:` form its docstring mentions does not exist, and this contract uses `0xHEX`.
+- **P2** cannot pass yet: the signed Phase 86 build is running on this Mac (a `gamelib-shell`, its `--gamelib-reaper` and `gamelib-sidecar`). No
+  `wineserver` is running. The operator quits GameLib, then the runner re-checks.
+- **P3/P4** not taken: they need P5's named titles and the app closed. The commands are prepared as `p3-p4.sh` in the session directory (it refuses to
+  run if P2 fails). The CrossOver licence file is present (existence only).
+- **P6** the Wi-Fi interface is `en1` (not `en0`): `networksetup -setairportpower en1 off` / `on`.
+- **Item 1 offline-refusal precondition not met as found:** the pinned engine is already installed (`tools/steam-engines/wine-staging-11.20`, 882 MB, and
+  `dxvk-macOS-v1.10.3-20230507-repack`, 8 MB). The refusal needs the pin absent, and the 228 MB download half needs it absent too. Both halves are scored
+  `blocked` unless the operator approves moving those two directories aside into the session directory (`ditto` copy first, restored after item 1).
+- **Item 4 precondition:** the profile's `store/wine-downloader-info.json` and `store_cache/steam_engine_notices.json` exist (P4 targets).
+
+### Live checks owed by 87-56a, 87-56b, 87-56c and 87-57 (carried into this gate)
+
+| Owed check | Carried by |
+|---|---|
+| 56a-1 Winetricks apply and Run EXE during a live non-Steam fallback launch act on the launch's engine | item 4, run while the throwaway game runs on the fallback engine; added as a sub-check |
+| 56a-2 a real Steam first-need download shows progress and an abort leaves no `.tmp-*` under `tools/steam-engines` | item 1 fallback half (bridge Steam title, pin absent): progress seen, then one abort, then `ls` for `.tmp-*` |
+| 56a-3 an offline engine-download failure leaves the renderer off `engine-download` | item 1 offline sub-check (game page status clears after the refusal) |
+| 56b-1 a Steam bridge launch on a built-in engine registers its selection, runs, and the stop clears it | item 1 bridge title on `no-crossover.sb` (run, then Stop from the game page; the badge clears) |
+| 56b-2 a DRM-mode launch restores to CrossOver and the install's redist switch reach Rust | not covered by items 1 to 4; listed as **not run** unless the operator has a DRM-mode title |
+| 56b-3 CrossOver only under `~/Applications`: the Steam bottle's sync lookup finds it | not coverable on this Mac (CrossOver is in `/Applications`); **not run** |
+| 56c-1 cold start of the signed app boots without the engine steps and quits promptly | launch 1 (record time from quit to process gone; `pgrep` clean) |
+| 56c-2 a bridge launch (CrossOver) and a built-in launch reach Rust for the ledger, selection clear and CrossOver lookup | item 1, healthy bridge launch and the `no-crossover.sb` launch |
+| 56c-3 engine-state and notice dismissals come from Rust alone | item 1: open a fallback-engine game page, dismiss a notice |
+| 57 (no live check owed beyond the above) | none |
 
 ## Structural Reachability Review
 
