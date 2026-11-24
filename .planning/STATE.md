@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 88
 current_phase_name: Launch scaffolding and known fixes
 status: executing
-stopped_at: Completed 88-03-PLAN.md
-last_updated: "2026-11-24T19:49:37.053Z"
+stopped_at: Completed 88-04-PLAN.md
+last_updated: "2026-11-24T19:58:19.189Z"
 last_activity: 2026-11-25
 last_activity_desc: Phase 88 execution started
-state_head: e0ed919b6ee9b7acebfd013210737c05d14a2840
+state_head: f4f2a1459c063662a890ce1aa5dea918e4c046e3
 progress:
   total_phases: 25
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 88 (Launch scaffolding and known fixes) — EXECUTING
-Plan: 4 of 17
+Plan: 5 of 17
 Status: Ready to execute
 Last activity: 2026-11-25 — Phase 88 execution started
 Progress: [█████████░] 92%
@@ -484,6 +484,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 88 P01 | 25 min | 3 tasks | 4 files |
 | Phase 88 P02 | 3 min | 3 tasks | 2 files |
 | Phase 88 P03 | 30 min | 2 tasks | 23 files |
+| Phase 88 P04 | 25 min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -1055,6 +1056,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 88]: 88-01: Phase 88 sub-phase targets recorded in the 82 amendments keep every 'TS mirror deleted' cell an integer; overlay-install-flight flips 97 -> 88 (gamelib-knownfix); info-caches:systemInfo Rust owner corrected to gamelib-info
 - [Phase 88]: 88-02: schedule rows re-targeted by last call site (winetricksInstallVerbs to 97, wineReleasesInfoReady to 98, the other 11 to 88.1 or 88.2); deletedBy allow-set read from ROADMAP.md decimal phase headings
 - [Phase 88]: 88-03: overlay catalogue is one shared JSON ({targetEnv, entries[]}) read by the TS and compiled into gamelib-knownfix; both sides fail closed on an empty catalogue and the notices page is entries[0]
+- [Phase 88]: launchOracle injectProbe spies on function properties (os.release) and replaces others; attachSpawnClass takes spawns carrying a callSite id
+- [Phase 88]: assertCasesCoverTitles also fails a stale not-ported key and tsTestTitles throws on a non-literal title, so the incident census cannot pass silently
 
 ### Pending Todos
 
@@ -1336,8 +1339,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-24T19:49:34.252Z
-Stopped at: Completed 88-03-PLAN.md
+Last session: 2026-11-24T19:58:16.345Z
+Stopped at: Completed 88-04-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
