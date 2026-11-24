@@ -473,3 +473,86 @@ async fn h5_a_second_select_for_the_same_play_is_refused_the_same_way() {
         "every refused press shows its dialog"
     );
 }
+
+/// The lines the step wrote about the gate's inputs (87-63): words and booleans only, never a path.
+fn gate_lines(rig: &Rig) -> Vec<String> {
+    rig.log
+        .lines()
+        .into_iter()
+        .map(|(_, line)| line)
+        .filter(|line| line.contains("offline gate:"))
+        .collect()
+}
+
+#[tokio::test]
+async fn the_gate_writes_its_inputs_and_verdict_when_it_refuses() {
+    // The 87-59 gate could not say why the step did not refuse: the gate wrote a line only when it fired, so a
+    // launch it let through left nothing to read. Its inputs and verdict are now one line either way.
+    let rig = rig(&World::offline_no_pin_no_crossover());
+    let reply = select(&rig, request(&rig, true, None)).await;
+    assert_eq!(reply["kind"], "refused", "reply: {reply}");
+    let lines = gate_lines(&rig);
+    assert_eq!(lines.len(), 1, "gate lines: {lines:?}");
+    assert!(
+        lines[0].ends_with(
+            "offline gate: request-offline=true context-online=false on-bottle=true override=automatic crossover-missing=true current-pin-installed=false marker=crossover verdict=blocked:crossover-missing"
+        ),
+        "{}",
+        lines[0]
+    );
+}
+
+#[tokio::test]
+async fn the_gate_says_so_when_it_is_not_applicable_to_an_offline_request() {
+    // An override the gate does not cover (a pinned engine) is let through: the line names why.
+    let rig = rig(&World {
+        engine_override: Some("pinned:wine-staging-11.20"),
+        ..World::offline_no_pin_no_crossover()
+    });
+    let _ = select(&rig, request(&rig, true, None)).await;
+    let lines = gate_lines(&rig);
+    assert_eq!(lines.len(), 1, "gate lines: {lines:?}");
+    assert!(
+        lines[0].ends_with(
+            "offline gate: request-offline=true context-online=false on-bottle=true override=pinned:wine-staging-11.20 verdict=not-applicable"
+        ),
+        "{}",
+        lines[0]
+    );
+}
+
+#[tokio::test]
+async fn the_gate_names_a_disagreement_between_the_request_and_the_context() {
+    // The request says online while the context knows the app is offline: the gate does not fire, and the
+    // line is what shows the two signals apart.
+    let rig = rig(&World::offline_no_pin_no_crossover());
+    let _ = select(&rig, request(&rig, false, None)).await;
+    let lines = gate_lines(&rig);
+    assert_eq!(lines.len(), 1, "gate lines: {lines:?}");
+    assert!(
+        lines[0].contains("request-offline=false context-online=false")
+            && lines[0].ends_with("verdict=not-applicable"),
+        "{}",
+        lines[0]
+    );
+}
+
+#[tokio::test]
+async fn an_online_launch_writes_no_gate_line() {
+    let rig = rig(&World {
+        ctx_online: true,
+        ..World::offline_no_pin_no_crossover()
+    });
+    let _ = select(&rig, request(&rig, false, None)).await;
+    assert!(gate_lines(&rig).is_empty(), "{:?}", gate_lines(&rig));
+}
+
+#[tokio::test]
+async fn the_gate_line_carries_no_path_from_the_profile() {
+    let rig = rig(&World::offline_no_pin_no_crossover());
+    let _ = select(&rig, request(&rig, true, None)).await;
+    let home = rig.profile.root().to_string_lossy().into_owned();
+    for line in gate_lines(&rig) {
+        assert!(!line.contains(&home), "{line}");
+    }
+}
