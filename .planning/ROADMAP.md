@@ -1093,7 +1093,7 @@ Plans:
   3. The Humble and shortcut test oracles are ported as Rust tests or recorded fixtures
   4. The Humble and shortcuts TypeScript and their sidecar registrations are deleted in this phase, except scheduled survivors listed in the schedule test (D-03, D-04, D-24, D-27)
 
-**Plans:** 14/32 plans executed (94-07 partial and 94-14 partial, awaiting macOS icon_geometry goldens) in 18 waves; planned 2026-11-24 (runs in `.claude/worktrees/phase-94`, rebased onto main before each wave, D-02)
+**Plans:** 15/32 plans executed (94-07 partial and 94-14 partial, awaiting macOS icon_geometry goldens) in 18 waves; planned 2026-11-24 (runs in `.claude/worktrees/phase-94`, rebased onto main before each wave, D-02)
 
 Plans:
 **Wave 1**
@@ -1122,7 +1122,7 @@ Plans:
 
 **Wave 6** *(blocked on Wave 5 completion)*
 - [x] 94-15-PLAN.md — Humble HTTP seam (no redirects, multipart, request pinning); app-id resolver, title match and dedup
-- [ ] 94-16-PLAN.md — Windows `.lnk` through PowerShell via gamelib-proc, the icon chain and getIcon
+- [x] 94-16-PLAN.md — Windows `.lnk` through PowerShell via gamelib-proc, the icon chain and getIcon
 
 **Wave 7** *(blocked on Wave 6 completion)*
 - [ ] 94-17-PLAN.md — Expiry digest with i18next-identical text and the backfill; the user-agent twin

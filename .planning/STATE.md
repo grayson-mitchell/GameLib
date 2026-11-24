@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 94
 current_phase_name: Humble Bundle and shortcuts
 status: executing
-stopped_at: Completed 94-15-PLAN.md
-last_updated: "2026-11-24T03:45:49.710Z"
+stopped_at: Completed 94-16-PLAN.md
+last_updated: "2026-11-24T04:47:14.070Z"
 last_activity: 2026-11-24
 last_activity_desc: Phase 94 execution started
-state_head: 422182ef9b8ffa527a6e022b26487ebb4c7128bb
+state_head: 7527139cb8710e2bbbdbb86cdeeb744a3af4ebcd
 progress:
   total_phases: 22
   completed_phases: 23
@@ -77,9 +77,9 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 94 (Humble Bundle and shortcuts) — EXECUTING
-Plan: 14 of 32
-Status: Ready to execute (94-15 complete; 94-14 complete except the icon_geometry golden comparison, which is pending the four macOS goldens from 94-07 and is an explicit #[ignore]; 94-07 is open, awaiting those goldens, which need a Mac; 94-10, the live Humble capture, is deferred by the user until after 94-24 and 94-15 left a named pending header check for it; 94-16 next, wave 6; worktree-local STATE, D-02)
-Last activity: 2026-11-24 — Completed 94-15: the Humble HTTP seam (no redirect on a Humble request, ordered multipart, a Replay pinned to the 94-06 wire recordings), the Steam app-id resolver under the shutdown contract replaying its 11 goldens, the fuzzy title match replaying the 101 shared vectors and the dedup replaying its 61 goldens
+Plan: 15 of 32
+Status: Ready to execute (94-16 complete; 94-14 complete except the icon_geometry golden comparison, which is pending the four macOS goldens from 94-07 and is an explicit #[ignore]; 94-07 is open, awaiting those goldens, which need a Mac; 94-10, the live Humble capture, is deferred by the user until after 94-24 and 94-15 left a named pending header check for it; 94-17 next, wave 7; worktree-local STATE, D-02)
+Last activity: 2026-11-24 — Completed 94-16: the Windows .lnk writer (constant CRLF PowerShell script on stdin, values only through GAMELIB_LNK_* env, hidden 30 s gamelib-proc helper spawn) replaying 90 recorded spawns and writing a real .lnk on this Windows host, the bounded icon chain replaying its 36 goldens, and getIcon with its downloads through the crate HTTP seam replaying its 19 goldens under the shutdown contract
 Progress: [██████████] 100%
 
 ## Native-Install Arc Phase Map (21–25)
@@ -484,6 +484,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 94 P13 | 95min | 2 tasks | 22 files |
 | Phase 94 P14 | 100min | 3 tasks | 9 files |
 | Phase 94 P15 | 150min | 2 tasks | 14 files |
+| Phase 94 P16 | 105min | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -1055,6 +1056,10 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 94]: 94-13: humbleGetGiftedAt and humbleGetOwnershipOverrides are native humble channels answered by Rust from the StoreHost; the TS handles and zod entries are deleted in the same commit and Rust only reads, so each file keeps one writer until 94-29
 - [Phase 94]: 94-13: HumbleCtx takes the user-data folder as a constructor argument and the Humble catalog loads from the steampoll locales folder (public in dev, build packaged), not info_dispatch::bundled_public_dir, which hard-codes public
 - [Phase 94]: 94-13: the Humble log is fixed text; guarded writes only an op name and a category for a panic or a shutdown stop, and a test feeds a URL, a cookie and a key as arguments and asserts none reaches a line
+- [Phase 94]: 94-16: the Windows .lnk script is a compile-time constant replayed byte for byte in 90 recorded spawns; the system root travels as its own argument beside the base environment, both derived by the shell from its one Windows environment snapshot
+- [Phase 94]: 94-16: get_icon takes the GOG product API's raw images.icon as an input and exports gog_local_icon; the caller must resolve the API lazily (only when no local goggame ico or support icon exists), as the TS did, or an installed game would gain an API call and an API failure would fail the add
+- [Phase 94]: 94-16: icon downloads are atomic (.part renamed), capped at 32 MiB, refuse a non-2xx status or an empty body, hold a shortcuts-icon registrant and abort on shutdown; an app name that is not a plain file name gets no icon (T-94-30)
+- [Phase 94]: 94-16: the regex dependency of gamelib-shortcuts gains unicode-gencat for the icon scan's [^\p{L}\p{N}] name normalisation; gamelib-proc is a dev-dependency for the real PowerShell .lnk test
 
 ### Pending Todos
 
@@ -1337,7 +1342,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 ## Session Continuity
 
 Last session: 2026-11-24T03:45:49.577Z
-Stopped at: Completed 94-15-PLAN.md
+Stopped at: Completed 94-16-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
