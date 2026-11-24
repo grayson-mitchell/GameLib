@@ -1788,9 +1788,25 @@ mod tests {
         emitter: Arc<Recorded>,
         fetch: Arc<dyn gamelib_engine::fetch::Fetch>,
     ) -> Arc<WineCtx> {
+        wine_over_host(
+            home,
+            emitter,
+            fetch,
+            Arc::new(gamelib_store::host::StoreHost::new()),
+        )
+    }
+
+    /// [`wine_over_fetch`] over the store host the test chooses (the one the renderer push is
+    /// installed on, as `store_boot::host()` is in the shell).
+    fn wine_over_host(
+        home: &gamelib_testutil::FakeHome,
+        emitter: Arc<Recorded>,
+        fetch: Arc<dyn gamelib_engine::fetch::Fetch>,
+        host: Arc<gamelib_store::host::StoreHost>,
+    ) -> Arc<WineCtx> {
         let root = home.root().to_path_buf();
         let engine = gamelib_engine::ctx::EngineCtx::new(
-            Arc::new(gamelib_store::host::StoreHost::new()),
+            host,
             Arc::new(gamelib_core::clock::SystemClock),
             gamelib_engine::ctx::Platform::Linux,
             gamelib_engine::ctx::EnginePaths {
@@ -1952,6 +1968,145 @@ mod tests {
         assert_eq!(
             stored_list(&wine)[0]["installDir"],
             json!(computed.display().to_string())
+        );
+    }
+
+    /// F4 (87-59 item 4): after a Rust install and after a Rust remove, the renderer hears a
+    /// `storeChanged` frame for `wineDownloaderInfoStore` / `wine-releases` carrying the new list,
+    /// and hears it before the `wineVersionsUpdated` push that makes the list re-read it. Every
+    /// frame lands in one recorder in arrival order, as the preload sees them.
+    #[test]
+    fn a_wine_manager_install_and_remove_push_the_new_list_before_the_list_re_reads_it() {
+        let home = gamelib_testutil::FakeHome::new("wine-dispatch-f4-");
+        let frames = Arc::new(Recorded::default());
+        let host = Arc::new(gamelib_store::host::StoreHost::new());
+        crate::store_native::install_renderer_push(
+            &host,
+            Arc::clone(&frames) as Arc<dyn gamelib_core::emitter::FrontendEmitter>,
+        );
+        // The shell's own context builder, so the emitter is the one the app gives the crate; only
+        // the network is the replayed golden feed.
+        let root = home.root().to_path_buf();
+        let engine = engine_dispatch::build_ctx(
+            Arc::clone(&host),
+            &root.join("userdata"),
+            root.clone(),
+            root.join("temp"),
+            Arc::clone(&frames) as Arc<dyn gamelib_core::emitter::FrontendEmitter>,
+            Arc::new(engine_dispatch::ShellEngineUi::silent(Arc::new(
+                gamelib_engine::sinks::NullEmitter,
+            ))),
+            gamelib_core::shutdown::Shutdown::new(),
+        )
+        .with_fetch(Arc::new(ServesGolden));
+        let wine = Arc::new(WineCtx::new(
+            Arc::new(engine),
+            root.join("tools").join("runtimes"),
+        ));
+        seed_stored(&wine, std::slice::from_ref(&golden_entry()));
+        delivered(&host);
+        frames.0.lock().unwrap().clear();
+
+        let sent = golden_entry();
+        let answer =
+            tauri::async_runtime::block_on(install_channel(Some(Arc::clone(&wine)), vec![sent]));
+        assert_eq!(answer, Ok(Value::Null));
+        delivered(&host);
+        let after_install = frames_of(&frames);
+        eprintln!("install frames: {after_install:#?}");
+        assert_list_frame_precedes_re_read(&after_install, true);
+        // A tab switch or a fresh hydrate does not wait for a push: it reads the store through
+        // the shell's own fetch, which must hold the list the crate wrote (one host entry for the
+        // file, whichever of the crate or the renderer's fetch opened it first).
+        let reads = crate::store_native::StoreReads {
+            config: Some(crate::store_native::ReadConfig {
+                user_data: root.join("userdata"),
+            }),
+        };
+        let fetched = crate::store_native::fetch_blocking(
+            &host,
+            &reads,
+            &crate::store_native::resolve_renderer_store("wineDownloaderInfoStore").unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            fetched["values"]["wine-releases"][0]["isInstalled"],
+            json!(true),
+            "{fetched}"
+        );
+        assert_eq!(fetched["rev"], json!(2), "{fetched}");
+
+        frames.0.lock().unwrap().clear();
+        let installed = stored_list(&wine).remove(0);
+        let answer = tauri::async_runtime::block_on(remove_channel(
+            Some(Arc::clone(&wine)),
+            vec![installed],
+        ));
+        assert_eq!(answer, Ok(Value::Null));
+        delivered(&host);
+        let after_remove = frames_of(&frames);
+        eprintln!("remove frames: {after_remove:#?}");
+        assert_list_frame_precedes_re_read(&after_remove, false);
+    }
+
+    /// Waits until the host's event queue has run everything queued so far, so every push the
+    /// changes made has reached the recorder.
+    fn delivered(host: &gamelib_store::host::StoreHost) {
+        let (tx, rx) = std::sync::mpsc::channel();
+        host.post(Box::new(move || {
+            let _ = tx.send(());
+        }));
+        rx.recv_timeout(std::time::Duration::from_secs(10))
+            .expect("the host's event queue drained");
+    }
+
+    /// The channels and the one-line shape of what the recorder saw, in arrival order.
+    fn frames_of(frames: &Recorded) -> Vec<(String, Value)> {
+        frames
+            .0
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|(channel, _)| channel == "storeChanged" || channel == "wineVersionsUpdated")
+            .map(|(channel, args)| {
+                (
+                    channel.clone(),
+                    args.first().cloned().unwrap_or(Value::Null),
+                )
+            })
+            .collect()
+    }
+
+    /// There is a `wine-releases` frame for the wine manager's renderer store, its list holds the
+    /// installed (or removed) state, and no `wineVersionsUpdated` came before the last such frame.
+    fn assert_list_frame_precedes_re_read(frames: &[(String, Value)], installed: bool) {
+        let list_frames: Vec<usize> = frames
+            .iter()
+            .enumerate()
+            .filter(|(_, (channel, frame))| {
+                channel == "storeChanged"
+                    && frame["store"] == "wineDownloaderInfoStore"
+                    && frame["key"] == "wine-releases"
+            })
+            .map(|(i, _)| i)
+            .collect();
+        assert!(
+            !list_frames.is_empty(),
+            "no wine-releases frame: {frames:#?}"
+        );
+        let last = *list_frames.last().unwrap();
+        assert_eq!(
+            frames[last].1["value"][0]["isInstalled"],
+            json!(installed),
+            "{frames:#?}"
+        );
+        let first_re_read = frames
+            .iter()
+            .position(|(channel, _)| channel == "wineVersionsUpdated")
+            .expect("the crate announces the change");
+        assert!(
+            list_frames[0] < first_re_read,
+            "the list re-reads before the snapshot holds the new value: {frames:#?}"
         );
     }
 

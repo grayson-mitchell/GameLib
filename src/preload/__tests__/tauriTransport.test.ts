@@ -373,6 +373,35 @@ describe('change events', () => {
     expect(snapshotGet('configStore', 'theme')).toBe('dark')
   })
 
+  // 87-62 (F4): the frame the shell pushes after a Rust wine-manager install or remove. The shell
+  // test `a_wine_manager_install_and_remove_push_the_new_list_before_the_list_re_reads_it` fixes the
+  // ORDER (this frame before `wineVersionsUpdated`); this fixes what the preload does with it: it
+  // patches the snapshot, a newer rev replaces an older one, and a subscriber of the store hears the
+  // change after the patch, so a re-read inside it sees the new list.
+  it('a wine-manager list push patches the snapshot before its subscribers re-read it', () => {
+    const listOf = (isInstalled: boolean): unknown[] => [{ version: 'GE-Proton9-27', isInstalled }]
+    const heard: unknown[] = []
+    const stop = onStoreChanged('wineDownloaderInfoStore', () => {
+      heard.push(snapshotGet('wineDownloaderInfoStore', 'wine-releases'))
+    })
+    const frame = (rev: number, isInstalled: boolean) =>
+      storeChangedHandler!({
+        payload: {
+          channel: STORE_CHANGED_CHANNEL,
+          args: [{ store: 'wineDownloaderInfoStore', key: 'wine-releases', value: listOf(isInstalled), rev }]
+        }
+      })
+
+    frame(2, true)
+    expect(heard).toEqual([listOf(true)])
+    expect(snapshotGet('wineDownloaderInfoStore', 'wine-releases')).toEqual(listOf(true))
+
+    frame(3, false)
+    expect(heard).toEqual([listOf(true), listOf(false)])
+    expect(snapshotGet('wineDownloaderInfoStore', 'wine-releases')).toEqual(listOf(false))
+    stop()
+  })
+
   it('a storeChanged delete removes the key', () => {
     storeChangedHandler!({
       payload: {
