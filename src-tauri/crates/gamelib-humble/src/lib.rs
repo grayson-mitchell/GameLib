@@ -11,10 +11,12 @@
 pub mod app_id_resolver;
 pub mod classify;
 pub mod ctx;
+pub mod dedup;
 pub mod http;
 pub mod js_date;
 pub mod js_value;
 pub mod stores;
+pub mod title_match;
 
 use ctx::HumbleCtx;
 use serde_json::Value;
