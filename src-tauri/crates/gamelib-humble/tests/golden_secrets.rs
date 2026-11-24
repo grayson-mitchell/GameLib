@@ -30,7 +30,7 @@ use gamelib_core::shutdown::Shutdown;
 use gamelib_humble::ctx::{HumbleCtx, HumbleLog, Platform};
 use gamelib_humble::http::NoHttp;
 use gamelib_humble::secrets::{
-    CacheState, HumbleSecretSource, HumbleSecrets, HumbleSlot, SecretRead,
+    migrate_plaintext, CacheState, HumbleSecretSource, HumbleSecrets, HumbleSlot, SecretRead,
 };
 use gamelib_store::host::StoreHost;
 use gamelib_testutil::FakeHome;
@@ -350,6 +350,14 @@ impl Env {
     async fn get(&self, slot: HumbleSlot) -> Value {
         json!(self.ctx.secrets.get(&self.ctx, slot).await)
     }
+
+    /// The migration is blocking, as the shell runs it.
+    async fn migrate(&self) {
+        let ctx = Arc::clone(&self.ctx);
+        tokio::task::spawn_blocking(move || migrate_plaintext(&ctx))
+            .await
+            .expect("the migration did not panic");
+    }
 }
 
 /// `TokenReadOutcome` as the TS golden spells it.
@@ -507,6 +515,23 @@ async fn scenario(id: &str, env: &Env) -> Value {
             let csrf = env.read(Csrf).await;
             json!({ "session": session, "csrf": csrf, "sessionAgain": env.get(Session).await })
         }
+        "migration-moves-both-secrets-with-a-read-back" => {
+            let before = env.get(Session).await;
+            env.migrate().await;
+            let after = env.get(Session).await;
+            let csrf_after = env.get(Csrf).await;
+            json!({ "before": before, "after": after, "csrfAfter": csrf_after })
+        }
+        "migration-with-nothing-to-migrate-makes-no-keyring-call"
+        | "migration-write-failure-leaves-the-plaintext-in-place"
+        | "migration-read-back-failure-leaves-the-plaintext-in-place"
+        | "migration-read-back-mismatch-is-never-rounded-up-to-success"
+        | "migration-is-per-secret-so-a-csrf-failure-never-strands-the-session"
+        | "migration-only-the-csrf-token-is-plaintext"
+        | "boot-hook-logs-the-install-line-and-fires-the-migration" => {
+            env.migrate().await;
+            Value::Null
+        }
         other => panic!("no scenario for golden {other}: add it beside its TypeScript script"),
     }
 }
@@ -659,12 +684,10 @@ async fn every_secrets_golden_replays_through_the_rust_owner_and_the_migration()
         .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
         .filter(|n| n.ends_with(".json") && n != "MANIFEST.json")
         .map(|n| n.trim_end_matches(".json").to_string())
-        .filter(|id| !id.starts_with("migration-") && !id.starts_with("boot-hook"))
         .collect();
     ids.sort();
-    // The eight migration goldens are replayed by the migration (Task 2), not by the owner.
     assert_eq!(
-        ids.len() + 8,
+        ids.len(),
         manifest.count,
         "the manifest count and the golden files disagree: a truncated set must not pass"
     );
@@ -686,7 +709,33 @@ async fn every_secrets_golden_replays_through_the_rust_owner_and_the_migration()
 
     // The replay itself: every golden ran, with warnings, byte-compared config files, a plaintext that
     // was deleted and a plaintext that was kept.
-    assert_eq!(coverage.cases, ids.len());
+    assert_eq!(coverage.cases, manifest.count);
     assert!(coverage.gated >= 1, "the in-flight dedupe case did not run");
     assert!(coverage.warned >= 5, "too few failure cases replayed");
+    assert!(coverage.config_bytes_checked >= 7);
+    assert!(
+        coverage.plaintext_deleted >= 3,
+        "no migration deleted a plaintext key"
+    );
+    assert!(
+        coverage.plaintext_kept >= 4,
+        "no migration kept a plaintext key"
+    );
+}
+
+/// The migration's one promise, replayed against the one golden that matters most: a read back that
+/// answers a different value leaves the plaintext's exact bytes in the config.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_read_back_mismatch_keeps_the_plaintext_bytes_in_the_config() {
+    let id = "migration-read-back-mismatch-is-never-rounded-up-to-success";
+    let text = fs::read_to_string(fixtures().join(format!("{id}.json"))).unwrap();
+    let case: Case = serde_json::from_str(&text).unwrap();
+    let mut coverage = Coverage::default();
+    let failures = replay(id, &case, &mut coverage).await;
+    assert!(failures.is_empty(), "{failures:?}");
+
+    let before = &case.state_before["humble_store/config.json"].utf8;
+    let after = &case.state_after["humble_store/config.json"].utf8;
+    assert!(after.contains("\"sessionCookie\": \"fake-secret-value-0001\""));
+    assert_eq!(before, after, "the config bytes are exactly as they were");
 }
