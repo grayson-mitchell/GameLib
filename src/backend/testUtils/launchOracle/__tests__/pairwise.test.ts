@@ -9,13 +9,13 @@ const THREE: Axes = { a: [1, 2], b: ['x', 'y'], c: [true, false] }
 
 /** Every value pair across `axes`, in the `uncoveredPairs` spelling. */
 function everyPair(axes: Axes): string[] {
-  const keys = Object.keys(axes)
+  const entries = Object.entries(axes)
   const out: string[] = []
-  for (let i = 0; i < keys.length; i++) {
-    for (let j = i + 1; j < keys.length; j++) {
-      for (const v of axes[keys[i]]) {
-        for (const w of axes[keys[j]]) {
-          out.push(`${keys[i]}=${String(v)}|${keys[j]}=${String(w)}`)
+  for (const [i, [nameA, valuesA]] of entries.entries()) {
+    for (const [nameB, valuesB] of entries.slice(i + 1)) {
+      for (const v of valuesA) {
+        for (const w of valuesB) {
+          out.push(`${nameA}=${String(v)}|${nameB}=${String(w)}`)
         }
       }
     }
@@ -24,13 +24,13 @@ function everyPair(axes: Axes): string[] {
 }
 
 function pairsOf(rows: readonly Row[], axes: Axes): Set<string> {
-  const keys = Object.keys(axes)
+  const names = Object.keys(axes)
   const seen = new Set<string>()
   for (const row of rows) {
-    for (let i = 0; i < keys.length; i++) {
-      for (let j = i + 1; j < keys.length; j++) {
+    for (const [i, nameA] of names.entries()) {
+      for (const nameB of names.slice(i + 1)) {
         seen.add(
-          `${keys[i]}=${String(row[keys[i]])}|${keys[j]}=${String(row[keys[j]])}`
+          `${nameA}=${String(row[nameA])}|${nameB}=${String(row[nameB])}`
         )
       }
     }
