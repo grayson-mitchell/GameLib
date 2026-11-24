@@ -316,6 +316,15 @@ on it.
 
 Milestone v0.11 Node Sidecar Retirement. Planned 2026-11-17 alongside v0.10; starts when v0.10 closes. Requirements: `REQUIREMENTS-v0.11.md`. Research: `research/v0.11/SUMMARY.md`. Rules that apply to every port phase: the phase's last plan deletes the TypeScript it replaced and its sidecar channel registrations; any `GAMELIB_<SLICE>=rust|ts` fallback flag is removed in the same phase unless a named fallback window is recorded in the phase's plan; live gates are authored before coding; golden traces are recorded from TS before porting.
 
+**Lanes** (set 2026-11-24 from the research's own dependency rules and a check of the TS imports; each lane runs in its own worktree):
+
+- **Lane A — Steam (sets the pace):** 87 → 88 → 89 → 90 → 90.1 → 90.2 → 95 → 96 → 97
+- **Lane B — runners:** after 88: 91 → 92 → 93 (93 also waits for 90.1, because the download queue calls Steam install code: `cancelDelete`, `queueHeadRevalidation`, `gameRequirements`)
+- **Lane C — Humble and shortcuts:** 94, startable now (Humble imports only Steam *types*; shortcuts use `process/context` and the Rust steamfiles)
+- **Join:** 98 after 93, 94 and 97; then 99.
+
+Rules for lanes running side by side: give each lane its own worktree and STATE position (`/gsd-workstreams`, or snapshot and restore STATE.md and state.json around phase.complete and plan-phase); commit planning files with `--files`; rebase onto main before each phase's deletion plan, because every port phase edits the channel manifest, `relay_commands.rs`, `Cargo.lock` and `EXPECTED_LOCKFILE_CRATE_NAMES`.
+
 ### Phase 82: Guardrails, hygiene and shared safety primitives
 
 **Goal**: The backend test suite is trustworthy and the shared safety rules exist before any code is ported, so no later slice can fail open, delete a sibling game, or pass a drift gate vacuously.
@@ -653,7 +662,7 @@ Plans:
   3. Wine, CrossOver and Staging downloads, Winetricks and DXVK/DXMT/vkd3d tools install and report progress as before
   4. `wine/`, `tools/` and engine TypeScript and their sidecar registrations are deleted in this phase, except scheduled resolvers listed in the schedule test (D-23)
 
-**Plans:** 62/73 plans executed in 41 waves; planned 2026-11-23, revised the same day so every plan fits the 100k smart-zone budget (executes after Phase 86 closes); 87-56a/b/c added 2026-11-24 for the 87-56 remainder; 87-60..87-70 added 2026-11-24 as gap closure for the 87-59 live gate (F1-F5 and the engine-log gap) in 8 gap waves
+**Plans:** 63/73 plans executed in 41 waves; planned 2026-11-23, revised the same day so every plan fits the 100k smart-zone budget (executes after Phase 86 closes); 87-56a/b/c added 2026-11-24 for the 87-56 remainder; 87-60..87-70 added 2026-11-24 as gap closure for the 87-59 live gate (F1-F5 and the engine-log gap) in 8 gap waves
 
 Plans:
 **Wave 1**
@@ -805,19 +814,10 @@ Plans:
 - Two-profile rule: every golden runs on an isolated createFakeHomeProfile(); no case reads the real HOME
 - D-25 (c): `callTool` (winecfg, runExe) and `runWineCommandForGame` spawn in Rust as `SpawnClass::Helper`; the GOG offline-installer check, `pushGameToLibrary` and the final `gameStatusUpdate done` stay in the TS registration glue after the resolver returns, in the TS order
 
-### Phase 88: Launch pipeline
-
-**Goal**: Launching any game builds the same command line and environment from Rust.
-**Requirements**: SVC-03
-**Depends on**: Phase 87
-**Research flag**: Needs deeper research (golden argv/env traces recorded from TS first)
-**Success Criteria** (what must be TRUE):
-  1. For native, Wine/Proton/CrossOver, gamescope/mangohud, known-fix overlay and pre/post-script launches, the Rust command line and environment match golden traces recorded from the TypeScript
-  2. A game launched from the UI starts and runs on macOS, Windows and Linux with a single in-flight launch per game
 **Gap closure (87-59 gate findings; user decisions 2026-11-24)**
 
 **Gap wave 1**
-- [ ] 87-60-PLAN.md — Author the re-run gate contract 87-RERUN-1-HUMAN-UAT.md (7 items, before any fix, D-21/D-E) and file the non-gate observations as todos
+- [x] 87-60-PLAN.md — Author the re-run gate contract 87-RERUN-1-HUMAN-UAT.md (7 items, before any fix, D-21/D-E) and file the non-gate observations as todos
 
 **Gap wave 2** *(blocked on gap wave 1)*
 - [ ] 87-61-PLAN.md — Wire the shell's EngineLog with redaction (home as ~, no account names, tokens or args lines) into gamelib.log
@@ -848,6 +848,15 @@ Plans:
 - Two-profile rule: every golden runs on an isolated createFakeHomeProfile(); no case reads the real HOME
 - D-25 (c): `callTool` (winecfg, runExe) and `runWineCommandForGame` spawn in Rust as `SpawnClass::Helper`; the GOG offline-installer check, `pushGameToLibrary` and the final `gameStatusUpdate done` stay in the TS registration glue after the resolver returns, in the TS order
 
+### Phase 88: Launch pipeline
+
+**Goal**: Launching any game builds the same command line and environment from Rust.
+**Requirements**: SVC-03
+**Depends on**: Phase 87
+**Research flag**: Needs deeper research (golden argv/env traces recorded from TS first)
+**Success Criteria** (what must be TRUE):
+  1. For native, Wine/Proton/CrossOver, gamescope/mangohud, known-fix overlay and pre/post-script launches, the Rust command line and environment match golden traces recorded from the TypeScript
+  2. A game launched from the UI starts and runs on macOS, Windows and Linux with a single in-flight launch per game
   3. Anti-cheat handling at launch and the remaining `utils.ts` pieces behave as before
   4. `launcher.ts`, `commandRunner`, known-fixes and the replaced `utils.ts` code and their registrations are deleted in this phase
 
@@ -928,7 +937,7 @@ Plans:
 
 **Goal**: Epic sign-in, library and game management run from Rust over the bundled legendary binary.
 **Requirements**: STO-01
-**Depends on**: Phase 90.2
+**Depends on**: Phase 88 (Lane B; needs `enginewine` from 87 and `knownFixLaunch` from 88, nothing from Steam)
 **Research flag**: Needs deeper research (external binary output formats, Windows process-tree kill and quoting; parsers first with real captured transcripts)
 **Success Criteria** (what must be TRUE):
   1. A user can sign in to Epic and see their library, and install, update, repair, move and uninstall a game
@@ -963,7 +972,7 @@ Plans:
 
 **Goal**: The download queue runs in Rust and keeps every behaviour users rely on.
 **Requirements**: STO-04
-**Depends on**: Phase 92
+**Depends on**: Phases 90.1, 92 (the queue calls Steam install code that 90.1 ports)
 **Research flag**: Needs deeper research (regression scenarios from `steam-dm-queue-wedge` and `gog-download-resume-from-zero`)
 **Success Criteria** (what must be TRUE):
   1. Downloads can be paused and resumed, and a download interrupted by quitting resumes after relaunch without restarting from zero
@@ -980,7 +989,7 @@ Plans:
 
 **Goal**: Humble key handling and desktop shortcuts run from Rust.
 **Requirements**: SVC-04, SVC-05
-**Depends on**: Phase 93 (Humble is independent of the managers and may slide earlier, to right after Phase 86)
+**Depends on**: Phase 86 (Lane C; Humble imports only Steam types, shortcuts use process/context and Rust steamfiles)
 **Research flag**: Standard
 **Success Criteria** (what must be TRUE):
   1. Humble keys sync, can be claimed and redeemed as before, with secrets still read through the keyring dispatch and no new Keychain prompt
@@ -1071,7 +1080,7 @@ Plans:
 **Goal**: Installing a game through the Steam bridge runs in Rust.
 **Requirements**: STM-03
 **Depends on**: Phase 90.2
-**Research flag**: Needs deeper research (run the bridge spike early; may overlap Phases 91-94 if a second lane exists)
+**Research flag**: Needs deeper research (run the bridge spike early; runs in Lane A alongside Lane B's 91-93)
 **Success Criteria** (what must be TRUE):
   1. A bridge install performs the import scan, shim placement and shared redistributable install and produces the same installed layout as before
   2. An already bridge-verified title installs and still verifies under the strict bridge-verified criterion
@@ -1119,7 +1128,7 @@ Plans:
 
 **Goal**: Links, single-instance, quit and boot run with no sidecar, and dev builds stop prompting for the Keychain.
 **Requirements**: RET-01, RET-04
-**Depends on**: Phases 94, 97
+**Depends on**: Phases 93, 94, 97
 **Research flag**: Standard
 **Success Criteria** (what must be TRUE):
   1. A `gamelib://` link opens the right screen in a running app and in a cold start, and a second launch focuses the existing window

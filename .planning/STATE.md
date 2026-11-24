@@ -5,15 +5,15 @@ milestone_name: Node Sidecar Retirement
 current_phase: 87
 current_phase_name: Engine, Wine and tools
 status: executing
-stopped_at: Completed 87-59-PLAN.md
-last_updated: "2026-11-24T10:05:42.402Z"
+stopped_at: Completed 87-60-PLAN.md
+last_updated: "2026-11-24T10:15:16.052Z"
 last_activity: 2026-11-24
 last_activity_desc: Phase 87 execution started
-state_head: 51484af2b91d9774c1207c05443287fa85e8fa18
+state_head: 1267d3696e4b1d74e004bb188f5c61b03f591c85
 progress:
-  total_phases: 20
+  total_phases: 22
   completed_phases: 23
-  total_plans: 174
+  total_plans: 220
   completed_plans: 531
   percent: 100
 ---
@@ -76,10 +76,10 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 
 ## Current Position
 
-Phase: 87 (Engine, Wine and tools) — READY TO EXECUTE
-Plan: 62 of 73 (87-01..87-59 complete; gap closure 87-60..87-70 planned 2026-11-24, 87-60 next)
-Status: Ready to execute (gap plans via /gsd-execute-phase 87 --gaps-only; 87-59 live gate scored 1 pass, 2 issue, 1 blocked)
-Last activity: 2026-11-24 — Planned Phase 87 gap closure (11 plans, 8 gap waves: F1-F5, redacted engine log, signed 0.13.1 build, live re-gate)
+Phase: 87 (Engine, Wine and tools) — EXECUTING
+Plan: 64 of 73
+Status: Ready to execute
+Last activity: 2026-11-24 — Phase 87 execution started
 Progress: [██████████] 100%
 
 ## Native-Install Arc Phase Map (21–25)
@@ -471,6 +471,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 87 P57 | not recorded | 2 tasks | 12 files |
 | Phase 87 P58 | 280min | 3 tasks | 21 files |
 | Phase 87 P59 | 6h25m | 3 tasks | 3 files |
+| Phase 87 P60 | 4 min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -521,6 +522,11 @@ Entries for phases before 44 live in STATE-HISTORY.md § Roadmap Evolution archi
 - Phase 66.2 inserted after Phase 66: Split from Phase 66 at plan time (2026-11-10): ~50 plans at full depth; see ROADMAP § Phase 66
 - Phase 66.3 inserted after Phase 66: Split from Phase 66 at plan time (2026-11-10): ~50 plans at full depth; see ROADMAP § Phase 66
 - Phase 66.4 inserted after Phase 66.3: Split from Phase 66.3 at plan time (2026-11-11, D-66.3-04): long tail, census-to-test flip, poller revive, live macOS smoke + Windows UAT
+- Phase 91 edited: edited fields: depends_on 90.2 -> 88 (Lane B); v0.11 lane map added 2026-11-24
+- Phase 93 edited: edited fields: depends_on 92 -> 90.1, 92; v0.11 lane map added 2026-11-24
+- Phase 94 edited: edited fields: depends_on 93 -> 86 (Lane C); v0.11 lane map added 2026-11-24
+- Phase 95 edited: edited fields: research note: runs in Lane A beside 91-93; v0.11 lane map added 2026-11-24
+- Phase 98 edited: edited fields: depends_on 94, 97 -> 93, 94, 97; v0.11 lane map added 2026-11-24
 
 ### Decisions
 
@@ -1012,6 +1018,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 87]: 87-58: push-and-build with dry_run=true; D-10 accepted as met by the operator; D-12 gate blocked (a dry run uploads no artifact)
 - [Phase 87]: 87-58: Windows-only test reds (twelve CI runs) fixed by #[cfg(unix)] gating and a leading-tilde fix in tools/dxvk.rs, not by loosening assertions
 - [Phase 87]: 87-59: the live gate scored item 1 issue, item 2 pass, item 3 blocked, item 4 issue; the offline refusal, Winetricks target prefix and wine-manager install of never-installed releases go to /gsd-plan-phase 87 --gaps; the engine-log wiring is the deferred decision
+- [Phase 87]: 87-60: re-run item 7 (bottle removal) runs as its own launch 4 after launches 1-3 with the sibling compare app closed; every required literal is CONDITIONAL on 87-61's engine log, re-checked by 87-69 Task 1
 
 ### Pending Todos
 
@@ -1293,8 +1300,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-24T09:13:12.653Z
-Stopped at: Completed 87-59-PLAN.md
+Last session: 2026-11-24T10:15:13.375Z
+Stopped at: Completed 87-60-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
