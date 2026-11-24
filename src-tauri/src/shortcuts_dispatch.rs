@@ -8,8 +8,8 @@
 //! spawns nothing and waits on nothing; an op before [`install`] answers `<op>:not-ready`. Every op
 //! runs inside the crate's `guarded` wrapper (a shutdown registrant raced against the token).
 //!
-//! D-21: the only child process an op may start is `reg.exe` (the Windows Desktop folder), through
-//! `SpecProcRunner` as a helper, hidden and bounded. The crate reads no environment variable; this file
+//! D-21: the only child processes an op may start are `reg.exe` (the Windows Desktop folder) and
+//! `powershell.exe` (the Windows `.lnk` writer), through `SpecProcRunner` as a helper, hidden and bounded. The crate reads no environment variable; this file
 //! supplies the home, the app data folder, the Linux Desktop folder and the Windows expansion
 //! environment.
 //!
@@ -112,6 +112,15 @@ fn expansion_env(platform: Platform) -> Vec<(String, String)> {
         .collect()
 }
 
+/// `%SystemRoot%` out of the Windows environment snapshot, the way the TS read it (`SystemRoot`, an empty
+/// value counting as unset: the writer then uses `C:\Windows`). Windows names are case-insensitive, so
+/// the snapshot is searched that way.
+fn system_root_of(env: &[(String, String)]) -> Option<PathBuf> {
+    env.iter()
+        .find(|(name, value)| name.eq_ignore_ascii_case("SystemRoot") && !value.is_empty())
+        .map(|(_, value)| PathBuf::from(value))
+}
+
 /// Lines go to the shell log. They carry fixed words only (see [`ShortcutsLog`]).
 struct ShellShortcutsLog;
 
@@ -130,9 +139,13 @@ pub(crate) fn build_ctx(
     expand_env: Vec<(String, String)>,
     shutdown: gamelib_core::shutdown::Shutdown,
 ) -> ShortcutsCtx {
+    // The Windows `.lnk` writer hands PowerShell exactly this snapshot (plus its own variables).
+    let system_root = system_root_of(&expand_env);
     ShortcutsCtx::new(host, Arc::new(SystemClock), platform, shutdown)
         .with_paths(paths)
         .with_proc(Arc::new(SpecProcRunner))
+        .with_base_env(expand_env.clone())
+        .with_system_root(system_root)
         .with_expand_env(expand_env)
         .with_log(Arc::new(ShellShortcutsLog))
 }
@@ -319,6 +332,48 @@ mod tests {
             Some(home.join("AppData").join("Roaming"))
         );
         assert_eq!(windows_app_data(Platform::Linux, home, None), None);
+    }
+
+    #[test]
+    fn the_system_root_is_the_non_empty_variable_in_any_case() {
+        let env = |pairs: &[(&str, &str)]| -> Vec<(String, String)> {
+            pairs
+                .iter()
+                .map(|(k, v)| ((*k).to_string(), (*v).to_string()))
+                .collect()
+        };
+        assert_eq!(
+            system_root_of(&env(&[("PATH", "p"), ("SYSTEMROOT", r"D:\Win")])),
+            Some(PathBuf::from(r"D:\Win"))
+        );
+        assert_eq!(system_root_of(&env(&[("SystemRoot", "")])), None);
+        assert_eq!(system_root_of(&env(&[("PATH", "p")])), None);
+    }
+
+    #[test]
+    fn the_context_carries_the_powershell_environment_and_the_system_root() {
+        let home = FakeHome::new("gamelib-shortcuts-dispatch-");
+        let paths = ShortcutPaths {
+            user_home: home.root().to_path_buf(),
+            ..ShortcutPaths::default()
+        };
+        let snapshot = vec![
+            ("PATH".to_string(), "p".to_string()),
+            ("SystemRoot".to_string(), r"D:\Win".to_string()),
+        ];
+        let ctx = build_ctx(
+            Arc::new(StoreHost::new()),
+            Platform::Windows,
+            paths,
+            snapshot.clone(),
+            gamelib_core::shutdown::Shutdown::new(),
+        );
+        assert_eq!(ctx.base_env, snapshot);
+        assert_eq!(ctx.system_root, Some(PathBuf::from(r"D:\Win")));
+        // Off Windows the snapshot is empty, so there is nothing to carry.
+        let ctx = test_ctx(&home, Platform::Linux);
+        assert!(ctx.base_env.is_empty());
+        assert_eq!(ctx.system_root, None);
     }
 
     #[test]

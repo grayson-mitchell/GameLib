@@ -36,7 +36,9 @@ url = "2"
 percent-encoding = "2"
 # The VDF and desktop-entry text patterns: every pattern spells its JS semantics out (`.`, `\s`, `\d`),
 # so no Unicode table feature is needed (the gamelib-info rule).
-regex = { version = "1", default-features = false, features = ["std", "perf"] }
+# `unicode-gencat` is the one table the Windows icon scan needs: its name normalisation is JS's
+# `[^\p{L}\p{N}]` (the gamelib-humble precedent).
+regex = { version = "1", default-features = false, features = ["std", "perf", "unicode-gencat"] }
 # Node `zlib.crc32` parity for the Steam shortcut app id. Already locked (flate2 and png use it).
 crc32fast = "1"
 # PNG and JPEG decode and PNG encode for the icon pipeline; no other codec is linked. The version the
@@ -54,6 +56,8 @@ testing = []
 gamelib-shortcuts = { path = ".", features = ["testing"] }
 gamelib-testutil = { path = "../gamelib-testutil" }
 tempfile = "3"
+# The real-PowerShell `.lnk` test (Windows only) runs the app's own spawn seam.
+gamelib-proc = { path = "../gamelib-proc" }
 
 [lints.clippy]
 dbg_macro = "deny"

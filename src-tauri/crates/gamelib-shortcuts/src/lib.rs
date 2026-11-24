@@ -21,6 +21,7 @@ pub mod registry;
 pub mod sanitize;
 #[cfg(any(test, feature = "testing"))]
 pub mod testing;
+pub mod windows;
 
 use ctx::ShortcutsCtx;
 use serde_json::Value;

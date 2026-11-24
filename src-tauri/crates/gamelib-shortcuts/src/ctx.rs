@@ -73,6 +73,12 @@ pub struct ShortcutsCtx {
     /// The process environment `%VAR%` in a registry value expands against, snapshotted by the shell
     /// (Windows only). The crate reads no environment variable of its own.
     pub expand_env: Vec<(String, String)>,
+    /// The process environment the Windows `.lnk` writer hands PowerShell (`replace_env`: it gets
+    /// exactly this plus `GAMELIB_LNK_*`), snapshotted by the shell. Empty off Windows and headless.
+    pub base_env: Vec<(String, String)>,
+    /// `%SystemRoot%` as the shell read it; `None` or empty makes the writer use `C:\Windows`, as the TS
+    /// does. The crate reads no environment variable of its own.
+    pub system_root: Option<PathBuf>,
     /// Where an op's diagnostic line goes, if anywhere.
     pub log: Option<Arc<dyn ShortcutsLog>>,
 }
@@ -92,6 +98,8 @@ impl ShortcutsCtx {
             paths: ShortcutPaths::default(),
             proc: None,
             expand_env: Vec::new(),
+            base_env: Vec::new(),
+            system_root: None,
             log: None,
         }
     }
@@ -111,6 +119,18 @@ impl ShortcutsCtx {
     /// Sets the environment a registry `%VAR%` expands against.
     pub fn with_expand_env(mut self, env: Vec<(String, String)>) -> ShortcutsCtx {
         self.expand_env = env;
+        self
+    }
+
+    /// Sets the environment the Windows `.lnk` writer passes PowerShell.
+    pub fn with_base_env(mut self, env: Vec<(String, String)>) -> ShortcutsCtx {
+        self.base_env = env;
+        self
+    }
+
+    /// Sets `%SystemRoot%` (the folder `explorer.exe` lives in).
+    pub fn with_system_root(mut self, root: Option<PathBuf>) -> ShortcutsCtx {
+        self.system_root = root;
         self
     }
 

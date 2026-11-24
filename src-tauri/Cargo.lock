@@ -1869,6 +1869,7 @@ dependencies = [
  "crc32fast",
  "gamelib-core",
  "gamelib-i18n",
+ "gamelib-proc",
  "gamelib-safety",
  "gamelib-shortcuts",
  "gamelib-store",
