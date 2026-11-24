@@ -1,0 +1,21 @@
+[
+  {
+    "id": "ex-1",
+    "request": {
+      "method": "POST",
+      "url": "http://relay.test/v1/reports",
+      "headers": {
+        "content-type": "application/json",
+        "user-agent": "GameLib/0.8.0-beta+1"
+      },
+      "body": "{\"v\":1,\"store\":\"steam\",\"appId\":\"220\",\"key\":\"macArch\",\"value\":\"32\",\"op\":\"add\",\"gamelibVersion\":\"0.8.0-beta+1\"}"
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json"
+      },
+      "bodyFile": "body-1.json"
+    }
+  }
+]

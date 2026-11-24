@@ -1,0 +1,26 @@
+[
+  {
+    "id": "ex-1",
+    "request": {
+      "method": "GET",
+      "url": "https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/gog/1-gog.json",
+      "headers": {}
+    },
+    "response": {
+      "status": 500,
+      "headers": {}
+    }
+  },
+  {
+    "id": "ex-2",
+    "request": {
+      "method": "GET",
+      "url": "https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/gog/1-gog.json",
+      "headers": {}
+    },
+    "response": {
+      "status": 403,
+      "headers": {}
+    }
+  }
+]

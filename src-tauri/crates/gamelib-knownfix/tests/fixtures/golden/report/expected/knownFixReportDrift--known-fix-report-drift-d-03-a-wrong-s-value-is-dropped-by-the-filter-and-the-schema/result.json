@@ -1,0 +1,25 @@
+{
+  "platform": "mac",
+  "settings": {
+    "shareDetectedFixes": true
+  },
+  "version": "0.8.0",
+  "steps": [
+    {
+      "op": "filter",
+      "key": "macArch",
+      "value": "64",
+      "filtered": {},
+      "kept": false,
+      "schemaAccepts": false
+    },
+    {
+      "op": "filter",
+      "key": "drm",
+      "value": "none",
+      "filtered": {},
+      "kept": false,
+      "schemaAccepts": false
+    }
+  ]
+}

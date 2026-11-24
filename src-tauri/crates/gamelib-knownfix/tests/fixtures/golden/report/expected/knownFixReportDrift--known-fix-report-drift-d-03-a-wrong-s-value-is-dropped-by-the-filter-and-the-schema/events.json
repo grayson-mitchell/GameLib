@@ -1,0 +1,14 @@
+[
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": null,
+    "text": "Known fixes for 'x' (test layer): 'macArch' accepts only \"32\", ignoring \"64\"."
+  },
+  {
+    "step": 1,
+    "level": "warning",
+    "prefix": null,
+    "text": "Known fixes for 'x' (test layer): 'drm' accepts only \"ceg\", ignoring \"none\"."
+  }
+]

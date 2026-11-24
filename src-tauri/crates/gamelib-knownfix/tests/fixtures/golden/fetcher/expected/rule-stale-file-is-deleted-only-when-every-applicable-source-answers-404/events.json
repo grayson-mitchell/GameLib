@@ -1,0 +1,26 @@
+[
+  {
+    "step": 0,
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Known fixes: no source has 1-gog.json, removed stale <APPFOLDER>/fixes/1-gog.json"
+  },
+  {
+    "step": 1,
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Known fixes: no source has n1-amazon.json, removed stale <APPFOLDER>/fixes/n1-amazon.json"
+  },
+  {
+    "step": 2,
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Known fixes: no source has s1-steam.json, removed stale <APPFOLDER>/fixes/s1-steam.json"
+  },
+  {
+    "step": 3,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "Known fixes: Heroic returned 500 for https://raw.githubusercontent.com/Heroic-Games-Launcher/known-fixes/main/gog/1-gog.json"
+  }
+]

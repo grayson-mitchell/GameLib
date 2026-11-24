@@ -13,5 +13,904 @@
         }
       }
     ]
+  },
+  {
+    "id": "knownFixesFetcher--gamelib-source-steam-200-writes-only-allow-listed-keys-and-never-asks-heroic",
+    "title": "GameLib source > steam 200 writes only allow-listed keys and never asks Heroic",
+    "steps": [
+      {
+        "appName": "284100",
+        "runner": "steam",
+        "replies": {
+          "https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/steam/284100-steam.json": {
+            "status": 200,
+            "data": "{\"envVariables\":{\"A\":\"1\"},\"registry\":[],\"foo\":1}"
+          }
+        },
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local",
+            "dir": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesFetcher--gamelib-source-gog-200-overwrites-a-stale-file-heroic-not-requested",
+    "title": "GameLib source > gog 200 overwrites a stale file; Heroic not requested",
+    "steps": [
+      {
+        "appName": "1207658930",
+        "runner": "gog",
+        "replies": {
+          "https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/gog/1207658930-gog.json": {
+            "status": 200,
+            "data": {
+              "title": "fresh"
+            }
+          }
+        },
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local",
+            "dir": true
+          },
+          {
+            "path": "<APPFOLDER>/fixes/1207658930-gog.json",
+            "text": "{\"title\":\"stale\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesFetcher--gamelib-source-leaves-no-tmp-files-behind-after-a-write",
+    "title": "GameLib source > leaves no .tmp files behind after a write",
+    "steps": [
+      {
+        "appName": "1",
+        "runner": "gog",
+        "replies": {
+          "https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/gog/1-gog.json": {
+            "status": 200,
+            "data": {
+              "title": "t"
+            }
+          }
+        },
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local",
+            "dir": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesFetcher--heroic-fallback-s-falls-back-on-a-gamelib-404",
+    "title": "Heroic fallback > %s falls back on a GameLib 404",
+    "steps": [
+      {
+        "appName": "1207658930",
+        "runner": "gog",
+        "replies": {
+          "https://raw.githubusercontent.com/Heroic-Games-Launcher/known-fixes/main/gog/1207658930-gog.json": {
+            "status": 200,
+            "data": {
+              "title": "heroic"
+            }
+          }
+        },
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local",
+            "dir": true
+          }
+        ]
+      },
+      {
+        "appName": "Fortnite",
+        "runner": "legendary",
+        "replies": {
+          "https://raw.githubusercontent.com/Heroic-Games-Launcher/known-fixes/main/epic/Fortnite-epic.json": {
+            "status": 200,
+            "data": {
+              "title": "heroic"
+            }
+          }
+        }
+      },
+      {
+        "appName": "abc",
+        "runner": "nile",
+        "replies": {
+          "https://raw.githubusercontent.com/Heroic-Games-Launcher/known-fixes/main/amazon/abc-amazon.json": {
+            "status": 200,
+            "data": {
+              "title": "heroic"
+            }
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "knownFixesFetcher--heroic-fallback-gog-heroic-url-is-exact",
+    "title": "Heroic fallback > gog Heroic URL is exact",
+    "steps": [
+      {
+        "appName": "1207658930",
+        "runner": "gog",
+        "replies": {},
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local",
+            "dir": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesFetcher--heroic-fallback-s-never-asks-heroic-and-a-404-deletes-the-stale-file",
+    "title": "Heroic fallback > %s never asks Heroic and a 404 deletes the stale file",
+    "steps": [
+      {
+        "appName": "77",
+        "runner": "steam",
+        "replies": {},
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local",
+            "dir": true
+          },
+          {
+            "path": "<APPFOLDER>/fixes/77-steam.json",
+            "text": "{\"title\":\"old\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesFetcher--heroic-fallback-both-404-deletes-the-stale-file-epic",
+    "title": "Heroic fallback > both 404 deletes the stale file (epic)",
+    "steps": [
+      {
+        "appName": "App",
+        "runner": "legendary",
+        "replies": {},
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local",
+            "dir": true
+          },
+          {
+            "path": "<APPFOLDER>/fixes/App-epic.json",
+            "text": "{\"title\":\"old\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesFetcher--heroic-fallback-gamelib-404-then-heroic-throws-leaves-dest-untouched",
+    "title": "Heroic fallback > GameLib 404 then Heroic throws leaves dest untouched",
+    "steps": [
+      {
+        "appName": "1",
+        "runner": "gog",
+        "replies": {
+          "https://raw.githubusercontent.com/Heroic-Games-Launcher/known-fixes/main/gog/1-gog.json": {
+            "throws": "boom"
+          }
+        },
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local",
+            "dir": true
+          },
+          {
+            "path": "<APPFOLDER>/fixes/1-gog.json",
+            "text": "{\"title\":\"old\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesFetcher--indeterminate-gamelib-answers-network-error-resolves-no-fallback-file-untouched",
+    "title": "indeterminate GameLib answers > network error: resolves, no fallback, file untouched",
+    "steps": [
+      {
+        "appName": "1",
+        "runner": "gog",
+        "replies": {
+          "https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/gog/1-gog.json": {
+            "throws": "ETIMEDOUT"
+          }
+        },
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local",
+            "dir": true
+          },
+          {
+            "path": "<APPFOLDER>/fixes/1-gog.json",
+            "text": "{\"title\":\"old\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesFetcher--indeterminate-gamelib-answers-status-i-behaves-like-a-network-error",
+    "title": "indeterminate GameLib answers > status %i behaves like a network error",
+    "steps": [
+      {
+        "appName": "1",
+        "runner": "gog",
+        "replies": {
+          "https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/gog/1-gog.json": {
+            "status": 500
+          }
+        },
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local",
+            "dir": true
+          },
+          {
+            "path": "<APPFOLDER>/fixes/1-gog.json",
+            "text": "{\"title\":\"old\"}"
+          }
+        ]
+      },
+      {
+        "appName": "1",
+        "runner": "gog",
+        "replies": {
+          "https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/gog/1-gog.json": {
+            "status": 403
+          }
+        },
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/1-gog.json",
+            "text": "{\"title\":\"old\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesFetcher--indeterminate-gamelib-answers-200-with-s-body-warns-untouched-no-fallback",
+    "title": "indeterminate GameLib answers > 200 with %s body: warns, untouched, no fallback",
+    "steps": [
+      {
+        "appName": "1",
+        "runner": "gog",
+        "replies": {
+          "https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/gog/1-gog.json": {
+            "status": 200,
+            "data": "{not json"
+          }
+        },
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local",
+            "dir": true
+          },
+          {
+            "path": "<APPFOLDER>/fixes/1-gog.json",
+            "text": "{\"title\":\"old\"}"
+          }
+        ]
+      },
+      {
+        "appName": "1",
+        "runner": "gog",
+        "replies": {
+          "https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/gog/1-gog.json": {
+            "status": 200,
+            "data": "[1,2]"
+          }
+        },
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/1-gog.json",
+            "text": "{\"title\":\"old\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesFetcher--guards-sideload-makes-no-requests",
+    "title": "guards > sideload makes no requests",
+    "steps": [
+      {
+        "appName": "x",
+        "runner": "sideload",
+        "replies": {},
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local",
+            "dir": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesFetcher--guards-rejects-a-traversing-appname",
+    "title": "guards > rejects a traversing appName",
+    "steps": [
+      {
+        "appName": "../escape",
+        "runner": "gog",
+        "replies": {},
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local",
+            "dir": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixesFetcher--guards-never-touches-local-or-profile-files",
+    "title": "guards > never touches local or profile files",
+    "steps": [
+      {
+        "appName": "9",
+        "runner": "steam",
+        "replies": {
+          "https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/steam/9-steam.json": {
+            "status": 200,
+            "data": {
+              "title": "t"
+            }
+          }
+        },
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local",
+            "dir": true
+          },
+          {
+            "path": "<APPFOLDER>/fixes/local/9-steam.json",
+            "text": "L"
+          },
+          {
+            "path": "<APPFOLDER>/fixes/9-steam.profile.json",
+            "text": "P"
+          }
+        ]
+      },
+      {
+        "appName": "9",
+        "runner": "steam",
+        "replies": {}
+      },
+      {
+        "appName": "9",
+        "runner": "steam",
+        "replies": {
+          "https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/steam/9-steam.json": {
+            "throws": "x"
+          }
+        }
+      },
+      {
+        "appName": "9",
+        "runner": "steam",
+        "replies": {
+          "https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/steam/9-steam.json": {
+            "status": 500
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "rule-body-is-filtered-at-write-gamelib-feed-drops-tier-2-keys-and-bad-values",
+    "steps": [
+      {
+        "appName": "1207658930",
+        "runner": "gog",
+        "replies": {
+          "https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/gog/1207658930-gog.json": {
+            "status": 200,
+            "data": "{\"title\":\"Mixed\",\"envVariables\":{\"A\":\"1\"},\"registry\":[{\"key\":\"HKLM\\\\Software\\\\X\",\"name\":\"N\",\"type\":\"REG_DWORD\",\"value\":1}],\"dllOverrides\":{\"d3d11.dll\":\"native\"},\"overlays\":[\"gst-libav-1.24.13\"],\"shimFeatures\":[\"x\"],\"steamSharedRedists\":true,\"macArch\":\"64\",\"drm\":\"none\",\"steamGameOverlay\":\"on\",\"launchArgs\":[1],\"exeOverride\":\"../escape.exe\",\"unknownKey\":1}"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "rule-body-is-filtered-at-write-heroic-feed-drops-tier-2-keys-and-bad-values",
+    "steps": [
+      {
+        "appName": "1207658930",
+        "runner": "gog",
+        "replies": {
+          "https://raw.githubusercontent.com/Heroic-Games-Launcher/known-fixes/main/gog/1207658930-gog.json": {
+            "status": 200,
+            "data": "{\"title\":\"Mixed\",\"envVariables\":{\"A\":\"1\"},\"registry\":[{\"key\":\"HKLM\\\\Software\\\\X\",\"name\":\"N\",\"type\":\"REG_DWORD\",\"value\":1}],\"dllOverrides\":{\"d3d11.dll\":\"native\"},\"overlays\":[\"gst-libav-1.24.13\"],\"shimFeatures\":[\"x\"],\"steamSharedRedists\":true,\"macArch\":\"64\",\"drm\":\"none\",\"steamGameOverlay\":\"on\",\"launchArgs\":[1],\"exeOverride\":\"../escape.exe\",\"unknownKey\":1}"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "rule-every-tier-1-key-is-written-whole",
+    "steps": [
+      {
+        "appName": "1207658930",
+        "runner": "gog",
+        "replies": {
+          "https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/gog/1207658930-gog.json": {
+            "status": 200,
+            "data": "{\"title\":\"Every key\",\"notes\":\"n\",\"winetricks\":[\"vcrun2019\"],\"runInPrefix\":[\"reg\",\"query\"],\"envVariables\":{\"A\":\"1\"},\"wikiLink\":\"https://example.test/wiki\",\"launchNotice\":\"be patient\",\"macArch\":\"32\",\"drm\":\"ceg\",\"launchArgs\":[\"-windowed\"],\"exeOverride\":\"bin/game.exe\",\"steamGameOverlay\":\"off\"}"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "rule-heroic-feed-is-only-asked-for-legendary-gog-and-nile",
+    "steps": [
+      {
+        "appName": "Game1",
+        "runner": "legendary",
+        "replies": {}
+      },
+      {
+        "appName": "1",
+        "runner": "gog",
+        "replies": {}
+      },
+      {
+        "appName": "n1",
+        "runner": "nile",
+        "replies": {}
+      },
+      {
+        "appName": "x",
+        "runner": "sideload",
+        "replies": {}
+      },
+      {
+        "appName": "2",
+        "runner": "steam",
+        "replies": {}
+      }
+    ]
+  },
+  {
+    "id": "rule-gamelib-404-and-heroic-200-writes-the-heroic-body-and-keeps-nothing-else",
+    "steps": [
+      {
+        "appName": "1207658930",
+        "runner": "gog",
+        "replies": {
+          "https://raw.githubusercontent.com/Heroic-Games-Launcher/known-fixes/main/gog/1207658930-gog.json": {
+            "status": 200,
+            "data": {
+              "title": "heroic"
+            }
+          }
+        },
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/1207658930-gog.json",
+            "text": "{\"title\":\"old\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "rule-gamelib-network-error-with-no-stale-file-writes-nothing",
+    "steps": [
+      {
+        "appName": "1",
+        "runner": "gog",
+        "replies": {
+          "https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/gog/1-gog.json": {
+            "throws": "ECONNREFUSED"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "rule-gamelib-timeout-through-the-default-get-leaves-the-stale-file",
+    "steps": [
+      {
+        "appName": "1",
+        "runner": "gog",
+        "replies": {
+          "https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/gog/1-gog.json": {
+            "throws": "timeout of 10000ms exceeded",
+            "code": "ECONNABORTED"
+          }
+        },
+        "via": "default",
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/1-gog.json",
+            "text": "{\"title\":\"old\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "rule-default-get-asks-with-a-10000-ms-timeout-text-and-every-status-accepted",
+    "steps": [
+      {
+        "appName": "1",
+        "runner": "gog",
+        "replies": {
+          "https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/gog/1-gog.json": {
+            "status": 200,
+            "data": "{\"title\":\"viaDefault\"}"
+          }
+        },
+        "via": "default"
+      }
+    ]
+  },
+  {
+    "id": "rule-default-get-falls-back-to-heroic-on-a-404",
+    "steps": [
+      {
+        "appName": "1",
+        "runner": "gog",
+        "replies": {
+          "https://raw.githubusercontent.com/Heroic-Games-Launcher/known-fixes/main/gog/1-gog.json": {
+            "status": 200,
+            "data": "{\"title\":\"heroicViaDefault\"}"
+          }
+        },
+        "via": "default"
+      }
+    ]
+  },
+  {
+    "id": "rule-gamelib-redirect-status-is-indeterminate-and-asks-nothing-more",
+    "steps": [
+      {
+        "appName": "1",
+        "runner": "gog",
+        "replies": {
+          "https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/gog/1-gog.json": {
+            "status": 301
+          }
+        },
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/1-gog.json",
+            "text": "{\"title\":\"old\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "rule-gamelib-204-is-indeterminate-and-asks-nothing-more",
+    "steps": [
+      {
+        "appName": "1",
+        "runner": "gog",
+        "replies": {
+          "https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/gog/1-gog.json": {
+            "status": 204
+          }
+        },
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/1-gog.json",
+            "text": "{\"title\":\"old\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "rule-heroic-403-after-a-gamelib-404-leaves-the-stale-file",
+    "steps": [
+      {
+        "appName": "1",
+        "runner": "gog",
+        "replies": {
+          "https://raw.githubusercontent.com/Heroic-Games-Launcher/known-fixes/main/gog/1-gog.json": {
+            "status": 403
+          }
+        },
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/1-gog.json",
+            "text": "{\"title\":\"old\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "rule-heroic-500-after-a-gamelib-404-leaves-the-stale-file",
+    "steps": [
+      {
+        "appName": "1",
+        "runner": "gog",
+        "replies": {
+          "https://raw.githubusercontent.com/Heroic-Games-Launcher/known-fixes/main/gog/1-gog.json": {
+            "status": 500
+          }
+        },
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/1-gog.json",
+            "text": "{\"title\":\"old\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "rule-heroic-malformed-body-after-a-gamelib-404-leaves-the-stale-file",
+    "steps": [
+      {
+        "appName": "1",
+        "runner": "gog",
+        "replies": {
+          "https://raw.githubusercontent.com/Heroic-Games-Launcher/known-fixes/main/gog/1-gog.json": {
+            "status": 200,
+            "data": "{not json"
+          }
+        },
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/1-gog.json",
+            "text": "{\"title\":\"old\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "rule-heroic-array-body-after-a-gamelib-404-leaves-the-stale-file",
+    "steps": [
+      {
+        "appName": "1",
+        "runner": "gog",
+        "replies": {
+          "https://raw.githubusercontent.com/Heroic-Games-Launcher/known-fixes/main/gog/1-gog.json": {
+            "status": 200,
+            "data": "[1,2]"
+          }
+        },
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/1-gog.json",
+            "text": "{\"title\":\"old\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "rule-stale-file-is-deleted-only-when-every-applicable-source-answers-404",
+    "steps": [
+      {
+        "appName": "1",
+        "runner": "gog",
+        "replies": {},
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/1-gog.json",
+            "text": "{\"title\":\"old\"}"
+          }
+        ]
+      },
+      {
+        "appName": "n1",
+        "runner": "nile",
+        "replies": {},
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/n1-amazon.json",
+            "text": "{\"title\":\"old\"}"
+          }
+        ]
+      },
+      {
+        "appName": "s1",
+        "runner": "steam",
+        "replies": {},
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/s1-steam.json",
+            "text": "{\"title\":\"old\"}"
+          }
+        ]
+      },
+      {
+        "appName": "1",
+        "runner": "gog",
+        "replies": {
+          "https://raw.githubusercontent.com/Heroic-Games-Launcher/known-fixes/main/gog/1-gog.json": {
+            "status": 500
+          }
+        },
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/1-gog.json",
+            "text": "{\"title\":\"old\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "rule-json-null-body-is-not-an-object",
+    "steps": [
+      {
+        "appName": "1",
+        "runner": "gog",
+        "replies": {
+          "https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/gog/1-gog.json": {
+            "status": 200,
+            "data": "null"
+          }
+        },
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/1-gog.json",
+            "text": "{\"title\":\"old\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "rule-json-string-body-is-not-an-object",
+    "steps": [
+      {
+        "appName": "1",
+        "runner": "gog",
+        "replies": {
+          "https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/gog/1-gog.json": {
+            "status": 200,
+            "data": "\"text\""
+          }
+        },
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/1-gog.json",
+            "text": "{\"title\":\"old\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "rule-empty-object-body-writes-an-empty-object",
+    "steps": [
+      {
+        "appName": "1",
+        "runner": "gog",
+        "replies": {
+          "https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/gog/1-gog.json": {
+            "status": 200,
+            "data": "{}"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "rule-a-second-download-overwrites-the-first",
+    "steps": [
+      {
+        "appName": "1",
+        "runner": "gog",
+        "replies": {
+          "https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/gog/1-gog.json": {
+            "status": 200,
+            "data": {
+              "title": "one"
+            }
+          }
+        }
+      },
+      {
+        "appName": "1",
+        "runner": "gog",
+        "replies": {
+          "https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/gog/1-gog.json": {
+            "status": 200,
+            "data": {
+              "title": "two"
+            }
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "rule-unsafe-app-names-write-and-ask-nothing",
+    "steps": [
+      {
+        "appName": "../escape",
+        "runner": "gog",
+        "replies": {}
+      },
+      {
+        "appName": "..",
+        "runner": "gog",
+        "replies": {}
+      },
+      {
+        "appName": "a/b",
+        "runner": "gog",
+        "replies": {}
+      },
+      {
+        "appName": "/abs",
+        "runner": "gog",
+        "replies": {}
+      },
+      {
+        "appName": "..dots",
+        "runner": "gog",
+        "replies": {}
+      }
+    ]
+  },
+  {
+    "id": "rule-app-name-with-dots-inside-is-allowed",
+    "steps": [
+      {
+        "appName": "a..b",
+        "runner": "gog",
+        "replies": {
+          "https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/gog/a..b-gog.json": {
+            "status": 200,
+            "data": {
+              "title": "t"
+            }
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "rule-the-fixes-folder-being-a-file-makes-the-write-fail-and-nothing-rejects",
+    "steps": [
+      {
+        "appName": "1",
+        "runner": "gog",
+        "replies": {
+          "https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/gog/1-gog.json": {
+            "status": 200,
+            "data": {
+              "title": "t"
+            }
+          }
+        },
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes",
+            "text": "not a folder"
+          }
+        ]
+      }
+    ]
   }
 ]

@@ -1,0 +1,49 @@
+{
+  "steps": [
+    {
+      "appName": "../escape",
+      "runner": "gog",
+      "via": "injected",
+      "rejected": false,
+      "returned": null,
+      "requested": [],
+      "treeAfter": []
+    },
+    {
+      "appName": "..",
+      "runner": "gog",
+      "via": "injected",
+      "rejected": false,
+      "returned": null,
+      "requested": [],
+      "treeAfter": []
+    },
+    {
+      "appName": "a/b",
+      "runner": "gog",
+      "via": "injected",
+      "rejected": false,
+      "returned": null,
+      "requested": [],
+      "treeAfter": []
+    },
+    {
+      "appName": "/abs",
+      "runner": "gog",
+      "via": "injected",
+      "rejected": false,
+      "returned": null,
+      "requested": [],
+      "treeAfter": []
+    },
+    {
+      "appName": "..dots",
+      "runner": "gog",
+      "via": "injected",
+      "rejected": false,
+      "returned": null,
+      "requested": [],
+      "treeAfter": []
+    }
+  ]
+}

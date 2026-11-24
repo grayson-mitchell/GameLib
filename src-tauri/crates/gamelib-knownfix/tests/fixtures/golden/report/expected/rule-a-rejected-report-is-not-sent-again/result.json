@@ -1,0 +1,50 @@
+{
+  "platform": "mac",
+  "settings": {
+    "shareDetectedFixes": true
+  },
+  "version": "0.8.0",
+  "steps": [
+    {
+      "op": "run",
+      "fix": {
+        "appId": "220",
+        "key": "macArch",
+        "op": "add",
+        "detector": "macho"
+      },
+      "answer": {
+        "status": 404,
+        "data": {
+          "status": "rejected"
+        }
+      },
+      "outcome": "rejected",
+      "postsMade": 1,
+      "sentRecord": {
+        "at": 1234,
+        "status": 404
+      },
+      "sentStoreSize": 1,
+      "registryHoldsIt": false
+    },
+    {
+      "op": "run",
+      "fix": {
+        "appId": "220",
+        "key": "macArch",
+        "op": "add",
+        "detector": "macho"
+      },
+      "answer": null,
+      "outcome": "already-sent",
+      "postsMade": 0,
+      "sentRecord": {
+        "at": 1234,
+        "status": 404
+      },
+      "sentStoreSize": 1,
+      "registryHoldsIt": false
+    }
+  ]
+}

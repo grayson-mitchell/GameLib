@@ -1,0 +1,27 @@
+{
+  "steps": [
+    {
+      "appName": "App",
+      "runner": "legendary",
+      "via": "injected",
+      "rejected": false,
+      "returned": null,
+      "requested": [
+        "https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/epic/App-epic.json",
+        "https://raw.githubusercontent.com/Heroic-Games-Launcher/known-fixes/main/epic/App-epic.json"
+      ],
+      "treeAfter": [
+        {
+          "path": "<APPFOLDER>/fixes",
+          "kind": "dir",
+          "mode": "0755"
+        },
+        {
+          "path": "<APPFOLDER>/fixes/local",
+          "kind": "dir",
+          "mode": "0755"
+        }
+      ]
+    }
+  ]
+}

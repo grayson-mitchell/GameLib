@@ -1,0 +1,14 @@
+[
+  {
+    "step": 0,
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Known fixes written from GameLib: <APPFOLDER>/fixes/1-gog.json"
+  },
+  {
+    "step": 1,
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Known fixes written from GameLib: <APPFOLDER>/fixes/1-gog.json"
+  }
+]

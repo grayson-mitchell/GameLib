@@ -1,0 +1,8 @@
+[
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "Known fixes: Heroic body for https://raw.githubusercontent.com/Heroic-Games-Launcher/known-fixes/main/gog/1-gog.json is not valid JSON: SyntaxError: Expected property name or '}' in JSON at position 1 (line 1 column 2)"
+  }
+]

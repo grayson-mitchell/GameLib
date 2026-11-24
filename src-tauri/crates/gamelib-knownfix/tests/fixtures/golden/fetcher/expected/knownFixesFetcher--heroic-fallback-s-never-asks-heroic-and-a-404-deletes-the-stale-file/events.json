@@ -1,0 +1,8 @@
+[
+  {
+    "step": 0,
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Known fixes: no source has 77-steam.json, removed stale <APPFOLDER>/fixes/77-steam.json"
+  }
+]

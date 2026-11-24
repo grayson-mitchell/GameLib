@@ -1,0 +1,26 @@
+[
+  {
+    "step": 0,
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Known fixes written from GameLib: <APPFOLDER>/fixes/9-steam.json"
+  },
+  {
+    "step": 1,
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Known fixes: no source has 9-steam.json, removed stale <APPFOLDER>/fixes/9-steam.json"
+  },
+  {
+    "step": 2,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "Known fixes: GameLib request failed for https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/steam/9-steam.json: Error: x"
+  },
+  {
+    "step": 3,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "Known fixes: GameLib returned 500 for https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/steam/9-steam.json"
+  }
+]

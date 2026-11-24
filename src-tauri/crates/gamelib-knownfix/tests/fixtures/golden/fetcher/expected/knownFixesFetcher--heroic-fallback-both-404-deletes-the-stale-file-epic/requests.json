@@ -1,0 +1,4 @@
+[
+  "GET https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/epic/App-epic.json",
+  "GET https://raw.githubusercontent.com/Heroic-Games-Launcher/known-fixes/main/epic/App-epic.json"
+]

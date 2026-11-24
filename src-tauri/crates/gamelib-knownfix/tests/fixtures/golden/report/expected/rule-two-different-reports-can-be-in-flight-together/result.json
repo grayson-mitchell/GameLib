@@ -1,0 +1,108 @@
+{
+  "platform": "mac",
+  "settings": {
+    "shareDetectedFixes": true
+  },
+  "version": "0.8.0",
+  "steps": [
+    {
+      "op": "run",
+      "fix": {
+        "appId": "220",
+        "key": "macArch",
+        "op": "add",
+        "detector": "macho"
+      },
+      "answer": "hang",
+      "background": true,
+      "postsMade": 1
+    },
+    {
+      "op": "run",
+      "fix": {
+        "appId": "220",
+        "key": "drm",
+        "op": "add",
+        "detector": "ceg"
+      },
+      "answer": "hang",
+      "background": true,
+      "postsMade": 1
+    },
+    {
+      "op": "turn"
+    },
+    {
+      "op": "holds",
+      "held": [
+        {
+          "fix": {
+            "appId": "220",
+            "key": "macArch",
+            "op": "add",
+            "detector": "macho"
+          },
+          "held": true
+        },
+        {
+          "fix": {
+            "appId": "220",
+            "key": "drm",
+            "op": "add",
+            "detector": "ceg"
+          },
+          "held": true
+        }
+      ]
+    },
+    {
+      "op": "abortAll"
+    },
+    {
+      "op": "settle",
+      "settled": [
+        {
+          "fix": {
+            "appId": "220",
+            "key": "macArch",
+            "op": "add",
+            "detector": "macho"
+          },
+          "outcome": "retryable"
+        },
+        {
+          "fix": {
+            "appId": "220",
+            "key": "drm",
+            "op": "add",
+            "detector": "ceg"
+          },
+          "outcome": "retryable"
+        }
+      ]
+    },
+    {
+      "op": "holds",
+      "held": [
+        {
+          "fix": {
+            "appId": "220",
+            "key": "macArch",
+            "op": "add",
+            "detector": "macho"
+          },
+          "held": false
+        },
+        {
+          "fix": {
+            "appId": "220",
+            "key": "drm",
+            "op": "add",
+            "detector": "ceg"
+          },
+          "held": false
+        }
+      ]
+    }
+  ]
+}

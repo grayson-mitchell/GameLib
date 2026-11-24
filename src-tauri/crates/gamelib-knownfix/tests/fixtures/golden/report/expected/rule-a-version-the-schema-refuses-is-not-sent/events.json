@@ -1,0 +1,8 @@
+[
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "Known-fix report: invalid report not sent (Invalid string: must match pattern /^[0-9A-Za-z.+-]{1,40}$/)"
+  }
+]

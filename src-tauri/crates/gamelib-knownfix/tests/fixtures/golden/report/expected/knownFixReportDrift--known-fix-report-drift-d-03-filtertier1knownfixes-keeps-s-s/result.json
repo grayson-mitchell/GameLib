@@ -1,0 +1,29 @@
+{
+  "platform": "mac",
+  "settings": {
+    "shareDetectedFixes": true
+  },
+  "version": "0.8.0",
+  "steps": [
+    {
+      "op": "filter",
+      "key": "macArch",
+      "value": "32",
+      "filtered": {
+        "macArch": "32"
+      },
+      "kept": true,
+      "schemaAccepts": true
+    },
+    {
+      "op": "filter",
+      "key": "drm",
+      "value": "ceg",
+      "filtered": {
+        "drm": "ceg"
+      },
+      "kept": true,
+      "schemaAccepts": true
+    }
+  ]
+}

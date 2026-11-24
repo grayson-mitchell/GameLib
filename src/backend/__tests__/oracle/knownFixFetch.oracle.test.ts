@@ -56,7 +56,8 @@ import {
 } from 'backend/testUtils/engineWineOracle/harness'
 import {
   engineWineOracleMode,
-  engineWineRecordedCaseDir
+  engineWineRecordedCaseDir,
+  redactHeaders
 } from 'backend/testUtils/engineWineOracle/recorder'
 import { snapshotTree } from 'backend/testUtils/engineWineOracle/treeSnapshot'
 import { withPinnedBaseEnv } from 'backend/testUtils/launchOracle/baseEnv'
@@ -68,18 +69,64 @@ import {
   fetchRemoteKnownFixes,
   type KnownFixesGet
 } from 'backend/knownFixesFetcher'
-import { dropRealpathPrefix, json, spyLogs, type LogLine } from './oracleCommon'
 import {
-  fetcherTracer,
+  GAMELIB_FIX_RELAY_URL,
+  RELAY_URL_PENDING_SENTINEL,
+  knownFixReportDeps,
+  reportDetectedFix,
+  relayUrl,
+  runKnownFixReport,
+  type ReportDeps
+} from 'backend/knownFixReport'
+import {
+  TIER1_KNOWN_FIX_KEYS,
+  TIER1_ROUTING_KEYS,
+  filterTier1KnownFixes
+} from 'backend/knownFixes'
+import {
+  KNOWN_FIX_REPORT_MAX_BYTES,
+  KNOWN_FIX_REPORT_PAIRS,
+  KNOWN_FIX_REPORT_VERSION,
+  RELAY_RESPONSE_STATUSES,
+  parseKnownFixReport,
+  reportSentKey
+} from 'common/knownFixReport'
+import { createAbortRegistry } from 'backend/utils/aborthandler/aborthandler'
+import {
+  assertCasesCoverTitles,
+  slug,
+  tsTestTitles
+} from 'backend/testUtils/launchOracle/census'
+import {
+  dropRealpathPrefix,
+  json,
+  realTurn,
+  spyLogs,
+  type LogLine
+} from './oracleCommon'
+import {
+  GAMELIB_KNOWN_FIXES_BASE,
+  HEROIC_KNOWN_FIXES_BASE
+} from 'backend/knownFixesFetcher'
+import {
+  fetcherCases,
+  reportCases,
   type FetchCase,
   type FetchStep,
-  type Reply
+  type PostAnswer,
+  type Reply,
+  type ReportCase,
+  type ReportFix,
+  type ReportStep
 } from './knownFixFetch.cases'
 
 const CRATE = 'gamelib-knownfix'
 const FETCHER_SLICE = 'fetcher'
+const REPORT_SLICE = 'report'
 /** The case counts this plan committed; a later edit may raise them, never lower them. */
-const FETCHER_FLOOR = 1
+const FETCHER_FLOOR = 38
+const REPORT_FLOOR = 48
+const RELAY_TIMEOUT_MS = 8000
 
 const mode = engineWineOracleMode()
 
@@ -320,6 +367,340 @@ async function recordFetchCase(c: FetchCase): Promise<CaseRecord> {
 }
 
 // ---------------------------------------------------------------------------------------------
+// report
+// ---------------------------------------------------------------------------------------------
+
+const abortIdOf = (fix: ReportFix): string =>
+  `known-fix-report:${reportSentKey(fix)}`
+
+/** The report test's `report(k, v)` helper: a well-formed body for one pair. */
+const reportBodyFor = (key: string, value: string) => ({
+  v: 1,
+  store: 'steam',
+  appId: '1234',
+  key,
+  value,
+  op: 'add',
+  gamelibVersion: '0.8.0'
+})
+
+const postAnswerOf = (answer: PostAnswer): Answer =>
+  typeof answer === 'object' && 'status' in answer
+    ? {
+        status: answer.status,
+        contentType: 'application/json',
+        body: bodyText(answer.data)
+      }
+    : { networkError: true }
+
+async function recordReportCase(c: ReportCase): Promise<CaseRecord> {
+  return withEngineOracleProfile(async (profile) => {
+    const events: LogLine[] = []
+    let stepNo = 0
+    const exchanges: ExchangeIn[] = []
+    const requests: Record<string, unknown>[] = []
+    const storeWrites: { step: number; key: string; value: unknown }[] = []
+    const results: unknown[] = []
+    const background: { fix: ReportFix; running: Promise<string> }[] = []
+    let settings: Record<string, unknown> = c.settings ?? {
+      shareDetectedFixes: true
+    }
+    let currentAnswer: PostAnswer = { status: 200, data: { status: 'created' } }
+
+    const makeState = () => {
+      const store = new Map<string, unknown>()
+      const aborts = createAbortRegistry()
+      const real = knownFixReportDeps({
+        stores: {
+          steam: {
+            steamKnownFixReportStore: {
+              get: (k: string) => store.get(k),
+              set: (k: string, v: unknown) => {
+                storeWrites.push({ step: stepNo, key: k, value: v })
+                store.set(k, v)
+              }
+            }
+          }
+        },
+        appInfo: { version: c.version ?? '0.8.0' },
+        config: { getSettings: () => settings },
+        aborts,
+        paths: {
+          ...profile.paths,
+          bundledFixesPath: join(profile.home, 'public', 'fixes')
+        }
+      } as never)
+      const deps: ReportDeps = { ...real, now: () => 1234 }
+      return { store, aborts, deps }
+    }
+    let state = makeState()
+
+    const post = jest.spyOn(axios, 'post')
+    post.mockImplementation(((
+      url: string,
+      body: unknown,
+      config?: AxiosRequestConfig
+    ) => {
+      const answer = currentAnswer
+      const signal = config?.signal as AbortSignal | undefined
+      const accepts = config?.validateStatus
+      const bodyJson = JSON.stringify(body)
+      const headers = redactHeaders(
+        (config?.headers ?? {}) as unknown as Record<string, unknown>
+      )
+      requests.push({
+        step: stepNo,
+        method: 'POST',
+        url,
+        headers,
+        body,
+        bodyKeys: Object.keys((body ?? {}) as object),
+        bodyBytes: Buffer.byteLength(bodyJson),
+        bodyWithinMaxBytes:
+          Buffer.byteLength(bodyJson) <= KNOWN_FIX_REPORT_MAX_BYTES,
+        bodyParses: parseKnownFixReport(body).ok,
+        timeoutMs: config?.timeout ?? null,
+        maxRedirects: config?.maxRedirects ?? null,
+        validateStatusAccepts: Object.fromEntries(
+          [200, 301, 400, 429, 500].map((code) => [code, accepts?.(code)])
+        ),
+        hasSignal: signal !== undefined,
+        signalAbortedAtCall: signal?.aborted ?? null
+      })
+      exchanges.push({
+        method: 'POST',
+        url,
+        headers,
+        body: bodyJson,
+        answer: postAnswerOf(answer)
+      })
+      if (answer === 'hang') {
+        return new Promise((_resolve, reject) => {
+          signal?.addEventListener('abort', () => reject(new Error('aborted')))
+        })
+      }
+      if ('throws' in answer) throw new Error(answer.throws)
+      if ('rejects' in answer) return Promise.reject(new Error(answer.rejects))
+      if ('rejectsNonError' in answer) {
+        // The case exists to reach the client's fallback line for a rejection that is not an Error.
+        // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
+        return Promise.reject(answer.rejectsNonError)
+      }
+      return Promise.resolve({ status: answer.status, data: answer.data })
+    }) as never)
+
+    const depsFor = (s: { readWinningThrows?: true; isMacThrows?: true }) => ({
+      ...state.deps,
+      ...(s.readWinningThrows
+        ? {
+            readWinning: () => {
+              throw new Error('boom')
+            }
+          }
+        : {}),
+      ...(s.isMacThrows
+        ? {
+            isMac: () => {
+              throw new Error('sync boom')
+            }
+          }
+        : {})
+    })
+    const turns = async () => {
+      for (let i = 0; i < 3; i++) await realTurn()
+    }
+
+    const runStep = async (s: ReportStep): Promise<unknown> => {
+      switch (s.op) {
+        case 'run': {
+          currentAnswer = s.answer ?? {
+            status: 200,
+            data: { status: 'created' }
+          }
+          const before = requests.length
+          const started = runKnownFixReport(s.fix, depsFor(s))
+          if (s.background) {
+            background.push({ fix: s.fix, running: started })
+            return {
+              op: s.op,
+              fix: s.fix,
+              answer: s.answer ?? null,
+              background: true,
+              postsMade: requests.length - before
+            }
+          }
+          const outcome = await started
+          return {
+            op: s.op,
+            fix: s.fix,
+            answer: s.answer ?? null,
+            outcome,
+            postsMade: requests.length - before,
+            sentRecord: state.store.get(reportSentKey(s.fix)) ?? null,
+            sentStoreSize: state.store.size,
+            registryHoldsIt: state.aborts.has(abortIdOf(s.fix))
+          }
+        }
+        case 'detect': {
+          currentAnswer = s.answer ?? {
+            status: 200,
+            data: { status: 'created' }
+          }
+          const before = requests.length
+          let returned: unknown = 'unset'
+          let threw = false
+          try {
+            returned = reportDetectedFix(s.fix, depsFor(s))
+          } catch {
+            threw = true
+          }
+          const postsMadeSynchronously = requests.length - before
+          await turns()
+          return {
+            op: s.op,
+            fix: s.fix,
+            returnedUndefined: returned === undefined,
+            threw,
+            postsMadeSynchronously,
+            postsMade: requests.length - before
+          }
+        }
+        case 'turn':
+          await turns()
+          return { op: s.op }
+        case 'holds':
+          return {
+            op: s.op,
+            held: s.fixes.map((fix) => ({
+              fix,
+              held: state.aborts.has(abortIdOf(fix))
+            }))
+          }
+        case 'abortAll':
+          state.aborts.abortAll()
+          return { op: s.op }
+        case 'settle': {
+          const settled = await Promise.all(
+            background.splice(0).map(async (b) => ({
+              fix: b.fix,
+              outcome: await b.running
+            }))
+          )
+          return { op: s.op, settled }
+        }
+        case 'reset':
+          state = makeState()
+          return { op: s.op }
+        case 'setSettings':
+          settings = s.settings
+          return { op: s.op, settings: s.settings }
+        case 'setSent':
+          state.store.set(s.key, s.value)
+          return { op: s.op, key: s.key, value: s.value }
+        case 'relayUrl': {
+          if (s.env === null) delete process.env.GAMELIB_FIX_RELAY_URL
+          else process.env.GAMELIB_FIX_RELAY_URL = s.env
+          return { op: s.op, env: s.env, url: relayUrl() }
+        }
+        case 'constants':
+          return {
+            op: s.op,
+            pairs: KNOWN_FIX_REPORT_PAIRS,
+            version: KNOWN_FIX_REPORT_VERSION,
+            maxBytes: KNOWN_FIX_REPORT_MAX_BYTES,
+            tier1RoutingKeys: [...TIER1_ROUTING_KEYS],
+            tier1AllowList: [...TIER1_KNOWN_FIX_KEYS],
+            relayUrl: GAMELIB_FIX_RELAY_URL,
+            relayUrlContainsThePendingSentinel: GAMELIB_FIX_RELAY_URL.includes(
+              RELAY_URL_PENDING_SENTINEL
+            ),
+            relayUrlIsAWorkersDevEndpoint:
+              /^https:\/\/[a-z0-9-]+\.[a-z0-9-]+\.workers\.dev\/v1\/reports$/.test(
+                GAMELIB_FIX_RELAY_URL
+              ),
+            pendingSentinel: RELAY_URL_PENDING_SENTINEL,
+            relayResponseStatuses: [...RELAY_RESPONSE_STATUSES],
+            relayTimeoutMs: RELAY_TIMEOUT_MS,
+            gamelibFeedBase: GAMELIB_KNOWN_FIXES_BASE,
+            heroicFeedBase: HEROIC_KNOWN_FIXES_BASE
+          }
+        case 'parse':
+          return {
+            op: s.op,
+            parsed: s.inputs.map((input) => ({
+              input,
+              result: parseKnownFixReport(input)
+            })),
+            sentKey: reportSentKey({ appId: '220', key: 'macArch', op: 'add' })
+          }
+        case 'filter': {
+          const out = filterTier1KnownFixes('x', 'test', {
+            [s.key]: s.value
+          }) as unknown as Record<string, unknown> | null
+          return {
+            op: s.op,
+            key: s.key,
+            value: s.value,
+            filtered: out,
+            kept: out?.[s.key] === s.value,
+            schemaAccepts: parseKnownFixReport(reportBodyFor(s.key, s.value)).ok
+          }
+        }
+        case 'drift':
+          return {
+            op: s.op,
+            pairKeys: Object.keys(KNOWN_FIX_REPORT_PAIRS).sort(),
+            routingKeys: [...TIER1_ROUTING_KEYS].sort()
+          }
+      }
+    }
+
+    const restoreLogs = spyLogs(events, () => stepNo, [
+      'debug',
+      'info',
+      'warning'
+    ])
+    try {
+      await withInjected(
+        [injectPlatform(c.platform ?? 'mac'), restoreLogs],
+        () =>
+          withPinnedBaseEnv(profile.fake, async () => {
+            const relayEnv =
+              c.relayEnv === undefined
+                ? 'http://relay.test/v1/reports'
+                : c.relayEnv
+            if (relayEnv !== null) process.env.GAMELIB_FIX_RELAY_URL = relayEnv
+            for (const [index, s] of c.steps.entries()) {
+              stepNo = index
+              if (s.seed) seedProfile(profile, s.seed)
+              results.push(await runStep(s))
+            }
+          })
+      )
+    } finally {
+      post.mockRestore()
+    }
+    const clean = <T>(value: T): T =>
+      dropRealpathPrefix(normalisePaths(value, profile))
+    return {
+      result: clean({
+        platform: c.platform ?? 'mac',
+        settings: c.settings ?? { shareDetectedFixes: true },
+        version: c.version ?? '0.8.0',
+        steps: results
+      }),
+      events: clean(events),
+      requests: requests.map((r) => clean(r)),
+      store: clean({
+        writes: storeWrites,
+        final: Object.fromEntries(state.store)
+      }),
+      exchanges
+    }
+  })
+}
+
+// ---------------------------------------------------------------------------------------------
 // The tests
 // ---------------------------------------------------------------------------------------------
 
@@ -330,8 +711,22 @@ function writeCases(slice: string, built: unknown): void {
   writeFileSync(file, json(built))
 }
 
+/** Every title of `file` (a sibling `../` test) is a named case id with the given stem, one for one. */
+function expectEveryTitleIsACase(
+  cases: readonly { id: string }[],
+  stem: string,
+  file: string
+): void {
+  const ids = cases
+    .filter((c) => c.id.startsWith(`${stem}--`))
+    .map((c) => c.id.slice(`${stem}--`.length))
+  const titles = tsTestTitles(join(__dirname, '..', file))
+  assertCasesCoverTitles(ids, titles, {})
+  expect([...ids].sort()).toEqual(titles.map(slug).sort())
+}
+
 describeSkipOnWindows('known-fix remote fetcher oracle (88-07)', () => {
-  const built = [fetcherTracer()]
+  const built = fetcherCases()
   writeCases(FETCHER_SLICE, built)
   const cases = loadCases<FetchCase>(CRATE, FETCHER_SLICE)
 
@@ -345,10 +740,31 @@ describeSkipOnWindows('known-fix remote fetcher oracle (88-07)', () => {
     writeOrCompareGolden(CRATE, FETCHER_SLICE, c.id, {
       result,
       events,
-      requests: requests as string[],
+      requests,
       after: tree
     })
     writeOrCompareRecorded(FETCHER_SLICE, c.id, exchanges)
+  })
+
+  it('every title of knownFixesFetcher.test.ts is a named case, one for one', () => {
+    expectEveryTitleIsACase(
+      cases,
+      'knownFixesFetcher',
+      'knownFixesFetcher.test.ts'
+    )
+  })
+
+  it('no case reaches the network: every URL asked is a feed URL the case scripted or a 404 default', () => {
+    for (const c of cases) {
+      for (const s of c.steps) {
+        for (const url of Object.keys(s.replies)) {
+          expect(
+            url.startsWith(`${GAMELIB_KNOWN_FIXES_BASE}/`) ||
+              url.startsWith(`${HEROIC_KNOWN_FIXES_BASE}/`)
+          ).toBe(true)
+        }
+      }
+    }
   })
 
   it('the committed MANIFEST agrees with the case list and holds one folder per case', () => {
@@ -358,5 +774,64 @@ describeSkipOnWindows('known-fix remote fetcher oracle (88-07)', () => {
 
   it('an empty case list fails the manifest check', () => {
     expectEmptyCasesToFail(CRATE, FETCHER_SLICE, FETCHER_FLOOR)
+  })
+})
+
+describeSkipOnWindows('known-fix report oracle (88-07)', () => {
+  const built = reportCases()
+  writeCases(REPORT_SLICE, built)
+  const cases = loadCases<ReportCase>(CRATE, REPORT_SLICE)
+
+  it('cases.json is exactly what the case builder produces', () => {
+    expect(cases).toEqual(JSON.parse(JSON.stringify(built)))
+  })
+
+  it.each(cases)('$id', async (c) => {
+    const { result, events, requests, store, exchanges } =
+      await recordReportCase(c)
+    writeOrCompareGolden(CRATE, REPORT_SLICE, c.id, {
+      result,
+      events,
+      requests,
+      extra: { 'store.json': store }
+    })
+    writeOrCompareRecorded(REPORT_SLICE, c.id, exchanges)
+  })
+
+  it.each([
+    ['knownFixReport', 'knownFixReport.test.ts'],
+    ['knownFixReportUrl', 'knownFixReportUrl.test.ts'],
+    ['knownFixReportDrift', 'knownFixReportDrift.test.ts']
+  ])('every title of %s is a named case, one for one', (stem, file) => {
+    expectEveryTitleIsACase(cases, stem, file)
+  })
+
+  it('no recorded request header is anything but Content-Type and User-Agent', () => {
+    // Every case's POST is checked in the case itself; this pins the file set the replay reads.
+    for (const c of cases) {
+      const file = join(
+        engineWineRecordedCaseDir(CRATE, REPORT_SLICE, c.id),
+        'exchanges.json'
+      )
+      if (mode === 'write' && !existsSync(file)) continue
+      const exchanges = JSON.parse(readFileSync(file, 'utf8')) as {
+        request: { headers: Record<string, string> }
+      }[]
+      for (const e of exchanges) {
+        expect(Object.keys(e.request.headers).sort()).toEqual([
+          'content-type',
+          'user-agent'
+        ])
+      }
+    }
+  })
+
+  it('the committed MANIFEST agrees with the case list and holds one folder per case', () => {
+    syncManifest(CRATE, REPORT_SLICE, cases, cases.length)
+    assertManifest(CRATE, REPORT_SLICE, cases, REPORT_FLOOR)
+  })
+
+  it('an empty case list fails the manifest check', () => {
+    expectEmptyCasesToFail(CRATE, REPORT_SLICE, REPORT_FLOOR)
   })
 })

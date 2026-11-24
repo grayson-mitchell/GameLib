@@ -1,0 +1,8 @@
+[
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "Known fixes: GameLib request failed for https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/gog/1-gog.json: Error: ETIMEDOUT"
+  }
+]

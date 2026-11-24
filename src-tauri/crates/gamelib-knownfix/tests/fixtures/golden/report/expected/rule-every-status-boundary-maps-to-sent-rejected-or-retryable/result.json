@@ -1,0 +1,401 @@
+{
+  "platform": "mac",
+  "settings": {
+    "shareDetectedFixes": true
+  },
+  "version": "0.8.0",
+  "steps": [
+    {
+      "op": "reset"
+    },
+    {
+      "op": "run",
+      "fix": {
+        "appId": "220",
+        "key": "macArch",
+        "op": "add",
+        "detector": "macho"
+      },
+      "answer": {
+        "status": 199,
+        "data": {
+          "status": "rejected"
+        }
+      },
+      "outcome": "retryable",
+      "postsMade": 1,
+      "sentRecord": null,
+      "sentStoreSize": 0,
+      "registryHoldsIt": false
+    },
+    {
+      "op": "reset"
+    },
+    {
+      "op": "run",
+      "fix": {
+        "appId": "220",
+        "key": "macArch",
+        "op": "add",
+        "detector": "macho"
+      },
+      "answer": {
+        "status": 200,
+        "data": {
+          "status": "rejected"
+        }
+      },
+      "outcome": "sent",
+      "postsMade": 1,
+      "sentRecord": {
+        "at": 1234,
+        "status": 200
+      },
+      "sentStoreSize": 1,
+      "registryHoldsIt": false
+    },
+    {
+      "op": "reset"
+    },
+    {
+      "op": "run",
+      "fix": {
+        "appId": "220",
+        "key": "macArch",
+        "op": "add",
+        "detector": "macho"
+      },
+      "answer": {
+        "status": 299,
+        "data": {
+          "status": "rejected"
+        }
+      },
+      "outcome": "sent",
+      "postsMade": 1,
+      "sentRecord": {
+        "at": 1234,
+        "status": 299
+      },
+      "sentStoreSize": 1,
+      "registryHoldsIt": false
+    },
+    {
+      "op": "reset"
+    },
+    {
+      "op": "run",
+      "fix": {
+        "appId": "220",
+        "key": "macArch",
+        "op": "add",
+        "detector": "macho"
+      },
+      "answer": {
+        "status": 300,
+        "data": {
+          "status": "rejected"
+        }
+      },
+      "outcome": "retryable",
+      "postsMade": 1,
+      "sentRecord": null,
+      "sentStoreSize": 0,
+      "registryHoldsIt": false
+    },
+    {
+      "op": "reset"
+    },
+    {
+      "op": "run",
+      "fix": {
+        "appId": "220",
+        "key": "macArch",
+        "op": "add",
+        "detector": "macho"
+      },
+      "answer": {
+        "status": 301,
+        "data": {
+          "status": "rejected"
+        }
+      },
+      "outcome": "retryable",
+      "postsMade": 1,
+      "sentRecord": null,
+      "sentStoreSize": 0,
+      "registryHoldsIt": false
+    },
+    {
+      "op": "reset"
+    },
+    {
+      "op": "run",
+      "fix": {
+        "appId": "220",
+        "key": "macArch",
+        "op": "add",
+        "detector": "macho"
+      },
+      "answer": {
+        "status": 399,
+        "data": {
+          "status": "rejected"
+        }
+      },
+      "outcome": "retryable",
+      "postsMade": 1,
+      "sentRecord": null,
+      "sentStoreSize": 0,
+      "registryHoldsIt": false
+    },
+    {
+      "op": "reset"
+    },
+    {
+      "op": "run",
+      "fix": {
+        "appId": "220",
+        "key": "macArch",
+        "op": "add",
+        "detector": "macho"
+      },
+      "answer": {
+        "status": 400,
+        "data": {
+          "status": "rejected"
+        }
+      },
+      "outcome": "rejected",
+      "postsMade": 1,
+      "sentRecord": {
+        "at": 1234,
+        "status": 400
+      },
+      "sentStoreSize": 1,
+      "registryHoldsIt": false
+    },
+    {
+      "op": "reset"
+    },
+    {
+      "op": "run",
+      "fix": {
+        "appId": "220",
+        "key": "macArch",
+        "op": "add",
+        "detector": "macho"
+      },
+      "answer": {
+        "status": 404,
+        "data": {
+          "status": "rejected"
+        }
+      },
+      "outcome": "rejected",
+      "postsMade": 1,
+      "sentRecord": {
+        "at": 1234,
+        "status": 404
+      },
+      "sentStoreSize": 1,
+      "registryHoldsIt": false
+    },
+    {
+      "op": "reset"
+    },
+    {
+      "op": "run",
+      "fix": {
+        "appId": "220",
+        "key": "macArch",
+        "op": "add",
+        "detector": "macho"
+      },
+      "answer": {
+        "status": 407,
+        "data": {
+          "status": "rejected"
+        }
+      },
+      "outcome": "rejected",
+      "postsMade": 1,
+      "sentRecord": {
+        "at": 1234,
+        "status": 407
+      },
+      "sentStoreSize": 1,
+      "registryHoldsIt": false
+    },
+    {
+      "op": "reset"
+    },
+    {
+      "op": "run",
+      "fix": {
+        "appId": "220",
+        "key": "macArch",
+        "op": "add",
+        "detector": "macho"
+      },
+      "answer": {
+        "status": 408,
+        "data": {
+          "status": "rejected"
+        }
+      },
+      "outcome": "retryable",
+      "postsMade": 1,
+      "sentRecord": null,
+      "sentStoreSize": 0,
+      "registryHoldsIt": false
+    },
+    {
+      "op": "reset"
+    },
+    {
+      "op": "run",
+      "fix": {
+        "appId": "220",
+        "key": "macArch",
+        "op": "add",
+        "detector": "macho"
+      },
+      "answer": {
+        "status": 409,
+        "data": {
+          "status": "rejected"
+        }
+      },
+      "outcome": "rejected",
+      "postsMade": 1,
+      "sentRecord": {
+        "at": 1234,
+        "status": 409
+      },
+      "sentStoreSize": 1,
+      "registryHoldsIt": false
+    },
+    {
+      "op": "reset"
+    },
+    {
+      "op": "run",
+      "fix": {
+        "appId": "220",
+        "key": "macArch",
+        "op": "add",
+        "detector": "macho"
+      },
+      "answer": {
+        "status": 429,
+        "data": {
+          "status": "rejected"
+        }
+      },
+      "outcome": "retryable",
+      "postsMade": 1,
+      "sentRecord": null,
+      "sentStoreSize": 0,
+      "registryHoldsIt": false
+    },
+    {
+      "op": "reset"
+    },
+    {
+      "op": "run",
+      "fix": {
+        "appId": "220",
+        "key": "macArch",
+        "op": "add",
+        "detector": "macho"
+      },
+      "answer": {
+        "status": 430,
+        "data": {
+          "status": "rejected"
+        }
+      },
+      "outcome": "rejected",
+      "postsMade": 1,
+      "sentRecord": {
+        "at": 1234,
+        "status": 430
+      },
+      "sentStoreSize": 1,
+      "registryHoldsIt": false
+    },
+    {
+      "op": "reset"
+    },
+    {
+      "op": "run",
+      "fix": {
+        "appId": "220",
+        "key": "macArch",
+        "op": "add",
+        "detector": "macho"
+      },
+      "answer": {
+        "status": 499,
+        "data": {
+          "status": "rejected"
+        }
+      },
+      "outcome": "rejected",
+      "postsMade": 1,
+      "sentRecord": {
+        "at": 1234,
+        "status": 499
+      },
+      "sentStoreSize": 1,
+      "registryHoldsIt": false
+    },
+    {
+      "op": "reset"
+    },
+    {
+      "op": "run",
+      "fix": {
+        "appId": "220",
+        "key": "macArch",
+        "op": "add",
+        "detector": "macho"
+      },
+      "answer": {
+        "status": 500,
+        "data": {
+          "status": "rejected"
+        }
+      },
+      "outcome": "retryable",
+      "postsMade": 1,
+      "sentRecord": null,
+      "sentStoreSize": 0,
+      "registryHoldsIt": false
+    },
+    {
+      "op": "reset"
+    },
+    {
+      "op": "run",
+      "fix": {
+        "appId": "220",
+        "key": "macArch",
+        "op": "add",
+        "detector": "macho"
+      },
+      "answer": {
+        "status": 599,
+        "data": {
+          "status": "rejected"
+        }
+      },
+      "outcome": "retryable",
+      "postsMade": 1,
+      "sentRecord": null,
+      "sentStoreSize": 0,
+      "registryHoldsIt": false
+    }
+  ]
+}

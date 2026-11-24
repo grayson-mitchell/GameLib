@@ -1,0 +1,43 @@
+[
+  {
+    "step": 0,
+    "method": "POST",
+    "url": "http://relay.test/v1/reports",
+    "headers": {
+      "content-type": "application/json",
+      "user-agent": "GameLib/0.8.0"
+    },
+    "body": {
+      "v": 1,
+      "store": "steam",
+      "appId": "220",
+      "key": "drm",
+      "value": "ceg",
+      "op": "add",
+      "gamelibVersion": "0.8.0"
+    },
+    "bodyKeys": [
+      "v",
+      "store",
+      "appId",
+      "key",
+      "value",
+      "op",
+      "gamelibVersion"
+    ],
+    "bodyBytes": 99,
+    "bodyWithinMaxBytes": true,
+    "bodyParses": true,
+    "timeoutMs": 8000,
+    "maxRedirects": 0,
+    "validateStatusAccepts": {
+      "200": true,
+      "301": true,
+      "400": true,
+      "429": true,
+      "500": true
+    },
+    "hasSignal": true,
+    "signalAbortedAtCall": false
+  }
+]

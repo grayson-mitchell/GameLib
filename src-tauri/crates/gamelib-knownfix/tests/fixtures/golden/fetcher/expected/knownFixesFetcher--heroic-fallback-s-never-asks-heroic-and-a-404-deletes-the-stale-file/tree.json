@@ -1,0 +1,12 @@
+[
+  {
+    "path": "<APPFOLDER>/fixes",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "<APPFOLDER>/fixes/local",
+    "kind": "dir",
+    "mode": "0755"
+  }
+]

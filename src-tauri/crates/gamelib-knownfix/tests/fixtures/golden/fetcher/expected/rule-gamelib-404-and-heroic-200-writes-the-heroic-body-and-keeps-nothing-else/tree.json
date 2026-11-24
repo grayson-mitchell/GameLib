@@ -1,0 +1,13 @@
+[
+  {
+    "path": "<APPFOLDER>/fixes",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "<APPFOLDER>/fixes/1207658930-gog.json",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "1b22cf26e2ce3416e3ef0e5e163dac9829b2659f8107e87c8d44a80569e42bb3"
+  }
+]

@@ -1,0 +1,211 @@
+{
+  "platform": "mac",
+  "settings": {
+    "shareDetectedFixes": true
+  },
+  "version": "0.8.0",
+  "steps": [
+    {
+      "op": "parse",
+      "parsed": [
+        {
+          "input": {
+            "v": 1,
+            "store": "steam",
+            "appId": "220",
+            "key": "macArch",
+            "value": "32",
+            "op": "add",
+            "gamelibVersion": "0.8.0"
+          },
+          "result": {
+            "ok": true,
+            "report": {
+              "v": 1,
+              "store": "steam",
+              "appId": "220",
+              "key": "macArch",
+              "value": "32",
+              "op": "add",
+              "gamelibVersion": "0.8.0"
+            }
+          }
+        },
+        {
+          "input": {
+            "v": 1,
+            "store": "steam",
+            "appId": "1234567890",
+            "key": "drm",
+            "value": "ceg",
+            "op": "add",
+            "gamelibVersion": "1"
+          },
+          "result": {
+            "ok": true,
+            "report": {
+              "v": 1,
+              "store": "steam",
+              "appId": "1234567890",
+              "key": "drm",
+              "value": "ceg",
+              "op": "add",
+              "gamelibVersion": "1"
+            }
+          }
+        },
+        {
+          "input": {
+            "v": 1,
+            "store": "steam",
+            "appId": "12345678901",
+            "key": "macArch",
+            "value": "32",
+            "op": "add",
+            "gamelibVersion": "0.8.0"
+          },
+          "result": {
+            "ok": false,
+            "error": "Invalid string: must match pattern /^[1-9][0-9]{0,9}$/"
+          }
+        },
+        {
+          "input": {
+            "v": 1,
+            "store": "steam",
+            "appId": "0",
+            "key": "macArch",
+            "value": "32",
+            "op": "add",
+            "gamelibVersion": "0.8.0"
+          },
+          "result": {
+            "ok": false,
+            "error": "Invalid string: must match pattern /^[1-9][0-9]{0,9}$/"
+          }
+        },
+        {
+          "input": {
+            "v": 1,
+            "store": "steam",
+            "appId": "220",
+            "key": "macArch",
+            "value": "ceg",
+            "op": "add",
+            "gamelibVersion": "0.8.0"
+          },
+          "result": {
+            "ok": false,
+            "error": "pair not allowed"
+          }
+        },
+        {
+          "input": {
+            "v": 1,
+            "store": "steam",
+            "appId": "220",
+            "key": "drm",
+            "value": "ceg",
+            "op": "remove",
+            "gamelibVersion": "0.8.0"
+          },
+          "result": {
+            "ok": false,
+            "error": "only macArch can be removed"
+          }
+        },
+        {
+          "input": {
+            "v": 2,
+            "store": "steam",
+            "appId": "220",
+            "key": "macArch",
+            "value": "32",
+            "op": "add",
+            "gamelibVersion": "0.8.0"
+          },
+          "result": {
+            "ok": false,
+            "error": "Invalid input: expected 1"
+          }
+        },
+        {
+          "input": {
+            "v": 1,
+            "store": "gog",
+            "appId": "220",
+            "key": "macArch",
+            "value": "32",
+            "op": "add",
+            "gamelibVersion": "0.8.0"
+          },
+          "result": {
+            "ok": false,
+            "error": "Invalid input: expected \"steam\""
+          }
+        },
+        {
+          "input": {
+            "v": 1,
+            "store": "steam",
+            "appId": "220",
+            "key": "macArch",
+            "value": "32",
+            "op": "add",
+            "gamelibVersion": "0.8.0",
+            "title": "Half-Life"
+          },
+          "result": {
+            "ok": false,
+            "error": "Unrecognized key: \"title\""
+          }
+        },
+        {
+          "input": {
+            "v": 1,
+            "store": "steam",
+            "appId": "220",
+            "key": "macArch",
+            "value": "32",
+            "op": "add",
+            "gamelibVersion": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+          },
+          "result": {
+            "ok": false,
+            "error": "Invalid string: must match pattern /^[0-9A-Za-z.+-]{1,40}$/"
+          }
+        },
+        {
+          "input": {
+            "v": 1,
+            "store": "steam",
+            "appId": 220,
+            "key": "macArch",
+            "value": "32",
+            "op": "add",
+            "gamelibVersion": "0.8.0"
+          },
+          "result": {
+            "ok": false,
+            "error": "Invalid input: expected string, received number"
+          }
+        },
+        {
+          "input": null,
+          "result": {
+            "ok": false,
+            "error": "Invalid input: expected object, received null"
+          }
+        },
+        {
+          "input": "text",
+          "result": {
+            "ok": false,
+            "error": "Invalid input: expected object, received string"
+          }
+        }
+      ],
+      "sentKey": "220:macArch:add"
+    }
+  ]
+}

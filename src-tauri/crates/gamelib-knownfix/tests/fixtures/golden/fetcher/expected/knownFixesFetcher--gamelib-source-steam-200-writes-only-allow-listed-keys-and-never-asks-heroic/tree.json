@@ -1,0 +1,18 @@
+[
+  {
+    "path": "<APPFOLDER>/fixes",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "<APPFOLDER>/fixes/284100-steam.json",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "593df5a45ad9f64a6e05f6cadc00f69d862c97cfcd7aab5e2485dfa7ad86452d"
+  },
+  {
+    "path": "<APPFOLDER>/fixes/local",
+    "kind": "dir",
+    "mode": "0755"
+  }
+]

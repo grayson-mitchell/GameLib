@@ -282,8 +282,11 @@ export interface GoldenCapture {
   after?: readonly unknown[]
   /** The spawn trace (`createSpawnTracer().records`). */
   spawns?: readonly unknown[]
-  /** `METHOD url` of every request the TS made, in order. */
-  requests?: readonly string[]
+  /**
+   * `METHOD url` of every request the TS made, in order. 88-07 lets an oracle that records the whole
+   * request (URL, headers, JSON body, timeout) put an object here instead.
+   */
+  requests?: readonly (string | Readonly<Record<string, unknown>>)[]
   /**
    * Extra named files a slice records beside the five fixed ones (88-06: `calls.json`, the seams a
    * case drove). A file is written only when named here, so a slice without extras keeps the same

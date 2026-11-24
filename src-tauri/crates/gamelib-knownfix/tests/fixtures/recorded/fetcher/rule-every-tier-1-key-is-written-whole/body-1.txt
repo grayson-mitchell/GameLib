@@ -1,0 +1,1 @@
+{"title":"Every key","notes":"n","winetricks":["vcrun2019"],"runInPrefix":["reg","query"],"envVariables":{"A":"1"},"wikiLink":"https://example.test/wiki","launchNotice":"be patient","macArch":"32","drm":"ceg","launchArgs":["-windowed"],"exeOverride":"bin/game.exe","steamGameOverlay":"off"}

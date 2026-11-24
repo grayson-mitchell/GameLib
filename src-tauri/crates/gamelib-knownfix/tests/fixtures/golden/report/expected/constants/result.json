@@ -1,0 +1,54 @@
+{
+  "platform": "mac",
+  "settings": {
+    "shareDetectedFixes": true
+  },
+  "version": "0.8.0",
+  "steps": [
+    {
+      "op": "constants",
+      "pairs": {
+        "macArch": "32",
+        "drm": "ceg"
+      },
+      "version": 1,
+      "maxBytes": 2048,
+      "tier1RoutingKeys": [
+        "macArch",
+        "drm"
+      ],
+      "tier1AllowList": [
+        "title",
+        "notes",
+        "winetricks",
+        "runInPrefix",
+        "envVariables",
+        "wikiLink",
+        "launchNotice",
+        "macArch",
+        "drm",
+        "launchArgs",
+        "exeOverride",
+        "steamGameOverlay"
+      ],
+      "relayUrl": "https://gamelib-fix-relay.gamelib.workers.dev/v1/reports",
+      "relayUrlContainsThePendingSentinel": false,
+      "relayUrlIsAWorkersDevEndpoint": true,
+      "pendingSentinel": "OPERATOR-DEPLOY-PENDING",
+      "relayResponseStatuses": [
+        "created",
+        "updated",
+        "counted",
+        "already-known",
+        "suppressed",
+        "skipped",
+        "rejected",
+        "rate-limited",
+        "unavailable"
+      ],
+      "relayTimeoutMs": 8000,
+      "gamelibFeedBase": "https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main",
+      "heroicFeedBase": "https://raw.githubusercontent.com/Heroic-Games-Launcher/known-fixes/main"
+    }
+  ]
+}

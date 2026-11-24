@@ -1,0 +1,1708 @@
+[
+  {
+    "id": "knownFixReport--url-env-override-wins-else-the-constant",
+    "title": "url > env override wins, else the constant",
+    "steps": [
+      {
+        "op": "relayUrl",
+        "env": "http://x.test/r"
+      },
+      {
+        "op": "relayUrl",
+        "env": null
+      }
+    ]
+  },
+  {
+    "id": "knownFixReport--url-the-pending-sentinel-means-nothing-is-sent",
+    "title": "url > the pending sentinel means nothing is sent",
+    "steps": [
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        }
+      }
+    ],
+    "relayEnv": "https://OPERATOR-DEPLOY-PENDING.example/v1"
+  },
+  {
+    "id": "knownFixReport--gate-non-mac-does-not-send",
+    "title": "gate > non-mac does not send",
+    "steps": [
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        }
+      }
+    ],
+    "platform": "linux"
+  },
+  {
+    "id": "knownFixReport--gate-disabled-does-not-send",
+    "title": "gate > disabled does not send",
+    "steps": [
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        }
+      }
+    ],
+    "settings": {
+      "shareDetectedFixes": false
+    }
+  },
+  {
+    "id": "knownFixReport--gate-the-setting-is-read-on-every-call",
+    "title": "gate > the setting is read on every call",
+    "steps": [
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        }
+      },
+      {
+        "op": "setSettings",
+        "settings": {
+          "shareDetectedFixes": false
+        }
+      },
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "drm",
+          "op": "add",
+          "detector": "ceg"
+        }
+      }
+    ]
+  },
+  {
+    "id": "knownFixReport--gate-with-the-real-default-deps-d-09-an-absent-sharedetectedfixes-setting-posts-nothing",
+    "title": "gate with the real default deps (D-09) > an absent shareDetectedFixes setting posts nothing",
+    "steps": [
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        }
+      },
+      {
+        "op": "detect",
+        "fix": {
+          "appId": "220",
+          "key": "drm",
+          "op": "add",
+          "detector": "ceg"
+        }
+      }
+    ],
+    "settings": {}
+  },
+  {
+    "id": "knownFixReport--gate-with-the-real-default-deps-d-09-an-explicit-false-posts-nothing",
+    "title": "gate with the real default deps (D-09) > an explicit false posts nothing",
+    "steps": [
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        }
+      }
+    ],
+    "settings": {
+      "shareDetectedFixes": false
+    }
+  },
+  {
+    "id": "knownFixReport--skip-add-macarch-skipped-when-already-32",
+    "title": "skip > add macArch skipped when already 32",
+    "steps": [
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        },
+        "seed": [
+          {
+            "path": "<HOME>/public/fixes/220-steam.json",
+            "text": "{\"macArch\":\"32\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixReport--skip-add-drm-sent-when-winning-has-only-macarch",
+    "title": "skip > add drm sent when winning has only macArch",
+    "steps": [
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "drm",
+          "op": "add",
+          "detector": "ceg"
+        },
+        "seed": [
+          {
+            "path": "<HOME>/public/fixes/220-steam.json",
+            "text": "{\"macArch\":\"32\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixReport--skip-add-drm-skipped-when-already-ceg",
+    "title": "skip > add drm skipped when already ceg",
+    "steps": [
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "drm",
+          "op": "add",
+          "detector": "ceg"
+        },
+        "seed": [
+          {
+            "path": "<HOME>/public/fixes/220-steam.json",
+            "text": "{\"drm\":\"ceg\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixReport--skip-remove-sent-when-winning-says-32",
+    "title": "skip > remove sent when winning says 32",
+    "steps": [
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "remove",
+          "detector": "macho"
+        },
+        "seed": [
+          {
+            "path": "<HOME>/public/fixes/220-steam.json",
+            "text": "{\"macArch\":\"32\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixReport--skip-remove-skipped-when-winning-is-null-or-lacks-macarch-32",
+    "title": "skip > remove skipped when winning is null or lacks macArch 32",
+    "steps": [
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "remove",
+          "detector": "macho"
+        }
+      },
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "remove",
+          "detector": "macho"
+        },
+        "seed": [
+          {
+            "path": "<HOME>/public/fixes/220-steam.json",
+            "text": "{\"drm\":\"ceg\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixReport--skip-local-layer-wins-and-nothing-is-sent",
+    "title": "skip > local layer wins and nothing is sent",
+    "steps": [
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "drm",
+          "op": "add",
+          "detector": "ceg"
+        },
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local/220-steam.json",
+            "text": "{\"macArch\":\"32\"}"
+          }
+        ]
+      },
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "remove",
+          "detector": "macho"
+        }
+      }
+    ]
+  },
+  {
+    "id": "knownFixReport--skip-readwinning-throwing-yields-error-and-no-post",
+    "title": "skip > readWinning throwing yields error and no post",
+    "steps": [
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        },
+        "readWinningThrows": true
+      }
+    ]
+  },
+  {
+    "id": "knownFixReport--sent-2xx-marks-and-returns-sent-a-repeat-is-already-sent",
+    "title": "sent > 2xx marks and returns sent; a repeat is already-sent",
+    "steps": [
+      {
+        "op": "reset"
+      },
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        },
+        "answer": {
+          "status": 200,
+          "data": {
+            "status": "rejected"
+          }
+        }
+      },
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        },
+        "answer": {
+          "status": 200,
+          "data": {
+            "status": "rejected"
+          }
+        }
+      },
+      {
+        "op": "reset"
+      },
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        },
+        "answer": {
+          "status": 201,
+          "data": {
+            "status": "rejected"
+          }
+        }
+      },
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        },
+        "answer": {
+          "status": 201,
+          "data": {
+            "status": "rejected"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "knownFixReport--sent-terminal-4xx-marks-and-returns-rejected",
+    "title": "sent > terminal 4xx marks and returns rejected",
+    "steps": [
+      {
+        "op": "reset"
+      },
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        },
+        "answer": {
+          "status": 400,
+          "data": {
+            "status": "rejected"
+          }
+        }
+      },
+      {
+        "op": "reset"
+      },
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        },
+        "answer": {
+          "status": 413,
+          "data": {
+            "status": "rejected"
+          }
+        }
+      },
+      {
+        "op": "reset"
+      },
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        },
+        "answer": {
+          "status": 415,
+          "data": {
+            "status": "rejected"
+          }
+        }
+      },
+      {
+        "op": "reset"
+      },
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        },
+        "answer": {
+          "status": 422,
+          "data": {
+            "status": "rejected"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "knownFixReport--sent-408-429-5xx-are-retryable-and-not-marked",
+    "title": "sent > 408, 429, 5xx are retryable and not marked",
+    "steps": [
+      {
+        "op": "reset"
+      },
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        },
+        "answer": {
+          "status": 408,
+          "data": {
+            "status": "rejected"
+          }
+        }
+      },
+      {
+        "op": "reset"
+      },
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        },
+        "answer": {
+          "status": 429,
+          "data": {
+            "status": "rejected"
+          }
+        }
+      },
+      {
+        "op": "reset"
+      },
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        },
+        "answer": {
+          "status": 500,
+          "data": {
+            "status": "rejected"
+          }
+        }
+      },
+      {
+        "op": "reset"
+      },
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        },
+        "answer": {
+          "status": 503,
+          "data": {
+            "status": "rejected"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "knownFixReport--sent-a-network-failure-is-retryable-and-not-marked",
+    "title": "sent > a network failure is retryable and not marked",
+    "steps": [
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        },
+        "answer": {
+          "rejects": "ECONNRESET"
+        }
+      }
+    ]
+  },
+  {
+    "id": "knownFixReport--sent-posts-exactly-the-allowed-body",
+    "title": "sent > posts exactly the allowed body",
+    "steps": [
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "drm",
+          "op": "add",
+          "detector": "ceg"
+        }
+      }
+    ]
+  },
+  {
+    "id": "knownFixReport--sent-malformed-persisted-values-count-as-not-sent",
+    "title": "sent > malformed persisted values count as not sent",
+    "steps": [
+      {
+        "op": "reset"
+      },
+      {
+        "op": "setSent",
+        "key": "220:macArch:add",
+        "value": "yes"
+      },
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        }
+      },
+      {
+        "op": "reset"
+      },
+      {
+        "op": "setSent",
+        "key": "220:macArch:add",
+        "value": {
+          "at": "x"
+        }
+      },
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        }
+      },
+      {
+        "op": "reset"
+      },
+      {
+        "op": "setSent",
+        "key": "220:macArch:add",
+        "value": null
+      },
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        }
+      }
+    ]
+  },
+  {
+    "id": "knownFixReport--sent-an-invalid-appid-is-rejected-locally",
+    "title": "sent > an invalid appId is rejected locally",
+    "steps": [
+      {
+        "op": "run",
+        "fix": {
+          "appId": "../x",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        }
+      }
+    ]
+  },
+  {
+    "id": "knownFixReport--sent-logs-the-report-before-and-the-status-after-never-the-body",
+    "title": "sent > logs the report before and the status after, never the body",
+    "steps": [
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        },
+        "answer": {
+          "status": 201,
+          "data": {
+            "status": "created",
+            "detail": "SECRET",
+            "pr": 9
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "knownFixReport--abort-is-registered-in-flight-aborted-by-aborts-abortall-then-released",
+    "title": "abort > is registered in flight, aborted by aborts.abortAll, then released",
+    "steps": [
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        },
+        "answer": "hang",
+        "background": true
+      },
+      {
+        "op": "turn"
+      },
+      {
+        "op": "holds",
+        "fixes": [
+          {
+            "appId": "220",
+            "key": "macArch",
+            "op": "add",
+            "detector": "macho"
+          }
+        ]
+      },
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        }
+      },
+      {
+        "op": "abortAll"
+      },
+      {
+        "op": "settle"
+      },
+      {
+        "op": "holds",
+        "fixes": [
+          {
+            "appId": "220",
+            "key": "macArch",
+            "op": "add",
+            "detector": "macho"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "knownFixReport--abort-reportdetectedfix-returns-undefined-synchronously-and-never-throws",
+    "title": "abort > reportDetectedFix returns undefined synchronously and never throws",
+    "steps": [
+      {
+        "op": "detect",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        },
+        "isMacThrows": true
+      }
+    ]
+  },
+  {
+    "id": "knownFixReportUrl--url-deployed-does-not-ship-the-operator-pending-sentinel",
+    "title": "url deployed > does not ship the operator-pending sentinel",
+    "steps": [
+      {
+        "op": "constants"
+      }
+    ]
+  },
+  {
+    "id": "knownFixReportUrl--url-deployed-points-at-the-deployed-workers-dev-relay-endpoint",
+    "title": "url deployed > points at the deployed workers.dev relay endpoint",
+    "steps": [
+      {
+        "op": "constants"
+      }
+    ]
+  },
+  {
+    "id": "knownFixReportDrift--known-fix-report-drift-d-03-known-fix-report-pairs-keys-equal-tier1-routing-keys",
+    "title": "known-fix report drift (D-03) > KNOWN_FIX_REPORT_PAIRS keys equal TIER1_ROUTING_KEYS",
+    "steps": [
+      {
+        "op": "drift"
+      }
+    ]
+  },
+  {
+    "id": "knownFixReportDrift--known-fix-report-drift-d-03-filtertier1knownfixes-keeps-s-s",
+    "title": "known-fix report drift (D-03) > filterTier1KnownFixes keeps %s=%s",
+    "steps": [
+      {
+        "op": "filter",
+        "key": "macArch",
+        "value": "32"
+      },
+      {
+        "op": "filter",
+        "key": "drm",
+        "value": "ceg"
+      }
+    ]
+  },
+  {
+    "id": "knownFixReportDrift--known-fix-report-drift-d-03-a-wrong-s-value-is-dropped-by-the-filter-and-the-schema",
+    "title": "known-fix report drift (D-03) > a wrong %s value is dropped by the filter and the schema",
+    "steps": [
+      {
+        "op": "filter",
+        "key": "macArch",
+        "value": "64"
+      },
+      {
+        "op": "filter",
+        "key": "drm",
+        "value": "none"
+      }
+    ]
+  },
+  {
+    "id": "constants",
+    "steps": [
+      {
+        "op": "constants"
+      }
+    ]
+  },
+  {
+    "id": "rule-sent-to-the-deployed-relay-with-content-type-and-user-agent-only",
+    "steps": [
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        }
+      }
+    ],
+    "relayEnv": null
+  },
+  {
+    "id": "rule-the-env-override-is-the-url-posted",
+    "steps": [
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "drm",
+          "op": "add",
+          "detector": "ceg"
+        }
+      }
+    ],
+    "relayEnv": "https://staging.example/v1/reports"
+  },
+  {
+    "id": "rule-removing-drm-is-refused-by-the-schema-and-nothing-is-sent",
+    "steps": [
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "drm",
+          "op": "remove",
+          "detector": "ceg"
+        },
+        "seed": [
+          {
+            "path": "<HOME>/public/fixes/220-steam.json",
+            "text": "{\"macArch\":\"32\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "rule-a-version-the-schema-refuses-is-not-sent",
+    "steps": [
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        }
+      }
+    ],
+    "version": "not a version!"
+  },
+  {
+    "id": "rule-a-version-with-a-dash-and-a-plus-is-sent",
+    "steps": [
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        }
+      }
+    ],
+    "version": "0.8.0-beta+1"
+  },
+  {
+    "id": "rule-every-status-boundary-maps-to-sent-rejected-or-retryable",
+    "steps": [
+      {
+        "op": "reset"
+      },
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        },
+        "answer": {
+          "status": 199,
+          "data": {
+            "status": "rejected"
+          }
+        }
+      },
+      {
+        "op": "reset"
+      },
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        },
+        "answer": {
+          "status": 200,
+          "data": {
+            "status": "rejected"
+          }
+        }
+      },
+      {
+        "op": "reset"
+      },
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        },
+        "answer": {
+          "status": 299,
+          "data": {
+            "status": "rejected"
+          }
+        }
+      },
+      {
+        "op": "reset"
+      },
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        },
+        "answer": {
+          "status": 300,
+          "data": {
+            "status": "rejected"
+          }
+        }
+      },
+      {
+        "op": "reset"
+      },
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        },
+        "answer": {
+          "status": 301,
+          "data": {
+            "status": "rejected"
+          }
+        }
+      },
+      {
+        "op": "reset"
+      },
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        },
+        "answer": {
+          "status": 399,
+          "data": {
+            "status": "rejected"
+          }
+        }
+      },
+      {
+        "op": "reset"
+      },
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        },
+        "answer": {
+          "status": 400,
+          "data": {
+            "status": "rejected"
+          }
+        }
+      },
+      {
+        "op": "reset"
+      },
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        },
+        "answer": {
+          "status": 404,
+          "data": {
+            "status": "rejected"
+          }
+        }
+      },
+      {
+        "op": "reset"
+      },
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        },
+        "answer": {
+          "status": 407,
+          "data": {
+            "status": "rejected"
+          }
+        }
+      },
+      {
+        "op": "reset"
+      },
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        },
+        "answer": {
+          "status": 408,
+          "data": {
+            "status": "rejected"
+          }
+        }
+      },
+      {
+        "op": "reset"
+      },
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        },
+        "answer": {
+          "status": 409,
+          "data": {
+            "status": "rejected"
+          }
+        }
+      },
+      {
+        "op": "reset"
+      },
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        },
+        "answer": {
+          "status": 429,
+          "data": {
+            "status": "rejected"
+          }
+        }
+      },
+      {
+        "op": "reset"
+      },
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        },
+        "answer": {
+          "status": 430,
+          "data": {
+            "status": "rejected"
+          }
+        }
+      },
+      {
+        "op": "reset"
+      },
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        },
+        "answer": {
+          "status": 499,
+          "data": {
+            "status": "rejected"
+          }
+        }
+      },
+      {
+        "op": "reset"
+      },
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        },
+        "answer": {
+          "status": 500,
+          "data": {
+            "status": "rejected"
+          }
+        }
+      },
+      {
+        "op": "reset"
+      },
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        },
+        "answer": {
+          "status": 599,
+          "data": {
+            "status": "rejected"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "rule-the-relay-body-is-logged-by-its-status-word-only",
+    "steps": [
+      {
+        "op": "reset"
+      },
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        },
+        "answer": {
+          "status": 200,
+          "data": {
+            "status": "created"
+          }
+        }
+      },
+      {
+        "op": "reset"
+      },
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        },
+        "answer": {
+          "status": 200,
+          "data": {
+            "status": "rate-limited"
+          }
+        }
+      },
+      {
+        "op": "reset"
+      },
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        },
+        "answer": {
+          "status": 200,
+          "data": {
+            "status": "weird"
+          }
+        }
+      },
+      {
+        "op": "reset"
+      },
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        },
+        "answer": {
+          "status": 200,
+          "data": {
+            "status": 5
+          }
+        }
+      },
+      {
+        "op": "reset"
+      },
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        },
+        "answer": {
+          "status": 200,
+          "data": null
+        }
+      },
+      {
+        "op": "reset"
+      },
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        },
+        "answer": {
+          "status": 200,
+          "data": "plain text"
+        }
+      },
+      {
+        "op": "reset"
+      },
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        },
+        "answer": {
+          "status": 200,
+          "data": {
+            "detail": "only"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "rule-a-post-that-throws-synchronously-is-retryable",
+    "steps": [
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        },
+        "answer": {
+          "throws": "sync boom"
+        }
+      }
+    ]
+  },
+  {
+    "id": "rule-a-post-that-rejects-with-a-non-error-is-retryable-with-a-generic-line",
+    "steps": [
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        },
+        "answer": {
+          "rejectsNonError": "nope"
+        }
+      }
+    ]
+  },
+  {
+    "id": "rule-two-different-reports-can-be-in-flight-together",
+    "steps": [
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        },
+        "answer": "hang",
+        "background": true
+      },
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "drm",
+          "op": "add",
+          "detector": "ceg"
+        },
+        "answer": "hang",
+        "background": true
+      },
+      {
+        "op": "turn"
+      },
+      {
+        "op": "holds",
+        "fixes": [
+          {
+            "appId": "220",
+            "key": "macArch",
+            "op": "add",
+            "detector": "macho"
+          },
+          {
+            "appId": "220",
+            "key": "drm",
+            "op": "add",
+            "detector": "ceg"
+          }
+        ]
+      },
+      {
+        "op": "abortAll"
+      },
+      {
+        "op": "settle"
+      },
+      {
+        "op": "holds",
+        "fixes": [
+          {
+            "appId": "220",
+            "key": "macArch",
+            "op": "add",
+            "detector": "macho"
+          },
+          {
+            "appId": "220",
+            "key": "drm",
+            "op": "add",
+            "detector": "ceg"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "rule-add-and-remove-keep-separate-sent-records",
+    "steps": [
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        }
+      },
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "remove",
+          "detector": "macho"
+        },
+        "seed": [
+          {
+            "path": "<HOME>/public/fixes/220-steam.json",
+            "text": "{\"macArch\":\"32\"}"
+          }
+        ]
+      },
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        }
+      },
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "remove",
+          "detector": "macho"
+        }
+      }
+    ]
+  },
+  {
+    "id": "rule-a-rejected-report-is-not-sent-again",
+    "steps": [
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        },
+        "answer": {
+          "status": 404,
+          "data": {
+            "status": "rejected"
+          }
+        }
+      },
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        }
+      }
+    ]
+  },
+  {
+    "id": "rule-reportDetectedFix-posts-in-the-background",
+    "steps": [
+      {
+        "op": "detect",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        }
+      },
+      {
+        "op": "turn"
+      }
+    ]
+  },
+  {
+    "id": "rule-not-mac-wins-over-disabled",
+    "steps": [
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        }
+      }
+    ],
+    "platform": "linux",
+    "settings": {
+      "shareDetectedFixes": false
+    }
+  },
+  {
+    "id": "rule-only-the-boolean-true-enables-the-setting",
+    "steps": [
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        }
+      },
+      {
+        "op": "setSettings",
+        "settings": {
+          "shareDetectedFixes": "true"
+        }
+      },
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        }
+      },
+      {
+        "op": "setSettings",
+        "settings": {
+          "shareDetectedFixes": 1
+        }
+      },
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        }
+      }
+    ]
+  },
+  {
+    "id": "rule-the-remote-layer-counts-as-already-known",
+    "steps": [
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        },
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/220-steam.json",
+            "text": "{\"macArch\":\"32\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "rule-a-local-fix-without-the-key-still-skips-everything",
+    "steps": [
+      {
+        "op": "run",
+        "fix": {
+          "appId": "220",
+          "key": "macArch",
+          "op": "add",
+          "detector": "macho"
+        },
+        "seed": [
+          {
+            "path": "<APPFOLDER>/fixes/local/220-steam.json",
+            "text": "{\"title\":\"mine\"}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "rule-schema-vectors-for-parseKnownFixReport-and-the-sent-key",
+    "steps": [
+      {
+        "op": "parse",
+        "inputs": [
+          {
+            "v": 1,
+            "store": "steam",
+            "appId": "220",
+            "key": "macArch",
+            "value": "32",
+            "op": "add",
+            "gamelibVersion": "0.8.0"
+          },
+          {
+            "v": 1,
+            "store": "steam",
+            "appId": "1234567890",
+            "key": "drm",
+            "value": "ceg",
+            "op": "add",
+            "gamelibVersion": "1"
+          },
+          {
+            "v": 1,
+            "store": "steam",
+            "appId": "12345678901",
+            "key": "macArch",
+            "value": "32",
+            "op": "add",
+            "gamelibVersion": "0.8.0"
+          },
+          {
+            "v": 1,
+            "store": "steam",
+            "appId": "0",
+            "key": "macArch",
+            "value": "32",
+            "op": "add",
+            "gamelibVersion": "0.8.0"
+          },
+          {
+            "v": 1,
+            "store": "steam",
+            "appId": "220",
+            "key": "macArch",
+            "value": "ceg",
+            "op": "add",
+            "gamelibVersion": "0.8.0"
+          },
+          {
+            "v": 1,
+            "store": "steam",
+            "appId": "220",
+            "key": "drm",
+            "value": "ceg",
+            "op": "remove",
+            "gamelibVersion": "0.8.0"
+          },
+          {
+            "v": 2,
+            "store": "steam",
+            "appId": "220",
+            "key": "macArch",
+            "value": "32",
+            "op": "add",
+            "gamelibVersion": "0.8.0"
+          },
+          {
+            "v": 1,
+            "store": "gog",
+            "appId": "220",
+            "key": "macArch",
+            "value": "32",
+            "op": "add",
+            "gamelibVersion": "0.8.0"
+          },
+          {
+            "v": 1,
+            "store": "steam",
+            "appId": "220",
+            "key": "macArch",
+            "value": "32",
+            "op": "add",
+            "gamelibVersion": "0.8.0",
+            "title": "Half-Life"
+          },
+          {
+            "v": 1,
+            "store": "steam",
+            "appId": "220",
+            "key": "macArch",
+            "value": "32",
+            "op": "add",
+            "gamelibVersion": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+          },
+          {
+            "v": 1,
+            "store": "steam",
+            "appId": 220,
+            "key": "macArch",
+            "value": "32",
+            "op": "add",
+            "gamelibVersion": "0.8.0"
+          },
+          null,
+          "text"
+        ]
+      }
+    ]
+  }
+]

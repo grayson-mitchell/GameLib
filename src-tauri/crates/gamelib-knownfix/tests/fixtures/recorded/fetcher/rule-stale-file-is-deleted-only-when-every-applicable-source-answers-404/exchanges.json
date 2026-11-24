@@ -1,0 +1,86 @@
+[
+  {
+    "id": "ex-1",
+    "request": {
+      "method": "GET",
+      "url": "https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/gog/1-gog.json",
+      "headers": {}
+    },
+    "response": {
+      "status": 404,
+      "headers": {}
+    }
+  },
+  {
+    "id": "ex-2",
+    "request": {
+      "method": "GET",
+      "url": "https://raw.githubusercontent.com/Heroic-Games-Launcher/known-fixes/main/gog/1-gog.json",
+      "headers": {}
+    },
+    "response": {
+      "status": 404,
+      "headers": {}
+    }
+  },
+  {
+    "id": "ex-3",
+    "request": {
+      "method": "GET",
+      "url": "https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/amazon/n1-amazon.json",
+      "headers": {}
+    },
+    "response": {
+      "status": 404,
+      "headers": {}
+    }
+  },
+  {
+    "id": "ex-4",
+    "request": {
+      "method": "GET",
+      "url": "https://raw.githubusercontent.com/Heroic-Games-Launcher/known-fixes/main/amazon/n1-amazon.json",
+      "headers": {}
+    },
+    "response": {
+      "status": 404,
+      "headers": {}
+    }
+  },
+  {
+    "id": "ex-5",
+    "request": {
+      "method": "GET",
+      "url": "https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/steam/s1-steam.json",
+      "headers": {}
+    },
+    "response": {
+      "status": 404,
+      "headers": {}
+    }
+  },
+  {
+    "id": "ex-6",
+    "request": {
+      "method": "GET",
+      "url": "https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/gog/1-gog.json",
+      "headers": {}
+    },
+    "response": {
+      "status": 404,
+      "headers": {}
+    }
+  },
+  {
+    "id": "ex-7",
+    "request": {
+      "method": "GET",
+      "url": "https://raw.githubusercontent.com/Heroic-Games-Launcher/known-fixes/main/gog/1-gog.json",
+      "headers": {}
+    },
+    "response": {
+      "status": 500,
+      "headers": {}
+    }
+  }
+]

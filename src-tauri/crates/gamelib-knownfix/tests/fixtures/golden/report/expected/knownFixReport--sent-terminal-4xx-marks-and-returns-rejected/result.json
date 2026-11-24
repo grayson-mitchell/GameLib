@@ -1,0 +1,113 @@
+{
+  "platform": "mac",
+  "settings": {
+    "shareDetectedFixes": true
+  },
+  "version": "0.8.0",
+  "steps": [
+    {
+      "op": "reset"
+    },
+    {
+      "op": "run",
+      "fix": {
+        "appId": "220",
+        "key": "macArch",
+        "op": "add",
+        "detector": "macho"
+      },
+      "answer": {
+        "status": 400,
+        "data": {
+          "status": "rejected"
+        }
+      },
+      "outcome": "rejected",
+      "postsMade": 1,
+      "sentRecord": {
+        "at": 1234,
+        "status": 400
+      },
+      "sentStoreSize": 1,
+      "registryHoldsIt": false
+    },
+    {
+      "op": "reset"
+    },
+    {
+      "op": "run",
+      "fix": {
+        "appId": "220",
+        "key": "macArch",
+        "op": "add",
+        "detector": "macho"
+      },
+      "answer": {
+        "status": 413,
+        "data": {
+          "status": "rejected"
+        }
+      },
+      "outcome": "rejected",
+      "postsMade": 1,
+      "sentRecord": {
+        "at": 1234,
+        "status": 413
+      },
+      "sentStoreSize": 1,
+      "registryHoldsIt": false
+    },
+    {
+      "op": "reset"
+    },
+    {
+      "op": "run",
+      "fix": {
+        "appId": "220",
+        "key": "macArch",
+        "op": "add",
+        "detector": "macho"
+      },
+      "answer": {
+        "status": 415,
+        "data": {
+          "status": "rejected"
+        }
+      },
+      "outcome": "rejected",
+      "postsMade": 1,
+      "sentRecord": {
+        "at": 1234,
+        "status": 415
+      },
+      "sentStoreSize": 1,
+      "registryHoldsIt": false
+    },
+    {
+      "op": "reset"
+    },
+    {
+      "op": "run",
+      "fix": {
+        "appId": "220",
+        "key": "macArch",
+        "op": "add",
+        "detector": "macho"
+      },
+      "answer": {
+        "status": 422,
+        "data": {
+          "status": "rejected"
+        }
+      },
+      "outcome": "rejected",
+      "postsMade": 1,
+      "sentRecord": {
+        "at": 1234,
+        "status": 422
+      },
+      "sentStoreSize": 1,
+      "registryHoldsIt": false
+    }
+  ]
+}

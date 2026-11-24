@@ -1,0 +1,35 @@
+{
+  "platform": "mac",
+  "settings": {},
+  "version": "0.8.0",
+  "steps": [
+    {
+      "op": "run",
+      "fix": {
+        "appId": "220",
+        "key": "macArch",
+        "op": "add",
+        "detector": "macho"
+      },
+      "answer": null,
+      "outcome": "disabled",
+      "postsMade": 0,
+      "sentRecord": null,
+      "sentStoreSize": 0,
+      "registryHoldsIt": false
+    },
+    {
+      "op": "detect",
+      "fix": {
+        "appId": "220",
+        "key": "drm",
+        "op": "add",
+        "detector": "ceg"
+      },
+      "returnedUndefined": true,
+      "threw": false,
+      "postsMadeSynchronously": 0,
+      "postsMade": 0
+    }
+  ]
+}

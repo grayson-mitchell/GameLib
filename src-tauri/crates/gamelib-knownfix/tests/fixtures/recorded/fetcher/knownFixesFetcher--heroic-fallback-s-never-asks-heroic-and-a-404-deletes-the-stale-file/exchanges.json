@@ -1,0 +1,14 @@
+[
+  {
+    "id": "ex-1",
+    "request": {
+      "method": "GET",
+      "url": "https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/steam/77-steam.json",
+      "headers": {}
+    },
+    "response": {
+      "status": 404,
+      "headers": {}
+    }
+  }
+]

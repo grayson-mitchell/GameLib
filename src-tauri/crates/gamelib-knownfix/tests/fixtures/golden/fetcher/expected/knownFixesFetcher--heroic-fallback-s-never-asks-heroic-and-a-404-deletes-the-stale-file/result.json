@@ -1,0 +1,26 @@
+{
+  "steps": [
+    {
+      "appName": "77",
+      "runner": "steam",
+      "via": "injected",
+      "rejected": false,
+      "returned": null,
+      "requested": [
+        "https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/steam/77-steam.json"
+      ],
+      "treeAfter": [
+        {
+          "path": "<APPFOLDER>/fixes",
+          "kind": "dir",
+          "mode": "0755"
+        },
+        {
+          "path": "<APPFOLDER>/fixes/local",
+          "kind": "dir",
+          "mode": "0755"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "platform": "mac",
+  "settings": {
+    "shareDetectedFixes": true
+  },
+  "version": "0.8.0",
+  "steps": [
+    {
+      "op": "relayUrl",
+      "env": "http://x.test/r",
+      "url": "http://x.test/r"
+    },
+    {
+      "op": "relayUrl",
+      "env": null,
+      "url": "https://gamelib-fix-relay.gamelib.workers.dev/v1/reports"
+    }
+  ]
+}

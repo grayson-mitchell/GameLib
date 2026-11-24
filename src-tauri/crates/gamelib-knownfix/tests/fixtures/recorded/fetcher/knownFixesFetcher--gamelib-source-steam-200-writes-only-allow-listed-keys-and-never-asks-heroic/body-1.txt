@@ -1,0 +1,1 @@
+{"envVariables":{"A":"1"},"registry":[],"foo":1}

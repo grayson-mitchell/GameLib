@@ -1,0 +1,14 @@
+[
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": null,
+    "text": "Known fixes for '1' (remote: GameLib layer) is not an object, ignoring."
+  },
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "Known fixes: GameLib body for https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/gog/1-gog.json is not a JSON object"
+  }
+]

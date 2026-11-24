@@ -1,0 +1,74 @@
+[
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": null,
+    "text": "Known fixes for '1207658930' (remote: Heroic layer): 'registry' is a tier-2 key that belongs in '1207658930-<store>.profile.json', ignoring it here."
+  },
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": null,
+    "text": "Known fixes for '1207658930' (remote: Heroic layer): 'dllOverrides' is a tier-2 key that belongs in '1207658930-<store>.profile.json', ignoring it here."
+  },
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": null,
+    "text": "Known fixes for '1207658930' (remote: Heroic layer): 'overlays' is a tier-2 key that belongs in '1207658930-<store>.profile.json', ignoring it here."
+  },
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": null,
+    "text": "Known fixes for '1207658930' (remote: Heroic layer): 'shimFeatures' is a tier-2 key that belongs in '1207658930-<store>.profile.json', ignoring it here."
+  },
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": null,
+    "text": "Known fixes for '1207658930' (remote: Heroic layer): 'steamSharedRedists' is a tier-2 key that belongs in '1207658930-<store>.profile.json', ignoring it here."
+  },
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": null,
+    "text": "Known fixes for '1207658930' (remote: Heroic layer): 'macArch' accepts only \"32\", ignoring \"64\"."
+  },
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": null,
+    "text": "Known fixes for '1207658930' (remote: Heroic layer): 'drm' accepts only \"ceg\", ignoring \"none\"."
+  },
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": null,
+    "text": "Known fixes for '1207658930' (remote: Heroic layer): 'steamGameOverlay' accepts only \"off\", ignoring \"on\"."
+  },
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": null,
+    "text": "Known fixes for '1207658930' (remote: Heroic layer): 'launchArgs' must be an array of strings, ignoring [1]."
+  },
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": null,
+    "text": "Known fixes for '1207658930' (remote: Heroic layer): 'exeOverride' must be a relative path inside the install folder, ignoring \"../escape.exe\"."
+  },
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": null,
+    "text": "Known fixes for '1207658930' (remote: Heroic layer): 'unknownKey' is not a tier-1 key, ignoring it."
+  },
+  {
+    "step": 0,
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Known fixes written from Heroic: <APPFOLDER>/fixes/1207658930-gog.json"
+  }
+]

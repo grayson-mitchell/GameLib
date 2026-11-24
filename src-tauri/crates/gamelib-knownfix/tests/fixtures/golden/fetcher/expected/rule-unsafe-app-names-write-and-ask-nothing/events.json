@@ -1,0 +1,32 @@
+[
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "Refusing known-fixes fetch for unsafe app name \"../escape\""
+  },
+  {
+    "step": 1,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "Refusing known-fixes fetch for unsafe app name \"..\""
+  },
+  {
+    "step": 2,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "Refusing known-fixes fetch for unsafe app name \"a/b\""
+  },
+  {
+    "step": 3,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "Refusing known-fixes fetch for unsafe app name \"/abs\""
+  },
+  {
+    "step": 4,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "Refusing known-fixes fetch for unsafe app name \"..dots\""
+  }
+]

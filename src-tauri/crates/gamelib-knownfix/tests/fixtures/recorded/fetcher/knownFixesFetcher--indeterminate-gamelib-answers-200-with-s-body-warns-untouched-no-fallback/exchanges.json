@@ -1,0 +1,32 @@
+[
+  {
+    "id": "ex-1",
+    "request": {
+      "method": "GET",
+      "url": "https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/gog/1-gog.json",
+      "headers": {}
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "text/plain; charset=utf-8"
+      },
+      "bodyFile": "body-1.txt"
+    }
+  },
+  {
+    "id": "ex-2",
+    "request": {
+      "method": "GET",
+      "url": "https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/gog/1-gog.json",
+      "headers": {}
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "text/plain; charset=utf-8"
+      },
+      "bodyFile": "body-2.txt"
+    }
+  }
+]

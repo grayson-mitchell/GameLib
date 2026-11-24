@@ -1,0 +1,26 @@
+[
+  {
+    "step": 0,
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Known-fix report: sending appId 220 macArch=32 op=add (macho, GameLib 0.8.0)"
+  },
+  {
+    "step": 0,
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Known-fix report: relay answered HTTP 200 (created) for appId 220 macArch add"
+  },
+  {
+    "step": 1,
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Known-fix report: sending appId 220 macArch=32 op=remove (macho, GameLib 0.8.0)"
+  },
+  {
+    "step": 1,
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Known-fix report: relay answered HTTP 200 (created) for appId 220 macArch remove"
+  }
+]

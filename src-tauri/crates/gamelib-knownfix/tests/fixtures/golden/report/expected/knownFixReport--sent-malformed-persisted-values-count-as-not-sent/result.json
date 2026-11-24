@@ -1,0 +1,89 @@
+{
+  "platform": "mac",
+  "settings": {
+    "shareDetectedFixes": true
+  },
+  "version": "0.8.0",
+  "steps": [
+    {
+      "op": "reset"
+    },
+    {
+      "op": "setSent",
+      "key": "220:macArch:add",
+      "value": "yes"
+    },
+    {
+      "op": "run",
+      "fix": {
+        "appId": "220",
+        "key": "macArch",
+        "op": "add",
+        "detector": "macho"
+      },
+      "answer": null,
+      "outcome": "sent",
+      "postsMade": 1,
+      "sentRecord": {
+        "at": 1234,
+        "status": 200
+      },
+      "sentStoreSize": 1,
+      "registryHoldsIt": false
+    },
+    {
+      "op": "reset"
+    },
+    {
+      "op": "setSent",
+      "key": "220:macArch:add",
+      "value": {
+        "at": "x"
+      }
+    },
+    {
+      "op": "run",
+      "fix": {
+        "appId": "220",
+        "key": "macArch",
+        "op": "add",
+        "detector": "macho"
+      },
+      "answer": null,
+      "outcome": "sent",
+      "postsMade": 1,
+      "sentRecord": {
+        "at": 1234,
+        "status": 200
+      },
+      "sentStoreSize": 1,
+      "registryHoldsIt": false
+    },
+    {
+      "op": "reset"
+    },
+    {
+      "op": "setSent",
+      "key": "220:macArch:add",
+      "value": null
+    },
+    {
+      "op": "run",
+      "fix": {
+        "appId": "220",
+        "key": "macArch",
+        "op": "add",
+        "detector": "macho"
+      },
+      "answer": null,
+      "outcome": "sent",
+      "postsMade": 1,
+      "sentRecord": {
+        "at": 1234,
+        "status": 200
+      },
+      "sentStoreSize": 1,
+      "registryHoldsIt": false
+    }
+  ]
+}

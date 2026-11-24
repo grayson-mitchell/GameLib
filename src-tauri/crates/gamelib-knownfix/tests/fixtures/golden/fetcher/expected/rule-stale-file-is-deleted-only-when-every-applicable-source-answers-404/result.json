@@ -1,0 +1,81 @@
+{
+  "steps": [
+    {
+      "appName": "1",
+      "runner": "gog",
+      "via": "injected",
+      "rejected": false,
+      "returned": null,
+      "requested": [
+        "https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/gog/1-gog.json",
+        "https://raw.githubusercontent.com/Heroic-Games-Launcher/known-fixes/main/gog/1-gog.json"
+      ],
+      "treeAfter": [
+        {
+          "path": "<APPFOLDER>/fixes",
+          "kind": "dir",
+          "mode": "0755"
+        }
+      ]
+    },
+    {
+      "appName": "n1",
+      "runner": "nile",
+      "via": "injected",
+      "rejected": false,
+      "returned": null,
+      "requested": [
+        "https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/amazon/n1-amazon.json",
+        "https://raw.githubusercontent.com/Heroic-Games-Launcher/known-fixes/main/amazon/n1-amazon.json"
+      ],
+      "treeAfter": [
+        {
+          "path": "<APPFOLDER>/fixes",
+          "kind": "dir",
+          "mode": "0755"
+        }
+      ]
+    },
+    {
+      "appName": "s1",
+      "runner": "steam",
+      "via": "injected",
+      "rejected": false,
+      "returned": null,
+      "requested": [
+        "https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/steam/s1-steam.json"
+      ],
+      "treeAfter": [
+        {
+          "path": "<APPFOLDER>/fixes",
+          "kind": "dir",
+          "mode": "0755"
+        }
+      ]
+    },
+    {
+      "appName": "1",
+      "runner": "gog",
+      "via": "injected",
+      "rejected": false,
+      "returned": null,
+      "requested": [
+        "https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/gog/1-gog.json",
+        "https://raw.githubusercontent.com/Heroic-Games-Launcher/known-fixes/main/gog/1-gog.json"
+      ],
+      "treeAfter": [
+        {
+          "path": "<APPFOLDER>/fixes",
+          "kind": "dir",
+          "mode": "0755"
+        },
+        {
+          "path": "<APPFOLDER>/fixes/1-gog.json",
+          "kind": "file",
+          "mode": "0644",
+          "sha256": "b84374add5a5d2b2f8d196d7120426dcf137a72d12ce50d50097975cd7fd97fd"
+        }
+      ]
+    }
+  ]
+}

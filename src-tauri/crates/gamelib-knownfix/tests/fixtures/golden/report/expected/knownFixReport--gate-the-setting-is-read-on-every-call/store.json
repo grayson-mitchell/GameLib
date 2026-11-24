@@ -1,0 +1,18 @@
+{
+  "writes": [
+    {
+      "step": 0,
+      "key": "220:macArch:add",
+      "value": {
+        "at": 1234,
+        "status": 200
+      }
+    }
+  ],
+  "final": {
+    "220:macArch:add": {
+      "at": 1234,
+      "status": 200
+    }
+  }
+}

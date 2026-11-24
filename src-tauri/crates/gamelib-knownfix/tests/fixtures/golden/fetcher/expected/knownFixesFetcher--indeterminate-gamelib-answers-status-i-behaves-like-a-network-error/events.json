@@ -1,0 +1,14 @@
+[
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "Known fixes: GameLib returned 500 for https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/gog/1-gog.json"
+  },
+  {
+    "step": 1,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "Known fixes: GameLib returned 403 for https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/gog/1-gog.json"
+  }
+]

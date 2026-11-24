@@ -1,0 +1,50 @@
+[
+  {
+    "step": 1,
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Known-fix report: sending appId 220 macArch=32 op=add (macho, GameLib 0.8.0)"
+  },
+  {
+    "step": 1,
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Known-fix report: relay answered HTTP 400 (rejected) for appId 220 macArch add"
+  },
+  {
+    "step": 3,
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Known-fix report: sending appId 220 macArch=32 op=add (macho, GameLib 0.8.0)"
+  },
+  {
+    "step": 3,
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Known-fix report: relay answered HTTP 413 (rejected) for appId 220 macArch add"
+  },
+  {
+    "step": 5,
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Known-fix report: sending appId 220 macArch=32 op=add (macho, GameLib 0.8.0)"
+  },
+  {
+    "step": 5,
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Known-fix report: relay answered HTTP 415 (rejected) for appId 220 macArch add"
+  },
+  {
+    "step": 7,
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Known-fix report: sending appId 220 macArch=32 op=add (macho, GameLib 0.8.0)"
+  },
+  {
+    "step": 7,
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Known-fix report: relay answered HTTP 422 (rejected) for appId 220 macArch add"
+  }
+]

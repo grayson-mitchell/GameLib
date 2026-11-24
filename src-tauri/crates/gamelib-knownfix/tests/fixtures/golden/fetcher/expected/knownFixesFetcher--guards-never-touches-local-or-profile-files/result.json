@@ -1,0 +1,146 @@
+{
+  "steps": [
+    {
+      "appName": "9",
+      "runner": "steam",
+      "via": "injected",
+      "rejected": false,
+      "returned": null,
+      "requested": [
+        "https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/steam/9-steam.json"
+      ],
+      "treeAfter": [
+        {
+          "path": "<APPFOLDER>/fixes",
+          "kind": "dir",
+          "mode": "0755"
+        },
+        {
+          "path": "<APPFOLDER>/fixes/9-steam.json",
+          "kind": "file",
+          "mode": "0644",
+          "sha256": "b054e0f2000ac1824b4ec47ef6e4568c729a06c59c1ea958a0e42a3346c90229"
+        },
+        {
+          "path": "<APPFOLDER>/fixes/9-steam.profile.json",
+          "kind": "file",
+          "mode": "0644",
+          "sha256": "5c62e091b8c0565f1bafad0dad5934276143ae2ccef7a5381e8ada5b1a8d26d2"
+        },
+        {
+          "path": "<APPFOLDER>/fixes/local",
+          "kind": "dir",
+          "mode": "0755"
+        },
+        {
+          "path": "<APPFOLDER>/fixes/local/9-steam.json",
+          "kind": "file",
+          "mode": "0644",
+          "sha256": "72dfcfb0c470ac255cde83fb8fe38de8a128188e03ea5ba5b2a93adbea1062fa"
+        }
+      ]
+    },
+    {
+      "appName": "9",
+      "runner": "steam",
+      "via": "injected",
+      "rejected": false,
+      "returned": null,
+      "requested": [
+        "https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/steam/9-steam.json"
+      ],
+      "treeAfter": [
+        {
+          "path": "<APPFOLDER>/fixes",
+          "kind": "dir",
+          "mode": "0755"
+        },
+        {
+          "path": "<APPFOLDER>/fixes/9-steam.profile.json",
+          "kind": "file",
+          "mode": "0644",
+          "sha256": "5c62e091b8c0565f1bafad0dad5934276143ae2ccef7a5381e8ada5b1a8d26d2"
+        },
+        {
+          "path": "<APPFOLDER>/fixes/local",
+          "kind": "dir",
+          "mode": "0755"
+        },
+        {
+          "path": "<APPFOLDER>/fixes/local/9-steam.json",
+          "kind": "file",
+          "mode": "0644",
+          "sha256": "72dfcfb0c470ac255cde83fb8fe38de8a128188e03ea5ba5b2a93adbea1062fa"
+        }
+      ]
+    },
+    {
+      "appName": "9",
+      "runner": "steam",
+      "via": "injected",
+      "rejected": false,
+      "returned": null,
+      "requested": [
+        "https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/steam/9-steam.json"
+      ],
+      "treeAfter": [
+        {
+          "path": "<APPFOLDER>/fixes",
+          "kind": "dir",
+          "mode": "0755"
+        },
+        {
+          "path": "<APPFOLDER>/fixes/9-steam.profile.json",
+          "kind": "file",
+          "mode": "0644",
+          "sha256": "5c62e091b8c0565f1bafad0dad5934276143ae2ccef7a5381e8ada5b1a8d26d2"
+        },
+        {
+          "path": "<APPFOLDER>/fixes/local",
+          "kind": "dir",
+          "mode": "0755"
+        },
+        {
+          "path": "<APPFOLDER>/fixes/local/9-steam.json",
+          "kind": "file",
+          "mode": "0644",
+          "sha256": "72dfcfb0c470ac255cde83fb8fe38de8a128188e03ea5ba5b2a93adbea1062fa"
+        }
+      ]
+    },
+    {
+      "appName": "9",
+      "runner": "steam",
+      "via": "injected",
+      "rejected": false,
+      "returned": null,
+      "requested": [
+        "https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/steam/9-steam.json"
+      ],
+      "treeAfter": [
+        {
+          "path": "<APPFOLDER>/fixes",
+          "kind": "dir",
+          "mode": "0755"
+        },
+        {
+          "path": "<APPFOLDER>/fixes/9-steam.profile.json",
+          "kind": "file",
+          "mode": "0644",
+          "sha256": "5c62e091b8c0565f1bafad0dad5934276143ae2ccef7a5381e8ada5b1a8d26d2"
+        },
+        {
+          "path": "<APPFOLDER>/fixes/local",
+          "kind": "dir",
+          "mode": "0755"
+        },
+        {
+          "path": "<APPFOLDER>/fixes/local/9-steam.json",
+          "kind": "file",
+          "mode": "0644",
+          "sha256": "72dfcfb0c470ac255cde83fb8fe38de8a128188e03ea5ba5b2a93adbea1062fa"
+        }
+      ]
+    }
+  ]
+}

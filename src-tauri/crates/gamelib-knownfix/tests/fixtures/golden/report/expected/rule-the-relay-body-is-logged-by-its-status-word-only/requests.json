@@ -1,0 +1,289 @@
+[
+  {
+    "step": 1,
+    "method": "POST",
+    "url": "http://relay.test/v1/reports",
+    "headers": {
+      "content-type": "application/json",
+      "user-agent": "GameLib/0.8.0"
+    },
+    "body": {
+      "v": 1,
+      "store": "steam",
+      "appId": "220",
+      "key": "macArch",
+      "value": "32",
+      "op": "add",
+      "gamelibVersion": "0.8.0"
+    },
+    "bodyKeys": [
+      "v",
+      "store",
+      "appId",
+      "key",
+      "value",
+      "op",
+      "gamelibVersion"
+    ],
+    "bodyBytes": 102,
+    "bodyWithinMaxBytes": true,
+    "bodyParses": true,
+    "timeoutMs": 8000,
+    "maxRedirects": 0,
+    "validateStatusAccepts": {
+      "200": true,
+      "301": true,
+      "400": true,
+      "429": true,
+      "500": true
+    },
+    "hasSignal": true,
+    "signalAbortedAtCall": false
+  },
+  {
+    "step": 3,
+    "method": "POST",
+    "url": "http://relay.test/v1/reports",
+    "headers": {
+      "content-type": "application/json",
+      "user-agent": "GameLib/0.8.0"
+    },
+    "body": {
+      "v": 1,
+      "store": "steam",
+      "appId": "220",
+      "key": "macArch",
+      "value": "32",
+      "op": "add",
+      "gamelibVersion": "0.8.0"
+    },
+    "bodyKeys": [
+      "v",
+      "store",
+      "appId",
+      "key",
+      "value",
+      "op",
+      "gamelibVersion"
+    ],
+    "bodyBytes": 102,
+    "bodyWithinMaxBytes": true,
+    "bodyParses": true,
+    "timeoutMs": 8000,
+    "maxRedirects": 0,
+    "validateStatusAccepts": {
+      "200": true,
+      "301": true,
+      "400": true,
+      "429": true,
+      "500": true
+    },
+    "hasSignal": true,
+    "signalAbortedAtCall": false
+  },
+  {
+    "step": 5,
+    "method": "POST",
+    "url": "http://relay.test/v1/reports",
+    "headers": {
+      "content-type": "application/json",
+      "user-agent": "GameLib/0.8.0"
+    },
+    "body": {
+      "v": 1,
+      "store": "steam",
+      "appId": "220",
+      "key": "macArch",
+      "value": "32",
+      "op": "add",
+      "gamelibVersion": "0.8.0"
+    },
+    "bodyKeys": [
+      "v",
+      "store",
+      "appId",
+      "key",
+      "value",
+      "op",
+      "gamelibVersion"
+    ],
+    "bodyBytes": 102,
+    "bodyWithinMaxBytes": true,
+    "bodyParses": true,
+    "timeoutMs": 8000,
+    "maxRedirects": 0,
+    "validateStatusAccepts": {
+      "200": true,
+      "301": true,
+      "400": true,
+      "429": true,
+      "500": true
+    },
+    "hasSignal": true,
+    "signalAbortedAtCall": false
+  },
+  {
+    "step": 7,
+    "method": "POST",
+    "url": "http://relay.test/v1/reports",
+    "headers": {
+      "content-type": "application/json",
+      "user-agent": "GameLib/0.8.0"
+    },
+    "body": {
+      "v": 1,
+      "store": "steam",
+      "appId": "220",
+      "key": "macArch",
+      "value": "32",
+      "op": "add",
+      "gamelibVersion": "0.8.0"
+    },
+    "bodyKeys": [
+      "v",
+      "store",
+      "appId",
+      "key",
+      "value",
+      "op",
+      "gamelibVersion"
+    ],
+    "bodyBytes": 102,
+    "bodyWithinMaxBytes": true,
+    "bodyParses": true,
+    "timeoutMs": 8000,
+    "maxRedirects": 0,
+    "validateStatusAccepts": {
+      "200": true,
+      "301": true,
+      "400": true,
+      "429": true,
+      "500": true
+    },
+    "hasSignal": true,
+    "signalAbortedAtCall": false
+  },
+  {
+    "step": 9,
+    "method": "POST",
+    "url": "http://relay.test/v1/reports",
+    "headers": {
+      "content-type": "application/json",
+      "user-agent": "GameLib/0.8.0"
+    },
+    "body": {
+      "v": 1,
+      "store": "steam",
+      "appId": "220",
+      "key": "macArch",
+      "value": "32",
+      "op": "add",
+      "gamelibVersion": "0.8.0"
+    },
+    "bodyKeys": [
+      "v",
+      "store",
+      "appId",
+      "key",
+      "value",
+      "op",
+      "gamelibVersion"
+    ],
+    "bodyBytes": 102,
+    "bodyWithinMaxBytes": true,
+    "bodyParses": true,
+    "timeoutMs": 8000,
+    "maxRedirects": 0,
+    "validateStatusAccepts": {
+      "200": true,
+      "301": true,
+      "400": true,
+      "429": true,
+      "500": true
+    },
+    "hasSignal": true,
+    "signalAbortedAtCall": false
+  },
+  {
+    "step": 11,
+    "method": "POST",
+    "url": "http://relay.test/v1/reports",
+    "headers": {
+      "content-type": "application/json",
+      "user-agent": "GameLib/0.8.0"
+    },
+    "body": {
+      "v": 1,
+      "store": "steam",
+      "appId": "220",
+      "key": "macArch",
+      "value": "32",
+      "op": "add",
+      "gamelibVersion": "0.8.0"
+    },
+    "bodyKeys": [
+      "v",
+      "store",
+      "appId",
+      "key",
+      "value",
+      "op",
+      "gamelibVersion"
+    ],
+    "bodyBytes": 102,
+    "bodyWithinMaxBytes": true,
+    "bodyParses": true,
+    "timeoutMs": 8000,
+    "maxRedirects": 0,
+    "validateStatusAccepts": {
+      "200": true,
+      "301": true,
+      "400": true,
+      "429": true,
+      "500": true
+    },
+    "hasSignal": true,
+    "signalAbortedAtCall": false
+  },
+  {
+    "step": 13,
+    "method": "POST",
+    "url": "http://relay.test/v1/reports",
+    "headers": {
+      "content-type": "application/json",
+      "user-agent": "GameLib/0.8.0"
+    },
+    "body": {
+      "v": 1,
+      "store": "steam",
+      "appId": "220",
+      "key": "macArch",
+      "value": "32",
+      "op": "add",
+      "gamelibVersion": "0.8.0"
+    },
+    "bodyKeys": [
+      "v",
+      "store",
+      "appId",
+      "key",
+      "value",
+      "op",
+      "gamelibVersion"
+    ],
+    "bodyBytes": 102,
+    "bodyWithinMaxBytes": true,
+    "bodyParses": true,
+    "timeoutMs": 8000,
+    "maxRedirects": 0,
+    "validateStatusAccepts": {
+      "200": true,
+      "301": true,
+      "400": true,
+      "429": true,
+      "500": true
+    },
+    "hasSignal": true,
+    "signalAbortedAtCall": false
+  }
+]

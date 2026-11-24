@@ -1,0 +1,1 @@
+{"title":"Mixed","envVariables":{"A":"1"},"registry":[{"key":"HKLM\\Software\\X","name":"N","type":"REG_DWORD","value":1}],"dllOverrides":{"d3d11.dll":"native"},"overlays":["gst-libav-1.24.13"],"shimFeatures":["x"],"steamSharedRedists":true,"macArch":"64","drm":"none","steamGameOverlay":"on","launchArgs":[1],"exeOverride":"../escape.exe","unknownKey":1}

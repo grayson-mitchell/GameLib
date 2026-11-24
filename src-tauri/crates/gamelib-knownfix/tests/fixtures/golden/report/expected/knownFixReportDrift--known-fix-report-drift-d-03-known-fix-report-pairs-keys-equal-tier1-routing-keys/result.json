@@ -1,0 +1,20 @@
+{
+  "platform": "mac",
+  "settings": {
+    "shareDetectedFixes": true
+  },
+  "version": "0.8.0",
+  "steps": [
+    {
+      "op": "drift",
+      "pairKeys": [
+        "drm",
+        "macArch"
+      ],
+      "routingKeys": [
+        "drm",
+        "macArch"
+      ]
+    }
+  ]
+}

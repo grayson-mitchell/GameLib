@@ -1,0 +1,187 @@
+{
+  "platform": "mac",
+  "settings": {
+    "shareDetectedFixes": true
+  },
+  "version": "0.8.0",
+  "steps": [
+    {
+      "op": "reset"
+    },
+    {
+      "op": "run",
+      "fix": {
+        "appId": "220",
+        "key": "macArch",
+        "op": "add",
+        "detector": "macho"
+      },
+      "answer": {
+        "status": 200,
+        "data": {
+          "status": "created"
+        }
+      },
+      "outcome": "sent",
+      "postsMade": 1,
+      "sentRecord": {
+        "at": 1234,
+        "status": 200
+      },
+      "sentStoreSize": 1,
+      "registryHoldsIt": false
+    },
+    {
+      "op": "reset"
+    },
+    {
+      "op": "run",
+      "fix": {
+        "appId": "220",
+        "key": "macArch",
+        "op": "add",
+        "detector": "macho"
+      },
+      "answer": {
+        "status": 200,
+        "data": {
+          "status": "rate-limited"
+        }
+      },
+      "outcome": "sent",
+      "postsMade": 1,
+      "sentRecord": {
+        "at": 1234,
+        "status": 200
+      },
+      "sentStoreSize": 1,
+      "registryHoldsIt": false
+    },
+    {
+      "op": "reset"
+    },
+    {
+      "op": "run",
+      "fix": {
+        "appId": "220",
+        "key": "macArch",
+        "op": "add",
+        "detector": "macho"
+      },
+      "answer": {
+        "status": 200,
+        "data": {
+          "status": "weird"
+        }
+      },
+      "outcome": "sent",
+      "postsMade": 1,
+      "sentRecord": {
+        "at": 1234,
+        "status": 200
+      },
+      "sentStoreSize": 1,
+      "registryHoldsIt": false
+    },
+    {
+      "op": "reset"
+    },
+    {
+      "op": "run",
+      "fix": {
+        "appId": "220",
+        "key": "macArch",
+        "op": "add",
+        "detector": "macho"
+      },
+      "answer": {
+        "status": 200,
+        "data": {
+          "status": 5
+        }
+      },
+      "outcome": "sent",
+      "postsMade": 1,
+      "sentRecord": {
+        "at": 1234,
+        "status": 200
+      },
+      "sentStoreSize": 1,
+      "registryHoldsIt": false
+    },
+    {
+      "op": "reset"
+    },
+    {
+      "op": "run",
+      "fix": {
+        "appId": "220",
+        "key": "macArch",
+        "op": "add",
+        "detector": "macho"
+      },
+      "answer": {
+        "status": 200,
+        "data": null
+      },
+      "outcome": "sent",
+      "postsMade": 1,
+      "sentRecord": {
+        "at": 1234,
+        "status": 200
+      },
+      "sentStoreSize": 1,
+      "registryHoldsIt": false
+    },
+    {
+      "op": "reset"
+    },
+    {
+      "op": "run",
+      "fix": {
+        "appId": "220",
+        "key": "macArch",
+        "op": "add",
+        "detector": "macho"
+      },
+      "answer": {
+        "status": 200,
+        "data": "plain text"
+      },
+      "outcome": "sent",
+      "postsMade": 1,
+      "sentRecord": {
+        "at": 1234,
+        "status": 200
+      },
+      "sentStoreSize": 1,
+      "registryHoldsIt": false
+    },
+    {
+      "op": "reset"
+    },
+    {
+      "op": "run",
+      "fix": {
+        "appId": "220",
+        "key": "macArch",
+        "op": "add",
+        "detector": "macho"
+      },
+      "answer": {
+        "status": 200,
+        "data": {
+          "detail": "only"
+        }
+      },
+      "outcome": "sent",
+      "postsMade": 1,
+      "sentRecord": {
+        "at": 1234,
+        "status": 200
+      },
+      "sentStoreSize": 1,
+      "registryHoldsIt": false
+    }
+  ]
+}

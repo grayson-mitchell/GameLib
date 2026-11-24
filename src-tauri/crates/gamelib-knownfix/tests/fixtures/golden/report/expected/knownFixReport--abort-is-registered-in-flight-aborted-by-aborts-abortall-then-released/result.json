@@ -1,0 +1,84 @@
+{
+  "platform": "mac",
+  "settings": {
+    "shareDetectedFixes": true
+  },
+  "version": "0.8.0",
+  "steps": [
+    {
+      "op": "run",
+      "fix": {
+        "appId": "220",
+        "key": "macArch",
+        "op": "add",
+        "detector": "macho"
+      },
+      "answer": "hang",
+      "background": true,
+      "postsMade": 1
+    },
+    {
+      "op": "turn"
+    },
+    {
+      "op": "holds",
+      "held": [
+        {
+          "fix": {
+            "appId": "220",
+            "key": "macArch",
+            "op": "add",
+            "detector": "macho"
+          },
+          "held": true
+        }
+      ]
+    },
+    {
+      "op": "run",
+      "fix": {
+        "appId": "220",
+        "key": "macArch",
+        "op": "add",
+        "detector": "macho"
+      },
+      "answer": null,
+      "outcome": "in-flight",
+      "postsMade": 0,
+      "sentRecord": null,
+      "sentStoreSize": 0,
+      "registryHoldsIt": true
+    },
+    {
+      "op": "abortAll"
+    },
+    {
+      "op": "settle",
+      "settled": [
+        {
+          "fix": {
+            "appId": "220",
+            "key": "macArch",
+            "op": "add",
+            "detector": "macho"
+          },
+          "outcome": "retryable"
+        }
+      ]
+    },
+    {
+      "op": "holds",
+      "held": [
+        {
+          "fix": {
+            "appId": "220",
+            "key": "macArch",
+            "op": "add",
+            "detector": "macho"
+          },
+          "held": false
+        }
+      ]
+    }
+  ]
+}

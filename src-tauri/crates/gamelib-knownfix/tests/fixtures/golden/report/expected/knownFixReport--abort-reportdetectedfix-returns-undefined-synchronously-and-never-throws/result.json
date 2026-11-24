@@ -1,0 +1,22 @@
+{
+  "platform": "mac",
+  "settings": {
+    "shareDetectedFixes": true
+  },
+  "version": "0.8.0",
+  "steps": [
+    {
+      "op": "detect",
+      "fix": {
+        "appId": "220",
+        "key": "macArch",
+        "op": "add",
+        "detector": "macho"
+      },
+      "returnedUndefined": true,
+      "threw": false,
+      "postsMadeSynchronously": 0,
+      "postsMade": 0
+    }
+  ]
+}

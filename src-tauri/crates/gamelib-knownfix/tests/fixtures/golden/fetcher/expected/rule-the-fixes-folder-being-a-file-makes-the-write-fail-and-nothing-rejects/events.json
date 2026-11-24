@@ -1,0 +1,8 @@
+[
+  {
+    "step": 0,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "Known fixes fetch failed for 1: Error: EEXIST: file already exists, mkdir '<APPFOLDER>/fixes'"
+  }
+]

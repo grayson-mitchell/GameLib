@@ -1,0 +1,69 @@
+{
+  "writes": [
+    {
+      "step": 3,
+      "key": "220:macArch:add",
+      "value": {
+        "at": 1234,
+        "status": 200
+      }
+    },
+    {
+      "step": 5,
+      "key": "220:macArch:add",
+      "value": {
+        "at": 1234,
+        "status": 299
+      }
+    },
+    {
+      "step": 13,
+      "key": "220:macArch:add",
+      "value": {
+        "at": 1234,
+        "status": 400
+      }
+    },
+    {
+      "step": 15,
+      "key": "220:macArch:add",
+      "value": {
+        "at": 1234,
+        "status": 404
+      }
+    },
+    {
+      "step": 17,
+      "key": "220:macArch:add",
+      "value": {
+        "at": 1234,
+        "status": 407
+      }
+    },
+    {
+      "step": 21,
+      "key": "220:macArch:add",
+      "value": {
+        "at": 1234,
+        "status": 409
+      }
+    },
+    {
+      "step": 25,
+      "key": "220:macArch:add",
+      "value": {
+        "at": 1234,
+        "status": 430
+      }
+    },
+    {
+      "step": 27,
+      "key": "220:macArch:add",
+      "value": {
+        "at": 1234,
+        "status": 499
+      }
+    }
+  ],
+  "final": {}
+}

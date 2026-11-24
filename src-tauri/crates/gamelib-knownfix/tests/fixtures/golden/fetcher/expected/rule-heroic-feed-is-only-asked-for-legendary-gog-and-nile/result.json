@@ -1,0 +1,60 @@
+{
+  "steps": [
+    {
+      "appName": "Game1",
+      "runner": "legendary",
+      "via": "injected",
+      "rejected": false,
+      "returned": null,
+      "requested": [
+        "https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/epic/Game1-epic.json",
+        "https://raw.githubusercontent.com/Heroic-Games-Launcher/known-fixes/main/epic/Game1-epic.json"
+      ],
+      "treeAfter": []
+    },
+    {
+      "appName": "1",
+      "runner": "gog",
+      "via": "injected",
+      "rejected": false,
+      "returned": null,
+      "requested": [
+        "https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/gog/1-gog.json",
+        "https://raw.githubusercontent.com/Heroic-Games-Launcher/known-fixes/main/gog/1-gog.json"
+      ],
+      "treeAfter": []
+    },
+    {
+      "appName": "n1",
+      "runner": "nile",
+      "via": "injected",
+      "rejected": false,
+      "returned": null,
+      "requested": [
+        "https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/amazon/n1-amazon.json",
+        "https://raw.githubusercontent.com/Heroic-Games-Launcher/known-fixes/main/amazon/n1-amazon.json"
+      ],
+      "treeAfter": []
+    },
+    {
+      "appName": "x",
+      "runner": "sideload",
+      "via": "injected",
+      "rejected": false,
+      "returned": null,
+      "requested": [],
+      "treeAfter": []
+    },
+    {
+      "appName": "2",
+      "runner": "steam",
+      "via": "injected",
+      "rejected": false,
+      "returned": null,
+      "requested": [
+        "https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/steam/2-steam.json"
+      ],
+      "treeAfter": []
+    }
+  ]
+}

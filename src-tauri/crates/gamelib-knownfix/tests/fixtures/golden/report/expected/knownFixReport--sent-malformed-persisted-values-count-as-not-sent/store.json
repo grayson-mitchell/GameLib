@@ -1,0 +1,34 @@
+{
+  "writes": [
+    {
+      "step": 2,
+      "key": "220:macArch:add",
+      "value": {
+        "at": 1234,
+        "status": 200
+      }
+    },
+    {
+      "step": 5,
+      "key": "220:macArch:add",
+      "value": {
+        "at": 1234,
+        "status": 200
+      }
+    },
+    {
+      "step": 8,
+      "key": "220:macArch:add",
+      "value": {
+        "at": 1234,
+        "status": 200
+      }
+    }
+  ],
+  "final": {
+    "220:macArch:add": {
+      "at": 1234,
+      "status": 200
+    }
+  }
+}

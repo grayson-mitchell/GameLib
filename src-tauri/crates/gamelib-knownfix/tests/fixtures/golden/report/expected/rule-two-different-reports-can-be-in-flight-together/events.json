@@ -1,0 +1,26 @@
+[
+  {
+    "step": 0,
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Known-fix report: sending appId 220 macArch=32 op=add (macho, GameLib 0.8.0)"
+  },
+  {
+    "step": 1,
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Known-fix report: sending appId 220 drm=ceg op=add (ceg, GameLib 0.8.0)"
+  },
+  {
+    "step": 4,
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Known-fix report: send failed for appId 220 macArch add (aborted)"
+  },
+  {
+    "step": 4,
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Known-fix report: send failed for appId 220 drm add (aborted)"
+  }
+]

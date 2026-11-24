@@ -1,0 +1,8 @@
+[
+  "GET https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/gog/1207658930-gog.json",
+  "GET https://raw.githubusercontent.com/Heroic-Games-Launcher/known-fixes/main/gog/1207658930-gog.json",
+  "GET https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/epic/Fortnite-epic.json",
+  "GET https://raw.githubusercontent.com/Heroic-Games-Launcher/known-fixes/main/epic/Fortnite-epic.json",
+  "GET https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/amazon/abc-amazon.json",
+  "GET https://raw.githubusercontent.com/Heroic-Games-Launcher/known-fixes/main/amazon/abc-amazon.json"
+]

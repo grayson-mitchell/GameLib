@@ -1,0 +1,42 @@
+{
+  "steps": [
+    {
+      "appName": "1",
+      "runner": "gog",
+      "via": "default",
+      "rejected": false,
+      "returned": null,
+      "requested": [
+        "https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/gog/1-gog.json"
+      ],
+      "axiosCalls": [
+        {
+          "url": "https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/gog/1-gog.json",
+          "timeout": 10000,
+          "responseType": "text",
+          "transformResponseKeepsTheText": true,
+          "validateStatusAccepts": {
+            "200": true,
+            "301": true,
+            "403": true,
+            "404": true,
+            "500": true
+          }
+        }
+      ],
+      "treeAfter": [
+        {
+          "path": "<APPFOLDER>/fixes",
+          "kind": "dir",
+          "mode": "0755"
+        },
+        {
+          "path": "<APPFOLDER>/fixes/1-gog.json",
+          "kind": "file",
+          "mode": "0644",
+          "sha256": "59173f41290912bf3d06475a384d1b7339c8c9167bc3ce6f3446fae0d401d31b"
+        }
+      ]
+    }
+  ]
+}

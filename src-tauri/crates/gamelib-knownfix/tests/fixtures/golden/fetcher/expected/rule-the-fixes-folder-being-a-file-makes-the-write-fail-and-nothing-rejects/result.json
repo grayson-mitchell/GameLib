@@ -1,0 +1,22 @@
+{
+  "steps": [
+    {
+      "appName": "1",
+      "runner": "gog",
+      "via": "injected",
+      "rejected": false,
+      "returned": null,
+      "requested": [
+        "https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/gog/1-gog.json"
+      ],
+      "treeAfter": [
+        {
+          "path": "<APPFOLDER>/fixes",
+          "kind": "file",
+          "mode": "0644",
+          "sha256": "75867a6093f3b3ed31db687b99c2927f953d432ca8170cddfe0d74b1a915b5b0"
+        }
+      ]
+    }
+  ]
+}
