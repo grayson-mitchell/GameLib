@@ -168,6 +168,55 @@ fn runtime() -> Result<&'static Runtime, String> {
         .map_err(Clone::clone)
 }
 
+/// How long the boot migration may run before the shell stops waiting for it (D-18): a cold Keychain can
+/// hold a read for the shell's own 45 s bound, and boot must not wait on that.
+pub const HUMBLE_MIGRATION_BOUND: std::time::Duration = std::time::Duration::from_secs(10);
+
+/// Runs [`secrets::migrate_plaintext`] once, in the background, as bounded boot work (D-18, D-21), and
+/// hands `report` exactly one word describing how it ended: an outcome label (see
+/// [`secrets::MigrationOutcome::label`]), `timeout` when it ran past `bound`, `shutdown` when the
+/// application began to exit first (the work is then not started at all if it had not begun), or
+/// `panic`. The word never carries a value, a length or a path.
+///
+/// The work holds a `Shutdown` registrant named `humble-migration` for as long as it really runs, so an
+/// exit waits for it within the one exit budget instead of cutting a config write short. After `bound`
+/// the wait is abandoned (a blocking Keychain call cannot be interrupted) but the registrant is still
+/// held by the worker until it returns.
+///
+/// Callable from any thread: the work runs on the crate's own runtime. An error is only a runtime that
+/// could not be built.
+pub fn spawn_humble_migration(
+    ctx: std::sync::Arc<HumbleCtx>,
+    bound: std::time::Duration,
+    report: impl FnOnce(&'static str) + Send + 'static,
+) -> Result<(), String> {
+    let runtime = runtime().map_err(|e| format!("humble_migrate:no-runtime ({e})"))?;
+    runtime.spawn(async move {
+        let token = ctx.shutdown.token();
+        if token.is_cancelled() {
+            report("shutdown");
+            return;
+        }
+        let registrant = ctx.shutdown.register("humble-migration");
+        let worker = std::sync::Arc::clone(&ctx);
+        let work = tokio::task::spawn_blocking(move || {
+            let _registrant = registrant;
+            secrets::migrate_plaintext(&worker)
+        });
+        let word = tokio::select! {
+            biased;
+            _ = token.cancelled() => "shutdown",
+            done = tokio::time::timeout(bound, work) => match done {
+                Ok(Ok(outcome)) => outcome.label(),
+                Ok(Err(_)) => "panic",
+                Err(_) => "timeout",
+            },
+        };
+        report(word);
+    });
+    Ok(())
+}
+
 /// [`dispatch`] for a plain thread: blocks on the crate's own runtime. Called from inside a tokio
 /// runtime it answers `<op>:wrong-thread` instead of panicking in `block_on`.
 pub fn dispatch_sync(op: &str, args: &[Value], ctx: &HumbleCtx) -> Result<Value, String> {
@@ -289,6 +338,98 @@ mod tests {
         assert_eq!(done, Ok(json!(1)));
         // Nothing still held: the drain finds no name to wait on.
         assert!(shutdown.drain(Duration::from_millis(50)).is_empty());
+    }
+
+    /// A source over a map: what a Keychain would hold, with no Keychain.
+    #[derive(Default)]
+    struct MapSource(std::sync::Mutex<std::collections::HashMap<&'static str, String>>);
+
+    impl secrets::HumbleSecretSource for MapSource {
+        fn get(&self, slot: secrets::HumbleSlot) -> Result<Option<String>, String> {
+            Ok(self.0.lock().unwrap().get(slot.word()).cloned())
+        }
+        fn set(&self, slot: secrets::HumbleSlot, value: &str) -> Result<(), String> {
+            self.0
+                .lock()
+                .unwrap()
+                .insert(slot.word(), value.to_string());
+            Ok(())
+        }
+        fn delete(&self, slot: secrets::HumbleSlot) -> Result<(), String> {
+            self.0.lock().unwrap().remove(slot.word());
+            Ok(())
+        }
+        fn available(&self) -> Result<bool, String> {
+            Ok(true)
+        }
+    }
+
+    fn migration_ctx(shutdown: Shutdown, home: &gamelib_testutil::FakeHome) -> Arc<HumbleCtx> {
+        let config = home.root().join("humble_store");
+        std::fs::create_dir_all(&config).unwrap();
+        std::fs::write(
+            config.join("config.json"),
+            "{
+	\"sessionCookie\": \"fake-secret-value-0001\",
+	\"encryptionDegraded\": true
+}",
+        )
+        .unwrap();
+        Arc::new(
+            HumbleCtx::new(
+                Arc::new(StoreHost::new()),
+                home.root().to_path_buf(),
+                Arc::new(SystemClock),
+                ctx::Platform::Linux,
+                shutdown,
+                Arc::new(http::NoHttp),
+            )
+            .with_secrets(Arc::new(MapSource::default())),
+        )
+    }
+
+    /// The word the boot log line carries, from a migration that runs to its end.
+    #[test]
+    fn the_boot_migration_reports_one_word_and_releases_its_registrant() {
+        let home = gamelib_testutil::FakeHome::new("humble-migrate-");
+        let shutdown = Shutdown::new();
+        let ctx = migration_ctx(shutdown.clone(), &home);
+        let (tx, rx) = std::sync::mpsc::channel();
+        spawn_humble_migration(Arc::clone(&ctx), HUMBLE_MIGRATION_BOUND, move |word| {
+            let _ = tx.send(word);
+        })
+        .unwrap();
+        assert_eq!(rx.recv_timeout(Duration::from_secs(20)), Ok("migrated"));
+        // The plaintext went to the source and out of the config.
+        let config =
+            std::fs::read_to_string(home.root().join("humble_store").join("config.json")).unwrap();
+        assert!(!config.contains("sessionCookie"));
+        assert!(config.contains("\"encryptionDegraded\": false"));
+        assert!(
+            shutdown.drain(Duration::from_secs(5)).is_empty(),
+            "the humble-migration registrant is released"
+        );
+    }
+
+    /// Once shutdown has begun the work is not started at all, and no source call is made.
+    #[test]
+    fn the_boot_migration_does_not_start_once_shutdown_has_begun() {
+        let home = gamelib_testutil::FakeHome::new("humble-migrate-");
+        let shutdown = Shutdown::new();
+        let ctx = migration_ctx(shutdown.clone(), &home);
+        assert!(shutdown.drain(Duration::ZERO).is_empty());
+        let (tx, rx) = std::sync::mpsc::channel();
+        spawn_humble_migration(ctx, HUMBLE_MIGRATION_BOUND, move |word| {
+            let _ = tx.send(word);
+        })
+        .unwrap();
+        assert_eq!(rx.recv_timeout(Duration::from_secs(20)), Ok("shutdown"));
+        let config =
+            std::fs::read_to_string(home.root().join("humble_store").join("config.json")).unwrap();
+        assert!(
+            config.contains("fake-secret-value-0001"),
+            "the plaintext is untouched"
+        );
     }
 
     /// Records every line the crate wrote.

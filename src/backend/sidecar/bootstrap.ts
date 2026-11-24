@@ -2672,7 +2672,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
     {
       name: 'secret-stores',
       run: (ctx, _io, state) => {
-        const { stores, tokenStore } = requireServices(state)
+        const { tokenStore } = requireServices(state)
         // Phase 87 (D-06, D-17, 87-31): DXMT's three listeners (`wineVersionInstalled`,
         // `wineVersionUninstalled`, `releasesInfoReady`) are Rust's now. The wine manager calls it after an
         // install and a remove, and `wine_releases_info_ready` starts its bounded boot update, so DXMT has
@@ -2684,18 +2684,18 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         // observes the fail-closed default UnconfiguredTokenStore in the sidecar build (D-12). This constraint is inherited
         // UNCHANGED by both arms of the exclusive branch immediately below (34.5 gap cycle 4 plan 36):
         // installDevSecretVault() only performs local file I/O (no RPC), but the keyring arm it
-        // replaces on the OTHER side of this branch needs the same live transport
-        // startSidecarHumbleSecretStore()'s migration logic does, so the branch as a whole stays
-        // below startRpcServer() regardless of which arm a given boot takes.
+        // replaces on the OTHER side of this branch needs the same live transport the keyring
+        // stores' reads do, so the branch as a whole stays below startRpcServer() regardless of
+        // which arm a given boot takes.
         //
         // Exclusive, not additive (34.5 gap cycle 4 plan 36, Routing's developer-scoped dev-vault
         // item): calling installDevSecretVault() first and checking its return value BEFORE touching
         // either keyring install is deliberate. Running the vault install alongside or after the
-        // keyring installs would leave startSidecarHumbleSecretStore()'s fire-and-forget
-        // migrateHumbleSecrets() already dispatched -- a migration that reads the keyring and writes
-        // configStore, i.e. precisely the Keychain interaction this branch exists to let a developer
-        // avoid -- and would mean a boot that both prompted for Keychain access AND then discarded the
-        // result underneath the vault. Exactly one arm below ever runs. The `[bootstrap] secret
+        // keyring installs would arm the keyring arm's Keychain interaction -- precisely what this
+        // branch exists to let a developer avoid -- and would mean a boot that both prompted for
+        // Keychain access AND then discarded the result underneath the vault. (The Humble plaintext
+        // migration is Rust's since Phase 94, D-18; `start_humble_migration` skips a dev-vault run
+        // for the same reason.) Exactly one arm below ever runs. The `[bootstrap] secret
         // stores: ` line is the receipt: `34.5-UNTESTED-ITEMS.md`'s `U-34.5-01` row keys its
         // retirement condition directly off this exact string, so a live `gamelib.log` can prove which
         // arm a given gate run actually used.
@@ -2709,17 +2709,15 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           )
           // Phase 34.4.1 gap-cycle plan 13 (F-1 BLOCKING closure): the keyring-backed Humble
           // secret store was already built and injected into the Humble services by the
-          // 'humble-services' step (66.3-17); this arm only runs its observable receipt line and the
-          // one-time plaintext migration, at the same site as the Steam TokenStore just above. Must
-          // run AFTER startRpcServer() for the same reason tokenStore.configure() does (the migration
-          // calls requestRustInvoke, which needs a live transport).
+          // 'humble-services' step (66.3-17); this arm only runs its observable receipt line, at the
+          // same site as the Steam TokenStore just above. Must run AFTER startRpcServer() for the same
+          // reason tokenStore.configure() does (a read calls requestRustInvoke, which needs a live
+          // transport). Phase 94 (D-18): the one-time plaintext migration is Rust's now
+          // (`humble_secrets::start_humble_migration`), so this arm no longer migrates.
           const humbleKeyringStore = state.humbleKeyringStore
           if (!humbleKeyringStore)
             throw new Error('boot: humble-services step must run first')
-          startSidecarHumbleSecretStore(humbleKeyringStore, {
-            stores,
-            requestRustInvoke: requireHost(state).requestRustInvoke
-          })
+          startSidecarHumbleSecretStore()
           // Phase 86 (86-15, D-26): the SteamGridDB key owner and its one-time plaintext
           // migration are Rust now (`info_dispatch::install` starts the bounded migration), so no
           // SteamGridDB store is built or migrated here.

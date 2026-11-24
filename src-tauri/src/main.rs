@@ -1950,6 +1950,9 @@ fn run_setup(
     // spawns a process or waits; an op before this answers not-ready.
     if let Some(paths) = log_paths.as_ref() {
         humble_dispatch::install(app.handle(), std::path::Path::new(&paths.user_data));
+        // Phase 94 (D-18): the one-time plaintext-to-Keychain move of the Humble secrets, bounded boot work
+        // holding a `humble-migration` shutdown registrant. The sidecar no longer migrates.
+        humble_secrets::start_humble_migration();
     }
     // Where the sidecar's store frames are resolved: the directory this boot opened.
     if let Some(paths) = log_paths.as_ref() {

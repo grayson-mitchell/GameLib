@@ -444,7 +444,7 @@ describe('devSecretVault', () => {
       }
     })
 
-    it('vault enabled: installs the vault token store, not the keyring stores, fires no Humble migration, and emits the dev-vault receipt line', () => {
+    it('vault enabled: installs the vault token store, not the keyring stores, has no Humble migration to fire, and emits the dev-vault receipt line', () => {
       const { freshVault, freshHumbleStore } = freshRegistry()
       const fakeVault = {
         tokenStore: {
@@ -467,10 +467,6 @@ describe('devSecretVault', () => {
         freshHumbleStore,
         'startSidecarHumbleSecretStore'
       )
-      const migrateHumbleSecretsSpy = jest.spyOn(
-        freshHumbleStore,
-        'migrateHumbleSecrets'
-      )
 
       try {
         const { services } = bootFresh({ reuseRegistry: true })
@@ -480,11 +476,9 @@ describe('devSecretVault', () => {
 
         expect(services.tokenStore.current()).toBe(fakeVault.tokenStore)
         expect(startSidecarHumbleSecretStoreSpy).not.toHaveBeenCalled()
-        // migrateHumbleSecrets() is only ever fired FROM INSIDE startSidecarHumbleSecretStore()
-        // (humbleSecretStore.ts) — asserting it directly, not merely inferring it from the line
-        // above, is this test's own regression guard against a future edit that calls it from a
-        // second site.
-        expect(migrateHumbleSecretsSpy).not.toHaveBeenCalled()
+        // The Humble plaintext migration is Rust's since Phase 94 (D-18): `start_humble_migration`
+        // skips a dev-vault run, and the TS module no longer has a migration to fire.
+        expect('migrateHumbleSecrets' in freshHumbleStore).toBe(false)
         expect(
           mockLogInfo.mock.calls.some(
             ([message]) => message === '[bootstrap] secret stores: dev-vault'
@@ -498,7 +492,6 @@ describe('devSecretVault', () => {
       } finally {
         createDevSecretVaultSpy.mockRestore()
         startSidecarHumbleSecretStoreSpy.mockRestore()
-        migrateHumbleSecretsSpy.mockRestore()
       }
     })
   })

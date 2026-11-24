@@ -129,12 +129,46 @@ fn choose_source(
     }
 }
 
+/// Which source `install` chose, for the boot migration's dev-vault skip.
+static SOURCE_KIND: OnceLock<SourceKind> = OnceLock::new();
+
 /// The source `humble_dispatch::install` hands the context. Reads the variable once, here.
 pub(crate) fn secret_source() -> Arc<dyn HumbleSecretSource> {
     let env = std::env::var(DEV_SECRET_VAULT_ENV).ok();
     let (source, kind) = choose_source(env.as_deref(), tauri::is_dev(), &std::env::temp_dir());
+    let _ = SOURCE_KIND.set(kind);
     shell_log(&format!("humble secret source: {}", kind.word()));
     source
+}
+
+/// The one-line report of the boot migration: the outcome word and nothing else (T-94-38).
+fn migration_line(word: &str) -> String {
+    format!("humble secret migration: {word}")
+}
+
+/// Starts the one-time move of a legacy plaintext Humble session cookie and CSRF token into the Keychain
+/// as bounded boot work (D-18, D-21): in the background on the crate's runtime, holding the
+/// `humble-migration` shutdown registrant, abandoned after [`gamelib_humble::HUMBLE_MIGRATION_BOUND`], and
+/// logging one line with the outcome word only. It replaces the sidecar's `migrateHumbleSecrets`, which is
+/// deleted in the same commit so the two never race. A profile with no plaintext key reads no Keychain at
+/// all. Under the dev vault it does nothing (see the module comment).
+pub(crate) fn start_humble_migration() {
+    let Some(ctx) = humble_dispatch::humble_ctx() else {
+        return;
+    };
+    if SOURCE_KIND.get() == Some(&SourceKind::DevVault) {
+        shell_log(&migration_line("skipped-dev-vault"));
+        return;
+    }
+    let started = gamelib_humble::spawn_humble_migration(
+        Arc::clone(ctx),
+        gamelib_humble::HUMBLE_MIGRATION_BOUND,
+        |word| shell_log(&migration_line(word)),
+    );
+    if started.is_err() {
+        // The crate's error names only a runtime that could not be built; the line carries a word.
+        shell_log(&migration_line("not-started"));
+    }
 }
 
 #[cfg(test)]
@@ -174,6 +208,14 @@ mod tests {
     fn the_vault_keys_are_the_ts_vault_keys() {
         assert_eq!(vault_key(HumbleSlot::Session), "sessionCookie");
         assert_eq!(vault_key(HumbleSlot::Csrf), "csrfToken");
+    }
+
+    #[test]
+    fn the_migration_report_is_a_word_and_nothing_else() {
+        assert_eq!(
+            migration_line("migrated"),
+            "humble secret migration: migrated"
+        );
     }
 
     fn vault_source(home: &gamelib_testutil::FakeHome) -> Arc<dyn HumbleSecretSource> {

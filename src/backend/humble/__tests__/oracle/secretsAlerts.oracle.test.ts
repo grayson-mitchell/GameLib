@@ -40,7 +40,6 @@ import { standardBrowserUserAgent } from 'backend/login/userAgent'
 import { resolveAppInfo } from 'backend/host/appInfo'
 import {
   SidecarHumbleSecretStore,
-  migrateHumbleSecrets,
   startSidecarHumbleSecretStore
 } from 'backend/sidecar/humbleSecretStore'
 import { SidecarKeyringSlotStore } from 'backend/sidecar/keyringTokenStore'
@@ -74,6 +73,7 @@ import {
   type FakeKeyringOptions
 } from './fakeKeyring'
 import { getAnswer } from './flight'
+import { migrateHumbleSecrets } from './legacyMigration'
 import { readableSnapshot, withUtc } from './flowHarness'
 import { axiosEncode, storeSearch } from './libraryFixtures'
 
@@ -675,7 +675,13 @@ addSecret({
     'startSidecarHumbleSecretStore logs the keyring-backed receipt line and runs the migration without being awaited; the golden is read after it settles',
   prepare: withPlaintext(true, true),
   script: async (env) => {
-    startSidecarHumbleSecretStore(env.store, migrationDeps(env))
+    // The shipped sidecar boot only logs the receipt line now (the migration is Rust's, 94-21); the
+    // goldens were recorded when it also fired the migration, so the oracle composes the two the way the
+    // old boot did.
+    startSidecarHumbleSecretStore()
+    void migrateHumbleSecrets(env.store, migrationDeps(env)).catch(
+      () => undefined
+    )
     await env.advance(0)
   }
 })
