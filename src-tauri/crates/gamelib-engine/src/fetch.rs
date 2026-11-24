@@ -833,6 +833,9 @@ async fn download_ranged(
 /// five connections; anything else is the single stream (quick 261123-txk).
 pub struct ReqwestFetch {
     client: OnceLock<Result<reqwest::Client, FetchError>>,
+    /// The same client with redirects off, for a request that asks for [`FetchRequest::no_redirects`]
+    /// (reqwest sets the redirect policy per client, not per request).
+    plain_client: OnceLock<Result<reqwest::Client, FetchError>>,
     clock: Arc<dyn Clock>,
 }
 
@@ -845,22 +848,27 @@ impl ReqwestFetch {
     pub fn with_clock(clock: Arc<dyn Clock>) -> ReqwestFetch {
         ReqwestFetch {
             client: OnceLock::new(),
+            plain_client: OnceLock::new(),
             clock,
         }
     }
 
-    fn client(&self) -> Result<&reqwest::Client, FetchError> {
-        self.client
-            .get_or_init(|| {
-                install_crypto_provider();
-                reqwest::Client::builder()
-                    .redirect(reqwest::redirect::Policy::limited(5))
-                    .connect_timeout(CONNECT_TIMEOUT)
-                    .build()
-                    .map_err(classify)
-            })
-            .as_ref()
-            .map_err(|e| *e)
+    fn client(&self, follow_redirects: bool) -> Result<&reqwest::Client, FetchError> {
+        let (slot, policy) = if follow_redirects {
+            (&self.client, reqwest::redirect::Policy::limited(5))
+        } else {
+            (&self.plain_client, reqwest::redirect::Policy::none())
+        };
+        slot.get_or_init(|| {
+            install_crypto_provider();
+            reqwest::Client::builder()
+                .redirect(policy)
+                .connect_timeout(CONNECT_TIMEOUT)
+                .build()
+                .map_err(classify)
+        })
+        .as_ref()
+        .map_err(|e| *e)
     }
 
     fn builder(&self, req: &FetchRequest) -> Result<reqwest::RequestBuilder, FetchError> {
@@ -869,9 +877,14 @@ impl ReqwestFetch {
             Method::Head => reqwest::Method::HEAD,
             Method::Post => reqwest::Method::POST,
         };
-        let mut builder = self.client()?.request(method, req.url.as_str());
+        let mut builder = self
+            .client(req.follow_redirects)?
+            .request(method, req.url.as_str());
         for (name, value) in &req.headers {
             builder = builder.header(name.as_str(), value.as_str());
+        }
+        if let Some(body) = &req.body {
+            builder = builder.body(body.clone());
         }
         Ok(builder)
     }
@@ -901,7 +914,7 @@ impl Fetch for ReqwestFetch {
                 })
                 .collect();
             // A declared length over the cap is refused before a byte of the body is read.
-            if req.method == Method::Get && header_length(response.headers()) > MAX_GET_BODY as u64
+            if req.method != Method::Head && header_length(response.headers()) > MAX_GET_BODY as u64
             {
                 return Err(FetchError::TooLarge);
             }
@@ -1080,6 +1093,8 @@ mod replay {
         method: String,
         url: Url,
         headers: Vec<(String, String)>,
+        /// The recorded request body (a POST's), `None` for a request that carried none.
+        body: Option<Vec<u8>>,
         status: u16,
         response_headers: Vec<(String, String)>,
         response_body: Vec<u8>,
@@ -1152,6 +1167,16 @@ mod replay {
             .ok_or_else(|| format!("exchange {id}: missing {name}"))
     }
 
+    /// The request body a recorded exchange holds: the text the oracle recorded (a JSON body is the text
+    /// that was sent), or another JSON value in its compact form. Absent or `null` is no body.
+    fn body_of(request: &Value) -> Option<Vec<u8>> {
+        match request.get("body")? {
+            Value::Null => None,
+            Value::String(text) => Some(text.as_bytes().to_vec()),
+            other => Some(other.to_string().into_bytes()),
+        }
+    }
+
     fn flag(item: &Value, name: &str) -> bool {
         item.get(name).and_then(Value::as_bool).unwrap_or(false)
     }
@@ -1210,6 +1235,7 @@ mod replay {
                 exchanges.push(Exchange {
                     method,
                     url,
+                    body: body_of(request),
                     headers: request
                         .get("headers")
                         .map(headers_of)
@@ -1318,6 +1344,7 @@ mod replay {
                 free(e)
                     && query_matches(&pairs(&e.url), &wanted)
                     && header(&e.headers, "range") == wanted_range
+                    && e.body == request.body
             };
             let index = st
                 .exchanges
@@ -1523,6 +1550,14 @@ mod replay {
                 ));
             }
         }
+        // A body is pinned byte for byte, and never printed: it can hold an id or a key.
+        if exchange.body != request.body {
+            diffs.push(format!(
+                "body differs (recorded {} byte(s), got {})",
+                exchange.body.as_ref().map_or(0, Vec::len),
+                request.body.as_ref().map_or(0, Vec::len)
+            ));
+        }
         for name in PINNED_HEADERS {
             let (recorded, got) = (
                 header(&exchange.headers, name),
@@ -1629,7 +1664,6 @@ mod tests {
     // ---- POST and no-redirect (88-11) ----
 
     use std::net::SocketAddr;
-    use tokio::io::{AsyncReadExt as _, AsyncWriteExt as _};
     use tokio::net::TcpListener;
 
     /// One request a local server saw: the request line, the lower-cased headers and the body.
