@@ -979,7 +979,8 @@ async function shutdownWine(
   ) {
     // 87-65 (F3): the CrossOver overlay keeps the stored prefix and names its own bottle only here, so Rust's guarded kill
     // (WINEPREFIX = the bottle's directory) ends that bottle's wineserver, not the shared prefix's.
-    await killBottleWineServerWith(
+    // Fixed warning text, no path and no bottle name (84-17); a failed or refused kill never throws out of stop().
+    const killed = await killBottleWineServerWith(
       deps,
       crossoverBottle,
       crossoverWineserver,
@@ -988,7 +989,13 @@ async function shutdownWine(
         CX_BOTTLE: crossoverBottle
       },
       WINESERVER_KILL_TIMEOUT_MS
-    )
+    ).catch(() => false)
+    if (killed !== true) {
+      logWarning(
+        'The CrossOver bottle wineserver kill did not run to an exit',
+        LogPrefix.Backend
+      )
+    }
     return
   }
   if (gameSettings.wineVersion.wineserver) {
