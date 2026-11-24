@@ -3,13 +3,15 @@
  * never throws.
  */
 
-jest.mock('backend/knownFixes', () => ({ readKnownFixes: jest.fn() }))
+jest.mock('backend/launchrust/knownFixTwins', () => ({
+  readKnownFixes: jest.fn()
+}))
 jest.mock('backend/logger', () => ({
   logWarning: jest.fn(),
   LogPrefix: { Steam: 'Steam' }
 }))
 
-import { readKnownFixes } from 'backend/knownFixes'
+import { readKnownFixes } from 'backend/launchrust/knownFixTwins'
 import { logWarning } from 'backend/logger'
 import { createTestAppPaths } from 'backend/testUtils/testAppPaths'
 import { knownFixSaysCeg } from '../drmKnownFix'

@@ -184,12 +184,18 @@ const KNOWN_FIX_SHIM_IMPORTERS: readonly string[] = [
  * Every non-test importer of `launchrust/knownFixTwins.ts` (the check is per file, so every row of that file lists them
  * all): the launcher's `installFixes` and `getKnownFixesEnvVariables` and its env log line, and storeManagerCommon's
  * `withKnownFixEnv` (88-13), and the Steam bridge's known-fix application (the profile and launch-override reads, the
- * env lookup) and the steamclient layer install (the overlay archive reader) (88-14).
+ * env lookup) and the steamclient layer install (the overlay archive reader) (88-14), and the Steam library's
+ * synchronous readers (the DRM and macArch known-fix hints, the overlay launch gate, the shared-redist install)
+ * (88-15).
  */
 const KNOWN_FIX_TWIN_IMPORTERS: readonly string[] = [
   'src/backend/launcher.ts',
   'src/backend/storeManagers/steam/bridge/drm/steamclientLayerInstall.ts',
+  'src/backend/storeManagers/steam/bridge/sharedRedistInstall.ts',
   'src/backend/storeManagers/steam/bridgeKnownFixes.ts',
+  'src/backend/storeManagers/steam/drmKnownFix.ts',
+  'src/backend/storeManagers/steam/gameLaunchOverlay.ts',
+  'src/backend/storeManagers/steam/macArchKnownFix.ts',
   'src/backend/storeManagers/storeManagerCommon/games.ts'
 ]
 /** Every non-test importer of `enginewine/bottles.ts` (the check is per file, so every row of that file lists them all). */

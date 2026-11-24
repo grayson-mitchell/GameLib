@@ -45,7 +45,7 @@ import { classifySharedRedist } from '../sharedRedists'
 import type { InstallScriptEntry } from '../sharedRedists'
 import type { SharedRedistDepot, SharedRedistDownloadResult } from '../../depot'
 import { downloadSharedRedistDepots } from '../../depot'
-import { readKnownFixProfile } from 'backend/knownFixes'
+import { readKnownFixProfile } from 'backend/launchrust/knownFixTwins'
 import { sendGameStatusUpdate } from 'backend/utils'
 import { logWarning } from 'backend/logger'
 import { endPerGameBridgeBottleSession } from '../../bridgeBottleLifecycle'
@@ -61,7 +61,9 @@ jest.mock('backend/logger', () => ({
 }))
 jest.mock('../../depot', () => ({ downloadSharedRedistDepots: jest.fn() }))
 jest.mock('backend/utils', () => ({ sendGameStatusUpdate: jest.fn() }))
-jest.mock('backend/knownFixes', () => ({ readKnownFixProfile: jest.fn() }))
+jest.mock('backend/launchrust/knownFixTwins', () => ({
+  readKnownFixProfile: jest.fn()
+}))
 jest.mock('backend/enginewine/twin', () => ({
   ...jest.requireActual<typeof import('backend/enginewine/twin')>(
     'backend/enginewine/twin'

@@ -5,7 +5,7 @@
 
 import { createTestSteamSession } from 'backend/testUtils/testSteamSession'
 import { createTestAppPaths } from 'backend/testUtils/testAppPaths'
-import type { KnownFixPathsDeps } from 'backend/knownFixes'
+import type { KnownFixPathsDeps } from 'backend/launchrust/knownFixTwins'
 
 const sendFrontendMessage = jest.fn()
 
@@ -16,7 +16,9 @@ jest.mock('backend/logger', () => ({
   LogPrefix: { Steam: 'Steam', Backend: 'Backend' }
 }))
 
-jest.mock('backend/knownFixes', () => ({ readKnownFixes: jest.fn() }))
+jest.mock('backend/launchrust/knownFixTwins', () => ({
+  readKnownFixes: jest.fn()
+}))
 
 const env = { isMac: true, isAppleSiliconMac: true }
 jest.mock('backend/constants/environment', () => ({
@@ -49,7 +51,7 @@ const deps = {
   FrontendMessageDeps &
   KnownFixPathsDeps
 
-import { readKnownFixes } from 'backend/knownFixes'
+import { readKnownFixes } from 'backend/launchrust/knownFixTwins'
 import { logWarning, logInfo } from 'backend/logger'
 import type { SteamStoresDeps } from '../library/installRoot'
 import type { FrontendMessageDeps } from 'backend/host/frontendMessage'

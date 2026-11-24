@@ -72,7 +72,7 @@ import {
 } from 'node:fs/promises'
 import { join, dirname } from 'node:path'
 import type { GameSettings } from 'common/types'
-import { readKnownFixProfile } from 'backend/knownFixes'
+import { readKnownFixProfile } from 'backend/launchrust/knownFixTwins'
 import { sendGameStatusUpdate } from 'backend/utils'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { endPerGameBridgeBottleSession } from '../bridgeBottleLifecycle'

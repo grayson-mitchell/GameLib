@@ -15,7 +15,10 @@ import type { SteamGameInfo } from 'common/types/steam'
  */
 
 import { readdirSync } from 'graceful-fs'
-import { readKnownFixes, type KnownFixPathsDeps } from 'backend/knownFixes'
+import {
+  readKnownFixes,
+  type KnownFixPathsDeps
+} from 'backend/launchrust/knownFixTwins'
 import { isAppleSiliconMac } from 'backend/constants/environment'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 

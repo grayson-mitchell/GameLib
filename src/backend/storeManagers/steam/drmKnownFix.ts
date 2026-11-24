@@ -10,7 +10,10 @@
  * MUST NOT import games.ts or library.ts (import cycle).
  */
 
-import { readKnownFixes, type KnownFixPathsDeps } from 'backend/knownFixes'
+import {
+  readKnownFixes,
+  type KnownFixPathsDeps
+} from 'backend/launchrust/knownFixTwins'
 import { logWarning, LogPrefix } from 'backend/logger'
 
 /** True when the title's known fix says `drm: "ceg"`. Never throws. */

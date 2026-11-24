@@ -38,7 +38,7 @@ import {
   type OverlayStep
 } from './bridge/overlay/overlayNotice'
 import { STEAM_ENGINE_RUNNER } from './engine/steamEngineDeps'
-import { readKnownFixes } from 'backend/knownFixes'
+import { readKnownFixes } from 'backend/launchrust/knownFixTwins'
 import type { OverlayRunnerReady } from './bridge/overlay/overlayRunnerClone'
 import { DRM_END_SESSION_TIMEOUT_MS } from './bridge/drm/drmLaunchSetup'
 import { MAC_STEAM_CLIENT_SUBPATH } from './gameDrmLaunch'

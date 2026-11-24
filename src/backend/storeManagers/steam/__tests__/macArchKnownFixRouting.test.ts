@@ -166,11 +166,13 @@ jest.mock('axios')
 // spied with `jest.spyOn(jest.requireMock('os'), 'cpus')` inside
 // `loadWithHost()` below, without redeclaring the mock.
 
-jest.mock('backend/knownFixes', () => ({ readKnownFixes: jest.fn() }))
+jest.mock('backend/launchrust/knownFixTwins', () => ({
+  readKnownFixes: jest.fn()
+}))
 
 import { existsSync, readdirSync } from 'graceful-fs'
 import { getSteamLibraries } from 'backend/utils'
-import { readKnownFixes } from 'backend/knownFixes'
+import { readKnownFixes } from 'backend/launchrust/knownFixTwins'
 import { downloadSteamDepots } from '../depot'
 import SteamGame from '../games'
 import { checkBottleEligibility } from '../gameEligibility'
