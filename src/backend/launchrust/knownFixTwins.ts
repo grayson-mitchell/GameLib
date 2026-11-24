@@ -299,3 +299,42 @@ export function withKnownFixEnv(
     ]
   }
 }
+
+// 88-14 (RED stubs): the bridge's five twins land in the next commit; these answer nothing, so the vectors fail on
+// their comparisons and not on a missing module.
+export interface KnownFixLocalPathsDeps {
+  paths: Pick<AppPaths, 'bundledFixesPath' | 'localFixesPath'>
+}
+export function readKnownFixProfile(
+  _deps: KnownFixLocalPathsDeps,
+  _appName: string,
+  _runner: Runner
+): Record<string, unknown> | null {
+  return null
+}
+export function readKnownFixLaunchOverridesSync(
+  _deps: KnownFixPathsDeps,
+  _appName: string,
+  _runner: Runner,
+  _installPath: string | undefined
+): { launchArgs: string[]; exeOverride?: string } {
+  return { launchArgs: ['stub'] }
+}
+export function lastEnvOption(
+  _options: Array<{ key: string; value: string }> | undefined,
+  _key: string
+): string | undefined {
+  return 'stub'
+}
+export async function readOverlayTarGz(
+  _archive: Buffer,
+  _expected: ReadonlyMap<string, number>,
+  _max: number
+): Promise<Map<string, Buffer>> {
+  return new Map()
+}
+export function buildOverlayTarGz(
+  _files: ReadonlyArray<{ path: string; data: Buffer }>
+): Buffer {
+  return Buffer.alloc(0)
+}
