@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 88
 current_phase_name: Launch scaffolding and known fixes
 status: executing
-stopped_at: Completed 88-05-PLAN.md
-last_updated: "2026-11-24T20:10:19.862Z"
+stopped_at: Completed 88-06-PLAN.md
+last_updated: "2026-11-24T20:30:02.635Z"
 last_activity: 2026-11-25
 last_activity_desc: Phase 88 execution started
-state_head: 83af688a4ee09be91aabdd09a77b483348c9ebb4
+state_head: 0dc89810b4eee0db10efc53fbf445860ef475b17
 progress:
   total_phases: 25
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 88 (Launch scaffolding and known fixes) — EXECUTING
-Plan: 6 of 17
+Plan: 7 of 17
 Status: Ready to execute
 Last activity: 2026-11-25 — Phase 88 execution started
 Progress: [█████████░] 92%
@@ -486,6 +486,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 88 P03 | 30 min | 2 tasks | 23 files |
 | Phase 88 P04 | 25 min | 3 tasks | 9 files |
 | Phase 88 P05 | 40 min | 2 tasks | 8 files |
+| Phase 88 P06 | 18 min | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -1060,6 +1061,9 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 88]: launchOracle injectProbe spies on function properties (os.release) and replaces others; attachSpawnClass takes spawns carrying a callSite id
 - [Phase 88]: assertCasesCoverTitles also fails a stale not-ported key and tsTestTitles throws on a non-literal title, so the incident census cannot pass silently
 - [Phase 88]: 88-05: cases.json is generated from a TS case builder (written in write mode, compared in compare mode); a wrong-case spelling of an existing file is not recorded because it depends on the volume's case sensitivity; the malformed-JSON parser message is recorded as a token and documented in deltas.json
+- [Phase 88]: 88-06: calls.json is an extra file of the registry slice via an optional extra map on writeOrCompareGolden (files written only when named), so Phase 87 slices keep their file set
+- [Phase 88]: 88-06: compressed buildOverlayTarGz bytes are recorded as asked but depend on the zlib build; tar sha256 and size are recorded beside them, and Rust compares the tar (deltas.json)
+- [Phase 88]: 88-06: the TS hostile-archive install test fails on the ustar magic, not ../x; recorded as found plus a well-formed ../x case; quirks filed as todos (D-20)
 
 ### Pending Todos
 
@@ -1341,8 +1345,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-24T20:10:17.117Z
-Stopped at: Completed 88-05-PLAN.md
+Last session: 2026-11-24T20:29:59.902Z
+Stopped at: Completed 88-06-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
