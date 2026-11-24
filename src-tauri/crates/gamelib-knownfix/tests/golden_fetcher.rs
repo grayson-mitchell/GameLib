@@ -326,6 +326,7 @@ async fn run_case(id: &str, case: &Value) -> (Value, Vec<(u64, String, String)>,
             assert_eq!(FEED_REQUEST_TIMEOUT, Duration::from_millis(10_000));
             assert_eq!(request.headers.len(), 1, "{id}: only the User-Agent");
             assert_eq!(request.headers[0].0, "User-Agent", "{id}");
+            assert!(request.body.is_none() && request.follow_redirects, "{id}");
             requests.push(format!("GET {}", request.url));
         }
         steps.push(json!({

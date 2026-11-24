@@ -876,3 +876,223 @@ fn the_constants_equal_the_shared_schema_source() {
     assert!(client.contains("maxRedirects: 0"));
     assert_eq!(RELAY_TIMEOUT, Duration::from_millis(8000));
 }
+
+/// A Mac context over a fresh fake HOME whose network is `fetch`.
+fn bare_ctx(home: &FakeHome, fetch: Arc<dyn Fetch>) -> (KnownFixCtx, Arc<RecordingLog>) {
+    let root = home.root().to_path_buf();
+    let log = Arc::new(RecordingLog::new());
+    let engine = EngineCtx::new(
+        Arc::new(StoreHost::new()),
+        Arc::new(FixedClock::new(1234)),
+        Platform::Mac,
+        EnginePaths {
+            tools_path: root.join("tools"),
+            user_data: root.join("userData"),
+            app_folder: root.clone(),
+            user_home: root.clone(),
+            temp: root.join("tmp"),
+        },
+        Shutdown::new(),
+    )
+    .with_log(log.clone())
+    .with_fetch(fetch);
+    (
+        KnownFixCtx::new(Arc::new(engine), None, DEFAULT_RELAY, DEFAULT_VERSION),
+        log,
+    )
+}
+
+/// A network that never answers.
+struct Silent;
+
+impl Fetch for Silent {
+    fn get(&self, _req: FetchRequest) -> FetchFuture<'_, Result<FetchResponse, FetchError>> {
+        Box::pin(pending())
+    }
+
+    fn download<'a>(
+        &'a self,
+        _req: FetchRequest,
+        _dest: &'a Path,
+        _progress: &'a (dyn Fn(Progress) + Send + Sync),
+        _cancel: CancellationToken,
+    ) -> FetchFuture<'a, Result<DownloadOutcome, FetchError>> {
+        Box::pin(pending())
+    }
+}
+
+fn macho_fix() -> DetectedFix {
+    DetectedFix {
+        app_id: "220".to_string(),
+        key: ReportKey::MacArch,
+        op: ReportOp::Add,
+        detector: Detector::Macho,
+    }
+}
+
+/// The relay's 8 s bound holds even for a network that ignores the request's own timeout, and the report
+/// is then `retryable`, not recorded and no longer in flight. The clock is paused, so nothing waits.
+#[tokio::test(start_paused = true)]
+async fn an_unanswered_post_is_given_up_after_8_seconds_and_is_retryable() {
+    let home = FakeHome::new("knownfix-report-timeout-");
+    let (ctx, log) = bare_ctx(&home, Arc::new(Silent));
+    let env = CtxReportEnv::new(&ctx);
+    let started = tokio::time::Instant::now();
+    let outcome = run_known_fix_report_with(&ctx, &macho_fix(), true, &env).await;
+    assert_eq!(outcome, ReportOutcome::Retryable);
+    assert_eq!(started.elapsed(), RELAY_TIMEOUT);
+    assert!(ctx.report_in_flight.is_empty());
+    assert_eq!(env.sent("220:macArch:add").unwrap(), None);
+    let lines: Vec<String> = log.lines().into_iter().map(|(_, l)| l).collect();
+    assert_eq!(
+        lines.last().unwrap(),
+        "Known-fix report: send failed for appId 220 macArch add (timeout)"
+    );
+}
+
+/// Shutdown mid-post: the op answers `<op>:shutdown`, the in-flight place is freed by dropping the work,
+/// and the `knownfix` registrant is released so the exit drain is not held.
+#[tokio::test]
+async fn a_shutdown_during_the_post_frees_the_place_and_the_registrant() {
+    let home = FakeHome::new("knownfix-report-shutdown-");
+    let (ctx, _log) = bare_ctx(&home, Arc::new(Silent));
+    let args = json!({"appId": "220", "key": "macArch", "op": "add", "detector": "macho",
+                      "enabled": true});
+    let token = ctx.engine.shutdown.token();
+    let canceller = {
+        let ctx = ctx.clone();
+        tokio::spawn(async move {
+            while !ctx.report_in_flight.holds("220:macArch:add") {
+                tokio::task::yield_now().await;
+            }
+            token.cancel();
+        })
+    };
+    let err = gamelib_knownfix::dispatch("knownfix_report_detected", &[args], &ctx)
+        .await
+        .unwrap_err();
+    canceller.await.unwrap();
+    assert_eq!(err, "knownfix_report_detected:shutdown");
+    assert!(ctx.report_in_flight.is_empty());
+    assert!(ctx
+        .engine
+        .shutdown
+        .drain(Duration::from_millis(50))
+        .is_empty());
+}
+
+/// The op takes one strict object, never echoes what it was given, and the disabled and non-Mac gates
+/// answer without touching the network (`Silent` would hang).
+#[tokio::test]
+async fn the_report_op_decodes_one_strict_object_and_answers_the_outcome_word() {
+    let home = FakeHome::new("knownfix-report-op-");
+    let (ctx, _log) = bare_ctx(&home, Arc::new(Silent));
+    let op = "knownfix_report_detected";
+    let good = json!({"appId": "220", "key": "macArch", "op": "add", "detector": "macho",
+                      "enabled": false});
+    let secret = "SECRET-VALUE-".repeat(30);
+    for bad in [
+        vec![],
+        vec![good.clone(), good.clone()],
+        vec![json!([["220", "macArch", "add", "macho", false]])],
+        vec![json!({"appId": "220", "key": "macArch", "op": "add", "detector": "macho"})],
+        vec![
+            json!({"appId": "220", "key": "macArch", "op": "add", "detector": "macho",
+                    "enabled": "yes"}),
+        ],
+        vec![
+            json!({"appId": "220", "key": "title", "op": "add", "detector": "macho",
+                    "enabled": true}),
+        ],
+        vec![
+            json!({"appId": "220", "key": "macArch", "op": "delete", "detector": "macho",
+                    "enabled": true}),
+        ],
+        vec![
+            json!({"appId": "220", "key": "macArch", "op": "add", "detector": secret,
+                    "enabled": true}),
+        ],
+        vec![
+            json!({"appId": secret, "key": "macArch", "op": "add", "detector": "macho",
+                    "enabled": true}),
+        ],
+        vec![
+            json!({"appId": "220", "key": "macArch", "op": "add", "detector": "macho",
+                    "enabled": true, "extra": secret}),
+        ],
+    ] {
+        let err = gamelib_knownfix::dispatch(op, &bad, &ctx)
+            .await
+            .unwrap_err();
+        assert_eq!(err, format!("{op}:bad-args"), "{bad:?}");
+        assert!(!err.contains("SECRET"), "{err}");
+    }
+    assert_eq!(
+        gamelib_knownfix::dispatch(op, &[good], &ctx).await,
+        Ok(json!("disabled"))
+    );
+    let linux = {
+        let root = home.root().to_path_buf();
+        let engine = EngineCtx::new(
+            Arc::new(StoreHost::new()),
+            Arc::new(FixedClock::new(1)),
+            Platform::Linux,
+            EnginePaths {
+                tools_path: root.join("tools"),
+                user_data: root.join("userData"),
+                app_folder: root.clone(),
+                user_home: root.clone(),
+                temp: root.join("tmp"),
+            },
+            Shutdown::new(),
+        )
+        .with_fetch(Arc::new(Silent));
+        KnownFixCtx::new(Arc::new(engine), None, DEFAULT_RELAY, DEFAULT_VERSION)
+    };
+    let enabled = json!({"appId": "220", "key": "drm", "op": "add", "detector": "ceg",
+                         "enabled": true});
+    assert_eq!(
+        gamelib_knownfix::dispatch(op, &[enabled], &linux).await,
+        Ok(json!("not-mac"))
+    );
+}
+
+/// The remote-fetch op takes one strict object too, and a refused name or a sideload game asks nothing.
+#[tokio::test]
+async fn the_fetch_remote_op_decodes_one_strict_object_and_asks_nothing_for_a_refused_name() {
+    let home = FakeHome::new("knownfix-fetch-op-");
+    let (ctx, log) = bare_ctx(&home, Arc::new(Silent));
+    let op = "knownfix_fetch_remote";
+    let secret = "SECRET-APP-".repeat(40);
+    for bad in [
+        vec![],
+        vec![json!(["1", "gog"])],
+        vec![json!({"appName": "1"})],
+        vec![json!({"appName": "1", "runner": "epic"})],
+        vec![json!({"appName": "", "runner": "gog"})],
+        vec![json!({"appName": secret, "runner": "gog"})],
+        vec![json!({"appName": "1", "runner": "gog", "extra": 1})],
+    ] {
+        let err = gamelib_knownfix::dispatch(op, &bad, &ctx)
+            .await
+            .unwrap_err();
+        assert_eq!(err, format!("{op}:bad-args"), "{bad:?}");
+        assert!(!err.contains("SECRET"), "{err}");
+    }
+    // `Silent` would hang a request: both of these answer without making one.
+    for args in [
+        json!({"appName": "../escape", "runner": "gog"}),
+        json!({"appName": "1", "runner": "sideload"}),
+    ] {
+        assert_eq!(
+            gamelib_knownfix::dispatch(op, &[args], &ctx).await,
+            Ok(Value::Null)
+        );
+    }
+    let lines: Vec<String> = log.lines().into_iter().map(|(_, l)| l).collect();
+    assert_eq!(
+        lines,
+        ["Refusing known-fixes fetch for an unsafe app name"],
+        "the refused name is not echoed"
+    );
+}

@@ -487,9 +487,146 @@ pub async fn run_known_fix_report_with(
     enabled: bool,
     env: &dyn ReportEnv,
 ) -> ReportOutcome {
-    // RED: the report logic is not written yet.
-    let _ = (ctx, fix, enabled, env);
-    ReportOutcome::Error
+    match env.is_mac() {
+        Ok(true) => {}
+        Ok(false) => return ReportOutcome::NotMac,
+        Err(message) => return failed(ctx, &message),
+    }
+    if !enabled {
+        return ReportOutcome::Disabled;
+    }
+
+    let (key, op) = (fix.key, fix.op);
+    let value = key.value();
+    let winning = match env.winning(&fix.app_id) {
+        Ok(winning) => winning,
+        Err(message) => return failed(ctx, &message),
+    };
+    if winning.as_ref().is_some_and(|w| w.layer == FixLayer::Local) {
+        return ReportOutcome::SkippedLocal;
+    }
+    match op {
+        ReportOp::Add => {
+            let known = winning
+                .as_ref()
+                .and_then(|w| w.fix.get(key.as_str()))
+                .and_then(Value::as_str)
+                == Some(value);
+            if known {
+                return ReportOutcome::SkippedKnown;
+            }
+        }
+        ReportOp::Remove => {
+            let is_32 = winning
+                .as_ref()
+                .and_then(|w| w.fix.get("macArch"))
+                .and_then(Value::as_str)
+                == Some("32");
+            if !is_32 {
+                return ReportOutcome::SkippedNot32;
+            }
+        }
+    }
+
+    let sent_key = report_sent_key(&fix.app_id, key, op);
+    match env.sent(&sent_key) {
+        Ok(record) if was_sent(record.as_ref()) => return ReportOutcome::AlreadySent,
+        Ok(_) => {}
+        Err(message) => return failed(ctx, &message),
+    }
+
+    let url = relay_url(ctx);
+    if url.contains(RELAY_URL_PENDING_SENTINEL) {
+        ctx.log_warn("Known-fix report: relay URL is not deployed yet, nothing sent");
+        return ReportOutcome::NoRelay;
+    }
+
+    let version = ctx.app_version.as_str();
+    let candidate = json!({
+        "v": KNOWN_FIX_REPORT_VERSION,
+        "store": "steam",
+        "appId": fix.app_id,
+        "key": key.as_str(),
+        "value": value,
+        "op": op.as_str(),
+        "gamelibVersion": version,
+    });
+    let report = match parse_known_fix_report(&candidate) {
+        Ok(report) => report,
+        Err(error) => {
+            ctx.log_warn(&format!(
+                "Known-fix report: invalid report not sent ({error})"
+            ));
+            return ReportOutcome::Invalid;
+        }
+    };
+    let body = report.body();
+    if body.len() > KNOWN_FIX_REPORT_MAX_BYTES {
+        ctx.log_warn("Known-fix report: invalid report not sent (over the size cap)");
+        return ReportOutcome::Invalid;
+    }
+
+    // One post per (appId, key, op) at a time; the place is freed however this ends.
+    let Some(_claim) = ctx.report_in_flight.claim(&sent_key) else {
+        return ReportOutcome::InFlight;
+    };
+
+    ctx.log_info(&format!(
+        "Known-fix report: sending appId {} {}={} op={} ({}, GameLib {version})",
+        fix.app_id,
+        key.as_str(),
+        value,
+        op.as_str(),
+        fix.detector.as_str(),
+    ));
+
+    let request = FetchRequest::post(url, body)
+        .header("Content-Type", "application/json")
+        .header("User-Agent", &format!("GameLib/{version}"))
+        .timeout(RELAY_TIMEOUT)
+        .no_redirects();
+    let token = ctx.engine.shutdown.token();
+    let sent = tokio::select! {
+        biased;
+        _ = token.cancelled() => Err("aborted".to_string()),
+        done = tokio::time::timeout(RELAY_TIMEOUT, ctx.engine.fetch.get(request)) => match done {
+            Ok(Ok(response)) => Ok(response),
+            Ok(Err(error)) => Err(error.to_string()),
+            Err(_) => Err("timeout".to_string()),
+        },
+    };
+    let response = match sent {
+        Ok(response) => response,
+        Err(reason) => {
+            ctx.log_info(&format!(
+                "Known-fix report: send failed for appId {} {} {} ({reason})",
+                fix.app_id,
+                key.as_str(),
+                op.as_str()
+            ));
+            return ReportOutcome::Retryable;
+        }
+    };
+
+    ctx.log_info(&format!(
+        "Known-fix report: relay answered HTTP {} ({}) for appId {} {} {}",
+        response.status,
+        relay_status_word(&response.body),
+        fix.app_id,
+        key.as_str(),
+        op.as_str()
+    ));
+
+    let status = response.status;
+    let outcome = match status {
+        200..=299 => ReportOutcome::Sent,
+        400..=499 if status != 408 && status != 429 => ReportOutcome::Rejected,
+        _ => return ReportOutcome::Retryable,
+    };
+    match env.record_sent(&sent_key, ctx.engine.clock.now_ms(), status) {
+        Ok(()) => outcome,
+        Err(message) => failed(ctx, &message),
+    }
 }
 
 /// The fire-and-forget entry point for a detector hook (`reportDetectedFix`): the report runs as a task

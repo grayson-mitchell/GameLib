@@ -18,8 +18,10 @@ fn ops_prints_the_op_table_and_exits_zero() {
     for op in [
         "knownfix_apply_profile_registry",
         "knownfix_apply_registry",
+        "knownfix_fetch_remote",
         "knownfix_launch_overrides",
         "knownfix_profile_overlay_env",
+        "knownfix_report_detected",
         "knownfix_resolve_overlay_env",
     ] {
         assert!(names.contains(&op), "{op} is listed: {names:?}");
@@ -228,4 +230,55 @@ fn an_unknown_op_exits_two_over_a_fake_home() {
 fn no_subcommand_is_a_usage_error() {
     let out = cli().output().unwrap();
     assert_eq!(out.status.code(), Some(64));
+}
+
+/// The two network ops over a fake home, in the calls that make no request: a refused name asks nothing,
+/// and a report that is not opted in (or not on a Mac) posts nothing. A bad call exits 2.
+#[test]
+fn the_fetch_and_report_ops_answer_without_a_request_and_refuse_a_bad_call() {
+    let home = FakeHome::new("knownfix-cli-");
+    let user_data = home.root().join("userData");
+    let run = |op: &str, args: serde_json::Value| {
+        cli()
+            .args(["op", op])
+            .arg(args.to_string())
+            .arg("--user-data")
+            .arg(&user_data)
+            .output()
+            .unwrap()
+    };
+    let out = run(
+        "knownfix_fetch_remote",
+        serde_json::json!([{"appName": "../escape", "runner": "gog"}]),
+    );
+    assert_eq!(out.status.code(), Some(0), "{out:?}");
+    assert_eq!(String::from_utf8_lossy(&out.stdout).trim(), "null");
+    assert!(!user_data.join("fixes").exists(), "nothing was written");
+
+    let out = run(
+        "knownfix_report_detected",
+        serde_json::json!([{"appId": "220", "key": "macArch", "op": "add",
+                            "detector": "macho", "enabled": false}]),
+    );
+    assert_eq!(out.status.code(), Some(0), "{out:?}");
+    let answer = String::from_utf8_lossy(&out.stdout).trim().to_string();
+    assert!(
+        answer == "\"disabled\"" || answer == "\"not-mac\"",
+        "{answer}"
+    );
+
+    for (op, args) in [
+        (
+            "knownfix_fetch_remote",
+            serde_json::json!([{"appName": "1"}]),
+        ),
+        (
+            "knownfix_report_detected",
+            serde_json::json!([{"appId": "220", "key": "macArch", "op": "add", "detector": "macho"}]),
+        ),
+    ] {
+        let bad = run(op, args);
+        assert_eq!(bad.status.code(), Some(2));
+        assert!(String::from_utf8_lossy(&bad.stderr).contains(&format!("{op}:bad-args")));
+    }
 }
