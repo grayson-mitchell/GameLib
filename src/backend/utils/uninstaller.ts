@@ -22,7 +22,15 @@ import {
 } from 'backend/safety/knownInstalls'
 import { protectedRootsFor } from 'backend/safety/protectedRoots'
 import { pushRemovalRefusal } from 'backend/safety/refusal'
-import type { SafetyRequest } from 'common/types/safety'
+import {
+  REMOVAL_REASONS,
+  type RemovalReason,
+  type SafetyOutcome,
+  type SafetyRequest
+} from 'common/types/safety'
+import { removeGameBottle } from 'backend/enginewine/bottles'
+import type { GameSettings } from 'common/types'
+import { z } from 'zod'
 import { dropSettingsDoc, settingsDocExists } from 'backend/stores/settingsDocs'
 import { existsSync } from 'graceful-fs'
 import i18next from 'i18next'
@@ -47,10 +55,21 @@ export type UninstallerDeps = Pick<
 } & AppRuntimeSlice<'events'>
 
 /**
- * The Rust guard's request for one game's Wine prefix (D-11, D-14): the prefix is a `prefix` target,
- * the known installs are every OTHER game across every store, and the protected roots come from
- * settings and app paths. The drive_c/pfx shape rule and the default/shared prefix refusals live in
- * gamelib-safety (`not-a-prefix`, `is-protected-root`), not here.
+ * The guard's inputs for one game, the same values on both routes (the stored prefix and the per-game bottle): the
+ * known installs are every OTHER game across every store, and the protected roots come from settings and app paths.
+ */
+function guardInputs(deps: UninstallerDeps, appName: string, runner: Runner) {
+  return {
+    knownInstalls: collectKnownInstalls(deps, { runner, appName }),
+    selfKey: knownInstallKey(runner, appName),
+    protectedRoots: protectedRootsFor(deps)
+  }
+}
+
+/**
+ * The Rust guard's request for one game's Wine prefix (D-11, D-14): the prefix is a `prefix` target.
+ * The drive_c/pfx shape rule and the default/shared prefix refusals live in gamelib-safety
+ * (`not-a-prefix`, `is-protected-root`), not here.
  */
 function prefixRequest(
   deps: UninstallerDeps,
@@ -60,9 +79,22 @@ function prefixRequest(
 ): SafetyRequest {
   return {
     targets: [{ id: 'prefix', path: winePrefix, kind: 'prefix' }],
-    knownInstalls: collectKnownInstalls(deps, { runner, appName }),
-    selfKey: knownInstallKey(runner, appName),
-    protectedRoots: protectedRootsFor(deps)
+    ...guardInputs(deps, appName, runner)
+  }
+}
+
+/** The game's stored settings, or `undefined` when they cannot be read. */
+async function readStoredSettings(
+  deps: UninstallerDeps,
+  appName: string,
+  runner: Runner
+): Promise<GameSettings | undefined> {
+  try {
+    return await deps.libraryManagers[runner].getGame(appName).getSettings()
+  } catch (error) {
+    // No prefix path is known, so there is nothing this call could delete.
+    logError(error, LogPrefix.Backend)
+    return undefined
   }
 }
 
@@ -72,35 +104,138 @@ async function readWinePrefix(
   appName: string,
   runner: Runner
 ): Promise<string | undefined> {
+  const settings = await readStoredSettings(deps, appName, runner)
+  return settings?.winePrefix ? settings.winePrefix : undefined
+}
+
+/** What `engine_bottle_remove_per_game` answers (87-66): the four outcomes, the reason a closed word. */
+const bottleReplySchema = z.discriminatedUnion('outcome', [
+  z.object({ outcome: z.literal('removed') }),
+  z.object({ outcome: z.literal('not-bottle-backed') }),
+  z.object({
+    outcome: z.literal('refused'),
+    reason: z.string(),
+    otherKey: z.string().optional()
+  }),
+  z.object({ outcome: z.literal('failed'), reason: z.string() })
+])
+
+/** How a prefix or bottle removal ended, and which removal notice kind names it. */
+interface PrefixRemoval {
+  kind: 'remove-prefix' | 'remove-bottle'
+  outcome: SafetyOutcome
+  reason?: RemovalReason
+  otherKey?: string
+}
+
+/**
+ * A reason the notice can carry. The crate's bottle op also answers `in-use` and `unsafe-name`, which are not in
+ * the notice's closed vocabulary; they read as `bad-reply` (the same word an unreadable verdict gets).
+ */
+function noticeReason(word: string): RemovalReason {
+  return (REMOVAL_REASONS as readonly string[]).includes(word)
+    ? (word as RemovalReason)
+    : 'bad-reply'
+}
+
+/**
+ * Asks Rust to remove the game's own per-game bottle (87-70, F5). Resolves `'not-bottle-backed'` when the game has
+ * no bottle of its own (nothing was touched; the caller keeps its stored-prefix path), otherwise how the removal
+ * ended. A call that rejects or answers nonsense is `failed`: the bottle's state is unconfirmed, and the uninstall
+ * that already happened is not undone.
+ */
+async function removeOwnBottle(
+  deps: UninstallerDeps,
+  appName: string,
+  runner: Runner,
+  stored: GameSettings
+): Promise<PrefixRemoval | 'not-bottle-backed'> {
+  const failed = (reason: RemovalReason): PrefixRemoval => ({
+    kind: 'remove-bottle',
+    outcome: 'failed',
+    reason
+  })
+  let raw: unknown
   try {
-    const { winePrefix } = await deps.libraryManagers[runner]
-      .getGame(appName)
-      .getSettings()
-    return winePrefix ? winePrefix : undefined
-  } catch (error) {
-    // No prefix path is known, so there is nothing this call could delete.
-    logError(error, LogPrefix.Backend)
-    return undefined
+    raw = await removeGameBottle(deps, {
+      runner,
+      appName,
+      stored,
+      ...guardInputs(deps, appName, runner)
+    })
+  } catch {
+    // Fixed text only: the rejection can carry a path.
+    logWarning(
+      'removePrefix: the per-game bottle removal did not answer',
+      LogPrefix.Backend
+    )
+    return failed('rust-invoke-failed')
+  }
+  const parsed = bottleReplySchema.safeParse(raw)
+  if (!parsed.success) {
+    logWarning(
+      'removePrefix: the per-game bottle removal gave an unreadable answer',
+      LogPrefix.Backend
+    )
+    return failed('bad-reply')
+  }
+  const reply = parsed.data
+  switch (reply.outcome) {
+    case 'not-bottle-backed':
+      return 'not-bottle-backed'
+    case 'removed':
+      logInfo('Removed the game bottle', LogPrefix.Backend)
+      return { kind: 'remove-bottle', outcome: 'removed' }
+    case 'refused':
+      return {
+        kind: 'remove-bottle',
+        outcome: 'refused',
+        reason: noticeReason(reply.reason),
+        ...(reply.otherKey !== undefined ? { otherKey: reply.otherKey } : {})
+      }
+    case 'failed':
+      return failed(noticeReason(reply.reason))
   }
 }
 
 /**
- * Deletes the game's Wine prefix through the Rust guard (D-11). Resolves `undefined` when the game
- * has no prefix configured, otherwise the guard's result: only `outcome: 'removed'` means the
- * prefix is gone (an already-absent prefix reads as removed).
+ * Removes what the game's uninstall leaves of its Wine setup. Resolves `undefined` when there is nothing to remove.
+ *
+ * A game with a per-game bottle of its own (the crate decides, 87-66) has that bottle removed through Rust; every
+ * other game goes on to the stored-prefix removal through the Rust guard (D-11). In that case the shared default
+ * prefix is never deleted: a game that has no prefix of its own points at it, and it holds every such game's data
+ * (the uninstall dialog's rule, enforced here too). Only `outcome: 'removed'` means the thing is gone (an
+ * already-absent prefix reads as removed).
  */
 const removePrefix = async (
   deps: UninstallerDeps,
   appName: string,
   runner: Runner
-): Promise<GuardedRemoval | undefined> => {
-  const winePrefix = await readWinePrefix(deps, appName, runner)
+): Promise<PrefixRemoval | undefined> => {
+  const stored = await readStoredSettings(deps, appName, runner)
+  if (!stored) return undefined
+  const bottle = await removeOwnBottle(deps, appName, runner, stored)
+  if (bottle !== 'not-bottle-backed') return bottle
+  const winePrefix = stored.winePrefix ? stored.winePrefix : undefined
   if (!winePrefix) return undefined
+  if (winePrefix === deps.config.getSettings().winePrefix) {
+    logInfo(
+      'Keeping the shared default Wine prefix: the game has no prefix of its own',
+      LogPrefix.Backend
+    )
+    return undefined
+  }
   logInfo(`Removing prefix ${winePrefix}`, LogPrefix.Backend)
-  return guardedRemoveTree(
+  const removed = await guardedRemoveTree(
     deps,
     prefixRequest(deps, appName, runner, winePrefix)
   )
+  return {
+    kind: 'remove-prefix',
+    outcome: removed.outcome,
+    ...(removed.reason !== undefined ? { reason: removed.reason } : {}),
+    ...(removed.otherKey !== undefined ? { otherKey: removed.otherKey } : {})
+  }
 }
 
 /** What the app-data file deletes need: the guard's transport, the known installs and the roots. */
@@ -321,7 +456,7 @@ export const uninstallGameCallback = async (
       const removed = await removePrefix(deps, appName, runner)
       if (removed && removed.outcome !== 'removed') {
         pushRemovalRefusal(deps, {
-          kind: 'remove-prefix',
+          kind: removed.kind,
           outcome: removed.outcome,
           reason: removed.reason ?? 'bad-reply',
           title,

@@ -46,10 +46,10 @@ import { RUST_ENGINE_BOTTLE_REMOVE_PER_GAME } from 'common/types/sidecarTranspor
  */
 const bottleOp =
   (reply: unknown): RequestRustInvoke =>
-  async (channel) => {
-    if (channel === RUST_ENGINE_BOTTLE_REMOVE_PER_GAME) return reply
-    throw new Error(`unexpected channel ${channel}`)
-  }
+  (channel) =>
+    channel === RUST_ENGINE_BOTTLE_REMOVE_PER_GAME
+      ? Promise.resolve(reply)
+      : Promise.reject(new Error(`unexpected channel ${channel}`))
 const fakeSafetyRustInvoke = (options: FakeSafetyOptions = {}) =>
   fakeSafety({ base: bottleOp({ outcome: 'not-bottle-backed' }), ...options })
 // The managers arrive by deps now: a plain map the tests fill in per case.
@@ -800,15 +800,14 @@ describe('uninstallGameCallback per-game bottle (87-70)', () => {
       .map((a) => String(a))
       .join('\n')
   /** The transport answering the bottle op with `reply` (or rejecting it) and the guard with `yes`. */
-  const transport = (reply: unknown | Error) => {
+  const transport = (reply: unknown) => {
     const fake = fakeSafety({
-      base: async (channel) => {
-        if (channel !== RUST_ENGINE_BOTTLE_REMOVE_PER_GAME) {
-          throw new Error(`unexpected channel ${channel}`)
-        }
-        if (reply instanceof Error) throw reply
-        return reply
-      }
+      base: (channel) =>
+        channel !== RUST_ENGINE_BOTTLE_REMOVE_PER_GAME
+          ? Promise.reject(new Error(`unexpected channel ${channel}`))
+          : reply instanceof Error
+            ? Promise.reject(reply)
+            : Promise.resolve(reply)
     })
     return {
       ...fake,
@@ -906,7 +905,7 @@ describe('uninstallGameCallback per-game bottle (87-70)', () => {
     const lines = (logInfo as jest.Mock).mock.calls
       .flat()
       .map((a) => String(a))
-      .filter((l) => l.includes('shared default prefix'))
+      .filter((l) => l.includes('shared default Wine prefix'))
     expect(lines).toEqual([
       'Keeping the shared default Wine prefix: the game has no prefix of its own'
     ])

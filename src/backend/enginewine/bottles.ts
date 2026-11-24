@@ -1,5 +1,6 @@
 import type { EngineSelection, NonCrossoverEngine } from 'common/types/engine'
 import type { GameSettings } from 'common/types'
+import type { SafetyKnownInstall } from 'common/types/safety'
 import {
   RUST_ENGINE_BOTTLE_CANCEL_CREATE,
   RUST_ENGINE_BOTTLE_CREATE_FALLBACK,
@@ -9,6 +10,7 @@ import {
   RUST_ENGINE_BOTTLE_RECORD_CROSSOVER,
   RUST_ENGINE_BOTTLE_RECORD_PINNED,
   RUST_ENGINE_BOTTLE_REMOVE_CREATED,
+  RUST_ENGINE_BOTTLE_REMOVE_PER_GAME,
   RUST_ENGINE_LEDGER_MARK_RUNNING,
   RUST_ENGINE_LEDGER_MARK_STOPPED,
   RUST_ENGINE_SELECTION_CLEAR
@@ -105,6 +107,36 @@ export async function removeCreatedBottleDir(
   return deps.requestRustInvoke(RUST_ENGINE_BOTTLE_REMOVE_CREATED, [
     { bottleName }
   ])
+}
+
+/**
+ * What `engine_bottle_remove_per_game` is asked (87-66, 87-70): the game's identity and the facts the crate decides
+ * from. The bottle's name is never an argument; Rust computes it from `runner` and `appName` and only acts when
+ * `stored.wineCrossoverBottle` equals it.
+ */
+export interface RemoveGameBottleRequest {
+  runner: string
+  appName: string
+  /** The game's stored settings; only `wineCrossoverBottle` is read. */
+  stored: GameSettings
+  /** Every library entry with an install location; `null` when the list could not be read (the guard then refuses). */
+  knownInstalls: SafetyKnownInstall[] | null
+  /** The key of the game being removed; its own entry is not a sibling. */
+  selfKey: string
+  protectedRoots: string[]
+}
+
+/**
+ * Removes a non-Steam game's own per-game CrossOver bottle, and only that one, behind the safety guard. Resolves
+ * `{outcome: 'removed' | 'not-bottle-backed' | 'refused' | 'failed', reason?, otherKey?}`: `not-bottle-backed` means
+ * nothing was touched and the caller keeps its stored-prefix path. Rejects with Rust's category word when the call
+ * could not be made (an argument the crate refused, the shutdown).
+ */
+export async function removeGameBottle(
+  deps: RustInvokeDeps,
+  request: RemoveGameBottleRequest
+): Promise<unknown> {
+  return deps.requestRustInvoke(RUST_ENGINE_BOTTLE_REMOVE_PER_GAME, [request])
 }
 
 /** A fallback bottle creation: the built-in engine, the global settings its DXVK step builds over, and a cancel id. */

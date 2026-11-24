@@ -658,10 +658,11 @@ describe('noRollbackFlag', () => {
  * shape, wiring); `deletedBy` is held to 88..98 for every row but is not part of the key, because a later plan may move a
  * deleting phase to the latest phase among a row's callers without changing what survives.
  *
- * 77 rows and three wiring helpers. The plan's table named 70; the 87-56a and 87-56b splits added five rows the plan was
+ * 78 rows and three wiring helpers. The plan's table named 70; the 87-56a and 87-56b splits added five rows the plan was
  * written before (`resolveEngineToolSettings`, `resolveNonCrossoverEngine`, `ensureFallbackEngine`, `crossoverBinDirSync`,
  * `parseEngineOverride`), and two rows were created by plans 87-42 (`cancelFallbackBottle`, a bottles shim) and 87-54
- * (`bridgeDeadlines`, the D-24 view over the bridge deadline callbacks) that the plan's table did not list.
+ * (`bridgeDeadlines`, the D-24 view over the bridge deadline callbacks) that the plan's table did not list. Plan 87-70
+ * added the 78th, `removeGameBottle`, on the user's 2026-11-24 gap decision 5.
  */
 type ScheduleShape = (typeof SCHEDULE)[number]['shape']
 
@@ -752,6 +753,9 @@ const EXPECTED_SURVIVORS: readonly Survivor[] = [
     'prepareBottleForEngine',
     'killBottleWineServerWith',
     'removeCreatedBottleDir',
+    // 87-70 (F5): the per-game bottle removal. The user's 2026-11-24 gap decision 5 is the authority that extends the
+    // D-22/D-23/D-24 survivor list by this one row: `utils/uninstaller.ts` `removePrefix` is its only caller.
+    'removeGameBottle',
     'createFallbackBottle',
     'cancelFallbackBottle',
     'reconcileBottleEngineMarker',
@@ -925,13 +929,13 @@ describe('engineWineSurvivors', () => {
       !f.path.startsWith('src/backend/testUtils/')
   )
 
-  it('the table holds 77 rows, three of them naming a wiring helper (anti-vacuity)', () => {
+  it('the table holds 78 rows, three of them naming a wiring helper (anti-vacuity)', () => {
     assertAtOrAboveFloor(
       'EXPECTED_SURVIVORS rows',
       EXPECTED_SURVIVORS.length,
-      77
+      78
     )
-    expect(EXPECTED_SURVIVORS).toHaveLength(77)
+    expect(EXPECTED_SURVIVORS).toHaveLength(78)
     expect(
       EXPECTED_SURVIVORS.filter((r) => r.wiring).map((r) => r.name)
     ).toEqual(['toggleDXVK', 'engineSelectionView', 'armBridgeDeadline'])

@@ -155,7 +155,9 @@ const BOTTLES_SHIM_IMPORTERS: readonly string[] = [
   'src/backend/storeManagers/steam/engine/prepareBottle.ts',
   'src/backend/storeManagers/steam/gameBridgeLaunch.ts',
   // 87-65 (F3): shutdownWine routes a CrossOver bottle overlay's Stop to the bottle's wineserver kill.
-  'src/backend/utils.ts'
+  'src/backend/utils.ts',
+  // 87-70 (F5): removePrefix routes a non-Steam game's own per-game bottle to the crate's removal op.
+  'src/backend/utils/uninstaller.ts'
 ]
 /** Every non-test importer of `enginewine/launch.ts` (the check is per file, so every row of that file lists them all). */
 const LAUNCH_SHIM_IMPORTERS: readonly string[] = [
@@ -363,6 +365,18 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     channel: 'RUST_ENGINE_BOTTLE_REMOVE_CREATED',
     callers: BOTTLES_SHIM_IMPORTERS,
     deletedBy: 96
+  },
+  // 87-70 (F5, the user's 2026-11-24 gap decision 5): the non-Steam uninstall removes a game's own per-game bottle
+  // through the crate op. Its one caller is `utils/uninstaller.ts` `removePrefix`, which serves every non-Steam
+  // runner; no ROADMAP section names that file (Phase 91 ports Epic and Phase 92 GOG, Amazon and sideload, each as
+  // "uninstall a game"), so it goes with the join phase, 98, like the other shims whose callers have no single owner.
+  {
+    name: 'removeGameBottle',
+    file: 'src/backend/enginewine/bottles.ts',
+    shape: 'shim',
+    channel: 'RUST_ENGINE_BOTTLE_REMOVE_PER_GAME',
+    callers: BOTTLES_SHIM_IMPORTERS,
+    deletedBy: 98
   },
   {
     name: 'createFallbackBottle',
