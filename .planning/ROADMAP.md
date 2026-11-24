@@ -662,7 +662,7 @@ Plans:
   3. Wine, CrossOver and Staging downloads, Winetricks and DXVK/DXMT/vkd3d tools install and report progress as before
   4. `wine/`, `tools/` and engine TypeScript and their sidecar registrations are deleted in this phase, except scheduled resolvers listed in the schedule test (D-23)
 
-**Plans:** 63/73 plans executed in 41 waves; planned 2026-11-23, revised the same day so every plan fits the 100k smart-zone budget (executes after Phase 86 closes); 87-56a/b/c added 2026-11-24 for the 87-56 remainder; 87-60..87-70 added 2026-11-24 as gap closure for the 87-59 live gate (F1-F5 and the engine-log gap) in 8 gap waves
+**Plans:** 64/73 plans executed in 41 waves; planned 2026-11-23, revised the same day so every plan fits the 100k smart-zone budget (executes after Phase 86 closes); 87-56a/b/c added 2026-11-24 for the 87-56 remainder; 87-60..87-70 added 2026-11-24 as gap closure for the 87-59 live gate (F1-F5 and the engine-log gap) in 8 gap waves
 
 Plans:
 **Wave 1**
@@ -820,7 +820,7 @@ Plans:
 - [x] 87-60-PLAN.md — Author the re-run gate contract 87-RERUN-1-HUMAN-UAT.md (7 items, before any fix, D-21/D-E) and file the non-gate observations as todos
 
 **Gap wave 2** *(blocked on gap wave 1)*
-- [ ] 87-61-PLAN.md — Wire the shell's EngineLog with redaction (home as ~, no account names, tokens or args lines) into gamelib.log
+- [x] 87-61-PLAN.md — Wire the shell's EngineLog with redaction (home as ~, no account names, tokens or args lines) into gamelib.log
 - [ ] 87-62-PLAN.md — Wine manager: never-installed entries install (parse defaults, F2) and the list follows install and remove (F4)
 - [ ] 87-64-PLAN.md — Winetricks, Run EXE and wine commands act on the game's own CrossOver bottle; a Winetricks failure shows (F3, 56a-1)
 - [ ] 87-65-PLAN.md — Stop ends a non-Steam game on CrossOver through the guarded bottle wineserver kill (F3)
