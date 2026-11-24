@@ -5,8 +5,8 @@ milestone_name: Node Sidecar Retirement
 current_phase: 94
 current_phase_name: Humble Bundle and shortcuts
 status: executing
-stopped_at: Completed 94-18-PLAN.md
-last_updated: "2026-11-24T04:47:14.070Z"
+stopped_at: Completed 94-19-PLAN.md
+last_updated: "2026-11-24T09:30:00.000Z"
 last_activity: 2026-11-24
 last_activity_desc: Phase 94 execution started
 state_head: 7527139cb8710e2bbbdbb86cdeeb744a3af4ebcd
@@ -77,9 +77,9 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 94 (Humble Bundle and shortcuts) — EXECUTING
-Plan: 17 of 32
-Status: Ready to execute (94-18 complete; 94-14 complete except the icon_geometry golden comparison, which is pending the four macOS goldens from 94-07 and is an explicit #[ignore]; 94-07 is open, awaiting those goldens, which need a Mac; 94-10, the live Humble capture, is deferred by the user until after 94-24 and 94-15 left a named pending header check for it; 94-19 next, wave 8; worktree-local STATE, D-02)
-Last activity: 2026-11-24 — Completed 94-18: shortcuts_remove deleting only what GameLib provably wrote on every OS (macOS bundle and Desktop link, Linux .desktop, Windows .lnk, through gamelib-safety, refusing on unknown) replaying the 44 removal goldens with their 19 recorded D-29 deltas, and shortcuts_add with the per-OS file set, partial-failure semantics and the handler's notifications replaying 132 text and 40 Windows add goldens plus a named twin of each of the 25 TS outcome tests; no caller reaches either op before 94-22
+Plan: 18 of 32
+Status: Ready to execute (94-19 complete; 94-14 complete except the icon_geometry golden comparison, which is pending the four macOS goldens from 94-07 and is an explicit #[ignore]; 94-07 is open, awaiting those goldens, which need a Mac; 94-10, the live Humble capture, is deferred by the user until after 94-24 and 94-15 left a named pending header check for it; 94-20 next, wave 8; worktree-local STATE, D-02)
+Last activity: 2026-11-24 — Completed 94-19: all eleven Humble files read and written through the Rust StoreHost by typed views that keep unknown fields, replaying byte for byte against the 94-08 TS state goldens (an unchanged write-back, a forced persist and restore, the sync timestamp, the minute-later library rewrite, the legacy backfill), a corrupt user-state file Unreadable and never reset with the host's aside copy holding the original bytes, and clear_on_disconnect clearing exactly the config, library and sync files against 94-09's disconnect golden; no caller reaches the layer before 94-25
 Progress: [██████████] 100%
 
 ## Native-Install Arc Phase Map (21–25)
@@ -487,6 +487,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 94 P16 | 105min | 3 tasks | 12 files |
 | Phase 94 P17 | 60min | 2 tasks | 6 files |
 | Phase 94 P18 | 170min | 3 tasks | 13 files |
+| Phase 94 P19 | 75min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -1069,6 +1070,9 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 94]: 94-18: the Linux proof also needs a [Desktop Entry] line and both file proofs refuse a file over 64 KiB; a macOS add writes no bundle when the shell executable is unknown; shortcuts_add answers bad-args for an empty title, an empty app name or an unknown runner while add_with_desktop (the golden seam, registry answer injected) accepts the title-less goldens
 - [Phase 94]: 94-18: caller contract for 94-22: the TS resolver resolves gogProductIcon lazily (only when the install has no goggame ico or support icon; an API failure is null, never a failed add) and passes notify true for the renderer and false for the store managers; steam_registration_wanted is the predicate 94-20 joins to the add
 - [Phase 94]: 94-18: shortcuts_dispatch::install takes the AppHandle and loads the locales catalog; ShellShortcutsUi raises the OS notification and the showDialog frame (no ack id); rpc_shortcuts_add and rpc_shortcuts_remove are not created until 94-22 registers the channels
+- [Phase 94]: 94-19: a corrupt Humble file is StoreRead::Unreadable (reads) and WriteError::Unreadable (writes) when the host opened it read-only because it could not read it, which is every user-state and account file: the file is left as it was and the host's aside copy holds the original bytes; the two rebuildable caches (humble_sync, humble_steam_appid) follow the host's cache rule (copy aside, restart empty, writable) because refusing every write would leave the sync timestamp unwritable for good
+- [Phase 94]: 94-19: clear_on_disconnect clears config, library and sync in the TS order with Op::Clear and returns a ClearReport instead of stopping at the first failure, so an unreadable library is reported and kept while the config and sync are still cleared; the seven user-state files and the Steam app-id cache are never cleared (82-STATE-OWNERSHIP rows 69-76), proved by bytes against the 94-09 golden
+- [Phase 94]: 94-19: a Humble record update is {...existing, ...fields} (Entry::with, JS spread semantics) followed by the __timestamp.<key> stamp, so a field this crate does not know keeps its place; the sync state patches over the {syncedAt: null, syncError: none} default; the audit trail refuses an existing non-array value instead of replacing it
 
 ### Pending Todos
 
@@ -1350,8 +1354,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-24T07:30:00.000Z
-Stopped at: Completed 94-18-PLAN.md
+Last session: 2026-11-24T09:30:00.000Z
+Stopped at: Completed 94-19-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
