@@ -9,6 +9,11 @@
 //! shown, the spawns made and the tree it left (a sha256 per file, the store file's over its
 //! path-normalised text) must equal the oracle's golden, and the replay must finish clean: no
 //! unmatched request, no recorded exchange left over.
+//!
+//! POSIX only: the store file's text and the tree hashes carry the fake HOME's path, and a Windows
+//! HOME (`C:\Users\RUNNER~1\...`) is JSON-escaped inside that text, so the path-normalised bytes
+//! the golden pins cannot be reproduced there. The wine manager's own unit tests run on every OS.
+#![cfg(unix)]
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
