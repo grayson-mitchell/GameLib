@@ -73,8 +73,7 @@ import { recordPlaySession } from './runsForMe'
 import { getUmuPath, isUmuSupported } from './utils/compatibility_layers'
 import { copyFile } from 'fs/promises'
 import { addRecentGame } from './info/recentGames'
-import { readKnownFixes } from './knownFixes'
-import { logKnownFixEnv } from './knownFixOverlays'
+import { logKnownFixEnv, readKnownFixes } from './launchrust/knownFixTwins'
 import {
   applyKnownFixProfileRegistry,
   knownFixProfileOverlayEnv

@@ -281,7 +281,7 @@ describeSkipOnWindows(
         const expected = golden(OVERLAY_WITH_ENV)
         expect(expected.result.steps.length).toBeGreaterThanOrEqual(2)
         for (const s of expected.result.steps) {
-          const settings = s.settings as unknown as GameSettings
+          const settings = s.settings as GameSettings
           const before = settings.enviromentOptions?.length ?? null
           const out = withKnownFixEnv(settings, s.env ?? {})
           expect(out).toEqual(s.result)
@@ -297,10 +297,7 @@ describeSkipOnWindows(
         const expected = golden(OVERLAY_WITH_ENV)
         const s = expected.result.steps[1]
         if (!s) throw new Error('the golden has no second step')
-        const out = withKnownFixEnv(
-          s.settings as unknown as GameSettings,
-          s.env ?? {}
-        )
+        const out = withKnownFixEnv(s.settings as GameSettings, s.env ?? {})
         const planted = JSON.parse(JSON.stringify(s.result)) as {
           enviromentOptions: Array<{ key: string; value: string }>
         }

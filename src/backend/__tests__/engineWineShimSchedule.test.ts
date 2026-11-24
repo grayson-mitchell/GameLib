@@ -176,6 +176,15 @@ const KNOWN_FIX_SHIM_IMPORTERS: readonly string[] = [
   'src/backend/storeManagers/legendary/games.ts',
   'src/backend/storeManagers/nile/games.ts'
 ]
+/**
+ * Every non-test importer of `launchrust/knownFixTwins.ts` (the check is per file, so every row of that file lists them
+ * all): the launcher's `installFixes` and `getKnownFixesEnvVariables` and its env log line, and storeManagerCommon's
+ * `withKnownFixEnv` (88-13).
+ */
+const KNOWN_FIX_TWIN_IMPORTERS: readonly string[] = [
+  'src/backend/launcher.ts',
+  'src/backend/storeManagers/storeManagerCommon/games.ts'
+]
 /** Every non-test importer of `enginewine/bottles.ts` (the check is per file, so every row of that file lists them all). */
 const BOTTLES_SHIM_IMPORTERS: readonly string[] = [
   'src/backend/storeManagers/steam/bridgeBottleLifecycle.ts',
@@ -1096,6 +1105,43 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     channel: 'RUST_KNOWNFIX_PROFILE_OVERLAY_ENV',
     callers: KNOWN_FIX_SHIM_IMPORTERS,
     deletedBy: 88.1
+  },
+  // 88-13 (87 D-24): the synchronous known-fix twins, for callers 88 cannot make async. `installFixes` and
+  // `getKnownFixesEnvVariables` read the tier-1 fix inline in the launcher until 88.1/97 move them; the env log line goes
+  // with them. `withKnownFixEnv` builds the settings storeManagerCommon launches with, which the sideload and
+  // store-manager phase (92) replaces. Each is pinned to the Rust `golden/reader` and `golden/overlay_install` answers by
+  // `knownFixTwins.vectors.test.ts`.
+  {
+    name: 'readKnownFixes',
+    file: 'src/backend/launchrust/knownFixTwins.ts',
+    shape: 'twin',
+    vectors: 'src/backend/launchrust/__tests__/knownFixTwins.vectors.test.ts',
+    callers: KNOWN_FIX_TWIN_IMPORTERS,
+    deletedBy: 97
+  },
+  {
+    name: 'formatKnownFixEnvLine',
+    file: 'src/backend/launchrust/knownFixTwins.ts',
+    shape: 'twin',
+    vectors: 'src/backend/launchrust/__tests__/knownFixTwins.vectors.test.ts',
+    callers: KNOWN_FIX_TWIN_IMPORTERS,
+    deletedBy: 97
+  },
+  {
+    name: 'logKnownFixEnv',
+    file: 'src/backend/launchrust/knownFixTwins.ts',
+    shape: 'twin',
+    vectors: 'src/backend/launchrust/__tests__/knownFixTwins.vectors.test.ts',
+    callers: KNOWN_FIX_TWIN_IMPORTERS,
+    deletedBy: 97
+  },
+  {
+    name: 'withKnownFixEnv',
+    file: 'src/backend/launchrust/knownFixTwins.ts',
+    shape: 'twin',
+    vectors: 'src/backend/launchrust/__tests__/knownFixTwins.vectors.test.ts',
+    callers: KNOWN_FIX_TWIN_IMPORTERS,
+    deletedBy: 92
   }
 ]
 

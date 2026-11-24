@@ -10,7 +10,7 @@ import shlex from 'shlex'
 import { showDialogBoxModalAuto } from '../../dialog/dialog'
 import { sendGameStatusUpdate } from 'backend/utils'
 import { isLinux, isMac } from 'backend/constants/environment'
-import { withKnownFixEnv } from 'backend/knownFixOverlays'
+import { withKnownFixEnv } from 'backend/launchrust/knownFixTwins'
 
 import type LogWriter from 'backend/logger/targetWriter'
 import { Game } from '../../../common/types/game_manager'
