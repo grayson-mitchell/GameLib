@@ -1,11 +1,11 @@
 ---
-status: pending
+status: partial
 phase: 87-engine-wine-and-tools
 source: [87-CONTEXT.md D-09 D-11 D-12 D-13 D-20 D-21]
 authored_by: 87-01
 run_by: 87-59
-started:
-updated:
+started: 2026-11-24T02:45:10Z
+updated: 2026-11-24T09:12:00Z
 ---
 
 This is the live macOS gate contract for SVC-02 (engine selection, per-game bottles and the Wine tooling run in the Rust
@@ -100,19 +100,19 @@ and `~` paths only; never a token, a Keychain value, a full `args` line or the l
 
 ### 1. CrossOver first, fallback and re-adopt
 expected: On the signed Phase 87 build a healthy CrossOver launches the gate game with `reason=cx-healthy` and no fallback toast; under `sandbox-exec -f no-crossover.sb` the pinned Wine-Staging engine downloads with progress and the GOG or Epic game, the bridge Steam title and the D3D11 title (Planet Crafter or Avernum 6) run on Staging+DXVK with the fallback toast and badge; with the profile removed CrossOver adopts the bottle again with the save intact; an offline launch is refused with the dialog (network off only for the action); and one launch held past 180 s shows the no-match notice without raising the window.
-result: pending
+result: issue — launches 1 to 3 (`gamelib-launch-1.log`, `gamelib-launch-2*.log`, `gamelib-launch-3*.log`, `notes.log`). MET: (a) healthy CrossOver, no toast, launch 1: `[Backend] Engine: legendary:54f7949350c949c6a2c47f12e7b15636 engine=crossover build=26.3.0.39832 reason=cx-healthy` (Trash Goblin, Epic) and `Engine: 206060 uses engine=crossover ... reason=cx-healthy` (Avernum 6, bridge), no toast or dialog reported; (b) no-CrossOver fallback under `sandbox-exec -f no-crossover.sb`, pin moved aside (steam-engines-before copy tree sha256 `d3c2920a...`, 5768 files): the pinned engine downloaded in about 12 s with a moving percentage (operator), `tools/steam-engines` then held Wine-Staging 11.20 (892904 KB, `.gamelib-pin.json` byte-equal) and the DXVK repack, no `.tmp-*`; Avernum 6 (Steam bridge, D3D11): `Engine: 206060 uses engine=pinned name="Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)" version=11.20 reason=cx-missing`, the notification `notify(): "Avernum 6"` accepted by UserNotifications (missed live, found in Notification Centre: "CrossOver not found..."), badge present, `Avernum 6.exe` under the Staging wineserver with libvulkan loaded; Trash Goblin (Epic, non-Steam): same `reason=cx-missing`, toast seen live, badge "Built-in engine (best-effort) . CrossOver not found", DXVK presenter lines in its launch.log, bottle marker flipped to kind pinned; Schedule I (3205720) ran on the pinned engine as `reason=override` (a stored override, badge "Unsupported engine", bridge READY/HELLO/GINIT ok), an extra, not the automatic fallback; (c) re-adopt, launch 3 without the sandbox: `Engine: legendary:54f7... engine=crossover ... reason=cx-healthy`, CrossOver wineserver, marker back to kind crossover, `saveinfo.dat` sha256 `7eb70257...` identical before and after. NOT MET: (d) offline refusal: with the app's monitor offline (`offline via no-interface` 20:57:57) and the pin absent, Play at 20:58:09 and 20:58:28 gave `engine:3`/`engine:4` dialogs reading "couldn't download its built-in engine (download-failed failed-to-get-headers)", a real download attempt, not the refusal text "(offline)" of `step.rs:513-537`; no `.tmp-*` left; the gate's own warn goes through the unwired engine log so only the dialog text discriminates; (e) 180 s no-raise hold: blocked, Conquest of Elysium 3 is a native Mac install (no bridge bottle, no engine step); no Windows title was named. Stop on a non-Steam CrossOver game (Trash Goblin) did not end it (see Findings F3). The engine log lines the contract named (`[engine-notice]`, `Engine: downloading`) were not scored: deferred engine-log gap.
 
 ### 2. Expired trial routes to Staging
 expected: After the operator's approval is recorded in the result, `backdate.py` on the throwaway bottle (wineserver for that bottle stopped first) under `nolicence.sb` makes the less-than-or-equal-to-7-days notice show, and then an expired trial routes that game to the built-in Staging engine; the operator's real bottles and licence are not edited.
-result: pending
+result: pass — launches 4 and 5 under `sandbox-exec -f nolicence.sb`, on the operator-approved backdate of The Binding of Isaac's bottle `GameLibSteamBridge-113200` (P3 copy restored afterwards). Setup: first `wine --demo-status` wrote `InstallTime=0x60a88a38` (15 days), `backdate.py 0x6155c908` gave "Demo version (5 days remaining)". Launch 4: in-page notice (not a toast, `EngineNotices.tsx:29-38`) read exactly "CrossOver trial: 5 days remaining / When the trial ends, GameLib will switch this game to its built-in engine (best-effort)." with a Buy CrossOver button (no dismiss control); log `Engine: 113200 uses engine=crossover ... reason=cx-healthy`. Launch 5, `0x617d4e38` ("expired 25 days ago"): `SteamGame: appId 113200 engine=pinned name="Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)" version=11.20 reason=cx-expired`, `overlay=env reason=fallback-engine`, `notify()` accepted, toast "CrossOver trial expired..." seen live, badge "...CrossOver trial expired", bottle marker pinned, `Isaac.exe` under the Staging wineserver. Observation, not part of the expected line: Isaac showed a Dock icon but never a window and sat at 0.0% CPU for about 3 minutes until Stop (the same early-exit or no-window pattern as the Isaac relaunch in launch 4 and Trash Goblin on CrossOver in launch 1; unexplained, not compared on 0.12.0). The licence file never changed (304 bytes, 22 Oct, sha256 `e8276f77...`); Isaac's bottle was restored from `bottles-before/` (tree sha256 `f963b4eb...` equal, `InstallTime.orig` gone).
 
 ### 3. Bottles
 expected: A second launch of a game reuses its bottle with no new bottle create in the log, and removing one game's bottle leaves a sibling game's bottle, its `.gamelib-engine.json` and its files byte-identical to the P4 record.
-result: pending
+result: blocked — reuse half passes, removal half cannot be exercised. Reuse (launch 1, Avernum 6): second launch of a game with its P3 bottle: `Engine: 206060 uses engine=crossover ... reason=cx-healthy`, bridge READY, game matched; `.gamelib-engine.json` and `cxbottle.conf` byte-equal to `bottles-before/`, same top-level entries, bottle birth time 2026-10-22T20:07:06 unchanged, 46 bottle directories before and after, no new bottle created. Removal: Test 6's premise is not met. Trash Goblin's Uninstall dialog shows a ToggleSwitch "Remove prefix" that is DISABLED because the game's stored `winePrefix` equals the default prefix (`~/Games/GameLib/Prefixes/shared`, as do Racine and Caravan SandWitch; `UninstallModal/index.tsx:104-107`, disabled style `--icon-disabled` is near-invisible in every theme) and, even enabled, `uninstaller.ts removePrefix` deletes the stored winePrefix, not the game's per-game CrossOver bottle. Both are TS survivors Phase 87 did not touch. Nothing was removed; the sibling (Caravan SandWitch, 1900 files, `.reg` files excluded) stayed byte-equal to `sibling-before.sha` at the close. The Steam bridge uninstall route (which removes a per-game bottle) was not exercised: the contract names two non-Steam games and the operator was not asked to delete a game install. Also: Racine (GOG 1192621307) is installed on disk but `gog_library.json` says `is_installed: False`, so the library hides it; Bloody Hell's install path is broken (`Bloody Hell x`); Soma, Balrum and Conquest of Elysium 3 are native Mac installs with no bottle.
 
 ### 4. Tools and downloads
 expected: A Winetricks verb queued from Wine settings runs with progress lines, DXVK installs and then restores on one bottle and DXMT is provisioned and removed through a wine-manager Wine-Staging-macOS install and uninstall (its `-DXMT` copy appears and disappears), and a wine-manager version download completes with progress and appears in the list.
-result: pending
+result: issue — launches 3 and 4 (`gamelib-launch-3-wine.log`, `-uninstall.log`, `-reinstall.log`, `-winetricks.log`). (a) Wine-manager download: pressing Install on never-installed entries (Wine-11.20, Wine-11.18) did nothing; `gamelib.log` 21:30:20-21:30:40 carries `[ERROR][Frontend] Installing Wine-11.20 failed: IpcValidationError: [GAMELIB_IPC_INVALID_ARGS] Invalid arguments for IPC channel 'installWineVersion' at 0.isInstalled`: the stored entries lack `isInstalled`, `hasUpdate`, `installDir` and Rust `parse_wine_version` (`wine_dispatch.rs:219-300`, the same bounds as the old zod) rejects them; no download, no partial dir, no user-visible message. Workaround that exercised the path: removing the installed Wine-11.21 (disk gone, entry `{isInstalled:false, hasUpdate:false, installDir:''}`) then reinstalling it worked: progress moved for about 10 s, start and finish toasts, `tools/wine/Wine-11.21` 893324 KB, entry installed, no `.tmp`. (b) The Wine Manager list did not refresh after either (first remove click left the row installed until a second click; the install left the row not-installed even after a tab switch) although disk and store were correct; a restart (launch 4) showed Wine-11.21 installed and Wine-11.20 with Install. (c) Winetricks (Trash Goblin, Winetricks tab, "Everything else" search, first `fontsmooth` row = `fontsmooth=bgr`, Apply once, 2-3 s): progress lines streamed to the log panel, but the verb ran against the WRONG prefix and FAILED silently: `WINEPREFIX=~/Games/GameLib/Prefixes/shared` (a new dir with `winetricks.log` = `fontsmooth=bgr`), CrossOver wine without `CX_BOTTLE`, `WINEARCH=win32`, then `regedit: The file 'C:\windows\Temp\_fontsmooth=bgr\fontsmooth.reg' was not found`; the game's own bottle `user.reg` FontSmoothing keys were identical to the P3 copy; no failure banner (the owed 56a-1 check FAILS). The stray directory was removed with the operator's approval. (d) DXVK install and restore: blocked, the per-game toggle is hidden for bottle-backed games by design (`GamesSettings/index.tsx:276`, `AutoDXVK.tsx`); DXVK itself was installed by the engine into fallback bottles (libvulkan loaded, DXVK presenter log). (e) DXMT: blocked, `Wine-11.21`'s `winemac.so` has 0 `macdrv` exports (no `_macdrv_functions`, no `macdrv_view_*_metal_*`), so no `-DXMT` copy can be made, as the contract's Test 6 anticipated; the skip log line is unreadable (unwired engine log).
 
 ## Run order
 
@@ -135,6 +135,81 @@ the 86 build. Then install the signed Phase 87 build over it (same path, `/Appli
 
 The restore step for each item is the P3 copy of what it touched, taken with the app closed (P2 first), and the operator
 decides whether to restore.
+
+## Run record
+
+Run by plan 87-59 with the operator on 2026-11-24, 02:45Z to 09:10Z (local UTC+13, `gamelib.log` writes the local clock). `$S` is
+`gamelib-gate-87-2026-11-24T024510Z` under the session scratchpad in `/private/tmp` (P1; under the scratchpad like the 86 gate, not
+`/tmp`). The transcript is `$S/notes.log` (137 lines); logs are archived per launch.
+
+- **Build:** the signed Phase 87 build `v0.13.0` from `release/v0.13` at `8a0096bae` (main `65b47bfa1` plus the version bump), run
+  `45314401170`, installed over the signed Phase 86 build (`/Applications/GameLib.app` was 0.12.0, CDHash `06c8dcf0...`); the 87 app is
+  CDHash `18d7ea76c1f0758325b0976c643496d28c3b861d`, designated requirement byte-identical (sha256 `68d712d0...`), notarized, stapled
+  (`87-VALIDATION.md` "## Signed builds (D-12)"). `/Applications/GameLib.app` is left on **0.13.0**; the 0.12.0 app is kept in `$S`.
+- **P5 as run:** the operator named Soma (Epic), Schedule I (bridge), Avernum 6 (D3D11), Balrum and Caravan SandWitch (non-Steam pair), Isaac (throwaway
+  source) and Conquest of Elysium 3 (180 s hold). Soma, Balrum and Conquest of Elysium 3 are native Mac installs with no bottle or engine step, so the
+  runs used Trash Goblin (Epic), Avernum 6 and Schedule I (bridge) and Isaac's own bottle as the throwaway (operator-approved, restored from its P3 copy).
+- **P3/P4:** `profile-before/` (5.6G, 32507 files), `bottles-before/` for seven bottles (Racine, Bloody Hell, Trash Goblin, Caravan SandWitch, Schedule I,
+  Avernum 6, Isaac), `baseline.txt`, `sibling-before.sha` (Caravan SandWitch, 1900 files), the pin copy `steam-engines-before/` (tree sha256
+  `d3c2920a...`), the 86 session logs as `preexisting-gamelib.log*`.
+- **Launches:** 1 plain (item 3 reuse, healthy CrossOver); 2 under `no-crossover.sb` (offline refusal, download, three fallback runs); 3 plain
+  (re-adopt, then items 3 and 4); 4 under `nolicence.sb` at 5 days (item 2 notice, Isaac relaunch failure); 5 under `nolicence.sb`, expired (item 2 routing).
+  Launches 2, 4 and 5 were started by the runner with `sandbox-exec` (one instance each, pids in `shell-pid-N.txt`); every quit was clean (about 1 s,
+  `exit finished in 51 ms`).
+- **Operator decisions:** engine-log gap scored on amended evidence (option A); pin moved aside and restored; item 2 backdate approved; the stray
+  `Prefixes/shared` deleted.
+
+## Findings and observations
+
+Not fixed here (D-06): fixes go through `/gsd-plan-phase 87 --gaps`. Evidence is in `$S/notes.log` and the archived logs named in each result.
+
+**Findings against the plan's items (for the verifier and the gap plan)**
+
+- **F1 item 1, offline refusal did not fire.** Monitor offline for 12 s and 31 s before Play, pin absent, CrossOver missing: a real download was attempted
+  (dialog text "(download-failed failed-to-get-headers)", not "(offline)"). The static inputs of `step.rs:514-537` look right; root cause not
+  determined; the gate's warn line is unlogged.
+- **F2 item 4, wine-manager install rejected** for never-installed entries (`IpcValidationError ... at 0.isInstalled`, `wine_dispatch.rs:219-300`).
+  The old zod also required those keys, so likely pre-existing; not run on 0.12.0.
+- **F3 item 4 / owed 56a-1, Winetricks acts on the wrong prefix and fails silently** (stored `Prefixes/shared`, no `CX_BOTTLE`, `regedit ... fontsmooth.reg not found`, no failure shown).
+  Related, same class: **Stop on a non-Steam CrossOver game does not end it** (legendary `stop()` kills the tracked child, then `shutdownWine` runs
+  `wineserver -k` with the stored `winePrefix`; the CrossOver overlay keeps the stored prefix; `utils.ts:964`, `launch/settings.rs`). Stop worked on Staging and on every Steam bridge title.
+- **F4 item 4, Wine Manager list stays stale after a Rust install or remove** (a restart shows the right state; the push or snapshot path is the suspect, `store_native.rs` `install_renderer_push`).
+- **F5 item 3, no UI route removes a non-Steam per-game bottle** ("Remove prefix" is disabled for the default prefix and targets the stored prefix, not the bottle).
+
+**Non-gate observations (todo list)**
+
+- Disabled "Remove prefix" toggle and its text are very low contrast in every theme (seen in the dark Midnight Mirage theme).
+- Game page opened from Downloads: the back button returns to Downloads with no obvious way to the Library (recovered through the app-level tabs).
+- On Stop of a Steam bridge title: `[ERROR][Backend] Aborting not possible. Could not find a matching abort controller for 206060` (`aborthandler.ts:44`).
+- Isaac relaunch in one session exited about 1 s after the wine command four times (`launcher exited before any game process matched`) while CrossOver's own `wine cmd /c` in the same bottle worked; Trash Goblin exited about 1 s on CrossOver in launch 1 and ran on Staging and later on CrossOver; Isaac on Staging after an expired trial showed no window. Possibly one pattern; unexplained; 0.12.0 not compared.
+- The Racine library entry shows not installed although `gog_store/installed.json` lists it installed; Bloody Hell's install path points at a folder that does not exist.
+- Item 2's "Buy CrossOver" notice button is not logged; the trial notice has no dismiss control (the contract text implied a dismiss); the two dismissable notices were already dismissed in the notices store, so owed 56c-3 (dismissal from Rust alone) was **not run**.
+- Owed 56b-1 (stop clears the selection) is not observable live (no log, badge is independent of the live selection): **not run**. Owed 56b-2 (DRM-mode restore) and 56b-3 (CrossOver only under `~/Applications`): **not run**. 56c-1 (cold start, prompt quit): done, `exit finished in 51 ms` on every launch.
+
+**Deferred gap (operator decision A): the shell wires no `EngineLog`.** `build_ctx` (`engine_dispatch.rs`) has no `with_log`, so every line the engine and wine crates write through
+`ctx.log` reaches no log (`[engine-notice]`, `Engine: downloading/verifying/extracting`, the launch-deadline fired and notice lines, the offline gate's warn, the DXMT skip line). The `engine=... reason=...`
+lines do arrive (the TS caller writes the reply's `logLines`). A missing engine line is not a finding. Owner: a gap plan that decides what an engine line may carry
+into the uploaded `gamelib.log` (the open privacy decision recorded in 87-48 to 87-56).
+
+## Closing inventory
+
+Taken 2026-11-24 after the last quit (P2 clean: no GameLib, reaper, sidecar or wineserver process).
+
+- **Restored and verified:** Isaac's bottle `GameLibSteamBridge-113200` from `bottles-before/` (tree sha256 `f963b4eb1ded87e4...` equal on both sides; `InstallTime.orig` gone; the bottle as it was left is kept in `$S/isaac-bottle-as-left`). The original pin directories `wine-staging-11.20` and `dxvk-macOS-v1.10.3-20230507-repack` put back from `$S/steam-engines-aside` (5768 files, 911464 KB, tree sha256 `d3c2920a...` equal to `steam-engines-before/`); the fresh clean download (5279 files, 884800 KB) is kept in `$S/steam-engines-redownloaded`.
+- **Unchanged:** CrossOver licence (304 bytes, 22 Oct 19:57, sha256 `e8276f77...`); `steam_engine_notices.json` (sha256 `2b49222d...`); every `wine-downloader-info.json` release entry (32, parsed equal to the P3 copy); Caravan SandWitch's bottle (`sibling-before.sha` byte-equal, marker equal); Racine, Bloody Hell and Schedule I markers equal.
+- **Left changed, the operator's to restore from `bottles-before/` if wanted (restoring would also revert in-game saves):** Avernum 6's bottle `GameLibSteamBridge-206060` (marker kind pinned, switched in place to the built-in engine and not yet re-adopted; the next CrossOver launch re-adopts it, as Trash Goblin's did); Trash Goblin's bottle (marker is crossover again, with a `"version":1` field added, its save `saveinfo.dat` sha256 `7eb70257...` unchanged); `tools/wine/Wine-11.21` was removed and reinstalled (same entry). Trash Goblin was installed during the run (1.8 GB).
+- **Created and removed:** `~/Games/GameLib/Prefixes/shared` (4 KB Winetricks leftover), deleted with the operator's approval; `Bloody Hell` in the same folder was not touched.
+- **Installed:** `/Applications/GameLib.app` is the signed 0.13.0 build. `release/v0.13` stays on origin and the draft `GameLib v0.13.0` stays a draft; the `v0.10.0`, `v0.11.0` and `v0.12.0` drafts are untouched; the scratch worktree is removed.
+- **Captures:** `$S` holds 69 entries, 12G (profile and bottle copies, per-launch logs, `notes.log`), mode 0700, never committed; delete it once Phase 87 is verified.
+
+## Summary
+
+total: 4
+passed: 1
+issues: 2
+pending: 0
+skipped: 0
+blocked: 1
 
 ## Evidence capture
 
