@@ -35,8 +35,13 @@ url = "2"
 percent-encoding = "2"
 # The Humble page and key-text patterns: every pattern spells its JS semantics out (`.`, `\s`, `\d`), so
 # no Unicode table feature is needed (and a stray `\s` or `\d` fails to compile rather than quietly
-# matching the Rust set; the gamelib-info rule). The version the lockfile already holds.
-regex = { version = "1", default-features = false, features = ["std", "perf"] }
+# matching the Rust set; the gamelib-info rule). The version the lockfile already holds. `unicode-gencat`
+# (and nothing else) is on for the Steam app-id resolver, whose JS patterns are `\p{M}`, `\p{L}` and
+# `\p{N}` over the `u` flag; it adds no `\s`, `\d` or `\w`, so a stray shorthand class still fails to compile.
+regex = { version = "1", default-features = false, features = ["std", "perf", "unicode-gencat"] }
+# NFKD for the resolver's title match (`String.prototype.normalize('NFKD')`). Already in the lockfile and in use by
+# gamelib-info and gamelib-safety; no new package.
+unicode-normalization = "0.1"
 # Fixed-offset civil time only (order dates, the sync timestamp): no tz database is read.
 jiff = { version = "0.2", default-features = false, features = ["std"] }
 
@@ -48,6 +53,8 @@ testing = []
 gamelib-humble = { path = ".", features = ["testing"] }
 gamelib-testutil = { path = "../gamelib-testutil" }
 tempfile = "3"
+# `start_paused` for the resolver's 350 ms gaps: a paused clock makes the sleeps instant and countable.
+tokio = { version = "1", features = ["test-util"] }
 
 [lints.clippy]
 dbg_macro = "deny"

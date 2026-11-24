@@ -26,8 +26,10 @@ use std::path::Path;
 
 use gamelib_core::clock::SystemClock;
 use gamelib_core::emitter::FrontendEmitter;
-use gamelib_humble::ctx::{HumbleCtx, HumbleLog, HumbleUi, Platform};
+use gamelib_humble::ctx::{HostZone, HumbleCtx, HumbleLog, HumbleUi, Platform};
+use gamelib_humble::http::ReqwestHttp;
 use gamelib_i18n::Catalog;
+use gamelib_log::TzOffset;
 use gamelib_store::host::StoreHost;
 
 /// The one context, set once by [`install`].
@@ -131,6 +133,20 @@ impl HumbleUi for ShellHumbleUi {
     }
 }
 
+/// The host's time zone, read from the system at the instant asked (D-94-15): the crate allows
+/// fixed-offset civil time only, so the shell answers "what offset applies at this instant" through the
+/// same `jiff` system-zone lookup the log writer stamps its lines with, and the crate turns the answer
+/// into a `LocalZone`. A host without daylight saving always answers its one offset.
+struct ShellHostZone;
+
+impl HostZone for ShellHostZone {
+    fn offset_east_secs_at(&self, utc_ms: i64) -> i32 {
+        // `SystemTz` takes an unsigned instant and answers minutes; an instant before 1970 reads as
+        // 1970 (the classifier's dates are years away from it).
+        gamelib_log::SystemTz.offset_minutes(u64::try_from(utc_ms).unwrap_or(0)) * 60
+    }
+}
+
 /// The catalog notice text is rendered through, loaded from `locales_dir` in `language` (a shipped
 /// code or BCP-47 tag; `en` when `None`). It never fails: a missing or malformed file leaves the
 /// catalog empty and every notice renders its default text. Read once at install, so a language
@@ -155,9 +171,14 @@ pub(crate) fn build_ctx(
         Arc::new(SystemClock),
         platform,
         shutdown,
+        // Every Humble and Steam-store request: no redirect on a Humble one (Pitfall 5). Building it
+        // makes no request and no client; the clients are built on first use, after the rustls
+        // provider the shell installs at the top of `main()`.
+        Arc::new(ReqwestHttp::new()),
     )
     .with_emitter(emitter)
     .with_log(log)
+    .with_zone(Arc::new(ShellHostZone))
 }
 
 /// Builds the one context and stores it. Called from `run_setup` after the store host opened and
@@ -386,6 +407,47 @@ mod tests {
         assert!(emitter.0.lock().unwrap().is_empty());
         assert!(log.0.lock().unwrap().is_empty());
         assert!(std::fs::read_dir(home.root()).unwrap().next().is_none());
+    }
+
+    /// D-94-15: the context carries the real HTTP client (no request is made by building it, a request
+    /// to a closed loopback port is a transport error with no URL in it) and the host zone, which
+    /// answers the offset the system applies at the instant asked.
+    #[test]
+    fn the_context_carries_the_http_client_and_the_host_zone() {
+        let home = FakeHome::new("humble-http-zone-");
+        let ctx = build_ctx(
+            Arc::new(StoreHost::new()),
+            home.root(),
+            Platform::Linux,
+            Arc::new(RecordingEmitter::default()),
+            Arc::new(RecordingLog::default()),
+            Shutdown::new(),
+        );
+        // The offset at an instant is what the log writer's lookup says, whole minutes, within a day.
+        for instant in [0_i64, 1_782_864_000_000, 1_795_521_600_000] {
+            let zone = ctx.local_zone_at(instant);
+            let minutes = gamelib_log::SystemTz.offset_minutes(instant as u64);
+            assert_eq!(
+                zone,
+                gamelib_humble::js_date::LocalZone::from_east_secs(minutes * 60)
+            );
+            assert!(minutes.abs() <= 14 * 60);
+        }
+        // A request that cannot connect is an `HttpError` that names neither the URL nor its query.
+        let port = {
+            let probe = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+            probe.local_addr().unwrap().port()
+        };
+        let request = gamelib_humble::http::Request::get(
+            format!("http://127.0.0.1:{port}/api/v1/order/GKSECRET?key=SECRET-KEY"),
+            std::time::Duration::from_secs(5),
+        );
+        let error = tauri::async_runtime::block_on(ctx.http.send(request)).unwrap_err();
+        let text = error.to_string();
+        assert!(
+            !text.contains("GKSECRET") && !text.contains("SECRET-KEY"),
+            "{text}"
+        );
     }
 
     /// Every `(title, body)` and `(channel, args)` a [`ShellHumbleUi`] was asked for.

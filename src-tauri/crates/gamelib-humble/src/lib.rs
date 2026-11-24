@@ -8,8 +8,10 @@
 //!
 //! This crate depends on neither `gamelib-shortcuts` nor `tauri`; `cargo tree` proves it (94-02).
 
+pub mod app_id_resolver;
 pub mod classify;
 pub mod ctx;
+pub mod http;
 pub mod js_date;
 pub mod js_value;
 pub mod stores;
@@ -206,6 +208,7 @@ mod tests {
             Arc::new(SystemClock),
             ctx::Platform::Linux,
             shutdown,
+            Arc::new(http::NoHttp),
         )
     }
 

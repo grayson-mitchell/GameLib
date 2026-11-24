@@ -16,6 +16,7 @@ use gamelib_core::clock::SystemClock;
 use gamelib_core::shutdown::Shutdown;
 use gamelib_humble::ctx::{HumbleCtx, Platform};
 use gamelib_humble::dispatch;
+use gamelib_humble::http::NoHttp;
 use gamelib_store::host::StoreHost;
 use gamelib_testutil::FakeHome;
 use serde::Deserialize;
@@ -77,6 +78,7 @@ fn ctx_over(home: &FakeHome) -> HumbleCtx {
         Arc::new(SystemClock),
         Platform::Linux,
         Shutdown::new(),
+        Arc::new(NoHttp),
     )
 }
 

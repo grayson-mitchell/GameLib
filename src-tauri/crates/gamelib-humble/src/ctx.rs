@@ -11,12 +11,35 @@ use gamelib_i18n::Catalog;
 use gamelib_store::host::StoreHost;
 use serde_json::Value;
 
+use crate::http::Http;
+use crate::js_date::LocalZone;
+
 /// The platform the app runs on, as the shell reports it (the crate never asks the OS).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Platform {
     Mac,
     Linux,
     Windows,
+}
+
+/// The host's local time zone, as the shell reads it: the UTC offset in force at an instant. The crate
+/// allows fixed-offset civil time only (no tz database), so a zone arrives as an offset that
+/// [`HumbleCtx::local_zone_at`] turns into a [`LocalZone`]. A host with daylight saving gives a different
+/// offset in summer and winter, which is why this asks for an instant and not for "the" offset.
+pub trait HostZone: Send + Sync + 'static {
+    /// Seconds east of UTC that apply at `utc_ms` (milliseconds since the epoch).
+    fn offset_east_secs_at(&self, utc_ms: i64) -> i32;
+}
+
+/// The zone a context gets until the shell's is wired in: UTC, whatever the host. Also what a golden
+/// replay uses, since the recorded cases carry their zone themselves.
+#[derive(Debug, Default, Clone, Copy)]
+pub struct UtcZone;
+
+impl HostZone for UtcZone {
+    fn offset_east_secs_at(&self, _utc_ms: i64) -> i32 {
+        0
+    }
 }
 
 /// The emitter a context gets until the shell's is wired in: the push goes nowhere.
@@ -70,6 +93,11 @@ pub struct HumbleCtx {
     pub ui: Option<Arc<dyn HumbleUi>>,
     /// The i18n catalog notice text is rendered through; `None` renders each notice's default text.
     pub catalog: Option<Arc<Catalog>>,
+    /// Every HTTP request this crate makes (Humble and the Steam store search). The shell passes
+    /// `ReqwestHttp`; a test passes a `Replay` pinned to the TypeScript's recorded requests.
+    pub http: Arc<dyn Http>,
+    /// The host's time zone: what the classifier reads a zone-less or date-only expiry in.
+    pub zone: Arc<dyn HostZone>,
 }
 
 impl HumbleCtx {
@@ -79,6 +107,7 @@ impl HumbleCtx {
         clock: Arc<dyn Clock>,
         platform: Platform,
         shutdown: Shutdown,
+        http: Arc<dyn Http>,
     ) -> HumbleCtx {
         HumbleCtx {
             host,
@@ -90,7 +119,22 @@ impl HumbleCtx {
             log: None,
             ui: None,
             catalog: None,
+            http,
+            zone: Arc::new(UtcZone),
         }
+    }
+
+    /// The host's zone.
+    pub fn with_zone(mut self, zone: Arc<dyn HostZone>) -> HumbleCtx {
+        self.zone = zone;
+        self
+    }
+
+    /// The host zone as the fixed offset the classifier takes, for dates read around `utc_ms`. The
+    /// offset is the one in force AT that instant, so a caller passes the instant the date belongs
+    /// to when it knows it (the order's own date) and "now" when it does not.
+    pub fn local_zone_at(&self, utc_ms: i64) -> LocalZone {
+        LocalZone::from_east_secs(self.zone.offset_east_secs_at(utc_ms))
     }
 
     /// The emitter the shell pushes through.
@@ -142,6 +186,7 @@ impl HumbleCtx {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::http::NoHttp;
     use gamelib_core::clock::SystemClock;
     use std::sync::Mutex;
 
@@ -186,6 +231,7 @@ mod tests {
             Arc::new(SystemClock),
             Platform::Linux,
             Shutdown::new(),
+            Arc::new(NoHttp),
         )
     }
 
@@ -254,5 +300,36 @@ mod tests {
             &params,
         );
         assert_eq!(text, "Hello Ada");
+    }
+
+    /// A zone with daylight saving: +13:00 from September, +12:00 from April (the southern shape).
+    struct SouthernZone;
+
+    impl HostZone for SouthernZone {
+        fn offset_east_secs_at(&self, utc_ms: i64) -> i32 {
+            // 2026-04-05T00:00Z .. 2026-09-27T00:00Z is "winter".
+            if (1_775_347_200_000..1_790_467_200_000).contains(&utc_ms) {
+                12 * 3600
+            } else {
+                13 * 3600
+            }
+        }
+    }
+
+    #[test]
+    fn the_default_zone_is_utc_and_a_shell_zone_answers_the_offset_at_the_instant_asked() {
+        let utc = base(PathBuf::new());
+        assert_eq!(utc.local_zone_at(1_795_521_600_000), LocalZone::UTC);
+
+        let ctx = base(PathBuf::new()).with_zone(Arc::new(SouthernZone));
+        // 2026-07-01 is winter, 2026-12-01 is summer: one zone object, two offsets.
+        assert_eq!(
+            ctx.local_zone_at(1_782_864_000_000),
+            LocalZone::from_east_secs(12 * 3600)
+        );
+        assert_eq!(
+            ctx.local_zone_at(1_795_521_600_000),
+            LocalZone::from_east_secs(13 * 3600)
+        );
     }
 }
