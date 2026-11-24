@@ -506,7 +506,8 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     // bridge-deadline ops.
     // Phase 87 plan 55: 183 -> 185, engine_run_tool and engine_cancel.
     // Phase 87 plan 56a: 185 -> 188, engine_resolve_tool_settings, engine_non_crossover_engine and engine_fallback_ensure.
-    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(188)
+    // Phase 87 plan 70: 188 -> 189, engine_bottle_remove_per_game.
+    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(189)
     expect(router).not.toContain('_ =>')
   })
 
@@ -1032,7 +1033,10 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       'engine_non_crossover_engine',
       // Phase 87 plan 56a: the first-need pinned-engine download (`enginewine/fallback.ts` shim). PROVEN: `engine_dispatch::tests`
       // drives the arm's decode and not-ready.
-      'engine_fallback_ensure'
+      'engine_fallback_ensure',
+      // Phase 87 plan 70: the per-game bottle removal (`enginewine/bottles.ts` removeGameBottle shim). PROVEN:
+      // `engine_dispatch::tests` drives the arm on a FakeHome context (removed, sibling intact).
+      'engine_bottle_remove_per_game'
     ]
     const newArms = armNames.filter(
       (name) => name && !preExistingArms.includes(name)
@@ -5020,6 +5024,8 @@ describe('tauriShellSource helper scope', () => {
         'assertRepoRoot only checks main.rs EXISTS, it never reads it',
       'meta/__tests__/captureShellScrollback.test.ts':
         'an exists() mock for assertRepoRoot, not a read',
+      'src/backend/__tests__/shellLogCategoryOnly.test.ts':
+        "names main.rs only to assert shell_log_at's definition there is not counted as a call (87-61), never reads it",
       'meta/__tests__/gamelibSteamcmCli.test.ts':
         "reads the gamelib-steamcm-cli crate's own src/main.rs, not the Tauri shell's"
     }
