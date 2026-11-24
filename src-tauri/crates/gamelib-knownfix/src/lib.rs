@@ -16,6 +16,7 @@ pub mod ctx;
 pub mod jsvalue;
 pub mod launch;
 pub mod reader;
+pub mod registry;
 pub mod types;
 
 /// The cancel token a long op takes, re-exported so the shell, which owns the renderer's cancel, needs

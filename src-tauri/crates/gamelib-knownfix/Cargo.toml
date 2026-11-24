@@ -44,6 +44,8 @@ testing = ["gamelib-engine/testing", "gamelib-wine/testing"]
 gamelib-knownfix = { path = ".", features = ["testing"] }
 gamelib-testutil = { path = "../gamelib-testutil" }
 tempfile = "3"
+# The paused clock the 15 s `reg add` bound is replayed on (already locked: gamelib-wine and gamelib-engine use it).
+tokio = { version = "1", features = ["test-util"] }
 
 [lints.clippy]
 dbg_macro = "deny"
