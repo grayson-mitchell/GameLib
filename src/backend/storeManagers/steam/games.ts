@@ -16,7 +16,7 @@ import type LogWriter from 'backend/logger/targetWriter'
 import {
   addShortcuts as addShortcutsUtil,
   removeShortcuts as removeShortcutsUtil
-} from '../../shortcuts/shortcuts/shortcuts'
+} from 'backend/humbleshortcuts/shortcuts'
 import type { ManagerDeps } from 'backend/services/types'
 import { depotSignalCaptured } from './metadataCapture'
 import { fetchMetadataIfNeeded } from './gameMetadata'
@@ -361,11 +361,11 @@ export default class SteamGame implements Game {
    * that routing.
    */
   async addShortcuts(fromMenu?: boolean): Promise<void> {
-    return addShortcutsUtil(this.deps, this, fromMenu)
+    await addShortcutsUtil(this.deps, this, fromMenu)
   }
 
   async removeShortcuts(): Promise<void> {
-    return removeShortcutsUtil(this.deps, this)
+    await removeShortcutsUtil(this.deps, this)
   }
 
   /**

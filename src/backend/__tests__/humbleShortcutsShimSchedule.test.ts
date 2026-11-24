@@ -133,9 +133,20 @@ const LOGIN_SEAM_CALLERS: readonly string[] = [
   'src/backend/testUtils/testServices.ts'
 ]
 
-/** The non-test importers of `src/backend/humbleshortcuts/shortcuts.ts` (94-22): every shortcut resolver's callers. */
+/**
+ * The non-test importers of `src/backend/humbleshortcuts/shortcuts.ts` (94-22): the renderer handles' module and
+ * the five store managers (D-04). The schedule checks a file's callers as a set, so every row of the file lists all
+ * of them; the phase that deletes a row is the last caller's owner (steam 90.2, legendary 91, gog, nile and
+ * sideload 92).
+ */
 const SHORTCUT_RESOLVER_CALLERS: readonly string[] = [
-  'src/backend/sidecar/shortcutsResolvers.ts'
+  'src/backend/sidecar/shortcutsResolvers.ts',
+  'src/backend/storeManagers/gog/games.ts',
+  'src/backend/storeManagers/legendary/games.ts',
+  'src/backend/storeManagers/nile/games.ts',
+  'src/backend/storeManagers/sideload/games.ts',
+  'src/backend/storeManagers/sideload/library.ts',
+  'src/backend/storeManagers/steam/games.ts'
 ]
 
 export const SCHEDULE: readonly ScheduleRow[] = [
@@ -215,6 +226,95 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     channel: 'RUST_SHORTCUTS_ADD',
     callers: SHORTCUT_RESOLVER_CALLERS,
     deletedBy: 92
+  },
+  // 94-22, the rest of the renderer's channels: remove, Add to Steam, Remove from Steam and is-added. Each gathers the
+  // game and the settings through the one non-exported input helper and makes the one call; `registerShortcutsResolvers`
+  // answers the renderer with the op's `existsAfter` or boolean.
+  {
+    name: 'resolveRemoveShortcut',
+    file: 'src/backend/humbleshortcuts/shortcuts.ts',
+    shape: 'resolver',
+    inputs: ['game', 'inputs'],
+    channel: 'RUST_SHORTCUTS_REMOVE',
+    callers: SHORTCUT_RESOLVER_CALLERS,
+    deletedBy: 92
+  },
+  {
+    name: 'resolveAddToSteam',
+    file: 'src/backend/humbleshortcuts/shortcuts.ts',
+    shape: 'resolver',
+    inputs: ['game', 'inputs'],
+    channel: 'RUST_SHORTCUTS_STEAM_ADD',
+    callers: SHORTCUT_RESOLVER_CALLERS,
+    deletedBy: 92
+  },
+  {
+    name: 'resolveRemoveFromSteam',
+    file: 'src/backend/humbleshortcuts/shortcuts.ts',
+    shape: 'resolver',
+    inputs: ['game', 'inputs'],
+    channel: 'RUST_SHORTCUTS_STEAM_REMOVE',
+    callers: SHORTCUT_RESOLVER_CALLERS,
+    deletedBy: 92
+  },
+  {
+    name: 'resolveIsAddedToSteam',
+    file: 'src/backend/humbleshortcuts/shortcuts.ts',
+    shape: 'resolver',
+    inputs: ['game', 'inputs'],
+    channel: 'RUST_SHORTCUTS_STEAM_IS_ADDED',
+    callers: SHORTCUT_RESOLVER_CALLERS,
+    deletedBy: 92
+  },
+  // 94-22, the store managers' same-signature resolvers (D-04): they take the `Game` itself (`addShortcuts(deps, game,
+  // fromMenu?)`, `removeShortcuts(deps, game)`, `removeNonSteamGame(deps, game)`), pass `notify: false` and keep their
+  // method signatures at the callers: steam/games.ts, gog/games.ts, legendary/games.ts, nile/games.ts,
+  // sideload/games.ts and sideload/library.ts. `addShortcuts` rejects on a partial failure as the TS did, because Rust
+  // answers an add that wrote less than was asked with the TS's own message. The last caller's owner deletes them: steam
+  // 90.2, legendary 91, gog, nile and sideload 92.
+  {
+    name: 'addShortcuts',
+    file: 'src/backend/humbleshortcuts/shortcuts.ts',
+    shape: 'resolver',
+    inputs: ['inputs'],
+    channel: 'RUST_SHORTCUTS_ADD',
+    callers: SHORTCUT_RESOLVER_CALLERS,
+    deletedBy: 92
+  },
+  {
+    name: 'removeShortcuts',
+    file: 'src/backend/humbleshortcuts/shortcuts.ts',
+    shape: 'resolver',
+    inputs: ['inputs'],
+    channel: 'RUST_SHORTCUTS_REMOVE',
+    callers: SHORTCUT_RESOLVER_CALLERS,
+    deletedBy: 92
+  },
+  {
+    name: 'removeNonSteamGame',
+    file: 'src/backend/humbleshortcuts/shortcuts.ts',
+    shape: 'resolver',
+    inputs: ['inputs'],
+    channel: 'RUST_SHORTCUTS_STEAM_REMOVE',
+    callers: SHORTCUT_RESOLVER_CALLERS,
+    deletedBy: 92
+  },
+  // 94-22, D-27: the ctrl+q/k/j/l hotkey channel `processShortcut` is not a game-shortcut channel and is not ported: it
+  // quits through the quit path or asks the renderer to open a screen. It moved UNCHANGED from the deleted
+  // `shortcutsFlowRegistration.ts` to the app shell, where the quit path lives, and goes with it in Phase 98.
+  {
+    name: 'registerProcessShortcut',
+    file: 'src/backend/sidecar/appShellFlowRegistration.ts',
+    shape: 'relocated',
+    // The file's non-test importers: handlers.ts calls the function; the boot, the service types and the test
+    // shell state import the app-shell state the file also exports.
+    callers: [
+      'src/backend/services/types.ts',
+      'src/backend/sidecar/bootstrap.ts',
+      'src/backend/sidecar/handlers.ts',
+      'src/backend/testUtils/testShellState.ts'
+    ],
+    deletedBy: 98
   },
   // 94-22: the renderer-facing handles of every shortcut resolver. It holds no logic of its own (each handle
   // calls its resolver and projects the answer), so it is scheduled with the resolvers it installs and goes with

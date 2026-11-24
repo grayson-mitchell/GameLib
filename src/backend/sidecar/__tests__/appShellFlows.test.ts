@@ -294,7 +294,15 @@ import {
   RUST_WAKE_LOCK_STOP
 } from 'common/types/sidecarTransport'
 import { resolveAppInfo } from '../../host/appInfo'
-import { createAppShellState } from '../appShellFlowRegistration'
+import {
+  createAppShellState,
+  registerProcessShortcut
+} from '../appShellFlowRegistration'
+import { createIpcRegistry } from '../ipcRegistry'
+
+// The logger instance the statically imported `appShellFlowRegistration` holds: captured at load, before any
+// `freshRegistry()` `jest.resetModules()` gives later `require`s a different one (Phase 94 Plan 22).
+const staticLogger: typeof loggerModuleType = jest.requireActual('../../logger')
 import { createClock } from '../../process/clock'
 import { createStoreRegistry } from 'backend/stores/storeRegistry'
 
@@ -1958,5 +1966,89 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
     expect(typeof join).toBe('function')
     expect(typeof mkdirSync).toBe('function')
     expect(typeof writeFileSync).toBe('function')
+  })
+})
+
+// ── processShortcut (Phase 94 plan 22, D-27) ─────────────────────────────────────────────────────
+//
+// The ctrl+q/k/j/l app-shell hotkey channel moved UNCHANGED from the deleted `shortcutsFlowRegistration.ts`
+// (`humbleShortcutsShimSchedule.test.ts`: a `relocated` row, deleted by 98 with the quit path). These are its
+// cases from the deleted `shortcutsFlows.test.ts`.
+describe('registerProcessShortcut — the relocated hotkey channel', () => {
+  const settle = (): Promise<void> =>
+    new Promise((resolve) => setTimeout(resolve, 10))
+
+  function rig(handleExit: () => Promise<void> = () => Promise.resolve()) {
+    const ipc = createIpcRegistry()
+    const quit = { handleExit: jest.fn(handleExit) }
+    const sendFrontendMessage = jest.fn()
+    registerProcessShortcut({
+      ipc,
+      quit,
+      sendFrontendMessage: sendFrontendMessage as never
+    })
+    const listener = ipc.getListeners('processShortcut')[0]
+    return { ipc, quit, sendFrontendMessage, listener }
+  }
+
+  it('is registered send-kind, once, and nothing else', () => {
+    const { ipc } = rig()
+    expect([...ipc.listenerMap().keys()]).toEqual(['processShortcut'])
+    expect(ipc.getListeners('processShortcut')).toHaveLength(1)
+    expect([...ipc.handlerMap().keys()]).toEqual([])
+  })
+
+  it.each([
+    ['ctrl+k', '/settings/general'],
+    ['ctrl+j', '/download-manager'],
+    ['ctrl+l', '/library']
+  ])('%s pushes openScreen(%s)', async (combo, route) => {
+    const { listener, sendFrontendMessage, quit } = rig()
+    listener?.(null, combo)
+    await settle()
+    expect(sendFrontendMessage).toHaveBeenCalledWith('openScreen', route)
+    expect(quit.handleExit).not.toHaveBeenCalled()
+  })
+
+  it('ctrl+q reaches handleExit', async () => {
+    const { listener, quit, sendFrontendMessage } = rig()
+    listener?.(null, 'ctrl+q')
+    await settle()
+    expect(quit.handleExit).toHaveBeenCalledTimes(1)
+    expect(sendFrontendMessage).not.toHaveBeenCalled()
+  })
+
+  it.each(['ctrl+r', 'ctrl+shift+i', 'ctrl+totally-unknown'])(
+    '%s is a no-op: ctrl+r and ctrl+shift+i are declared degraded under Tauri (T-34.5-27)',
+    async (combo) => {
+      const { listener, quit, sendFrontendMessage } = rig()
+      expect(() => listener?.(null, combo)).not.toThrow()
+      await settle()
+      expect(sendFrontendMessage).not.toHaveBeenCalled()
+      expect(quit.handleExit).not.toHaveBeenCalled()
+    }
+  )
+
+  it('a rejecting handleExit() (ctrl+q) never becomes an unhandled rejection, and logs the failure', async () => {
+    const unhandled: unknown[] = []
+    const onUnhandled = (reason: unknown): void => {
+      unhandled.push(reason)
+    }
+    const warn = jest
+      .spyOn(staticLogger, 'logWarning')
+      .mockImplementation(() => undefined)
+    process.on('unhandledRejection', onUnhandled)
+    try {
+      const { listener } = rig(() =>
+        Promise.reject(new Error('boom-handleExit'))
+      )
+      listener?.(null, 'ctrl+q')
+      await settle()
+      expect(unhandled).toHaveLength(0)
+      expect(JSON.stringify(warn.mock.calls)).toContain('processShortcut')
+    } finally {
+      process.off('unhandledRejection', onUnhandled)
+      warn.mockRestore()
+    }
   })
 })

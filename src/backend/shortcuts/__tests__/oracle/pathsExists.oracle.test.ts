@@ -30,12 +30,10 @@ import sanitize from 'sanitize-filename'
 import {
   macDesktopShortcutPresent,
   macDesktopShortcutWanted,
-  shortcutFiles
-} from '../../shortcuts/shortcuts'
-import {
+  shortcutFiles,
   shortcutsExistOnDisk,
-  type ShortcutsFlowDeps
-} from 'backend/sidecar/shortcutsFlowRegistration'
+  type ShortcutsExistDeps
+} from '../../shortcuts/shortcuts'
 import {
   assertManifest,
   expectEmptyCasesToFail,
@@ -316,7 +314,7 @@ async function existsGolden(c: ExistsCase): Promise<unknown> {
               timedOut: false
             })
         }
-      } as unknown as ShortcutsFlowDeps
+      } as unknown as ShortcutsExistDeps
 
       if (c.title) {
         const [desktopFile, menuFile] = shortcutFiles(

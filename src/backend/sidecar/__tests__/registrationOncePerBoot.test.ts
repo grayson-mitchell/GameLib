@@ -12,7 +12,9 @@ const REGISTRATIONS = [
   'registerDevEpicCookieSweepFlow',
   'registerRunnerAuthFlows',
   'registerEngineWineResolvers',
-  'registerShortcutsFlows',
+  // Phase 94 Plan 22: `registerShortcutsFlows` is deleted; the `processShortcut` hotkey listener is the once-only
+  // registration that moved (`appShellFlowRegistration.ts`), and handlers.ts calls it exactly once.
+  'registerProcessShortcut',
   'registerStoreWriteHandlers'
 ] as const
 
@@ -50,8 +52,8 @@ describe('registrations are called once per boot (D-66.4-01)', () => {
   })
 
   it('reports a missing call', () => {
-    expect(callCountViolations('', ['registerShortcutsFlows'])).toEqual([
-      'registerShortcutsFlows'
+    expect(callCountViolations('', ['registerProcessShortcut'])).toEqual([
+      'registerProcessShortcut'
     ])
   })
 })

@@ -10,15 +10,28 @@ import { tmpdir } from 'os'
 import { join } from 'path'
 import {
   RUST_SHORTCUTS_ADD,
-  RUST_SHORTCUTS_EXIST
+  RUST_SHORTCUTS_EXIST,
+  RUST_SHORTCUTS_REMOVE,
+  RUST_SHORTCUTS_STEAM_ADD,
+  RUST_SHORTCUTS_STEAM_IS_ADDED,
+  RUST_SHORTCUTS_STEAM_REMOVE
 } from 'common/types/sidecarTransport'
 import type { Runner } from 'common/types'
 import { createIpcRegistry } from 'backend/sidecar/ipcRegistry'
+import { readTauriShellProductionSource } from 'backend/testUtils/tauriShellSource'
 import {
+  addShortcuts,
+  removeNonSteamGame,
+  removeShortcuts,
   resolveAddShortcut,
+  resolveAddToSteam,
+  resolveIsAddedToSteam,
+  resolveRemoveFromSteam,
+  resolveRemoveShortcut,
   resolveShortcutsExists,
   type ShortcutResolverDeps
 } from 'backend/humbleshortcuts/shortcuts'
+import type { Game } from 'common/types/game_manager'
 import { registerShortcutsResolvers } from '../shortcutsResolvers'
 
 type Call = [channel: string, args: unknown[]]
@@ -294,6 +307,149 @@ describe('resolveAddShortcut', () => {
   })
 })
 
+describe('the other renderer resolvers', () => {
+  it('resolveRemoveShortcut sends one shortcuts_remove call for the game, notify true, and no settings', async () => {
+    const rigged = rig(legendaryInfo)
+    await resolveRemoveShortcut(rigged.deps, 'AppName', 'legendary')
+    const [channel] = rigged.calls[0] as Call
+    expect(channel).toBe(RUST_SHORTCUTS_REMOVE)
+    expect(sent(rigged)).toEqual({
+      game: expect.objectContaining({
+        appName: 'AppName',
+        title: 'Plain Game',
+        isDlc: false
+      }),
+      notify: true
+    })
+    expect(rigged.productApi).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['resolveAddToSteam', resolveAddToSteam, RUST_SHORTCUTS_STEAM_ADD],
+    [
+      'resolveRemoveFromSteam',
+      resolveRemoveFromSteam,
+      RUST_SHORTCUTS_STEAM_REMOVE
+    ],
+    [
+      'resolveIsAddedToSteam',
+      resolveIsAddedToSteam,
+      RUST_SHORTCUTS_STEAM_IS_ADDED
+    ]
+  ] as const)(
+    '%s sends one %s call carrying the game and the settings, answering what Rust answers',
+    async (_name, resolver, channel) => {
+      const rigged = rig(legendaryInfo, { answer: 'rust-answer' })
+      await expect(resolver(rigged.deps, 'AppName', 'legendary')).resolves.toBe(
+        'rust-answer'
+      )
+      expect(rigged.calls).toHaveLength(1)
+      expect((rigged.calls[0] as Call)[0]).toBe(channel)
+      expect(sent(rigged)).toEqual({
+        game: expect.objectContaining({
+          appName: 'AppName',
+          runner: 'legendary'
+        }),
+        settings: expect.objectContaining({ defaultSteamPath: '/steam' })
+      })
+    }
+  )
+
+  it('only Add to Steam draws an icon here, so a GOG game costs a product API call there and nowhere else', async () => {
+    await onPlatform('linux', async () => {
+      const gog = {
+        ...legendaryInfo,
+        runner: 'gog',
+        app_name: 'g1',
+        install: { is_dlc: false }
+      }
+      for (const [resolver, calls] of [
+        [resolveAddToSteam, 1],
+        [resolveRemoveFromSteam, 0],
+        [resolveIsAddedToSteam, 0],
+        [resolveRemoveShortcut, 0]
+      ] as const) {
+        const rigged = rig(gog)
+        await resolver(rigged.deps, 'g1', 'gog')
+        expect(rigged.productApi).toHaveBeenCalledTimes(calls)
+      }
+    })
+  })
+
+  it('a GOG game on Windows adds Windows shortcuts with no icon API call unless Add to Steam is on', async () => {
+    await onPlatform('win32', async () => {
+      const gog = { ...legendaryInfo, runner: 'gog', app_name: 'g1' }
+      const plain = rig(gog)
+      await resolveAddShortcut(plain.deps, 'g1', 'gog', false)
+      expect(plain.productApi).not.toHaveBeenCalled()
+      const withSteam = rig(gog, { settings: { addSteamShortcuts: true } })
+      await resolveAddShortcut(withSteam.deps, 'g1', 'gog', false)
+      expect(withSteam.productApi).toHaveBeenCalledTimes(1)
+    })
+  })
+})
+
+describe('the store managers resolvers (same signature, notify false)', () => {
+  const game = (info: Record<string, unknown>) =>
+    ({ getGameInfo: () => info }) as unknown as Game
+
+  it('addShortcuts reads the Game it is given, passes fromMenu and notify false, and never looks the game up', async () => {
+    const rigged = rig({})
+    await addShortcuts(rigged.deps, game(legendaryInfo), true)
+    expect(rigged.lookups).toEqual([])
+    const [channel] = rigged.calls[0] as Call
+    expect(channel).toBe(RUST_SHORTCUTS_ADD)
+    expect(sent(rigged)).toMatchObject({
+      game: { appName: 'AppName', title: 'Plain Game' },
+      fromMenu: true,
+      notify: false
+    })
+  })
+
+  it('addShortcuts rejects with what Rust rejects, so a partial failure reaches its caller', async () => {
+    const rigged = rig({})
+    rigged.deps.requestRustInvoke = (() =>
+      Promise.reject(
+        new Error('Could not write shortcuts: /d/Plain Game.lnk: denied')
+      )) as never
+    await expect(
+      addShortcuts(rigged.deps, game(legendaryInfo))
+    ).rejects.toThrow('Could not write shortcuts: /d/Plain Game.lnk: denied')
+  })
+
+  it('addShortcuts reads the game before its first await, as the TS did', async () => {
+    const rigged = rig({})
+    let read = false
+    const late = {
+      getGameInfo: () => {
+        read = true
+        return legendaryInfo
+      }
+    } as unknown as Game
+    const pending = addShortcuts(rigged.deps, late)
+    expect(read).toBe(true)
+    await pending
+  })
+
+  it('removeShortcuts and removeNonSteamGame send their own channel with notify false and the Steam path', async () => {
+    const remove = rig({})
+    await removeShortcuts(remove.deps, game(legendaryInfo))
+    expect((remove.calls[0] as Call)[0]).toBe(RUST_SHORTCUTS_REMOVE)
+    expect(sent(remove)).toMatchObject({
+      game: { appName: 'AppName' },
+      notify: false
+    })
+
+    const steam = rig({})
+    await removeNonSteamGame(steam.deps, game(legendaryInfo))
+    expect((steam.calls[0] as Call)[0]).toBe(RUST_SHORTCUTS_STEAM_REMOVE)
+    expect(sent(steam)).toMatchObject({
+      game: { appName: 'AppName' },
+      settings: { defaultSteamPath: '/steam' }
+    })
+  })
+})
+
 describe('registerShortcutsResolvers', () => {
   function register(rigged: Rig) {
     const ipc = createIpcRegistry()
@@ -311,7 +467,11 @@ describe('registerShortcutsResolvers', () => {
     const ipc = register(rigged)
     expect([...ipc.handlerMap().keys()]).toEqual([
       'shortcutsExists',
-      'addShortcut'
+      'addShortcut',
+      'removeShortcut',
+      'addToSteam',
+      'removeFromSteam',
+      'isAddedToSteam'
     ])
     expect([...ipc.listenerMap().keys()]).toEqual([])
     await expect(
@@ -337,6 +497,47 @@ describe('registerShortcutsResolvers', () => {
     }
   })
 
+  it('removeShortcut answers the renderer with the disk re-check Rust reports', async () => {
+    for (const existsAfter of [true, false]) {
+      const rigged = rig(legendaryInfo, {
+        answer: { removed: [], refused: [], existsAfter }
+      })
+      const ipc = register(rigged)
+      await expect(
+        ipc.getHandler('removeShortcut')?.(undefined, 'AppName', 'legendary')
+      ).resolves.toBe(existsAfter)
+      expect(sent(rigged)).toMatchObject({ notify: true })
+    }
+  })
+
+  it('addToSteam and isAddedToSteam answer a boolean, and removeFromSteam resolves undefined', async () => {
+    const ipc = register(rig(legendaryInfo, { answer: true }))
+    await expect(
+      ipc.getHandler('addToSteam')?.(undefined, 'AppName', 'legendary')
+    ).resolves.toBe(true)
+    await expect(
+      ipc.getHandler('isAddedToSteam')?.(undefined, 'AppName', 'legendary')
+    ).resolves.toBe(true)
+    const no = register(rig(legendaryInfo, { answer: false }))
+    await expect(
+      no.getHandler('addToSteam')?.(undefined, 'AppName', 'legendary')
+    ).resolves.toBe(false)
+    const gone = register(rig(legendaryInfo, { answer: null }))
+    await expect(
+      gone.getHandler('removeFromSteam')?.(undefined, 'AppName', 'legendary')
+    ).resolves.toBeUndefined()
+  })
+
+  it('a Rust rejection reaches the renderer call, never a swallowed false', async () => {
+    const rigged = rig(legendaryInfo)
+    rigged.deps.requestRustInvoke = (() =>
+      Promise.reject(new Error('shortcuts_steam_add:not-ready'))) as never
+    const ipc = register(rigged)
+    await expect(
+      ipc.getHandler('addToSteam')?.(undefined, 'AppName', 'legendary')
+    ).rejects.toThrow('shortcuts_steam_add:not-ready')
+  })
+
   it('addShortcut treats a null fromMenu (JSON turns undefined into null) as absent', async () => {
     const rigged = rig(legendaryInfo, { answer: { existsAfter: true } })
     const ipc = register(rigged)
@@ -347,5 +548,84 @@ describe('registerShortcutsResolvers', () => {
       null
     )
     expect(sent(rigged)).not.toHaveProperty('fromMenu')
+  })
+})
+
+// F-34.5-G6-08 discriminator (plan 34.5-45), carried over from the deleted `shortcutsFlows.test.ts`: a REAL
+// `{id, kind:'invoke', channel:'addToSteam'}` frame through the REAL `startRpcServer` loop, asserting on the
+// PARSED STDOUT FRAME rather than on the handler's own return value. `frame.ok === true`, an OWN `result` key
+// (`JSON.stringify` OMITS a key whose value is `undefined`, so a dropped key and a `false` value are different
+// failures) and `result === true`.
+describe('F-34.5-G6-08 discriminator — addToSteam over the REAL RPC frame path', () => {
+  const settle = (): Promise<void> =>
+    new Promise((resolve) => setTimeout(resolve, 25))
+
+  async function frameFor(answer: unknown): Promise<Record<string, unknown>> {
+    const { PassThrough } = await import('node:stream')
+    const rpc = (
+      await import('../../testUtils/testSidecarRpc')
+    ).createTestSidecarRpc()
+    const ipc = createIpcRegistry()
+    const rigged = rig(legendaryInfo, { answer })
+    registerShortcutsResolvers({
+      ipc,
+      managers: { library: rigged.deps.libraryManagers } as never,
+      config: rigged.deps.config,
+      requestRustInvoke: rigged.deps.requestRustInvoke
+    })
+    const input = new PassThrough()
+    const output = new PassThrough()
+    const frames: Record<string, unknown>[] = []
+    let buffer = ''
+    output.on('data', (chunk: Buffer | string) => {
+      buffer += chunk.toString()
+      let newlineIndex = buffer.indexOf('\n')
+      while (newlineIndex !== -1) {
+        const line = buffer.slice(0, newlineIndex)
+        buffer = buffer.slice(newlineIndex + 1)
+        if (line.trim().length > 0) {
+          try {
+            frames.push(JSON.parse(line) as Record<string, unknown>)
+          } catch {
+            // a non-JSON diagnostic line
+          }
+        }
+        newlineIndex = buffer.indexOf('\n')
+      }
+    })
+    rpc.start(input, output, ipc)
+    input.write(
+      `${JSON.stringify({
+        id: 'g6-08-frame-1',
+        kind: 'invoke',
+        channel: 'addToSteam',
+        args: ['AppName', 'legendary']
+      })}\n`
+    )
+    await settle()
+    const frame = frames.find((f) => f.id === 'g6-08-frame-1')
+    expect(frame).toBeDefined()
+    return frame as Record<string, unknown>
+  }
+
+  it("the emitted stdout frame has ok:true, an OWN 'result' key, and result === true", async () => {
+    const frame = await frameFor(true)
+    expect(frame.ok).toBe(true)
+    expect(Object.prototype.hasOwnProperty.call(frame, 'result')).toBe(true)
+    expect(frame.result).toBe(true)
+  })
+
+  it('a false answer keeps its own result key too, so a refusal is never mistaken for a dropped value', async () => {
+    const frame = await frameFor(false)
+    expect(frame.ok).toBe(true)
+    expect(Object.prototype.hasOwnProperty.call(frame, 'result')).toBe(true)
+    expect(frame.result).toBe(false)
+  })
+
+  // Pins interfaces fact 2 (34.5-45-PLAN.md): the Rust leg's response branch can never deliver a genuine
+  // `undefined` -- the smallest value it can produce is `null` (Serde's `unwrap_or(Value::Null)`). A
+  // source-text assertion, so this floor cannot silently change without this test noticing.
+  it("main.rs's response branch still floors a missing result at Value::Null (source-text pin)", () => {
+    expect(readTauriShellProductionSource()).toContain('unwrap_or(Value::Null)')
   })
 })

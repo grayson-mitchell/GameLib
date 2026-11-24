@@ -184,7 +184,7 @@ import { detectVCRedist } from '../utils'
 import { assertOpenableExternalUrl } from './openPolicy'
 import type { AbortRegistry } from '../utils/aborthandler/aborthandler'
 import type { GlobalConfigSlice } from '../config'
-import { logInfo, LogPrefix } from '../logger'
+import { logInfo, logWarning, LogPrefix } from '../logger'
 import type { MirrorRegistry } from '../stores/mirrorCell'
 // Phase 35 plan 11: boot-time download-queue auto-resume, ported from
 // `main.ts:613` before that file is deleted at plan 35-14. See the
@@ -200,7 +200,7 @@ import type { IpcRegistry } from './ipcRegistry'
 import type { AppState } from '../host/appState'
 import type { OpenExternal } from '../host/openExternal'
 import type { AppPaths } from '../process/context'
-import type { RequestRustInvoke } from '../host'
+import type { HostServices, RequestRustInvoke } from '../host'
 import type { Clock, TimerHandle } from '../process/types'
 import {
   RUST_STORE_READ_ONLY_NOTICE,
@@ -367,7 +367,8 @@ export interface AppShellFlowDeps
 }
 
 /**
- * Registers the 19 app-shell channels (6 invoke + 13 send). Called once from
+ * Registers the app-shell channels, 6 invoke and 13 send (19; the census total of this file is one higher
+ * since Phase 94 plan 22 moved the `processShortcut` hotkey here, see `registerProcessShortcut`). Called once from
  * `handlers.ts` — this
  * module owns no side effects at import time beyond the imports above; the
  * caller decides when registration onto the handler registry happens.
@@ -857,4 +858,58 @@ export function registerAppShellFlows(deps: AppShellFlowDeps): void {
   if (!deps.skipInitialTraySync) {
     setImmediate(() => syncTrayIcon(deps.config, deps.requestRustInvoke))
   }
+}
+
+/** Narrow dependency slice for `registerProcessShortcut`: the registry, the quit handler and the frontend push. */
+export interface ProcessShortcutDeps {
+  ipc: Pick<IpcRegistry, 'on'>
+  quit: Pick<QuitHandler, 'handleExit'>
+  sendFrontendMessage: HostServices['sendFrontendMessage']
+}
+
+/**
+ * The app-shell hotkey channel `processShortcut` (`main.ts:1465`, ctrl+q/k/j/l), moved here UNCHANGED from the
+ * deleted `shortcutsFlowRegistration.ts` (Phase 94 plan 22, D-27). It is not a game-shortcut channel and is not
+ * ported: it quits through the quit path or asks the renderer to open a screen, so it lives with the quit path
+ * and goes with it in Phase 98 (`humbleShortcutsShimSchedule.test.ts`, a `relocated` row).
+ *
+ * A `send` channel's rejection reaches NO caller (no reject, no timeout, no console line to the renderer), so
+ * the body is the `void (async () => { try {...} catch {...} })()` fire-and-forget shape. `ctrl+r` (reload) and
+ * `ctrl+shift+i` (devtools) are DECLARED DEGRADED under Tauri (T-34.5-27) and have no case. Called once from
+ * `handlers.ts` (single-run is owned by the 'register-handlers' boot step).
+ */
+export function registerProcessShortcut(deps: ProcessShortcutDeps): void {
+  deps.ipc.on('processShortcut', (_event: unknown, ...args: unknown[]) => {
+    void (async () => {
+      try {
+        const combination = args[0] as string
+        switch (combination) {
+          // hotkey to quit the app
+          case 'ctrl+q':
+            await deps.quit.handleExit()
+            break
+          // hotkey to open the settings on frontend
+          case 'ctrl+k':
+            deps.sendFrontendMessage('openScreen', '/settings/general')
+            break
+          // hotkey to open the downloads screen on frontend
+          case 'ctrl+j':
+            deps.sendFrontendMessage('openScreen', '/download-manager')
+            break
+          // hotkey to open the library screen on frontend
+          case 'ctrl+l':
+            deps.sendFrontendMessage('openScreen', '/library')
+            break
+        }
+      } catch (error) {
+        logWarning(
+          [
+            '[shortcutsFlowRegistration] processShortcut failed:',
+            error instanceof Error ? error.message : String(error)
+          ],
+          LogPrefix.Backend
+        )
+      }
+    })()
+  })
 }

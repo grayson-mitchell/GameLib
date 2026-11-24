@@ -116,7 +116,9 @@ const ENTRY_POINTS = [
   // the `syncGOGSaves` path this note ruled out). See `BASELINE_ELECTRON_REACHING_MODULES`'s
   // `save_sync.ts` entry below for the measured before/after.
   join(REPO_ROOT, 'src/backend/sidecar/runnerAuthFlowRegistration.ts'),
-  join(REPO_ROOT, 'src/backend/sidecar/shortcutsFlowRegistration.ts'),
+  // Phase 94 Plan 22: `shortcutsFlowRegistration.ts` is deleted (its channels are scheduled resolvers answered by
+  // Rust, and the hotkey channel moved to `appShellFlowRegistration.ts`, already an entry point), so it is no
+  // longer an entry point (the walk throws on an entry it cannot read).
   join(REPO_ROOT, 'src/backend/sidecar/runnerMiscFlowRegistration.ts'),
   // Phase 34.6 Plan 05 (REQ-34.6-04/07/13, 2026-08-23): this plan's
   // frontendReady/changeTrayColor registration module. Never previously an
@@ -634,8 +636,9 @@ describe('electronReachLedger (Phase 34.2 Plan 11 — REQ-34.2-03, gap #3 / WR-0
       // future refactor that broke ONLY those Steam/Humble edges would no
       // longer silently stop covering these paths -- this phase's own
       // modules independently require them.
-      'src/backend/shortcuts/shortcuts/shortcuts.ts', // direct: shortcutsFlowRegistration.ts
-      'src/backend/shortcuts/nonesteamgame/nonesteamgame.ts', // direct: shortcutsFlowRegistration.ts
+      // Phase 94 Plan 22: the two `src/backend/shortcuts/...` lines anchored to `shortcutsFlowRegistration.ts` died
+      // with it. Nothing in the entry-point graph imports the TypeScript shortcut modules any more (the store
+      // managers import `humbleshortcuts/shortcuts.ts`, which reaches no electron module); 94-24 deletes them.
       'src/backend/storeManagers/legendary/user.ts', // direct: runnerAuthFlowRegistration.ts
       'src/backend/storeManagers/gog/user.ts' // direct: runnerAuthFlowRegistration.ts
     ]

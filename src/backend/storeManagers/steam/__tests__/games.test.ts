@@ -62,7 +62,7 @@ const gameModuleFiles = (): string[] => {
   return files
 }
 const sendFrontendMessage = jest.fn()
-import * as shortcutsModule from '../../../shortcuts/shortcuts/shortcuts'
+import * as shortcutsModule from '../../../humbleshortcuts/shortcuts'
 import { TITLE_AUTHORITATIVE_KEYS } from '../titleSettings'
 import SteamGame from '../games'
 import * as gameMetadata from '../gameMetadata'
@@ -569,7 +569,7 @@ jest.mock('backend/logger', () => ({
 
 // steam/games.ts now imports the shared shortcuts module, whose import graph pulls fs-extra,
 // which cannot load under this file's graceful-fs mock (quick 261026-c7r).
-jest.mock('../../../shortcuts/shortcuts/shortcuts', () => ({
+jest.mock('../../../humbleshortcuts/shortcuts', () => ({
   addShortcuts: jest.fn(),
   removeShortcuts: jest.fn(),
   shortcutFiles: jest.fn()

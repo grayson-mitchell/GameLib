@@ -12,7 +12,7 @@ import { mkdir, rm, symlink, unlink, writeFile } from 'fs/promises'
 import { IconIcns } from '@shockpkg/icon-encoder'
 import { dirname, join } from 'path'
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { GameInfo } from 'common/types'
+import { GameInfo, Runner } from 'common/types'
 import { getIcon } from '../utils'
 import type { ShortcutsDeps } from '../utils'
 import { addNonSteamGame } from '../nonesteamgame/nonesteamgame'
@@ -20,6 +20,7 @@ import type { NonSteamGameDeps } from '../nonesteamgame/nonesteamgame'
 import sanitize from 'sanitize-filename'
 import { isMac } from 'backend/constants/environment'
 import type { Game } from 'common/types/game_manager'
+import type { StoreManagers } from 'backend/services/types'
 import { writeWindowsShortcut, type ShortcutDetails } from './windowsShortcut'
 import { resolveWindowsShortcutIcon } from './windowsShortcutIcon'
 import { readWindowsShellFolder } from '../../sidecar/knownFolders'
@@ -513,12 +514,62 @@ async function convertPngToICNS(
   }
 }
 
+/** What `shortcutsExistOnDisk` reads: the library for the game's title, the runner and the shortcut folders. */
+export interface ShortcutsExistDeps extends Pick<
+  ShortcutsDeps,
+  'runner' | 'paths' | 'config'
+> {
+  managers: Pick<StoreManagers, 'library'>
+}
+
+/**
+ * Whether a shortcut for the game exists on disk right now: the predicate the renderer's `shortcutsExists`
+ * and the `addShortcut`/`removeShortcut` handlers evaluated after their work settled (quick task 261012-ca6).
+ *
+ * Moved here from the deleted `sidecar/shortcutsFlowRegistration.ts` by Phase 94 plan 22. No handler reaches it
+ * any more (the renderer's channels are Rust-answered resolvers); it stays, exported, only because the 94-05
+ * oracle (`pathsExists.oracle.test.ts`) records what it decides as the goldens the Rust `shortcuts_exist` is
+ * held to. 94-24 deletes it with this module.
+ *
+ * @public Consumed by the oracle test.
+ */
+async function shortcutsExistOnDisk(
+  deps: ShortcutsExistDeps,
+  appName: string,
+  runner: Runner
+): Promise<boolean> {
+  const { title } = deps.managers.library[runner].getGame(appName).getGameInfo()
+
+  // Quick task 260905-mv5 (site 4, D-03): getGameInfo() can return `{} as GameInfo` on a double cache miss
+  // (D-01), leaving `title` undefined. This title feeds a FILESYSTEM PATH component (shortcutFiles ->
+  // sanitize-filename), so a synthesized fallback title would produce a plausible-looking path the app never
+  // actually wrote to. Return false and log instead of fabricating one.
+  if (!title) {
+    logWarning(
+      `shortcutsExists: getGameInfo() returned no title for ${appName} (${runner}); skipping shortcut lookup`,
+      LogPrefix.Backend
+    )
+    return false
+  }
+
+  const [desktopFile, menuFile] = shortcutFiles(
+    deps,
+    title,
+    await windowsDesktopDir(deps)
+  )
+
+  // 261026-ctm: a dangling Desktop link counts as present so Remove stays offered.
+  return (
+    shortcutPathPresent(desktopFile ?? '') ||
+    shortcutPathPresent(menuFile ?? '')
+  )
+}
+
 export {
   removeShortcuts,
   addShortcuts,
   shortcutFiles,
-  windowsDesktopDir,
-  shortcutPathPresent,
+  shortcutsExistOnDisk,
   macDesktopShortcutWanted,
   macDesktopShortcutPresent
 }

@@ -72,16 +72,13 @@ jest.mock('../user', () => ({
 }))
 
 const mockAddShortcutsUtil = jest.fn()
-jest.mock('../../../shortcuts/shortcuts/shortcuts', () => ({
+jest.mock('../../../humbleshortcuts/shortcuts', () => ({
   addShortcuts: (...a: unknown[]) => mockAddShortcutsUtil(...a),
-  removeShortcuts: jest.fn()
+  removeShortcuts: jest.fn(),
+  removeNonSteamGame: jest.fn()
 }))
 
 jest.mock('../setup', () => ({ __esModule: true, default: jest.fn() }))
-
-jest.mock('../../../shortcuts/nonesteamgame/nonesteamgame', () => ({
-  removeNonSteamGame: jest.fn()
-}))
 
 jest.mock('shlex', () => ({
   __esModule: true,

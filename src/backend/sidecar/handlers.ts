@@ -48,7 +48,7 @@
  * channel list, source line, and registration kind is pinned in its own module's header
  * docstring (`runnerAuthFlowRegistration.ts`, plans 34.5-06/34.5-10/REQ-34.5-04;
  * `wineToolsFlowRegistration.ts`, plans 34.5-05/34.5-09/REQ-34.5-03;
- * `shortcutsFlowRegistration.ts`, plans 34.5-08/34.5-11/REQ-34.5-05;
+ * `shortcutsFlowRegistration.ts`, plans 34.5-08/34.5-11/REQ-34.5-05, deleted by Phase 94 plan 22;
  * `runnerMiscFlowRegistration.ts`, plans 34.5-07/34.5-12/REQ-34.5-06/-07/-08/-09),
  * and cross-checked (import called exactly once, curated-import guard, containment pin) by
  * `__tests__/runnerSliceRegistration.test.ts`.
@@ -77,7 +77,10 @@ import { registerSettingsFlows } from './settingsFlowRegistration'
 import { registerDevEpicCookieSweepFlow } from './devEpicCookieSweepRegistration'
 import { registerDialogFlows } from './dialogFlowRegistration'
 import { registerDownloadQueueFlows } from './downloadQueueFlowRegistration'
-import { registerAppShellFlows } from './appShellFlowRegistration'
+import {
+  registerAppShellFlows,
+  registerProcessShortcut
+} from './appShellFlowRegistration'
 import { registerGameDetailsFlows } from './gameDetailsFlowRegistration'
 import { registerEnrichmentFlows } from './enrichmentFlowRegistration'
 import { registerShellFilesFlows } from './shellFilesFlowRegistration'
@@ -90,7 +93,6 @@ import { registerRunnerAuthFlows } from './runnerAuthFlowRegistration'
 import { registerEngineWineResolvers } from './engineWineResolvers'
 import { registerEngineDeadlineFired } from 'backend/enginewine/deadline'
 import { registerEngineSelectionView } from 'backend/enginewine/selectionView'
-import { registerShortcutsFlows } from './shortcutsFlowRegistration'
 import { registerShortcutsResolvers } from './shortcutsResolvers'
 import { registerRunnerMiscFlows } from './runnerMiscFlowRegistration'
 import { registerEosOverlayFlows } from './eosOverlayFlowRegistration'
@@ -411,31 +413,19 @@ export function registerHandlers(deps: {
   registerEngineSelectionView(ipc)
   // A Steam bridge launch's deadline fired in Rust (87-54, D-17): the callback the bridge stored when it armed runs.
   registerEngineDeadlineFired(ipc)
-  registerShortcutsFlows({
-    ipc,
-    appRuntime: deps.services.appRuntime,
-    managers: deps.services.managers,
-    quit: deps.services.quit,
-    stores: deps.services.stores,
-    infoCaches: deps.services.infoCaches,
-    aborts: deps.services.aborts,
-    runner: deps.services.runner,
-    config: deps.services.config,
-    paths: deps.services.paths,
-    imageTools: deps.services.host.imageTools,
-    dialogs: deps.services.host.dialogs,
-    appState: deps.services.host.appState,
-    notifications: deps.services.host.notifications,
-    sendFrontendMessage: deps.services.host.sendFrontendMessage,
-    requestRustInvoke: deps.services.host.requestRustInvoke
-  })
-  // Phase 94 (94-11, 94-22, 86 D-24): `shortcutsExists` and `addShortcut` are answered by Rust; each resolver gathers
-  // the game's and the settings' TypeScript-only inputs.
+  // Phase 94 (94-22, 86 D-24): the renderer's shortcut handles are answered by Rust; each resolver gathers the
+  // game's and the settings' TypeScript-only inputs. The ctrl+q/k/j/l hotkey channel moved unchanged to the app shell
+  // (D-27) and goes with the quit path in Phase 98.
   registerShortcutsResolvers({
     ipc,
     managers: deps.services.managers,
     config: deps.services.config,
     requestRustInvoke: deps.services.host.requestRustInvoke
+  })
+  registerProcessShortcut({
+    ipc,
+    quit: deps.services.quit,
+    sendFrontendMessage: deps.services.host.sendFrontendMessage
   })
   registerRunnerMiscFlows({
     ipc,

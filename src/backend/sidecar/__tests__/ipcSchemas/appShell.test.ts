@@ -13,6 +13,11 @@ import {
 const noArgs = { valid: [[]], invalid: [['x']] }
 
 const syncTable: FixtureTable<typeof appShellSyncArgs> = {
+  // Phase 94 Plan 22 (D-27): moved here from the shortcuts domain with its handler.
+  processShortcut: {
+    valid: [['ctrl+r'], ['ctrl+shift+i']],
+    invalid: [[''], [5], []]
+  },
   changeLanguage: {
     valid: [['en'], ['pt_BR']],
     invalid: [[], [''], [1], ['x'.repeat(36)]]

@@ -10,7 +10,7 @@ import {
  * bottle branch with no native download; Intel is unchanged.
  */
 
-jest.mock('../../../shortcuts/shortcuts/shortcuts', () => ({
+jest.mock('../../../humbleshortcuts/shortcuts', () => ({
   addShortcuts: jest.fn(),
   removeShortcuts: jest.fn(),
   shortcutFiles: jest.fn()

@@ -1,6 +1,10 @@
 import type { GlobalConfigSlice } from 'backend/config'
 import {
   resolveAddShortcut,
+  resolveAddToSteam,
+  resolveIsAddedToSteam,
+  resolveRemoveFromSteam,
+  resolveRemoveShortcut,
   resolveShortcutsExists,
   type ShortcutResolverDeps
 } from 'backend/humbleshortcuts/shortcuts'
@@ -64,5 +68,44 @@ export function registerShortcutsResolvers(deps: ShortcutsResolverDeps): void {
         (args[2] ?? undefined) as boolean | undefined
       )
     )
+  )
+  deps.ipc.handle(
+    'removeShortcut',
+    async (_event: unknown, ...args: unknown[]) =>
+      existsAfter(
+        await resolveRemoveShortcut(
+          resolverDeps,
+          args[0] as string,
+          args[1] as Runner
+        )
+      )
+  )
+  deps.ipc.handle(
+    'addToSteam',
+    async (_event: unknown, ...args: unknown[]) =>
+      (await resolveAddToSteam(
+        resolverDeps,
+        args[0] as string,
+        args[1] as Runner
+      )) === true
+  )
+  deps.ipc.handle(
+    'removeFromSteam',
+    async (_event: unknown, ...args: unknown[]): Promise<void> => {
+      await resolveRemoveFromSteam(
+        resolverDeps,
+        args[0] as string,
+        args[1] as Runner
+      )
+    }
+  )
+  deps.ipc.handle(
+    'isAddedToSteam',
+    async (_event: unknown, ...args: unknown[]) =>
+      (await resolveIsAddedToSteam(
+        resolverDeps,
+        args[0] as string,
+        args[1] as Runner
+      )) === true
   )
 }

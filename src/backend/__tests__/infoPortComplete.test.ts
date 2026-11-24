@@ -608,10 +608,9 @@ describe('discountsPortComplete', () => {
  * both to them. This list is exactly the files that hold such a member and can only shrink: delete the
  * member, the handlers.ts line, then the entry. OWED once handlers.ts is clean.
  */
-const INERT_DEPS_EXEMPT = [
-  'src/backend/sidecar/enrichmentFlowRegistration.ts',
-  'src/backend/sidecar/shortcutsFlowRegistration.ts'
-]
+// Phase 94 Plan 22 deleted `sidecar/shortcutsFlowRegistration.ts` (and with it its inert `infoCaches` and `appRuntime`
+// members and the handlers.ts lines that passed them), so only one file is left.
+const INERT_DEPS_EXEMPT = ['src/backend/sidecar/enrichmentFlowRegistration.ts']
 
 /**
  * 86-24 (SC4, D-13, D-18 and D-29 row 5): the wiki game info slice, umu included, is Rust. The CodeWeavers,

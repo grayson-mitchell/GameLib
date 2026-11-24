@@ -15,7 +15,7 @@ import { defineChannelEntries, type ChannelEntry } from './schemaTypes'
 import { gameDetailsAsyncArgs, gameDetailsSyncArgs } from './gameDetails'
 import { settingsAsyncArgs, settingsSyncArgs } from './settings'
 import { eosOverlayAsyncArgs } from './eosOverlay'
-import { shortcutsAsyncArgs, shortcutsSyncArgs } from './shortcuts'
+import { shortcutsAsyncArgs } from './shortcuts'
 import { runnerMiscAsyncArgs } from './runnerMisc'
 import { engineAsyncArgs, engineFrontendMessagesArgs } from './engine'
 import { loggerFrontendMessagesArgs } from './logger'
@@ -85,7 +85,6 @@ const inboundEntries = mergeChannelEntries(
   defineChannelEntries('send', gameDetailsSyncArgs),
   defineChannelEntries('invoke', gameDetailsAsyncArgs),
   defineChannelEntries('invoke', eosOverlayAsyncArgs),
-  defineChannelEntries('send', shortcutsSyncArgs),
   defineChannelEntries('invoke', shortcutsAsyncArgs),
   defineChannelEntries('invoke', runnerMiscAsyncArgs),
   defineChannelEntries('invoke', engineAsyncArgs),

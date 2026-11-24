@@ -461,11 +461,11 @@ describe('66.3 end state: shim, config and process-wide owners at zero', () => {
     }
   })
 
-  // 66.4-19 (D-66.4-01): the five once-only latches, converted (not sanctioned).
+  // 66.4-19 (D-66.4-01): the five once-only latches, converted (not sanctioned). Phase 94 Plan 22 deleted
+  // `sidecar/shortcutsFlowRegistration.ts` (D-27, SC4), one of the five.
   it.each([
     'src/backend/sidecar/devEpicCookieSweepRegistration.ts',
     'src/backend/sidecar/runnerAuthFlowRegistration.ts',
-    'src/backend/sidecar/shortcutsFlowRegistration.ts',
     'src/backend/sidecar/storeWriteHandlers.ts'
   ])('%s has no module state', (file) => {
     expect(moduleStateOf()[file]).toBeUndefined()
@@ -661,7 +661,6 @@ describe('66.4 end state: long tail at zero, census is a test, path shim gone', 
     'src/backend/sidecar/ipcValidation.ts',
     'src/backend/sidecar/outboundHttpRegistry.ts',
     'src/backend/sidecar/runnerAuthFlowRegistration.ts',
-    'src/backend/sidecar/shortcutsFlowRegistration.ts',
     'src/backend/sidecar/sidecarRpc.ts',
     'src/backend/sidecar/storeWriteHandlers.ts',
     'src/backend/store/storeEmbedSeam.ts',
@@ -757,7 +756,8 @@ describe('66.4 end state: long tail at zero, census is a test, path shim gone', 
     // Phase 87 Plan 56 deleted engine/launchDeadline.ts and engine/launchEngine.ts with the TS launch step (D-06): 63 -> 61.
     // Phase 87 Plan 56c deleted engine/bottleLedger.ts, crossoverLocation.ts, engineNoticeStore.ts, engineRegistry.ts, fallbackEngine.ts,
     // launchSettings.ts and perGameBottle.ts with the engine directory (D-06): 61 -> 54.
-    assertAtOrAboveFloor('66.4 owned list', OWNED_66_4.length, 54)
+    // Phase 94 Plan 22 deleted sidecar/shortcutsFlowRegistration.ts with the shortcuts registration (D-27, SC4): 54 -> 53.
+    assertAtOrAboveFloor('66.4 owned list', OWNED_66_4.length, 53)
   })
 
   it.each(OWNED_66_4)('%s is absent from the census', (file) => {

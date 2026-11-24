@@ -5,7 +5,11 @@ import type { InstalledInfo, Runner } from 'common/types'
 import type { Game } from 'common/types/game_manager'
 import {
   RUST_SHORTCUTS_ADD,
-  RUST_SHORTCUTS_EXIST
+  RUST_SHORTCUTS_EXIST,
+  RUST_SHORTCUTS_REMOVE,
+  RUST_SHORTCUTS_STEAM_ADD,
+  RUST_SHORTCUTS_STEAM_IS_ADDED,
+  RUST_SHORTCUTS_STEAM_REMOVE
 } from 'common/types/sidecarTransport'
 import type { StoreManagers } from 'backend/services/types'
 import type { GlobalConfigSlice } from 'backend/config'
@@ -140,7 +144,11 @@ async function shortcutInputs(
   const config = deps.config.getSettings()
   // The library's `{}` sentinel has no `install` either.
   const install = info.install as Partial<InstalledInfo> | undefined
-  const canAddSteamShortcut = storeCapabilities[info.runner].canAddSteamShortcut
+  // The library's `{}` sentinel has no runner either: a game no store holds cannot be added to Steam.
+  const capabilities = storeCapabilities[info.runner] as
+    | (typeof storeCapabilities)[Runner]
+    | undefined
+  const canAddSteamShortcut = capabilities?.canAddSteamShortcut === true
   const settings: ShortcutSettingsInput = {
     addDesktopShortcuts: Boolean(config.addDesktopShortcuts),
     addStartMenuShortcuts: Boolean(config.addStartMenuShortcuts),
@@ -217,5 +225,107 @@ export async function resolveAddShortcut(
       fromMenu,
       notify: true
     }
+  ])
+}
+
+/**
+ * The renderer's `removeShortcut`: Rust removes the shortcut files it can prove it wrote, raises the result
+ * notification and resolves `{ removed, refused, existsAfter }`.
+ */
+export async function resolveRemoveShortcut(
+  deps: ShortcutResolverDeps,
+  appName: string,
+  runner: Runner
+): Promise<unknown> {
+  const game = deps.libraryManagers[runner].getGame(appName)
+  const inputs = await shortcutInputs(deps, game, 'remove')
+  return deps.requestRustInvoke(RUST_SHORTCUTS_REMOVE, [
+    { game: inputs.game, notify: true }
+  ])
+}
+
+/** The renderer's `addToSteam`: Rust adds the game to Steam as a non-Steam shortcut and resolves whether it did. */
+export async function resolveAddToSteam(
+  deps: ShortcutResolverDeps,
+  appName: string,
+  runner: Runner
+): Promise<unknown> {
+  const game = deps.libraryManagers[runner].getGame(appName)
+  const inputs = await shortcutInputs(deps, game, 'steamAdd')
+  return deps.requestRustInvoke(RUST_SHORTCUTS_STEAM_ADD, [
+    { game: inputs.game, settings: inputs.settings }
+  ])
+}
+
+/** The renderer's `removeFromSteam`: Rust removes the game's non-Steam shortcut and its grid art, and resolves null. */
+export async function resolveRemoveFromSteam(
+  deps: ShortcutResolverDeps,
+  appName: string,
+  runner: Runner
+): Promise<unknown> {
+  const game = deps.libraryManagers[runner].getGame(appName)
+  const inputs = await shortcutInputs(deps, game, 'steamCheck')
+  return deps.requestRustInvoke(RUST_SHORTCUTS_STEAM_REMOVE, [
+    { game: inputs.game, settings: inputs.settings }
+  ])
+}
+
+/** The renderer's `isAddedToSteam`: Rust answers whether the game is already a non-Steam shortcut in Steam. */
+export async function resolveIsAddedToSteam(
+  deps: ShortcutResolverDeps,
+  appName: string,
+  runner: Runner
+): Promise<unknown> {
+  const game = deps.libraryManagers[runner].getGame(appName)
+  const inputs = await shortcutInputs(deps, game, 'steamCheck')
+  return deps.requestRustInvoke(RUST_SHORTCUTS_STEAM_IS_ADDED, [
+    { game: inputs.game, settings: inputs.settings }
+  ])
+}
+
+/**
+ * Adds the game's desktop shortcuts (and, when the settings ask, its Add to Steam entry), for a store manager:
+ * after an install or an import, and the game's own `addShortcuts` method. Shows nothing (`notify: false`) and
+ * rejects with `Could not write shortcuts: ...` when a requested file could not be written, as the TS did;
+ * Rust has by then tried every file. Never reads the renderer.
+ */
+export async function addShortcuts(
+  deps: ShortcutResolverDeps,
+  game: Game,
+  fromMenu?: boolean
+): Promise<unknown> {
+  const inputs = await shortcutInputs(deps, game, 'add')
+  return deps.requestRustInvoke(RUST_SHORTCUTS_ADD, [
+    {
+      game: inputs.game,
+      settings: inputs.settings,
+      fromMenu,
+      notify: false
+    }
+  ])
+}
+
+/**
+ * Removes the game's desktop shortcuts, for a store manager's uninstall. Shows nothing (`notify: false`) and,
+ * as the TS, never rejects for a file it could not delete: an uninstall must not fail over a stale shortcut.
+ */
+export async function removeShortcuts(
+  deps: ShortcutResolverDeps,
+  game: Game
+): Promise<unknown> {
+  const inputs = await shortcutInputs(deps, game, 'remove')
+  return deps.requestRustInvoke(RUST_SHORTCUTS_REMOVE, [
+    { game: inputs.game, notify: false }
+  ])
+}
+
+/** Removes the game's non-Steam shortcut and its grid art from Steam, for a store manager's uninstall. */
+export async function removeNonSteamGame(
+  deps: ShortcutResolverDeps,
+  game: Game
+): Promise<unknown> {
+  const inputs = await shortcutInputs(deps, game, 'steamCheck')
+  return deps.requestRustInvoke(RUST_SHORTCUTS_STEAM_REMOVE, [
+    { game: inputs.game, settings: inputs.settings }
   ])
 }

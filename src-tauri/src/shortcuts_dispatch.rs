@@ -535,9 +535,9 @@ mod tests {
         );
         assert!(ShortcutsRemoveArgs::from_args(&[]).is_err());
         let steam = json!({ "game": game_json(), "settings": settings_json() });
-        assert!(ShortcutsSteamAddArgs::from_args(&[steam.clone()]).is_ok());
-        assert!(ShortcutsSteamRemoveArgs::from_args(&[steam.clone()]).is_ok());
-        assert!(ShortcutsSteamIsAddedArgs::from_args(&[steam]).is_ok());
+        assert!(ShortcutsSteamAddArgs::from_args(std::slice::from_ref(&steam)).is_ok());
+        assert!(ShortcutsSteamRemoveArgs::from_args(std::slice::from_ref(&steam)).is_ok());
+        assert!(ShortcutsSteamIsAddedArgs::from_args(std::slice::from_ref(&steam)).is_ok());
     }
 
     #[test]
