@@ -1759,6 +1759,7 @@ dependencies = [
  "gamelib-knownfix",
  "gamelib-store",
  "gamelib-testutil",
+ "gamelib-wine",
  "serde_json",
 ]
 

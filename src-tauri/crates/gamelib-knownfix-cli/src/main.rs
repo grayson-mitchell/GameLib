@@ -10,7 +10,8 @@
 //!     array of the op's arguments. An op error prints on stderr and exits 2. `--home <dir>` is the
 //!     operator's home directory the ops see (default `<dir>/home`: the real profile is never read).
 //!     `--public <dir>` is the bundled `fixes` directory's parent (default: none). The context has no
-//!     UI and no log, and spawns through `gamelib-proc`.
+//!     UI and no log, and spawns through `gamelib-proc` (a registry op's `reg add` runs through a wine
+//!     command core built over the same directories).
 //! anything else: usage on stderr (exit 64); bad input (arguments that are not a JSON array) exits 2.
 
 use std::path::PathBuf;
@@ -22,6 +23,9 @@ use gamelib_core::shutdown::Shutdown;
 use gamelib_engine::ctx::{EngineCtx, EnginePaths, Platform};
 use gamelib_knownfix::ctx::KnownFixCtx;
 use gamelib_store::host::StoreHost;
+use gamelib_wine::ctx::WineCtx;
+use gamelib_wine::wine_cmd::env::EnvSnapshot;
+use gamelib_wine::wine_cmd::WineHost;
 
 const USAGE: &str = "usage: gamelib-knownfix-cli ops\n       gamelib-knownfix-cli op <name> <json-args> --user-data <dir> [--home <dir>] [--public <dir>] [--relay-url <url>] [--app-version <v>]";
 
@@ -94,7 +98,19 @@ fn run_op(args: &[String]) {
         },
         Shutdown::new(),
     );
-    let ctx = KnownFixCtx::new(Arc::new(engine), bundled, relay_url, app_version);
+    let engine = Arc::new(engine);
+    // The wine command core the registry ops spawn through: tools under `<dir>/tools`, the CLI's own
+    // process environment as the host's (a test clears it), no Darwin release.
+    let wine = WineCtx::new(
+        Arc::clone(&engine),
+        engine.paths.tools_path.join("runtimes"),
+    );
+    let host = WineHost {
+        env: EnvSnapshot::from_pairs(std::env::vars()),
+        ..WineHost::default()
+    };
+    let ctx =
+        KnownFixCtx::new(engine, bundled, relay_url, app_version).with_wine(Arc::new(wine), host);
     match gamelib_knownfix::dispatch_sync(name, &op_args, &ctx) {
         Ok(value) => println!("{value}"),
         Err(e) => bad(&e),

@@ -19,14 +19,15 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
 use gamelib_core::clock::SystemClock;
+use gamelib_core::process::SpecOutput;
 use gamelib_core::shutdown::Shutdown;
 use gamelib_engine::ctx::{EngineCtx, EnginePaths, Platform};
-use gamelib_engine::testing::RecordingLog;
+use gamelib_engine::testing::{RecordingLog, ScriptedSpecRunner};
 use gamelib_knownfix::ctx::KnownFixCtx;
 use gamelib_knownfix::jsvalue::JsValue;
 use gamelib_knownfix::registry::{
-    apply_known_fix_profile_registry_with, apply_registry_fixes, command_parts,
-    dll_overrides_to_registry_fixes, prefix_dir, profile_registry_fixes_js,
+    apply_known_fix_profile_registry, apply_known_fix_profile_registry_with, apply_registry_fixes,
+    command_parts, dll_overrides_to_registry_fixes, prefix_dir, profile_registry_fixes_js,
     validate_registry_fixes, value_is_set, RegistryRun, RegistryRunOutcome, RunFuture, RunOptions,
     ValidRegistryFix, BRIDGE_RUN_OPTIONS, LAUNCHER_RUN_OPTIONS, REGISTRY_FIX_TIMEOUT,
 };
@@ -34,11 +35,14 @@ use gamelib_knownfix::types::Runner;
 use gamelib_knownfix::CancellationToken;
 use gamelib_store::host::StoreHost;
 use gamelib_testutil::FakeHome;
+use gamelib_wine::ctx::WineCtx;
+use gamelib_wine::wine_cmd::env::EnvSnapshot;
+use gamelib_wine::wine_cmd::WineHost;
 use serde_json::{json, Value};
 
-/// `golden/registry` holds 57 cases; the plan asks for at least 50 to be compared. A later edit may raise
-/// this, never lower it.
-const REGISTRY_FLOOR: usize = 52;
+/// `golden/registry` holds 57 cases, all compared: 52 over the recording seam and 5 launcher-path cases
+/// over the wine command core. The plan asks for at least 50. A later edit may raise this, never lower it.
+const REGISTRY_FLOOR: usize = 57;
 
 fn golden_dir() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/golden/registry")
@@ -67,38 +71,96 @@ struct Rig {
     home: FakeHome,
     log: Arc<RecordingLog>,
     ctx: KnownFixCtx,
+    /// The spawn seam of a wine-core rig: what the scripted `reg add` children saw.
+    runner: Option<Arc<ScriptedSpecRunner>>,
 }
 
 impl Rig {
     fn new() -> Rig {
+        Rig::build(Platform::Mac, None)
+    }
+
+    /// The oracle's pinned base environment: the fake HOME's eight variables, then PATH, LANG and USER.
+    fn base_env(home: &FakeHome) -> Vec<(String, String)> {
+        let mut env: Vec<(String, String)> = home
+            .env()
+            .into_iter()
+            .map(|(k, v)| (k.to_string(), v.to_string_lossy().into_owned()))
+            .collect();
+        env.push(("PATH".to_string(), "/usr/bin:/bin".to_string()));
+        env.push(("LANG".to_string(), "C.UTF-8".to_string()));
+        env.push(("USER".to_string(), "gamelib-oracle".to_string()));
+        env
+    }
+
+    /// A rig on `platform`; with `scripted`, the context carries a wine core over a scripted spawn seam.
+    fn build(platform: Platform, scripted: Option<&Value>) -> Rig {
         let home = FakeHome::new("knownfix-registry-golden-");
         let root = home.root().to_path_buf();
         let app_folder = root.join(".config").join("GameLib");
         let log = Arc::new(RecordingLog::new());
-        let engine = EngineCtx::new(
+        let base = Rig::base_env(&home);
+        let runner = scripted.map(|script| {
+            let mut runner = ScriptedSpecRunner::new(base.clone());
+            for entry in script.as_array().unwrap() {
+                let program = entry["program"]
+                    .as_str()
+                    .unwrap()
+                    .replace("<TOOLS>", &app_folder.join("tools").to_string_lossy())
+                    .replace("<HOME>", &root.to_string_lossy());
+                runner = runner.on_program(
+                    &program,
+                    SpecOutput {
+                        code: entry["code"].as_i64().map(|c| c as i32),
+                        stdout: entry["stdout"].as_str().unwrap_or_default().to_string(),
+                        stderr: entry["stderr"].as_str().unwrap_or_default().to_string(),
+                        ..SpecOutput::default()
+                    },
+                );
+            }
+            Arc::new(runner)
+        });
+        let mut engine = EngineCtx::new(
             Arc::new(StoreHost::new()),
             Arc::new(SystemClock),
-            Platform::Mac,
+            platform,
             EnginePaths {
                 tools_path: app_folder.join("tools"),
                 user_data: root
                     .join("Library")
                     .join("Application Support")
                     .join("GameLib"),
-                app_folder,
+                app_folder: app_folder.clone(),
                 user_home: root.clone(),
                 temp: root.join("tmp"),
             },
             Shutdown::new(),
         )
         .with_log(log.clone());
-        let ctx = KnownFixCtx::new(
-            Arc::new(engine),
+        if let Some(runner) = &runner {
+            engine = engine.with_proc(runner.clone());
+        }
+        let engine = Arc::new(engine);
+        let mut ctx = KnownFixCtx::new(
+            Arc::clone(&engine),
             Some(root.join("public").join("fixes")),
             "https://relay.test",
             "0.0.0",
         );
-        Rig { home, log, ctx }
+        if runner.is_some() {
+            let wine = WineCtx::new(engine, app_folder.join("tools").join("runtimes"));
+            let host = WineHost {
+                env: EnvSnapshot::from_pairs(base),
+                ..WineHost::default()
+            };
+            ctx = ctx.with_wine(Arc::new(wine), host);
+        }
+        Rig {
+            home,
+            log,
+            ctx,
+            runner,
+        }
     }
 
     fn root(&self) -> &Path {
@@ -107,6 +169,15 @@ impl Rig {
 
     fn expand(&self, text: &str) -> String {
         text.replace(
+            "<TOOLS>",
+            &self
+                .root()
+                .join(".config")
+                .join("GameLib")
+                .join("tools")
+                .to_string_lossy(),
+        )
+        .replace(
             "<APPFOLDER>",
             &self
                 .root()
@@ -138,19 +209,16 @@ impl Rig {
         let as_text = |p: &Path| p.to_string_lossy().into_owned();
         let app = self.root().join(".config").join("GameLib");
         let mut table = vec![
+            ("<TOOLS>", as_text(&app.join("tools"))),
             ("<APPFOLDER>", as_text(&app)),
             ("<HOME>", as_text(self.root())),
         ];
         if !cfg!(windows) {
             if let Ok(real) = std::fs::canonicalize(self.root()) {
                 if real != self.root() {
-                    table.insert(
-                        0,
-                        (
-                            "<APPFOLDER>",
-                            as_text(&real.join(".config").join("GameLib")),
-                        ),
-                    );
+                    let real_app = real.join(".config").join("GameLib");
+                    table.insert(0, ("<TOOLS>", as_text(&real_app.join("tools"))));
+                    table.insert(1, ("<APPFOLDER>", as_text(&real_app)));
                     table.push(("<HOME>", as_text(&real)));
                 }
             }
@@ -159,7 +227,9 @@ impl Rig {
         for (token, root) in table {
             s = s.replace(root.as_str(), token);
         }
-        if cfg!(windows) && (s.contains("<APPFOLDER>") || s.contains("<HOME>")) {
+        if cfg!(windows)
+            && (s.contains("<APPFOLDER>") || s.contains("<HOME>") || s.contains("<TOOLS>"))
+        {
             s = s.replace('\\', "/");
         }
         s
@@ -492,6 +562,135 @@ async fn run_step(
     Step { result }
 }
 
+/// The call site the TS recorded for every `reg add` of this module, and the spawn class the shell
+/// assigns it (`golden/classes.json`).
+const CALL_SITE: &str = "knownfix.registry.reg_add";
+
+fn classes() -> Value {
+    read_json(&golden_dir().parent().unwrap().join("classes.json"))
+}
+
+/// What a launcher-path case produced: the answer and log, the `runWineCommand` calls as the spawns show
+/// them, and the whole spawn (program, argv, full environment, cwd) of each `reg add`.
+struct RealRun {
+    result: Value,
+    events: Value,
+    calls: Value,
+    spawns: Value,
+}
+
+/// Runs a `real` case: the profile hook over `gamelib-wine`'s command core on a scripted spawn seam. The
+/// settings carry a real wine installation under the fake HOME and the prefix files are seeded, so the
+/// command core's prefix check, environment merge and spawn all run as in the app.
+async fn run_real_case(case: &Value) -> RealRun {
+    let platform = match case["platform"].as_str().unwrap() {
+        "mac" => Platform::Mac,
+        "linux" => Platform::Linux,
+        "windows" => Platform::Windows,
+        other => panic!("unknown platform {other}"),
+    };
+    let rig = Rig::build(platform, Some(&case["scripted"]));
+    let steps = case["steps"].as_array().unwrap();
+    assert_eq!(steps.len(), 1, "a launcher-path case is one step");
+    let step = &steps[0];
+    assert_eq!(step["op"], "profileApply");
+    rig.seed(&step["seed"]);
+    let settings = rig.expand_deep(&step["settings"]);
+    let runner = Runner::parse(step["runner"].as_str().unwrap()).unwrap();
+    apply_known_fix_profile_registry(
+        &rig.ctx,
+        step["appName"].as_str().unwrap(),
+        runner,
+        &settings,
+    )
+    .await
+    .expect("the wine core is installed");
+
+    let scripted = rig.runner.as_ref().unwrap();
+    assert!(
+        scripted.unscripted().is_empty(),
+        "unscripted spawns: {:?}",
+        scripted.unscripted()
+    );
+    let base: std::collections::BTreeMap<String, String> =
+        Rig::base_env(&rig.home).into_iter().collect();
+    let classes = classes();
+    let class = classes[CALL_SITE].clone();
+    let mut calls = Vec::new();
+    let mut spawns = Vec::new();
+    for spawn in scripted.spawns() {
+        // The environment the child saw: the base without what the spawn unset, plus what it set.
+        let mut env = base.clone();
+        for key in &spawn.env_unset {
+            env.remove(key);
+        }
+        env.extend(spawn.env_set.clone());
+        let verb = env.get("PROTON_VERB").cloned();
+        let mut parts = spawn.argv.clone();
+        // A proton wine takes its verb as the first argument; the command parts are what follows.
+        if spawn.program.ends_with("/proton")
+            && parts.first().map(String::as_str) == verb.as_deref()
+        {
+            parts.remove(0);
+        }
+        calls.push(json!({
+            "step": 0,
+            "kind": "runWineCommand",
+            "commandParts": parts,
+            "wait": false,
+            "protonVerb": verb,
+            "skipPrefixCheckIKnowWhatImDoing": Value::Null,
+            "winePrefix": settings["winePrefix"],
+        }));
+        assert_eq!(spawn.label, "wine-command");
+        assert!(
+            spawn.timeout.is_none(),
+            "a reg add is bounded by its cancel, not a spec timeout"
+        );
+        spawns.push(json!({
+            "callSite": CALL_SITE,
+            "program": spawn.program,
+            "argv": spawn.argv,
+            "env": env,
+            "unsetEnv": spawn.env_unset,
+            "cwd": spawn.cwd.as_ref().map(|p| p.to_string_lossy().into_owned()),
+            "stdin": spawn.stdin,
+            "via": "run",
+            "result": {
+                "code": spawn.result.code,
+                "stdout": spawn.result.stdout,
+                "stderr": spawn.result.stderr,
+            },
+            "class": class,
+        }));
+    }
+    let events: Vec<Value> = rig
+        .log
+        .lines()
+        .into_iter()
+        .filter(|(level, _)| *level != "error")
+        .map(|(level, line)| {
+            json!({
+                "step": 0,
+                "level": if level == "warn" { "warning" } else { level },
+                "text": line,
+            })
+        })
+        .collect();
+    RealRun {
+        result: rig.normalise(json!({"steps": [{
+            "op": "profileApply",
+            "appName": step["appName"],
+            "runner": step["runner"],
+            "seam": step["seam"],
+            "settled": true,
+        }]})),
+        events: rig.normalise(Value::Array(events)),
+        calls: rig.normalise(Value::Array(calls)),
+        spawns: rig.normalise(Value::Array(spawns)),
+    }
+}
+
 fn is_real_seam(case: &Value) -> bool {
     case["steps"]
         .as_array()
@@ -571,7 +770,7 @@ fn load_cases() -> (Vec<Value>, Vec<JsValue>) {
     (cases, items(&ordered).to_vec())
 }
 
-/// One paused-clock replay of every case the seam-free (and scripted-seam) replay can run. The clock is
+/// One paused-clock replay of every case: the recording seam and the wine-core launcher path. The clock is
 /// paused so a `reg add` that never settles hits its 15 s bound without waiting for it.
 #[tokio::test(start_paused = true)]
 async fn every_registry_golden_replays() {
@@ -580,17 +779,21 @@ async fn every_registry_golden_replays() {
     let mut compared = 0usize;
     let mut failures = Vec::new();
     for (case, ordered) in cases.iter().zip(&ordered) {
-        if is_real_seam(case) {
-            continue;
-        }
         let id = case["id"].as_str().unwrap();
         let dir = golden_dir().join("expected").join(id);
-        let (result, events, calls) = run_case(case, ordered).await;
-        let checks = [
-            ("result", result, read_json(&dir.join("result.json"))),
-            ("events", events, golden_events(&dir)),
-            ("calls", calls, golden_calls(&dir)),
-        ];
+        let mut checks = Vec::new();
+        if is_real_seam(case) {
+            let run = run_real_case(case).await;
+            checks.push(("result", run.result, read_json(&dir.join("result.json"))));
+            checks.push(("events", run.events, golden_events(&dir)));
+            checks.push(("calls", run.calls, golden_calls(&dir)));
+            checks.push(("spawns", run.spawns, read_json(&dir.join("spawns.json"))));
+        } else {
+            let (result, events, calls) = run_case(case, ordered).await;
+            checks.push(("result", result, read_json(&dir.join("result.json"))));
+            checks.push(("events", events, golden_events(&dir)));
+            checks.push(("calls", calls, golden_calls(&dir)));
+        }
         for (what, got, want) in checks {
             if got != want {
                 failures.push(format!("{id}: {what}\n  want {want}\n  got  {got}"));
@@ -712,4 +915,239 @@ async fn an_application_after_shutdown_began_runs_nothing() {
     apply_registry_fixes(&rig.ctx, Some(&raw), "gog 123", &run, None).await;
     assert!(calls.lock().unwrap().is_empty());
     assert!(rig.log.lines().is_empty());
+}
+
+#[test]
+fn every_recorded_reg_add_is_the_one_call_site_and_the_class_is_helper() {
+    // The shell classes `knownfix.registry.reg_add` as a helper: a child GameLib starts for itself, never a
+    // game that must outlive it (the Rust shutdown contract).
+    assert_eq!(classes()[CALL_SITE], "helper");
+    let (cases, _) = load_cases();
+    let mut seen = 0usize;
+    for case in &cases {
+        let id = case["id"].as_str().unwrap();
+        let spawns = read_json(&golden_dir().join("expected").join(id).join("spawns.json"));
+        for spawn in spawns.as_array().unwrap() {
+            assert_eq!(spawn["callSite"], CALL_SITE, "{id}");
+            assert_eq!(spawn["class"], "helper", "{id}");
+            seen += 1;
+        }
+    }
+    assert!(seen >= 7, "{seen} recorded spawns");
+}
+
+/// A wine installation under the fake HOME whose binaries exist, on the settings shape the renderer holds.
+fn wine_settings(rig: &Rig, kind: &str) -> Value {
+    let bin = rig.root().join("wine").join("bin").join("wine");
+    std::fs::create_dir_all(bin.parent().unwrap()).unwrap();
+    std::fs::write(&bin, "").unwrap();
+    std::fs::write(bin.with_file_name("wineserver"), "").unwrap();
+    json!({
+        "winePrefix": rig.root().join("prefix").to_string_lossy(),
+        "wineVersion": {
+            "type": kind,
+            "name": "Wine-9",
+            "bin": bin.to_string_lossy(),
+            "wineserver": bin.with_file_name("wineserver").to_string_lossy(),
+        },
+    })
+}
+
+#[tokio::test(start_paused = true)]
+async fn the_bridge_reads_the_steam_profile_itself_and_never_checks_the_prefix() {
+    let scripted = json!([{"program": "<HOME>/wine/bin/wine", "code": 0}]);
+    let rig = Rig::build(Platform::Linux, Some(&scripted));
+    rig.seed(&json!([{
+        "path": "<APPFOLDER>/fixes/local/284100-steam.profile.json",
+        "text": r#"{"title":"t","registry":[{"key":"HKCU\\Software\\Foo","name":"Bar","type":"REG_DWORD","value":1}],"dllOverrides":[{"exe":"Game.exe","dlls":{"d3d9":"native"}}]}"#
+    }]));
+    // A tier-2 profile for another store is not this game's.
+    rig.seed(&json!([{
+        "path": "<APPFOLDER>/fixes/local/284100-gog.profile.json",
+        "text": r#"{"registry":[{"key":"HKCU\\Software\\Other","name":"X","type":"REG_DWORD","value":1}]}"#
+    }]));
+    let settings = wine_settings(&rig, "wine");
+    // Bridge: the prefix directory is missing, and the prefix check is skipped, so nothing but the three
+    // `reg add` children starts.
+    gamelib_knownfix::registry::apply_bridge_registry_fixes(
+        &rig.ctx,
+        "284100",
+        "Steam 284100",
+        &settings,
+        None,
+    )
+    .await
+    .expect("the wine core is installed");
+    let spawns = rig.runner.as_ref().unwrap().spawns();
+    let parts: Vec<Vec<String>> = spawns.iter().map(|s| s.argv.clone()).collect();
+    assert_eq!(parts.len(), 3, "{parts:?}");
+    assert!(
+        parts.iter().all(|argv| argv[..2] == ["reg", "add"]),
+        "{parts:?}"
+    );
+    assert!(parts[0].contains(&"HKCU\\Software\\Foo".to_string()));
+    assert!(
+        parts[2].contains(&"d3d9".to_string()),
+        "registry then dllOverrides"
+    );
+    assert!(spawns
+        .iter()
+        .all(|s| s.env_set.get("PROTON_VERB").map(String::as_str) == Some("run")));
+    // The wine core notes the missing library folders of this bare installation; the fixes themselves
+    // warn about nothing.
+    assert!(
+        rig.log.lines().iter().all(|(level, _)| *level == "error"),
+        "{:?}",
+        rig.log.lines()
+    );
+
+    // The same settings through the launcher's options check the prefix first, and the missing prefix is
+    // created before any `reg add` runs.
+    let rig2 = Rig::build(Platform::Linux, Some(&scripted));
+    rig2.seed(&json!([{
+        "path": "<APPFOLDER>/fixes/local/GOGAPP-gog.profile.json",
+        "text": r#"{"registry":[{"key":"HKCU\\Software\\Foo","name":"Bar","type":"REG_DWORD","value":1,"views":[64]}]}"#
+    }]));
+    let settings2 = wine_settings(&rig2, "wine");
+    apply_known_fix_profile_registry(&rig2.ctx, "GOGAPP", Runner::Gog, &settings2)
+        .await
+        .unwrap();
+    let first = rig2.runner.as_ref().unwrap().spawns();
+    assert!(first.len() >= 2, "the prefix is verified first: {first:?}");
+    assert_ne!(first[0].argv[..2], ["reg", "add"]);
+}
+
+#[tokio::test(start_paused = true)]
+async fn the_registry_ops_run_through_dispatch_and_hold_the_knownfix_registrant() {
+    let scripted = json!([{"program": "<HOME>/wine/bin/wine", "code": 0}]);
+    let rig = Rig::build(Platform::Linux, Some(&scripted));
+    rig.seed(&json!([{
+        "path": "<APPFOLDER>/fixes/local/GOGAPP-gog.profile.json",
+        "text": r#"{"registry":[{"key":"HKCU\\Software\\Foo","name":"Bar","type":"REG_DWORD","value":1,"views":[64]}]}"#
+    }]));
+    let mut settings = wine_settings(&rig, "wine");
+    // A complete prefix, so the launcher's check passes and exactly one `reg add` runs.
+    let prefix = PathBuf::from(settings["winePrefix"].as_str().unwrap());
+    for dir in ["dosdevices", "drive_c"] {
+        std::fs::create_dir_all(prefix.join(dir)).unwrap();
+    }
+    for file in ["system.reg", "user.reg", "userdef.reg"] {
+        std::fs::write(prefix.join(file), "").unwrap();
+    }
+    settings["winePrefix"] = Value::String(prefix.to_string_lossy().into_owned());
+    let answer = gamelib_knownfix::dispatch(
+        "knownfix_apply_profile_registry",
+        &[json!({"appName": "GOGAPP", "runner": "gog", "gameSettings": settings})],
+        &rig.ctx,
+    )
+    .await;
+    assert_eq!(answer, Ok(Value::Null));
+    let spawns = rig.runner.as_ref().unwrap().spawns();
+    assert_eq!(spawns.len(), 1, "{spawns:?}");
+    assert_eq!(spawns[0].argv[..2], ["reg", "add"]);
+    // The registrant was released when the op answered.
+    assert!(rig
+        .ctx
+        .engine
+        .shutdown
+        .drain(std::time::Duration::from_millis(50))
+        .is_empty());
+}
+
+/// The production seam end to end on unix: a real child through `gamelib-proc`'s `SpecProcRunner` (the
+/// app's `SpawnClass::Helper` runner), ended by the run's cancel token. Real time, no paused clock.
+#[cfg(unix)]
+#[tokio::test]
+async fn a_cancelled_reg_add_is_a_helper_child_that_is_gone_afterwards() {
+    use gamelib_knownfix::registry::WineRegistryRun;
+    use gamelib_proc::spec::SpecProcRunner;
+    use std::os::unix::fs::PermissionsExt;
+
+    let home = FakeHome::new("knownfix-registry-proc-");
+    let root = home.root().to_path_buf();
+    let pid_file = root.join("child.pid");
+    let bin = root.join("wine").join("bin").join("wine");
+    std::fs::create_dir_all(bin.parent().unwrap()).unwrap();
+    std::fs::write(
+        &bin,
+        format!(
+            "#!/bin/sh\necho $$ > '{}'\nexec /bin/sleep 60\n",
+            pid_file.display()
+        ),
+    )
+    .unwrap();
+    std::fs::set_permissions(&bin, std::fs::Permissions::from_mode(0o755)).unwrap();
+    std::fs::write(bin.with_file_name("wineserver"), "").unwrap();
+    let settings = json!({
+        "winePrefix": root.join("prefix").to_string_lossy(),
+        "wineVersion": {
+            "type": "wine",
+            "name": "Wine-9",
+            "bin": bin.to_string_lossy(),
+            "wineserver": bin.with_file_name("wineserver").to_string_lossy(),
+        },
+    });
+    let engine = Arc::new(
+        EngineCtx::new(
+            Arc::new(StoreHost::new()),
+            Arc::new(SystemClock),
+            Platform::Linux,
+            EnginePaths {
+                app_folder: root.clone(),
+                user_data: root.clone(),
+                tools_path: root.join("tools"),
+                user_home: root.clone(),
+                temp: root.join("tmp"),
+            },
+            Shutdown::new(),
+        )
+        .with_proc(Arc::new(SpecProcRunner)),
+    );
+    let wine = Arc::new(WineCtx::new(Arc::clone(&engine), root.join("runtime")));
+    let host = WineHost {
+        env: EnvSnapshot::from_pairs(Rig::base_env(&home)),
+        ..WineHost::default()
+    };
+    let run = WineRegistryRun::new(wine, host, &settings, BRIDGE_RUN_OPTIONS);
+    let cancel = CancellationToken::new();
+    let parts = vec!["reg".to_string(), "add".to_string()];
+    let handle = tokio::spawn({
+        let cancel = cancel.clone();
+        async move { run.run(parts, cancel).await }
+    });
+    // Wait (bounded) for the child to write its pid, then cancel.
+    let mut pid = None;
+    for _ in 0..200 {
+        if let Ok(text) = std::fs::read_to_string(&pid_file) {
+            if let Ok(parsed) = text.trim().parse::<i32>() {
+                pid = Some(parsed);
+                break;
+            }
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(25)).await;
+    }
+    let pid = pid.expect("the fake wine started");
+    let alive = |pid: i32| {
+        std::process::Command::new("/bin/kill")
+            .args(["-0", &pid.to_string()])
+            .output()
+            .map(|out| out.status.success())
+            .unwrap_or(false)
+    };
+    assert!(alive(pid), "the child runs until it is cancelled");
+    cancel.cancel();
+    let outcome = tokio::time::timeout(std::time::Duration::from_secs(10), handle)
+        .await
+        .expect("the run answers soon after its cancel")
+        .unwrap();
+    assert_eq!(outcome, RegistryRunOutcome::Killed(None));
+    let mut gone = false;
+    for _ in 0..80 {
+        if !alive(pid) {
+            gone = true;
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(25)).await;
+    }
+    assert!(gone, "the cancelled child is gone");
 }

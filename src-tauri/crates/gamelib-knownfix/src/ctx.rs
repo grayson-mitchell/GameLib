@@ -6,6 +6,8 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use gamelib_engine::ctx::EngineCtx;
+use gamelib_wine::ctx::WineCtx;
+use gamelib_wine::wine_cmd::WineHost;
 
 /// The deployed known-fix relay (`GAMELIB_FIX_RELAY_URL` of `src/backend/knownFixReport.ts`). The shell
 /// hands this to [`KnownFixCtx`] unless `GAMELIB_FIX_RELAY_URL` is set, so the crate itself reads no
@@ -50,6 +52,12 @@ pub struct KnownFixCtx {
     pub relay_url: String,
     /// The app's version, as the shell reports it.
     pub app_version: String,
+    /// The wine command core the registry fixes run their `reg add` through (88-09, D-21). `None` until
+    /// the shell (or the CLI) installs one, which makes the two registry ops answer `<op>:not-ready`.
+    pub wine: Option<Arc<WineCtx>>,
+    /// The process facts the wine command core reads and this crate may not (the process environment, the
+    /// Darwin release), as the shell took them. Empty until [`KnownFixCtx::with_wine`].
+    pub wine_host: WineHost,
 }
 
 impl KnownFixCtx {
@@ -80,6 +88,16 @@ impl KnownFixCtx {
             paths,
             relay_url: relay_url.into(),
             app_version: app_version.into(),
+            wine: None,
+            wine_host: WineHost::default(),
         }
+    }
+
+    /// Installs the wine command core and the host facts it runs with (the process environment and the
+    /// Darwin release, which the crate never reads for itself).
+    pub fn with_wine(mut self, wine: Arc<WineCtx>, host: WineHost) -> KnownFixCtx {
+        self.wine = Some(wine);
+        self.wine_host = host;
+        self
     }
 }

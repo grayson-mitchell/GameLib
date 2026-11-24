@@ -803,9 +803,9 @@ pub struct WineRegistryRun {
 }
 
 impl WineRegistryRun {
-    /// A run over `wine` for the game settings `game_settings` (the renderer's object). `None` when the
-    /// settings do not carry a wine installation the command core can use; the caller then has nothing to
-    /// run (the TS would have had `runWineCommand` refuse with "Invalid wine").
+    /// A run over `wine` for the game settings `game_settings` (the renderer's object). Settings that do
+    /// not carry a wine installation the command core can read make every run answer "no exit code", which
+    /// the applier warns about per (fix, view), as the TS did for a refused command.
     pub fn new(
         wine: Arc<gamelib_wine::ctx::WineCtx>,
         host: WineHost,
@@ -825,8 +825,10 @@ impl WineRegistryRun {
 impl RegistryRun for WineRegistryRun {
     fn run(&self, command_parts: Vec<String>, cancel: CancellationToken) -> RunFuture<'_> {
         Box::pin(async move {
+            // Settings without a usable wine: the command core's own "Invalid wine" refusal, which the TS
+            // `runWineCommand` answered with no exit code ("did not succeed (code undefined)").
             let Some(settings) = self.settings.clone() else {
-                return RegistryRunOutcome::Failed("Invalid wine".to_string());
+                return RegistryRunOutcome::Code(None);
             };
             let args = WineCommandArgs {
                 game_settings: Some(settings),
@@ -851,6 +853,73 @@ impl RegistryRun for WineRegistryRun {
             }
         })
     }
+}
+
+/// The launcher's [`WineRegistryRun`] over the context's wine core, or `None` when none is installed.
+fn wine_run(
+    ctx: &KnownFixCtx,
+    game_settings: &Value,
+    options: RunOptions,
+) -> Option<WineRegistryRun> {
+    let wine = ctx.wine.as_ref()?;
+    Some(WineRegistryRun::new(
+        Arc::clone(wine),
+        ctx.wine_host.clone(),
+        game_settings,
+        options,
+    ))
+}
+
+/// The refusal of a registry op before the wine core is installed (the shell answers `<op>:not-ready`).
+pub const NOT_READY: &str = "not-ready";
+
+/// The non-Steam launch hook over the context's wine core (`applyKnownFixProfileRegistry`): the profile
+/// is read, its registry and dllOverrides applied to the game's own prefix, every `reg add` a helper
+/// through the spawn seam. `Err(NOT_READY)` when no wine core is installed.
+pub async fn apply_known_fix_profile_registry(
+    ctx: &KnownFixCtx,
+    app_name: &str,
+    runner: Runner,
+    game_settings: &Value,
+) -> Result<(), &'static str> {
+    let run = wine_run(ctx, game_settings, LAUNCHER_RUN_OPTIONS).ok_or(NOT_READY)?;
+    apply_known_fix_profile_registry_with(ctx, app_name, runner, game_settings, &run).await;
+    Ok(())
+}
+
+/// [`apply_bridge_registry_fixes`] over a given run: the Steam tier-2 profile is read here (the one owner
+/// of the fix data), its registry then dllOverrides applied into the bridge's bottle through `run`, with
+/// the values already in `bottle_dir`'s registry files skipped. A game with no profile, or a profile with
+/// neither key, is a no-op.
+pub async fn apply_bridge_registry_fixes_with(
+    ctx: &KnownFixCtx,
+    app_id: &str,
+    label: &str,
+    run: &dyn RegistryRun,
+    bottle_dir: Option<&Path>,
+) {
+    let Some(profile) = reader::read_known_fix_profile(ctx, app_id, Runner::Steam) else {
+        return;
+    };
+    let Some(raw) = profile_registry_fixes(ctx, &profile, label) else {
+        return;
+    };
+    apply_registry_fixes(ctx, Some(&raw), label, run, bottle_dir).await;
+}
+
+/// The Steam bridge's registry step (`applySteamBridgeKnownFixes`): `wait` false, protonVerb `run`, the
+/// prefix check skipped, the bottle at `bottle_dir`. `label` names the game in the log (`Steam <appId>`).
+/// `Err(NOT_READY)` when no wine core is installed.
+pub async fn apply_bridge_registry_fixes(
+    ctx: &KnownFixCtx,
+    app_id: &str,
+    label: &str,
+    game_settings: &Value,
+    bottle_dir: Option<&Path>,
+) -> Result<(), &'static str> {
+    let run = wine_run(ctx, game_settings, BRIDGE_RUN_OPTIONS).ok_or(NOT_READY)?;
+    apply_bridge_registry_fixes_with(ctx, app_id, label, &run, bottle_dir).await;
+    Ok(())
 }
 
 /// The non-Steam launch hook: applies the game's tier-2 profile `registry` and `dllOverrides` to its own

@@ -44,13 +44,40 @@ pub(crate) fn install(public_dir: Option<std::path::PathBuf>) {
     let Some(engine) = engine_dispatch::engine_ctx() else {
         return;
     };
-    let ctx = KnownFixCtx::new(
+    let ctx = build_ctx(
         Arc::clone(engine),
+        public_dir,
+        wine_dispatch::wine_ctx().cloned(),
+    );
+    let _ = KNOWNFIX_CTX.set(Arc::new(ctx));
+}
+
+/// The known-fix context over `engine`: the bundled `<public>/fixes` layer, the relay URL, the app version
+/// and, when the wine context is installed, the wine command core the registry fixes spawn their `reg add`
+/// through (D-21: a `gamelib-proc` helper, through the engine's spawn seam) with the host facts the shell
+/// took (the process environment, the Darwin release). Without a wine context the two registry ops answer
+/// `<op>:not-ready`.
+fn build_ctx(
+    engine: Arc<gamelib_engine::ctx::EngineCtx>,
+    public_dir: Option<std::path::PathBuf>,
+    wine: Option<Arc<gamelib_wine::ctx::WineCtx>>,
+) -> KnownFixCtx {
+    let ctx = KnownFixCtx::new(
+        engine,
         public_dir.map(|dir| dir.join("fixes")),
         relay_url_from(std::env::var("GAMELIB_FIX_RELAY_URL").ok()),
         native_handlers::app_version(),
     );
-    let _ = KNOWNFIX_CTX.set(Arc::new(ctx));
+    match wine {
+        Some(wine) => {
+            let host = serde_json::from_value::<gamelib_wine::wine_cmd::WineHost>(
+                wine_dispatch::wine_run_host(),
+            )
+            .unwrap_or_default();
+            ctx.with_wine(wine, host)
+        }
+        None => ctx,
+    }
 }
 
 /// What a rejected argument looks like: the JSON path and the zod-vocabulary code. Fixed literals
@@ -186,6 +213,47 @@ mod tests {
             relay_url_from(None),
             "1.2.3",
         ))
+    }
+
+    #[test]
+    fn knownfix_registry_ops_are_not_ready_without_a_wine_context_and_answer_null_with_one() {
+        let home = FakeHome::new("knownfix-shell-");
+        let without = ctx_over(&home);
+        assert!(without.wine.is_none());
+        let args = vec![json!({"appName": "1234", "runner": "gog", "gameSettings": {}})];
+        let ask = |ctx: &Arc<KnownFixCtx>| {
+            tauri::async_runtime::block_on(run_knownfix_op(
+                Arc::clone(ctx),
+                "knownfix_apply_profile_registry",
+                args.clone(),
+                "the registry step did not finish",
+            ))
+        };
+        assert_eq!(
+            ask(&without),
+            Err("knownfix_apply_profile_registry:not-ready".to_string())
+        );
+        // The shell's builder installs the wine context and the host facts with it.
+        let engine = Arc::clone(&without.engine);
+        let wine = Arc::new(gamelib_wine::ctx::WineCtx::new(
+            Arc::clone(&engine),
+            home.root().join("runtime"),
+        ));
+        let with = Arc::new(build_ctx(engine, None, Some(wine)));
+        assert!(with.wine.is_some());
+        assert!(
+            with.wine_host.env.get("PATH").is_some() || std::env::var_os("PATH").is_none(),
+            "the host carries the process environment the shell took"
+        );
+        assert_eq!(ask(&with), Ok(Value::Null));
+        // The bridge op, from the same context: a game with no Steam profile is a no-op.
+        let bridge = tauri::async_runtime::block_on(run_knownfix_op(
+            with,
+            "knownfix_apply_registry",
+            vec![json!({"appId": "1", "label": "Steam 1", "gameSettings": {}, "bottleDir": null})],
+            "the registry step did not finish",
+        ));
+        assert_eq!(bridge, Ok(Value::Null));
     }
 
     #[test]

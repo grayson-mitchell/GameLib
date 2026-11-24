@@ -15,6 +15,47 @@ fn ops_prints_the_op_table_and_exits_zero() {
     let printed = String::from_utf8_lossy(&out.stdout);
     let names: Vec<&str> = printed.lines().collect();
     assert_eq!(names, gamelib_knownfix::OPS);
+    for op in [
+        "knownfix_apply_profile_registry",
+        "knownfix_apply_registry",
+        "knownfix_launch_overrides",
+    ] {
+        assert!(names.contains(&op), "{op} is listed: {names:?}");
+    }
+}
+
+#[test]
+fn the_registry_ops_answer_null_for_a_game_with_no_profile_and_refuse_a_bad_call_over_a_fake_home()
+{
+    let home = FakeHome::new("knownfix-cli-");
+    let user_data = home.root().join("userData");
+    let run = |op: &str, args: serde_json::Value| {
+        cli()
+            .args(["op", op])
+            .arg(args.to_string())
+            .arg("--user-data")
+            .arg(&user_data)
+            .output()
+            .unwrap()
+    };
+    let out = run(
+        "knownfix_apply_profile_registry",
+        serde_json::json!([{"appName": "nope", "runner": "gog", "gameSettings": {}}]),
+    );
+    assert_eq!(out.status.code(), Some(0), "{out:?}");
+    assert_eq!(String::from_utf8_lossy(&out.stdout).trim(), "null");
+    let out = run(
+        "knownfix_apply_registry",
+        serde_json::json!([{"appId": "9", "label": "Steam 9", "gameSettings": {}, "bottleDir": null}]),
+    );
+    assert_eq!(out.status.code(), Some(0), "{out:?}");
+    assert_eq!(String::from_utf8_lossy(&out.stdout).trim(), "null");
+    let bad = run(
+        "knownfix_apply_registry",
+        serde_json::json!([{"appId": "9", "label": "Steam 9"}]),
+    );
+    assert_eq!(bad.status.code(), Some(2));
+    assert!(String::from_utf8_lossy(&bad.stderr).contains("knownfix_apply_registry:bad-args"));
 }
 
 #[test]

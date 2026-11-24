@@ -34,6 +34,8 @@ use tokio::runtime::{Builder, Handle, Runtime};
 
 /// Ops reachable from the shell and the CLI. Keep sorted; each plan adds its own.
 pub const OPS: &[&str] = &[
+    "knownfix_apply_profile_registry",
+    "knownfix_apply_registry",
     "knownfix_launch_overrides",
     "knownfix_overlay_catalogue",
     "knownfix_read",
@@ -89,8 +91,75 @@ async fn route(op: &str, args: &[Value], ctx: &KnownFixCtx) -> Result<Value, Str
             );
             serde_json::to_value(overrides).map_err(|_| format!("{op}:bad-result"))
         }
+        // The launcher's registry hook (88-09, D-03): the game's tier-2 profile applied to its own prefix,
+        // every `reg add` a helper through the wine command core. Answers `null`; a failed `reg add` is a
+        // warning in the log, never an error here. Argument `{ appName, runner, gameSettings }`.
+        "knownfix_apply_profile_registry" => {
+            let args: ApplyProfileRegistryArgs = decode(op, args)?;
+            let runner =
+                types::Runner::parse(&args.runner).ok_or_else(|| format!("{op}:bad-args"))?;
+            if !args.game_settings.is_object()
+                || args.app_name.is_empty()
+                || args.app_name.encode_utf16().count() > 256
+            {
+                return Err(format!("{op}:bad-args"));
+            }
+            registry::apply_known_fix_profile_registry(
+                ctx,
+                &args.app_name,
+                runner,
+                &args.game_settings,
+            )
+            .await
+            .map_err(|e| format!("{op}:{e}"))?;
+            Ok(Value::Null)
+        }
+        // The Steam bridge's registry step (88-09, D-03): the Steam tier-2 profile is read here, so the
+        // fix data has one owner, and applied into the bottle with `run`, the prefix check skipped. Answers
+        // `null`. Argument `{ appId, label, gameSettings, bottleDir }`, `bottleDir` null when unknown.
+        "knownfix_apply_registry" => {
+            let args: ApplyRegistryArgs = decode(op, args)?;
+            if !args.game_settings.is_object()
+                || args.app_id.is_empty()
+                || args.app_id.encode_utf16().count() > 256
+                || args.label.is_empty()
+                || args.label.encode_utf16().count() > 256
+            {
+                return Err(format!("{op}:bad-args"));
+            }
+            registry::apply_bridge_registry_fixes(
+                ctx,
+                &args.app_id,
+                &args.label,
+                &args.game_settings,
+                args.bottle_dir.as_deref().map(std::path::Path::new),
+            )
+            .await
+            .map_err(|e| format!("{op}:{e}"))?;
+            Ok(Value::Null)
+        }
         _ => Err(format!("unknown op: {op}")),
     }
+}
+
+/// The object argument of `knownfix_apply_profile_registry`.
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct ApplyProfileRegistryArgs {
+    app_name: String,
+    runner: String,
+    game_settings: Value,
+}
+
+/// The object argument of `knownfix_apply_registry`.
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct ApplyRegistryArgs {
+    app_id: String,
+    label: String,
+    game_settings: Value,
+    #[serde(default)]
+    bottle_dir: Option<String>,
 }
 
 /// The object argument of `knownfix_launch_overrides`.
@@ -234,6 +303,8 @@ mod tests {
         sorted.sort_unstable();
         sorted.dedup();
         assert_eq!(sorted, OPS);
+        assert!(OPS.contains(&"knownfix_apply_profile_registry"));
+        assert!(OPS.contains(&"knownfix_apply_registry"));
         assert!(OPS.contains(&"knownfix_launch_overrides"));
         assert!(OPS.contains(&"knownfix_overlay_catalogue"));
         assert!(OPS.contains(&"knownfix_read"));
@@ -306,6 +377,71 @@ mod tests {
                 json!({"launchArgs": [], "exeOverride": null})
             );
         }
+    }
+
+    #[tokio::test]
+    async fn the_registry_ops_decode_one_strict_object_and_say_not_ready_without_a_wine_core() {
+        let home = FakeHome::new("knownfix-lib-");
+        let ctx = ctx(&home);
+        let secret = "SECRET-APP-".repeat(40);
+        let profile_op = "knownfix_apply_profile_registry";
+        for bad in [
+            vec![],
+            vec![json!({"appName": "a", "runner": "gog"})],
+            vec![json!({"appName": "a", "runner": "epic", "gameSettings": {}})],
+            vec![json!({"appName": "a", "runner": "gog", "gameSettings": []})],
+            vec![json!({"appName": "", "runner": "gog", "gameSettings": {}})],
+            vec![json!({"appName": secret, "runner": "gog", "gameSettings": {}})],
+            vec![json!({"appName": "a", "runner": "gog", "gameSettings": {}, "x": 1})],
+        ] {
+            let err = dispatch(profile_op, &bad, &ctx).await.unwrap_err();
+            assert_eq!(err, format!("{profile_op}:bad-args"), "{bad:?}");
+        }
+        let good = json!({"appName": "a", "runner": "gog", "gameSettings": {}});
+        assert_eq!(
+            dispatch(profile_op, &[good], &ctx).await.unwrap_err(),
+            format!("{profile_op}:not-ready")
+        );
+        let bridge_op = "knownfix_apply_registry";
+        for bad in [
+            vec![],
+            vec![json!({"appId": "1", "label": "Steam 1", "gameSettings": []})],
+            vec![json!({"appId": "", "label": "Steam 1", "gameSettings": {}})],
+            vec![json!({"appId": "1", "label": "", "gameSettings": {}})],
+            vec![json!({"appId": "1", "label": secret, "gameSettings": {}})],
+            vec![json!({"appId": "1", "label": "L", "gameSettings": {}, "bottleDir": 5})],
+            vec![json!({"appId": "1", "label": "L", "gameSettings": {}, "extra": 1})],
+        ] {
+            let err = dispatch(bridge_op, &bad, &ctx).await.unwrap_err();
+            assert_eq!(err, format!("{bridge_op}:bad-args"), "{bad:?}");
+        }
+        let good = json!({"appId": "1", "label": "Steam 1", "gameSettings": {}, "bottleDir": null});
+        assert_eq!(
+            dispatch(bridge_op, &[good], &ctx).await.unwrap_err(),
+            format!("{bridge_op}:not-ready")
+        );
+    }
+
+    #[tokio::test]
+    async fn the_registry_ops_answer_null_with_a_wine_core_and_no_profile() {
+        let home = FakeHome::new("knownfix-lib-");
+        let base = ctx(&home);
+        let wine = Arc::new(gamelib_wine::ctx::WineCtx::new(
+            Arc::clone(&base.engine),
+            home.root().join("runtime"),
+        ));
+        let ctx = base.with_wine(wine, gamelib_wine::wine_cmd::WineHost::default());
+        let profile = json!({"appName": "nope", "runner": "gog", "gameSettings": {}});
+        assert_eq!(
+            dispatch("knownfix_apply_profile_registry", &[profile], &ctx).await,
+            Ok(Value::Null)
+        );
+        let bridge =
+            json!({"appId": "9", "label": "Steam 9", "gameSettings": {}, "bottleDir": null});
+        assert_eq!(
+            dispatch("knownfix_apply_registry", &[bridge], &ctx).await,
+            Ok(Value::Null)
+        );
     }
 
     #[tokio::test]

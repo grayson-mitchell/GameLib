@@ -985,7 +985,7 @@ pub(crate) fn rpc_wine_valid(args: &[Value]) -> Result<Value, String> {
 /// base of a wine command's environment and the `PATH` the umu lookup scans) and the Darwin release. The
 /// sidecar is this shell's child, so its environment is this one's. A variable that is not UTF-8 is left
 /// out, as the crate's snapshot holds text.
-fn wine_run_host() -> Value {
+pub(crate) fn wine_run_host() -> Value {
     let env: Map<String, Value> = std::env::vars_os()
         .filter_map(|(key, value)| {
             Some((
