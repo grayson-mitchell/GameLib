@@ -562,6 +562,18 @@ mod tests {
             .unwrap_or_default()
     }
 
+    /// An absolute `wineserver` path on every platform. The op refuses a relative one as `bad-args`
+    /// before it looks at the bottle name, and `/cx/bin/wineserver` is not absolute on Windows (no
+    /// drive), so the unsafe-name tests below never reached the line they assert there. The unsafe
+    /// name is refused before anything is spawned, so the path is never run.
+    fn absolute_wineserver_bin() -> &'static str {
+        if cfg!(windows) {
+            r"C:\cx\bin\wineserver"
+        } else {
+            "/cx/bin/wineserver"
+        }
+    }
+
     fn built(home: &gamelib_testutil::FakeHome) -> gamelib_engine::ctx::EngineCtx {
         let emitter: Arc<dyn gamelib_core::emitter::FrontendEmitter> =
             Arc::new(gamelib_engine::sinks::NullEmitter);
@@ -592,7 +604,7 @@ mod tests {
             "engine_bottle_kill_wineserver",
             &[serde_json::json!({
                 "bottleName": "../escape",
-                "wineserverBin": "/cx/bin/wineserver",
+                "wineserverBin": absolute_wineserver_bin(),
             })],
             &ctx,
         )
@@ -638,7 +650,7 @@ mod tests {
             "engine_bottle_kill_wineserver",
             &[serde_json::json!({
                 "bottleName": "../escape",
-                "wineserverBin": "/cx/bin/wineserver",
+                "wineserverBin": absolute_wineserver_bin(),
             })],
             &ctx,
         )
