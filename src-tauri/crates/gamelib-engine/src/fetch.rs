@@ -64,6 +64,7 @@ pub const RANGE_CHUNK_MAX: u64 = 10 * 1024 * 1024;
 pub enum Method {
     Get,
     Head,
+    Post,
 }
 
 impl Method {
@@ -71,6 +72,7 @@ impl Method {
         match self {
             Method::Get => "GET",
             Method::Head => "HEAD",
+            Method::Post => "POST",
         }
     }
 }
@@ -85,6 +87,12 @@ pub struct FetchRequest {
     /// `None`: a get uses [`DEFAULT_GET_TIMEOUT`], a download has no overall limit (it has the idle
     /// limit and the cancel token).
     pub timeout: Option<Duration>,
+    /// The request body of a [`Method::Post`]; `None` for a request that carries none. The caller sets
+    /// the `Content-Type` header, the seam adds nothing.
+    pub body: Option<Vec<u8>>,
+    /// Whether a 3xx answer is followed (at most five hops, as axios does). `false` makes the 3xx
+    /// come back as the response ([`FetchRequest::no_redirects`], axios `maxRedirects: 0`).
+    pub follow_redirects: bool,
 }
 
 impl FetchRequest {
@@ -94,6 +102,8 @@ impl FetchRequest {
             url: url.into(),
             headers: Vec::new(),
             timeout: None,
+            body: None,
+            follow_redirects: true,
         }
     }
 
@@ -103,6 +113,20 @@ impl FetchRequest {
 
     pub fn head(url: impl Into<String>) -> FetchRequest {
         FetchRequest::new(Method::Head, url)
+    }
+
+    /// A POST of `body`. Set the `Content-Type` with [`FetchRequest::header`].
+    pub fn post(url: impl Into<String>, body: impl Into<Vec<u8>>) -> FetchRequest {
+        FetchRequest {
+            body: Some(body.into()),
+            ..FetchRequest::new(Method::Post, url)
+        }
+    }
+
+    /// A 3xx answer is returned as it is, not followed.
+    pub fn no_redirects(mut self) -> FetchRequest {
+        self.follow_redirects = false;
+        self
     }
 
     pub fn header(mut self, name: &str, value: &str) -> FetchRequest {
@@ -843,6 +867,7 @@ impl ReqwestFetch {
         let method = match req.method {
             Method::Get => reqwest::Method::GET,
             Method::Head => reqwest::Method::HEAD,
+            Method::Post => reqwest::Method::POST,
         };
         let mut builder = self.client()?.request(method, req.url.as_str());
         for (name, value) in &req.headers {
@@ -1599,6 +1624,255 @@ mod tests {
         assert!(ranged_plan(9, Some("bytes")).is_none());
         assert!(ranged_plan(200, None).is_none());
         assert!(ranged_plan(200, Some("none")).is_none());
+    }
+
+    // ---- POST and no-redirect (88-11) ----
+
+    use std::net::SocketAddr;
+    use tokio::io::{AsyncReadExt as _, AsyncWriteExt as _};
+    use tokio::net::TcpListener;
+
+    /// One request a local server saw: the request line, the lower-cased headers and the body.
+    #[derive(Debug, Clone)]
+    struct Seen {
+        line: String,
+        headers: Vec<(String, String)>,
+        body: Vec<u8>,
+    }
+
+    impl Seen {
+        fn header(&self, name: &str) -> Option<&str> {
+            self.headers
+                .iter()
+                .find(|(k, _)| k == name)
+                .map(|(_, v)| v.as_str())
+        }
+    }
+
+    /// A tiny HTTP/1.1 server on loopback: `/redirect` answers 302 to `/final`, `/final` answers 200
+    /// `final`, anything else 200 `ok`. It records every request, bodies included.
+    async fn local_server() -> (SocketAddr, Arc<Mutex<Vec<Seen>>>) {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let seen: Arc<Mutex<Vec<Seen>>> = Arc::default();
+        let log = seen.clone();
+        tokio::spawn(async move {
+            loop {
+                let Ok((mut stream, _)) = listener.accept().await else {
+                    return;
+                };
+                let log = log.clone();
+                tokio::spawn(async move {
+                    let mut raw = Vec::new();
+                    let mut buf = [0u8; 1024];
+                    let head_end = loop {
+                        if let Some(at) = raw.windows(4).position(|w| w == b"\r\n\r\n") {
+                            break at + 4;
+                        }
+                        match stream.read(&mut buf).await {
+                            Ok(0) | Err(_) => return,
+                            Ok(n) => raw.extend_from_slice(&buf[..n]),
+                        }
+                    };
+                    let head = String::from_utf8_lossy(&raw[..head_end]).to_string();
+                    let mut lines = head.lines();
+                    let line = lines.next().unwrap_or_default().to_string();
+                    let headers: Vec<(String, String)> = lines
+                        .filter_map(|l| l.split_once(": "))
+                        .map(|(k, v)| (k.to_ascii_lowercase(), v.to_string()))
+                        .collect();
+                    let length = headers
+                        .iter()
+                        .find(|(k, _)| k == "content-length")
+                        .and_then(|(_, v)| v.parse::<usize>().ok())
+                        .unwrap_or(0);
+                    while raw.len() < head_end + length {
+                        match stream.read(&mut buf).await {
+                            Ok(0) | Err(_) => break,
+                            Ok(n) => raw.extend_from_slice(&buf[..n]),
+                        }
+                    }
+                    let body = raw[head_end..].to_vec();
+                    let path = line.split(' ').nth(1).unwrap_or_default().to_string();
+                    log.lock().unwrap().push(Seen {
+                        line,
+                        headers,
+                        body,
+                    });
+                    let answer = match path.as_str() {
+                        "/redirect" => "HTTP/1.1 302 Found\r\nLocation: /final\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".to_string(),
+                        "/final" => "HTTP/1.1 200 OK\r\nContent-Length: 5\r\nConnection: close\r\n\r\nfinal".to_string(),
+                        _ => "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\nok".to_string(),
+                    };
+                    let _ = stream.write_all(answer.as_bytes()).await;
+                    let _ = stream.shutdown().await;
+                });
+            }
+        });
+        (addr, seen)
+    }
+
+    #[test]
+    fn a_new_request_has_no_body_and_follows_redirects() {
+        let get = FetchRequest::get("https://a.test/x");
+        assert!(get.body.is_none() && get.follow_redirects);
+        let post = FetchRequest::post("https://a.test/x", "{}");
+        assert_eq!(post.method, Method::Post);
+        assert_eq!(post.method.as_str(), "POST");
+        assert_eq!(post.body.as_deref(), Some(&b"{}"[..]));
+        assert!(post.follow_redirects);
+        assert!(!post.no_redirects().follow_redirects);
+    }
+
+    #[tokio::test]
+    async fn a_post_sends_its_body_and_the_content_type_the_caller_set() {
+        let (addr, seen) = local_server().await;
+        let fetch = ReqwestFetch::new();
+        let request = FetchRequest::post(format!("http://{addr}/echo"), r#"{"v":1}"#)
+            .header("Content-Type", "application/json")
+            .header("User-Agent", "GameLib/9.9.9");
+        let response = fetch.get(request).await.unwrap();
+        assert_eq!(
+            (response.status, response.body.as_slice()),
+            (200, &b"ok"[..])
+        );
+        let seen = seen.lock().unwrap();
+        assert_eq!(seen.len(), 1);
+        assert_eq!(seen[0].line, "POST /echo HTTP/1.1");
+        assert_eq!(seen[0].body, br#"{"v":1}"#);
+        assert_eq!(seen[0].header("content-type"), Some("application/json"));
+        assert_eq!(seen[0].header("user-agent"), Some("GameLib/9.9.9"));
+    }
+
+    #[tokio::test]
+    async fn a_redirect_is_followed_by_default_and_returned_as_the_3xx_with_no_redirects() {
+        let (addr, seen) = local_server().await;
+        let fetch = ReqwestFetch::new();
+        let url = format!("http://{addr}/redirect");
+
+        let followed = fetch.get(FetchRequest::get(&url)).await.unwrap();
+        assert_eq!(
+            (followed.status, followed.body.as_slice()),
+            (200, &b"final"[..])
+        );
+        assert_eq!(seen.lock().unwrap().len(), 2);
+
+        seen.lock().unwrap().clear();
+        let stopped = fetch
+            .get(FetchRequest::post(&url, "{}").no_redirects())
+            .await
+            .unwrap();
+        assert_eq!(stopped.status, 302);
+        assert!(stopped
+            .headers
+            .iter()
+            .any(|(k, v)| k == "location" && v == "/final"));
+        let seen = seen.lock().unwrap();
+        assert_eq!(seen.len(), 1, "the 3xx was not followed");
+        assert_eq!(seen[0].line, "POST /redirect HTTP/1.1");
+    }
+
+    #[cfg(feature = "testing")]
+    mod replay_post {
+        use super::*;
+
+        const URL: &str = "https://relay.test/v1/reports";
+        const BODY: &str = r#"{"v":1,"appId":"220"}"#;
+
+        /// A case directory holding one recorded POST answered 201.
+        fn case(dir: &std::path::Path, recorded_body: Option<&str>) {
+            let mut request = serde_json::json!({
+                "method": "POST",
+                "url": URL,
+                "headers": {"content-type": "application/json"},
+            });
+            if let Some(text) = recorded_body {
+                request["body"] = serde_json::json!(text);
+            }
+            let exchanges = serde_json::json!([{
+                "id": "ex-1",
+                "request": request,
+                "response": {"status": 201, "headers": {}},
+            }]);
+            std::fs::write(dir.join("exchanges.json"), exchanges.to_string()).unwrap();
+        }
+
+        fn post(body: Option<&str>) -> FetchRequest {
+            let request =
+                FetchRequest::new(Method::Post, URL).header("Content-Type", "application/json");
+            FetchRequest {
+                body: body.map(|b| b.as_bytes().to_vec()),
+                ..request
+            }
+        }
+
+        #[tokio::test]
+        async fn a_recorded_post_is_served_when_method_url_and_body_match() {
+            let dir = tempfile::tempdir().unwrap();
+            case(dir.path(), Some(BODY));
+            let replay = Replay::from_case(dir.path()).unwrap();
+            let response = replay.get(post(Some(BODY))).await.unwrap();
+            assert_eq!(response.status, 201);
+            replay.finish().unwrap();
+        }
+
+        #[tokio::test]
+        async fn a_post_whose_body_differs_fails_loudly_without_printing_either_body() {
+            let dir = tempfile::tempdir().unwrap();
+            case(dir.path(), Some(BODY));
+            let replay = Replay::from_case(dir.path()).unwrap();
+            let sent = r#"{"v":1,"appId":"SECRET-APP-ID"}"#;
+            assert_eq!(
+                replay.get(post(Some(sent))).await.unwrap_err(),
+                FetchError::Network
+            );
+            let report = replay.finish().unwrap_err();
+            assert!(
+                report.contains("POST https://relay.test/v1/reports"),
+                "{report}"
+            );
+            assert!(report.contains("body differs"), "{report}");
+            assert!(
+                !report.contains("SECRET-APP-ID") && !report.contains("220"),
+                "{report}"
+            );
+        }
+
+        #[tokio::test]
+        async fn a_post_with_no_body_does_not_match_a_recorded_body_and_the_reverse() {
+            let dir = tempfile::tempdir().unwrap();
+            case(dir.path(), Some(BODY));
+            let replay = Replay::from_case(dir.path()).unwrap();
+            assert!(replay.get(post(None)).await.is_err());
+            assert!(replay.finish().unwrap_err().contains("body differs"));
+
+            let dir = tempfile::tempdir().unwrap();
+            case(dir.path(), None);
+            let replay = Replay::from_case(dir.path()).unwrap();
+            assert!(replay.get(post(Some(BODY))).await.is_err());
+            assert!(replay.finish().unwrap_err().contains("body differs"));
+        }
+
+        #[tokio::test]
+        async fn a_recorded_get_still_matches_a_plain_get() {
+            let dir = tempfile::tempdir().unwrap();
+            let exchanges = serde_json::json!([{
+                "id": "ex-1",
+                "request": {"method": "GET", "url": "https://a.test/x", "headers": {}},
+                "response": {"status": 200, "headers": {}},
+            }]);
+            std::fs::write(dir.path().join("exchanges.json"), exchanges.to_string()).unwrap();
+            let replay = Replay::from_case(dir.path()).unwrap();
+            assert_eq!(
+                replay
+                    .get(FetchRequest::get("https://a.test/x"))
+                    .await
+                    .unwrap()
+                    .status,
+                200
+            );
+            replay.finish().unwrap();
+        }
     }
 
     #[test]
