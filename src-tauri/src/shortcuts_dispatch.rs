@@ -22,6 +22,7 @@ use std::path::{Path, PathBuf};
 use gamelib_core::clock::SystemClock;
 use gamelib_proc::spec::SpecProcRunner;
 use gamelib_shortcuts::ctx::{Platform, ShortcutPaths, ShortcutsCtx, ShortcutsLog};
+use gamelib_shortcuts::http::ReqwestHttp;
 use gamelib_store::host::StoreHost;
 
 /// The one context, set once by [`install`].
@@ -146,6 +147,7 @@ pub(crate) fn build_ctx(
         .with_proc(Arc::new(SpecProcRunner))
         .with_base_env(expand_env.clone())
         .with_system_root(system_root)
+        .with_http(Arc::new(ReqwestHttp::new()))
         .with_expand_env(expand_env)
         .with_log(Arc::new(ShellShortcutsLog))
 }

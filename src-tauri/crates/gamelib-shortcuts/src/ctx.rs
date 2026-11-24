@@ -9,6 +9,8 @@ use gamelib_core::process::SpecRunner;
 use gamelib_core::shutdown::Shutdown;
 use gamelib_store::host::StoreHost;
 
+use crate::http::{Http, NoHttp};
+
 /// The platform the app runs on, as the shell reports it (the crate never asks the OS).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Platform {
@@ -79,6 +81,10 @@ pub struct ShortcutsCtx {
     /// `%SystemRoot%` as the shell read it; `None` or empty makes the writer use `C:\Windows`, as the TS
     /// does. The crate reads no environment variable of its own.
     pub system_root: Option<PathBuf>,
+    /// The one HTTP seam (D-20): icon and artwork downloads go through it. The shell installs the
+    /// reqwest-backed one; the default answers every request with an error, so nothing reaches the network
+    /// by accident.
+    pub http: Arc<dyn Http>,
     /// Where an op's diagnostic line goes, if anywhere.
     pub log: Option<Arc<dyn ShortcutsLog>>,
 }
@@ -100,6 +106,7 @@ impl ShortcutsCtx {
             expand_env: Vec::new(),
             base_env: Vec::new(),
             system_root: None,
+            http: Arc::new(NoHttp),
             log: None,
         }
     }
@@ -131,6 +138,12 @@ impl ShortcutsCtx {
     /// Sets `%SystemRoot%` (the folder `explorer.exe` lives in).
     pub fn with_system_root(mut self, root: Option<PathBuf>) -> ShortcutsCtx {
         self.system_root = root;
+        self
+    }
+
+    /// Installs the HTTP seam.
+    pub fn with_http(mut self, http: Arc<dyn Http>) -> ShortcutsCtx {
+        self.http = http;
         self
     }
 

@@ -11,7 +11,9 @@
 
 pub mod ctx;
 pub mod exists;
+pub mod http;
 pub mod icns;
+pub mod icons;
 pub mod launch_url;
 pub mod linux;
 pub mod mac;
