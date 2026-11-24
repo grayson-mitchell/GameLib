@@ -149,3 +149,37 @@ Responsibility groups: binary paths, wine+runtime, fs, status-push, network, Dis
 | `ready-sentinel` | 3251 | writes the READY line to stdout | none | everything that must exist before the shell may send frames | delete (98) | the shell's readiness signal for a sidecar |
 | `sign-in-probe` | 3257 | starts the bounded boot sign-in probe pass | probe timers (unref'd) | ready-sentinel | Rust setup (94) | registration only; READY never waits on it |
 | `startup-protocol-url` | 3280 | delivers the startup protocol URL | none | ready-sentinel; last statement of init | Rust setup (98) | |
+
+## Amendments
+
+### 2026-11-25 (Phase 88 planning, D-24, D-28, D-30)
+
+Phase 88 is split into four sub-phases run in order: 88 (launch scaffolding and known fixes), 88.1 (builders and prepare steps), 88.2 (command runner and game processes) and 88.3 (launch funnel, re-adoption and the live gate) (88-CONTEXT D-30). The destination columns above keep the integer slice; this section records the sub-phase that acts on each row destined for 88, and the rows D-28 moves into 88. No existing table cell above is edited: the amendment is the record, and a later reader takes this section over the table where they disagree. Each name is backticked once, in its row's first column, and nowhere else in this section, so a count of first-column cells reads the same way as in the main tables above; the main tables' count stops at this heading.
+
+#### utils.ts exports
+
+| row | old destination | new destination | target sub-phase | reason |
+| --- | --- | --- | --- | --- |
+| `errorHandler` | 88 | 88 (unchanged) | 88.2 | Ports with the command runner (D-02): the runner object maps stderr to a dialog and a library-manager action through the ManagerHooks seam (D-26). |
+| `ErrorHandlerDeps` | 88 | 88 (unchanged) | 88.2 | Deleted with errorHandler. |
+| `askForceUninstall` | 88 | 88 (unchanged) | 88.2 | The "game folder deleted, remove from installed list?" dialog then forceUninstall on Yes; its manager call goes through the first ManagerHooks channel (force_uninstall, D-26). |
+| `isEpicServiceOffline` | 88 | 88 (unchanged) | 88.1 | Needed natively by the builders and prepare steps; rides on the 86 connectivity leaf and the funnel's EngineCtx.online fact. |
+| `isMacSonomaOrHigher` | 88 | 88 (unchanged) | 88.1 | The macOS version gate used by the launcher builders and the system-information module; a golden toggle in both directions (D-14). |
+| `removeQuoteIfNecessary` | 88 | 88 (unchanged) | 88.1 | Used by launcher argv handling; ports with the builders. |
+| `quoteIfNecessary` | delete | delete (unchanged) | 88.2 | Dies with the command runner's private copy when commandRunner.ts is deleted. |
+| `constructAndUpdateRPC` | delete | delete (unchanged) | 88.1 | Discord presence was dropped (2026-11-17); its sole caller is prepareLaunch, which ports in 88.1, so the function is deleted there and not ported. |
+| `checkWineBeforeLaunch` | 87 | 88 | 88.1 | D-28: still TS after 87 and the Rust funnel needs it before a Wine launch. Callers are the launcher, the Steam bottle and the gog and nile setup modules, which reach it through a typed shim scheduled for deletion by 91 and 92. |
+| `downloadDefaultWine` | 87 | 88 | 88.1 | D-28: called only from checkWineBeforeLaunch; the two move together. |
+| `shutdownWine` | 87 | scheduled TS shim, then deleted with the managers' stop() in 91 and 92 | stays TS through 88 | D-28: 87-65's subject; it runs a wineserver kill through the command runner, so after 88.2 it calls the Rust runner through a shim. Not an 88 port. |
+| `getWineFromProton` | 87 | scheduled TS, stays | stays TS through 88 | D-28: resolves a Wine install from a Proton or umu setup for the tools module; recorded as scheduled TS that stays, not ported by 88. |
+| `detectVCRedist` | 87 | 98 | not an 88 row; flagged for the 98 planner | Still TS after 87, wired from the app-shell flow registration; it moves with the app-shell cutover. |
+
+#### bootstrap.ts boot steps
+
+| step | old destination | new destination | target sub-phase | reason |
+| --- | --- | --- | --- | --- |
+| `command-runner` | Rust setup (87 spawnAsync; 88 command runner; 98 quit handler) | unchanged | 88.2 (command runner, errorHandler getters, quit "game running" condition); 88.3 (launcher wiring) | The step's spawnAsync piece is a scheduled shim after 88.2; the quit handler stays 98. |
+| `app-runtime` | Rust setup (98 event bus; 88 launch single-flight; 86 image and CrossOver fetches) | adds the overlay install single-flight to 88 | 88.3 (launch single-flight); 88 (overlay install single-flight) | The overlay install single-flight moves with known-fixes (app-runtime:overlay-install-flight, flipped 97 to 88 in the ownership amendment of the same date). |
+| `abort-registry` | Rust setup (83 Shutdown token replaces the registry; window raiser 88) | unchanged | 88.3 (window raiser) | The registry piece stays with the 83 Shutdown contract. |
+| `store-managers` | deleted DI plumbing (managers leave per slice: 90, 91, 92, 94; launcher 88; step gone in 98) | unchanged | 88.3 (launcher) | The managers' launch() stays TS until 91 and 92 (D-01); only the launcher leaves. |
+| `info-caches` | Rust setup (87 system info; 86 HowLongToBeat) | system info 87 to 88.1 | 88.1 | The info-caches:systemInfo flip is 88 (ownership amendment 2026-11-23); the step's system-information cache moves with the builders. HowLongToBeat stays 86. |
