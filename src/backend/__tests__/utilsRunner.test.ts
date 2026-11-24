@@ -10,7 +10,7 @@ import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 import { createRealRunner } from 'backend/testUtils/realRunner'
 import type { GameInfo, GameSettings } from 'common/types'
 import type { SpawnAsync } from '../spawnAsync'
-import type { RequestRustInvoke } from '..'
+import type { RequestRustInvoke } from 'backend/host'
 import { extractFiles, moveOnUnix, moveOnWindows, shutdownWine } from '../utils'
 import * as logger from '../logger'
 

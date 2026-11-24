@@ -153,7 +153,9 @@ const BOTTLES_SHIM_IMPORTERS: readonly string[] = [
   'src/backend/storeManagers/steam/engine/engineSync.ts',
   'src/backend/storeManagers/steam/engine/fallbackBottleCall.ts',
   'src/backend/storeManagers/steam/engine/prepareBottle.ts',
-  'src/backend/storeManagers/steam/gameBridgeLaunch.ts'
+  'src/backend/storeManagers/steam/gameBridgeLaunch.ts',
+  // 87-65 (F3): shutdownWine routes a CrossOver bottle overlay's Stop to the bottle's wineserver kill.
+  'src/backend/utils.ts'
 ]
 /** Every non-test importer of `enginewine/launch.ts` (the check is per file, so every row of that file lists them all). */
 const LAUNCH_SHIM_IMPORTERS: readonly string[] = [

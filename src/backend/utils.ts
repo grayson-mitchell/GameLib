@@ -45,6 +45,7 @@ import type { OpenExternal } from './host/openExternal'
 import type { AppState } from './host/appState'
 import type { AppInfo, AppPaths } from './process/context'
 import { validWine } from './enginewine/wineCore'
+import { killBottleWineServerWith } from './enginewine/bottles'
 import {
   installWineVersion,
   listWineReleases,
@@ -965,9 +966,31 @@ async function shutdownWine(
   deps: {
     commandRunner: Pick<CommandRunner, 'runWineCommand'>
     spawnAsync: SpawnAsync
-  },
+  } & RustInvokeDeps,
   gameSettings: GameSettings
 ) {
+  const crossoverBottle = gameSettings.wineCrossoverBottle
+  const crossoverWineserver = gameSettings.wineVersion.wineserver
+  if (
+    gameSettings.wineVersion.type === 'crossover' &&
+    typeof crossoverBottle === 'string' &&
+    crossoverBottle !== '' &&
+    crossoverWineserver
+  ) {
+    // 87-65 (F3): the CrossOver overlay keeps the stored prefix and names its own bottle only here, so Rust's guarded kill
+    // (WINEPREFIX = the bottle's directory) ends that bottle's wineserver, not the shared prefix's.
+    await killBottleWineServerWith(
+      deps,
+      crossoverBottle,
+      crossoverWineserver,
+      {
+        CX_ROOT: dirname(dirname(crossoverWineserver)),
+        CX_BOTTLE: crossoverBottle
+      },
+      WINESERVER_KILL_TIMEOUT_MS
+    )
+    return
+  }
   if (gameSettings.wineVersion.wineserver) {
     const result = await deps.spawnAsync(
       gameSettings.wineVersion.wineserver,
