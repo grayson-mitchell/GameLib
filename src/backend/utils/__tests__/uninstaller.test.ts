@@ -33,8 +33,25 @@ import { removeFixFile, uninstallGameCallback } from '../uninstaller'
 import { notify } from 'backend/dialog/dialog'
 import { logInfo, logWarning } from 'backend/logger'
 import { resolveGameTitle } from 'backend/utils/gameTitle'
-import { fakeSafetyRustInvoke } from 'backend/testUtils/fakeSafetyRust'
+import {
+  fakeSafetyRustInvoke as fakeSafety,
+  type FakeSafetyOptions
+} from 'backend/testUtils/fakeSafetyRust'
 import type { RequestRustInvoke } from 'backend/host'
+import { RUST_ENGINE_BOTTLE_REMOVE_PER_GAME } from 'common/types/sidecarTransport'
+
+/**
+ * 87-70: `removePrefix` asks the crate's per-game bottle removal first. Every test that is not about that route
+ * answers it the way a game with no per-game bottle of its own gets answered, so the stored-prefix path runs as before.
+ */
+const bottleOp =
+  (reply: unknown): RequestRustInvoke =>
+  async (channel) => {
+    if (channel === RUST_ENGINE_BOTTLE_REMOVE_PER_GAME) return reply
+    throw new Error(`unexpected channel ${channel}`)
+  }
+const fakeSafetyRustInvoke = (options: FakeSafetyOptions = {}) =>
+  fakeSafety({ base: bottleOp({ outcome: 'not-bottle-backed' }), ...options })
 // The managers arrive by deps now: a plain map the tests fill in per case.
 const libraryManagerMap = {} as Record<string, unknown>
 // Phase 82 (D-14): the guard talks to Rust through deps.requestRustInvoke; this default answers
@@ -481,9 +498,10 @@ describe('uninstallGameCallback prefix guard (82-07)', () => {
     expect(existsSync(prefix)).toBe(false)
     expect(notices()).toEqual([])
     expect(statuses()).toEqual(['uninstalling', 'done'])
-    // pre-flight check, then the guarded delete's own check and remove
+    // pre-flight check, the per-game bottle op (not-bottle-backed), then the guarded delete's own check and remove
     expect(calls.map((c) => c.channel)).toEqual([
       'safety_check_removal',
+      'engine_bottle_remove_per_game',
       'safety_check_removal',
       'safety_remove_tree'
     ])
@@ -757,5 +775,241 @@ describe('settings guard (261120-ux8)', () => {
     expect(notify).toHaveBeenCalledTimes(1)
     expect(statuses()).toEqual(['uninstalling', 'done'])
     expect(removalNotices()).toEqual([])
+  })
+})
+
+// 87-70 (F5, D-14, D-19): a non-Steam game's own per-game bottle is removed by the crate op; the caller supplies the
+// stored settings and the guard's inputs and handles the four answers. Real tmp dirs, an injected transport.
+describe('uninstallGameCallback per-game bottle (87-70)', () => {
+  const APP = 'abc123'
+  const BOTTLE = 'GameLib-legendary-abc123'
+  const getSettings = jest.fn()
+  const uninstall = jest.fn()
+  const prefixRoot = join(tmpdir(), `gamelib-uninstaller-bottle-${process.pid}`)
+  const prefix = join(prefixRoot, 'pfx-game')
+  const stored = { winePrefix: prefix, wineCrossoverBottle: BOTTLE }
+  const statuses = () =>
+    (sendGameStatusUpdate as jest.Mock).mock.calls.map((c) => c[1].status)
+  const notices = () =>
+    (deps.sendFrontendMessage as jest.Mock).mock.calls
+      .filter((c) => c[0] === 'removalRefusedNotice')
+      .map((c) => c[1])
+  const warningText = () =>
+    (logWarning as jest.Mock).mock.calls
+      .flat()
+      .map((a) => String(a))
+      .join('\n')
+  /** The transport answering the bottle op with `reply` (or rejecting it) and the guard with `yes`. */
+  const transport = (reply: unknown | Error) => {
+    const fake = fakeSafety({
+      base: async (channel) => {
+        if (channel !== RUST_ENGINE_BOTTLE_REMOVE_PER_GAME) {
+          throw new Error(`unexpected channel ${channel}`)
+        }
+        if (reply instanceof Error) throw reply
+        return reply
+      }
+    })
+    return {
+      ...fake,
+      deps: {
+        ...deps,
+        requestRustInvoke: fake.requestRustInvoke
+      } as typeof deps
+    }
+  }
+  const run = (d: typeof deps, runner = 'legendary' as const) =>
+    uninstallGameCallback(d, {} as any, APP, runner, true, false)
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    rmSync(prefixRoot, { recursive: true, force: true })
+    mkdirSync(join(prefix, 'drive_c'), { recursive: true })
+    getSettings.mockResolvedValue(stored)
+    uninstall.mockResolvedValue({ stdout: '', stderr: '' })
+    ;(resolveGameTitle as jest.Mock).mockImplementation(
+      (_m: unknown, _r: string, app: string) =>
+        app === 'other' ? 'Other Game' : 'Test Game'
+    )
+    libraryManagerMap.legendary = manager(uninstall, getSettings)
+    libraryManagerMap.gog = manager(uninstall, getSettings)
+  })
+
+  afterAll(() => {
+    rmSync(prefixRoot, { recursive: true, force: true })
+  })
+
+  it('asks the op once with the stored settings and the guard inputs, and a removed bottle skips the prefix delete', async () => {
+    const t = transport({ outcome: 'removed' })
+
+    await run(t.deps)
+
+    const opCalls = t.calls.filter(
+      (c) => c.channel === RUST_ENGINE_BOTTLE_REMOVE_PER_GAME
+    )
+    expect(opCalls).toHaveLength(1)
+    expect(opCalls[0]?.args).toHaveLength(1)
+    expect(opCalls[0]?.args[0]).toEqual({
+      runner: 'legendary',
+      appName: APP,
+      stored,
+      knownInstalls: [],
+      selfKey: `legendary:${APP}`,
+      protectedRoots: expect.any(Array)
+    })
+    // The pre-flight check and the op; no stored-prefix check or delete after it.
+    expect(t.calls.map((c) => c.channel)).toEqual([
+      'safety_check_removal',
+      'engine_bottle_remove_per_game'
+    ])
+    expect(existsSync(prefix)).toBe(true)
+    expect(notices()).toEqual([])
+    expect(statuses()).toEqual(['uninstalling', 'done'])
+  })
+
+  it('not-bottle-backed with a custom prefix runs the stored-prefix removal as before', async () => {
+    const t = transport({ outcome: 'not-bottle-backed' })
+
+    await run(t.deps)
+
+    expect(t.calls.map((c) => c.channel)).toEqual([
+      'safety_check_removal',
+      'engine_bottle_remove_per_game',
+      'safety_check_removal',
+      'safety_remove_tree'
+    ])
+    expect(existsSync(prefix)).toBe(false)
+    expect(notices()).toEqual([])
+  })
+
+  it('not-bottle-backed with the default prefix deletes nothing and logs one fixed line (T-87-133)', async () => {
+    const t = transport({ outcome: 'not-bottle-backed' })
+    const withDefault = {
+      ...t.deps,
+      config: {
+        getSettings: () => ({
+          defaultInstallPath: '',
+          sharedWinePrefix: '',
+          winePrefix: prefix
+        })
+      }
+    } as typeof deps
+
+    await run(withDefault)
+
+    expect(t.calls.map((c) => c.channel)).toEqual([
+      'safety_check_removal',
+      'engine_bottle_remove_per_game'
+    ])
+    expect(existsSync(prefix)).toBe(true)
+    expect(notices()).toEqual([])
+    const lines = (logInfo as jest.Mock).mock.calls
+      .flat()
+      .map((a) => String(a))
+      .filter((l) => l.includes('shared default prefix'))
+    expect(lines).toEqual([
+      'Keeping the shared default Wine prefix: the game has no prefix of its own'
+    ])
+    expect(statuses()).toEqual(['uninstalling', 'done'])
+  })
+
+  it('a refusal pushes the remove-bottle notice with the reason and the other game', async () => {
+    const t = transport({
+      outcome: 'refused',
+      reason: 'nested-known-install',
+      otherKey: 'gog:other'
+    })
+
+    await run(t.deps)
+
+    expect(notices()).toEqual([
+      {
+        kind: 'remove-bottle',
+        outcome: 'refused',
+        reason: 'nested-known-install',
+        title: 'Test Game',
+        appName: APP,
+        runner: 'legendary',
+        otherTitle: 'Other Game'
+      }
+    ])
+    expect(existsSync(prefix)).toBe(true)
+    expect(t.calls.map((c) => c.channel)).not.toContain('safety_remove_tree')
+    expect(statuses()).toEqual(['uninstalling', 'done'])
+  })
+
+  it('a crate-only refusal word reads as bad-reply in the closed notice vocabulary', async () => {
+    const t = transport({ outcome: 'refused', reason: 'in-use' })
+
+    await run(t.deps)
+
+    expect(notices()).toEqual([
+      expect.objectContaining({
+        kind: 'remove-bottle',
+        outcome: 'refused',
+        reason: 'bad-reply'
+      })
+    ])
+  })
+
+  it('a failed removal pushes a failed remove-bottle notice and keeps the prefix', async () => {
+    const t = transport({ outcome: 'failed', reason: 'delete-failed' })
+
+    await run(t.deps)
+
+    expect(notices()).toEqual([
+      expect.objectContaining({
+        kind: 'remove-bottle',
+        outcome: 'failed',
+        reason: 'delete-failed'
+      })
+    ])
+    expect(existsSync(prefix)).toBe(true)
+  })
+
+  it('a rejected call is logged with fixed text, reads as failed and does not undo the uninstall', async () => {
+    const t = transport(new Error(`boom ${prefix} secret`))
+
+    await run(t.deps)
+
+    expect(uninstall).toHaveBeenCalledTimes(1)
+    expect(notices()).toEqual([
+      expect.objectContaining({
+        kind: 'remove-bottle',
+        outcome: 'failed',
+        reason: 'rust-invoke-failed'
+      })
+    ])
+    expect(warningText()).toContain(
+      'removePrefix: the per-game bottle removal did not answer'
+    )
+    expect(warningText()).not.toMatch(/boom|secret|pfx-game/)
+    expect(existsSync(prefix)).toBe(true)
+    expect(notify).toHaveBeenCalledTimes(1)
+    expect(statuses()).toEqual(['uninstalling', 'done'])
+  })
+
+  it('a reply that is not an outcome reads as failed bad-reply', async () => {
+    const t = transport({ outcome: 'exploded' })
+
+    await run(t.deps)
+
+    expect(notices()).toEqual([
+      expect.objectContaining({
+        kind: 'remove-bottle',
+        outcome: 'failed',
+        reason: 'bad-reply'
+      })
+    ])
+    expect(existsSync(prefix)).toBe(true)
+  })
+
+  it('a Steam game never reaches the op', async () => {
+    const t = transport({ outcome: 'removed' })
+    libraryManagerMap.steam = manager(uninstall, getSettings)
+
+    await uninstallGameCallback(t.deps, {} as any, APP, 'steam', true, false)
+
+    expect(t.calls).toEqual([])
   })
 })
