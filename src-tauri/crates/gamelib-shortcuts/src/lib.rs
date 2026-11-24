@@ -12,6 +12,7 @@
 pub mod ctx;
 pub mod exists;
 pub mod paths;
+pub mod registry;
 pub mod sanitize;
 #[cfg(any(test, feature = "testing"))]
 pub mod testing;

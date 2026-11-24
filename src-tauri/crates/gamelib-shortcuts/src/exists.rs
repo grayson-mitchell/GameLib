@@ -13,6 +13,7 @@ use std::path::Path;
 
 use crate::ctx::{Platform, ShortcutPaths, ShortcutsCtx};
 use crate::paths::shortcut_files;
+use crate::registry;
 
 /// True when `path` exists or is a symlink, dangling or not. An empty path is never present.
 pub fn shortcut_path_present(path: &Path) -> bool {
@@ -45,12 +46,19 @@ pub async fn shortcuts_exist(ctx: &ShortcutsCtx, title: Option<&str>) -> bool {
         ctx.note("shortcuts_exist: no title, shortcut lookup skipped");
         return false;
     }
-    let windows_desktop = None;
+    // On Windows the Desktop is a registry known folder (D-12): no answer (no runner, a failed query,
+    // an absent value) means there is no Desktop path, never a guessed one.
+    let windows_desktop = match (ctx.platform, ctx.proc.as_deref()) {
+        (Platform::Windows, Some(proc)) => {
+            registry::windows_desktop_dir(proc, &ctx.expand_env).await
+        }
+        _ => None,
+    };
     shortcuts_exist_at(
         ctx.platform,
         &ctx.paths,
         title,
-        windows_desktop,
+        windows_desktop.as_deref(),
         &shortcut_path_present,
     )
 }
@@ -93,5 +101,97 @@ mod tests {
             None,
             &always
         ));
+    }
+
+    use crate::testing::ScriptedRunner;
+    use gamelib_core::clock::SystemClock;
+    use gamelib_core::process::SpecOutput;
+    use gamelib_core::shutdown::Shutdown;
+    use gamelib_store::host::StoreHost;
+    use gamelib_testutil::FakeHome;
+    use std::sync::Arc;
+
+    /// A Windows context whose Start Menu root is inside a fake home.
+    fn windows_ctx(home: &FakeHome, proc: Option<Arc<ScriptedRunner>>) -> ShortcutsCtx {
+        let app_data = home.root().join("AppData").join("Roaming");
+        let mut ctx = ShortcutsCtx::new(
+            Arc::new(StoreHost::new()),
+            Arc::new(SystemClock),
+            Platform::Windows,
+            Shutdown::new(),
+        )
+        .with_paths(ShortcutPaths {
+            user_home: home.root().to_path_buf(),
+            app_data: Some(app_data),
+            ..ShortcutPaths::default()
+        });
+        if let Some(proc) = proc {
+            ctx = ctx.with_proc(proc);
+        }
+        ctx
+    }
+
+    fn reg_answer(value: &str) -> SpecOutput {
+        SpecOutput {
+            code: Some(0),
+            stdout: format!(
+                "\r\nHKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\r\n    Desktop    REG_SZ    {value}\r\n\r\n"
+            ),
+            ..SpecOutput::default()
+        }
+    }
+
+    fn seed_start_menu_link(ctx: &ShortcutsCtx, title: &str) {
+        let (_, menu) = shortcut_files(Platform::Windows, &ctx.paths, title, None);
+        let menu = menu.expect("a Windows Start Menu path");
+        std::fs::create_dir_all(menu.parent().expect("a parent")).expect("menu dir");
+        std::fs::write(menu, "").expect("menu link");
+    }
+
+    #[tokio::test]
+    async fn windows_reads_the_desktop_through_one_hidden_bounded_reg_query() {
+        let home = FakeHome::new("gamelib-shortcuts-exists-");
+        let runner = Arc::new(ScriptedRunner::answering(reg_answer(
+            "Z:\\GameLibOracle\\Desktop",
+        )));
+        let ctx = windows_ctx(&home, Some(Arc::clone(&runner)));
+        seed_start_menu_link(&ctx, "Plain Game");
+        assert!(shortcuts_exist(&ctx, Some("Plain Game")).await);
+        let spawns = runner.spawns();
+        assert_eq!(spawns.len(), 1);
+        assert_eq!(spawns[0].program, "reg.exe");
+        assert!(spawns[0].hide_window, "reg.exe must not flash a console");
+        assert_eq!(spawns[0].timeout, Some(crate::registry::REG_QUERY_TIMEOUT));
+        assert_eq!(spawns[0].label, "shortcuts-reg");
+    }
+
+    #[tokio::test]
+    async fn windows_without_a_runner_or_with_a_failed_query_has_no_desktop_path() {
+        let home = FakeHome::new("gamelib-shortcuts-exists-");
+        // No runner: the Start Menu link still counts, and nothing is spawned.
+        let ctx = windows_ctx(&home, None);
+        assert!(!shortcuts_exist(&ctx, Some("Plain Game")).await);
+        seed_start_menu_link(&ctx, "Plain Game");
+        assert!(shortcuts_exist(&ctx, Some("Plain Game")).await);
+        // A failed query: no Desktop path, so a Desktop link cannot be found, only the menu one.
+        let failed = Arc::new(ScriptedRunner::answering(SpecOutput {
+            code: Some(1),
+            ..SpecOutput::default()
+        }));
+        let ctx = windows_ctx(&home, Some(Arc::clone(&failed)));
+        assert!(shortcuts_exist(&ctx, Some("Plain Game")).await);
+        assert_eq!(failed.spawns().len(), 1);
+    }
+
+    #[tokio::test]
+    async fn linux_and_macos_never_spawn_a_registry_query() {
+        let home = FakeHome::new("gamelib-shortcuts-exists-");
+        for platform in [Platform::Linux, Platform::Mac] {
+            let runner = Arc::new(ScriptedRunner::answering(SpecOutput::default()));
+            let mut ctx = windows_ctx(&home, Some(Arc::clone(&runner)));
+            ctx.platform = platform;
+            assert!(!shortcuts_exist(&ctx, Some("Plain Game")).await);
+            assert!(runner.spawns().is_empty());
+        }
     }
 }

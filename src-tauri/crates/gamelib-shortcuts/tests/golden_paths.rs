@@ -13,10 +13,15 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use gamelib_core::process::SpecOutput;
 use gamelib_shortcuts::ctx::{Platform, ShortcutPaths};
 use gamelib_shortcuts::exists::{shortcut_path_present, shortcuts_exist_at};
 use gamelib_shortcuts::paths::shortcut_files;
+use gamelib_shortcuts::registry::{
+    read_windows_shell_folder, windows_desktop_dir, WindowsShellFolder,
+};
 use gamelib_shortcuts::sanitize::{sanitize_filename, sanitize_utf16};
+use gamelib_shortcuts::testing::ScriptedRunner;
 use gamelib_testutil::{require_link, FakeHome};
 use serde_json::Value;
 
@@ -361,8 +366,8 @@ fn seed(
     true
 }
 
-#[test]
-fn exists_replays_every_shortcuts_exist_golden() {
+#[tokio::test]
+async fn exists_replays_every_shortcuts_exist_golden() {
     let slice = load("exists");
     slice.assert_floor("exists");
     let mut failures = Vec::new();
@@ -375,8 +380,18 @@ fn exists_replays_every_shortcuts_exist_golden() {
         let menu = case["input"]["menu"].as_str().expect("menu state");
         let want = case["exists"].as_bool().expect("exists");
         let profile = Profile::new();
-        let windows_desktop =
-            (platform == Platform::Windows && registry).then(|| PathBuf::from(REGISTRY_DESKTOP));
+        // On Windows the Desktop folder comes from the registry, answered here by the scripted `reg.exe` the
+        // oracle's runner scripted: the synthetic folder when it answered, a non-zero exit when it did not.
+        let windows_desktop = if platform == Platform::Windows {
+            windows_desktop_dir(&reg_runner(registry), &[]).await
+        } else {
+            None
+        };
+        assert_eq!(
+            windows_desktop,
+            (platform == Platform::Windows && registry).then(|| PathBuf::from(REGISTRY_DESKTOP)),
+            "{id}: the registry answer"
+        );
 
         if let Some(title) = title.filter(|t| !t.is_empty()) {
             let (desktop_file, menu_file) =
@@ -422,5 +437,113 @@ fn exists_replays_every_shortcuts_exist_golden() {
         replayed * 10 >= slice.cases.len() * 8,
         "only {replayed} of {} exists cases replayed",
         slice.cases.len()
+    );
+}
+
+/// `reg.exe`'s answer for `Desktop`, in the format the parser reads.
+fn reg_output(value: &str) -> String {
+    format!(
+        "\r\nHKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\r\n    Desktop    REG_SZ    {value}\r\n\r\n"
+    )
+}
+
+/// The runner the exists oracle scripted: `reg.exe` answers the synthetic Desktop when the registry
+/// answered, and exits non-zero when it did not.
+fn reg_runner(registry: bool) -> ScriptedRunner {
+    ScriptedRunner::answering(if registry {
+        SpecOutput {
+            code: Some(0),
+            stdout: reg_output(REGISTRY_DESKTOP),
+            ..SpecOutput::default()
+        }
+    } else {
+        SpecOutput {
+            code: Some(1),
+            ..SpecOutput::default()
+        }
+    })
+}
+
+/// The scripted `reg.exe` a `windows/reg-*` golden recorded: `{code, stdout?, stderr?, timedOut?, throws?}`.
+fn scripted_output(scripted: &Value) -> SpecOutput {
+    if let Some(throws) = scripted["throws"].as_str() {
+        // A spawn that could not start: no exit code, the reason in stderr (the SpecRunner contract).
+        return SpecOutput {
+            code: None,
+            stderr: throws.to_string(),
+            ..SpecOutput::default()
+        };
+    }
+    SpecOutput {
+        code: scripted["code"].as_i64().map(|c| c as i32),
+        stdout: scripted["stdout"].as_str().unwrap_or_default().to_string(),
+        stderr: scripted["stderr"].as_str().unwrap_or_default().to_string(),
+        timed_out: scripted["timedOut"].as_bool().unwrap_or(false),
+        ..SpecOutput::default()
+    }
+}
+
+#[tokio::test]
+async fn windows_registry_replays_every_reg_golden() {
+    let slice = load("windows");
+    slice.assert_floor("windows");
+    let mut replayed = 0usize;
+    let mut failures = Vec::new();
+    for (id, case) in slice.cases.iter().filter(|(id, _)| id.starts_with("reg-")) {
+        replayed += 1;
+        let folder = match case["input"]["name"].as_str() {
+            Some("Desktop") => WindowsShellFolder::Desktop,
+            Some("Personal") => WindowsShellFolder::Personal,
+            other => panic!("{id}: an unknown value name {other:?}"),
+        };
+        let env: Vec<(String, String)> = case["input"]["env"]
+            .as_object()
+            .expect("env is an object")
+            .iter()
+            .map(|(k, v)| (k.clone(), v.as_str().expect("env value").to_string()))
+            .collect();
+        let runner = ScriptedRunner::answering(scripted_output(&case["input"]["scripted"]));
+        let got = read_windows_shell_folder(&runner, folder, &env).await;
+        let want = case["folder"].as_str().map(PathBuf::from);
+        if got != want {
+            failures.push(format!("{id}: folder {got:?} want {want:?}"));
+        }
+        // The spawn: one `reg.exe query` with the recorded argv, timeout and hidden window, no env change,
+        // no cwd and no stdin.
+        let spawns = runner.spawns();
+        let recorded = &case["spawns"][0];
+        let argv: Vec<String> = recorded["argv"]
+            .as_array()
+            .expect("argv")
+            .iter()
+            .map(|a| a.as_str().expect("argv entry").to_string())
+            .collect();
+        let timeout = recorded["options"]["timeoutMs"]
+            .as_u64()
+            .map(std::time::Duration::from_millis);
+        let spawn_ok = spawns.len() == 1
+            && case["spawns"].as_array().map(Vec::len) == Some(1)
+            && spawns[0].program == recorded["program"].as_str().unwrap_or_default()
+            && spawns[0].argv == argv
+            && spawns[0].timeout == timeout
+            && spawns[0].hide_window
+                == recorded["options"]["windowsHide"]
+                    .as_bool()
+                    .unwrap_or(false)
+            && spawns[0].hide_window
+            && spawns[0].replace_env == recorded["options"]["replaceEnv"].as_bool().unwrap_or(true)
+            && spawns[0].env.is_empty()
+            && spawns[0].cwd.is_none()
+            && spawns[0].stdin.is_none()
+            && spawns[0].label == "shortcuts-reg";
+        if !spawn_ok {
+            failures.push(format!("{id}: spawn {:?} want {recorded}", spawns));
+        }
+    }
+    assert!(replayed >= 20, "only {replayed} reg goldens replayed");
+    assert!(
+        failures.is_empty(),
+        "reg mismatches:\n{}",
+        failures.join("\n")
     );
 }

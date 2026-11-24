@@ -71,6 +71,31 @@ fn windows_app_data(
     })
 }
 
+/// The Linux Desktop folder as the TS `resolveKnownFolder` finds it, minus its final `<home>/Desktop`
+/// fallback (the crate applies that): the exported `XDG_DESKTOP_DIR`, else `user-dirs.dirs` under
+/// `XDG_CONFIG_HOME` (or `<home>/.config`). The file is read only when the variable is unset, as the TS
+/// `||` short-circuits. `None` off Linux (macOS joins `<home>/Desktop` itself; Windows reads the registry).
+fn linux_desktop_dir_with(
+    platform: Platform,
+    home: &Path,
+    exported: Option<String>,
+    config_home: Option<String>,
+    read_file: impl Fn(&Path) -> Option<String>,
+) -> Option<PathBuf> {
+    if platform != Platform::Linux {
+        return None;
+    }
+    if exported.as_deref().is_some_and(|dir| !dir.is_empty()) {
+        return gamelib_shortcuts::paths::linux_desktop_dir(exported.as_deref(), None, home);
+    }
+    let config_home = match config_home.filter(|dir| !dir.is_empty()) {
+        Some(dir) => PathBuf::from(dir),
+        None => home.join(".config"),
+    };
+    let content = read_file(&config_home.join("user-dirs.dirs"));
+    gamelib_shortcuts::paths::linux_desktop_dir(None, content.as_deref(), home)
+}
+
 /// The process environment a registry `%VAR%` expands against, snapshotted once (Windows only; the
 /// other platforms never read a registry value).
 fn expansion_env(platform: Platform) -> Vec<(String, String)> {
@@ -122,7 +147,13 @@ pub(crate) fn install(user_data: &Path) {
     let platform = platform();
     let paths = ShortcutPaths {
         app_data: windows_app_data(platform, &user_home, std::env::var("APPDATA").ok()),
-        desktop_dir: None,
+        desktop_dir: linux_desktop_dir_with(
+            platform,
+            &user_home,
+            std::env::var("XDG_DESKTOP_DIR").ok(),
+            std::env::var("XDG_CONFIG_HOME").ok(),
+            |path| std::fs::read_to_string(path).ok(),
+        ),
         // `user_data` is both the user-data directory and the app folder (store_boot), so the icon
         // folder is `<appFolder>/icons` exactly as `appPaths.ts` derives `heroicIconFolder`.
         icon_folder: user_data.join("icons"),
@@ -294,5 +325,61 @@ mod tests {
     fn the_expansion_environment_is_only_read_on_windows() {
         assert!(expansion_env(Platform::Linux).is_empty());
         assert!(expansion_env(Platform::Mac).is_empty());
+    }
+
+    #[test]
+    fn the_linux_desktop_is_the_exported_variable_then_user_dirs_and_nothing_elsewhere() {
+        let home = Path::new("/home/u");
+        let never = |_: &Path| -> Option<String> { panic!("the file must not be read") };
+        assert_eq!(
+            linux_desktop_dir_with(
+                Platform::Linux,
+                home,
+                Some("/exported".to_string()),
+                None,
+                never
+            ),
+            Some(PathBuf::from("/exported"))
+        );
+        let read = |path: &Path| {
+            assert_eq!(path, Path::new("/cfg/user-dirs.dirs"));
+            Some("XDG_DESKTOP_DIR=\"$HOME/Schreibtisch\"".to_string())
+        };
+        assert_eq!(
+            linux_desktop_dir_with(
+                Platform::Linux,
+                home,
+                Some(String::new()),
+                Some("/cfg".to_string()),
+                read
+            ),
+            Some(PathBuf::from("/home/u/Schreibtisch"))
+        );
+        // No file: the crate's own `<home>/Desktop` fallback applies, so the shell says nothing.
+        assert_eq!(
+            linux_desktop_dir_with(Platform::Linux, home, None, None, |_| None),
+            None
+        );
+        // The default config folder is `<home>/.config`.
+        let default_cfg = |path: &Path| {
+            assert_eq!(path, home.join(".config").join("user-dirs.dirs"));
+            None
+        };
+        assert_eq!(
+            linux_desktop_dir_with(
+                Platform::Linux,
+                home,
+                None,
+                Some(String::new()),
+                default_cfg
+            ),
+            None
+        );
+        for platform in [Platform::Mac, Platform::Windows] {
+            assert_eq!(
+                linux_desktop_dir_with(platform, home, Some("/x".to_string()), None, never),
+                None
+            );
+        }
     }
 }
