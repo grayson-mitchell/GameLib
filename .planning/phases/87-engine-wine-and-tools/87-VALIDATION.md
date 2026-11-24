@@ -454,3 +454,47 @@ To obtain an artifact a non-dry-run dispatch is needed, from a version-bumped re
 because a `dry_run=false` dispatch on `main` at version 0.11.0 would write into the existing `GameLib v0.11.0` draft. That was not authorised here.
 
 (87-58 recorded `Gate: blocked (no artifact from a dry run)`; superseded by the line above.)
+
+### Phase 87 gap build (87-68)
+
+Operator decision `push-and-build` (see "## CI proof (gap closure)"). Same workflow (`release-tauri.yml`), same Apple secrets, `dry_run=false` from a version-bumped release branch, as 87-59 (`release/v0.13`).
+Exactly one dispatch was made: `gh workflow run release-tauri.yml --ref release/v0.13.1 -f dry_run=false`.
+
+- **Source:** branch `release/v0.13.1` at `97d6d2052fdf92b7f7e28ef584ab4df5674f577d` = `07b194604c8b982ae3f1b4b45ea0ecdd45b97909` (main, the head of the three-OS green CI proof; production code identical to the
+  clean-worktree proof head P `4cf38d88c`, see "## Gap closure proof (87-68)") + `97d6d2052` `chore(87-68): bump version to 0.13.1 for the signed Phase 87 gap-closure build (D-12)` (package.json, src-tauri/Cargo.toml,
+  src-tauri/tauri.conf.json and the `gamelib-shell` entry of src-tauri/Cargo.lock, one line each; `git diff --name-only 07b194604 HEAD` lists exactly those four). 0.13.1 is greater than the 0.13.0 build the operator last ran.
+  The branch was cut in a separate worktree (removed afterwards), so the main checkout never left `main`.
+- **Run:** release-tauri.yml `45455431706`, `workflow_dispatch` on `release/v0.13.1`, headSha `97d6d2052fdf92b7f7e28ef584ab4df5674f577d`, `dry_run=false`. Leg conclusions: `release (windows-latest, x86_64-pc-windows-msvc)` success
+  (18:12:39Z), `release (ubuntu-22.04, x86_64-unknown-linux-gnu)` success (18:16:23Z), `release (macos-latest, --target aarch64-apple-darwin, aarch64-apple-darwin)` success (18:28:48Z).
+- **Artifact:** draft release `GameLib v0.13.1` (tag `v0.13.1`, draft and prerelease, NOT published; target `97d6d2052`; 8 assets: the aarch64 app tar and dmg, the AppImage, the NSIS setup, their `.sig` files and `latest.json`).
+  `gh release list` after differs from before only by that new draft (`diff` of the two listings: one added line, `GameLib v0.13.1  Draft  v0.13.1  2026-11-24T18:12:26Z`). The `v0.10.0`, `v0.11.0`, `v0.12.0` and `v0.13.0` drafts are untouched
+  (each still holds 8 assets, newest asset timestamps unchanged: v0.10.0 2026-11-21T23:14:36Z, v0.11.0 2026-11-22T03:23:25Z, v0.12.0 2026-11-22T18:57:25Z, v0.13.0 2026-11-24T02:59:00Z); the remote tag count is 23 before and after (no tag was created or moved);
+  `origin/main` was not touched by the dispatch. Downloaded with `gh release download v0.13.1 -p 'GameLib_0.13.1_aarch64.app.tar.gz' -p 'GameLib_0.13.1_aarch64.dmg'` into a fresh directory under the session scratchpad:
+  - `GameLib_0.13.1_aarch64.app.tar.gz` (101132176 bytes), sha256 `54d6fe17a519217eb9837c4be6e0594b05ca0e3cca9d9d5c530d732440782235`
+  - `GameLib_0.13.1_aarch64.dmg` (100016050 bytes), sha256 `c043b8c4f0c2e13b0e67e4fa916eb19c01c1d2fcde16212eb9c1a715941297b4`
+  - The checks below ran on `GameLib.app` extracted from the app tar (like with like with the 85, 86 and 87-59 records). `CFBundleShortVersionString` = `0.13.1`. Nothing was installed, opened or launched by this plan.
+    The gap fixes are in the artifact: the string `engine_bottle_remove_per_game` (87-66/87-70's per-game bottle removal op) is present in `Contents/MacOS/gamelib-shell` and `gamelib-sidecar` of 0.13.1 and absent from both in the installed 0.13.0.
+- **`codesign -dv --verbose=4 GameLib.app`:** `Identifier=com.gamelib.shell`; `Format=app bundle with Mach-O thin (arm64)`; `Authority=Developer ID Application: grayson mitchell (S7U223QWXJ)` -> `Developer ID Certification Authority` -> `Apple Root CA`;
+  `TeamIdentifier=S7U223QWXJ`; `Timestamp=25 Nov 2026 at 7:25:30 AM` (local); flags `0x10000(runtime)`; `Notarization Ticket=stapled`; `CDHash=266b7378d08b90e305efe37d2573270b01b146dd`. `codesign --verify --deep --strict` passes (exit 0).
+- **Designated requirement (`codesign -d -r-`):** `identifier "com.gamelib.shell" and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] /* exists */ and certificate leaf[field.1.2.840.113635.100.6.1.13] /* exists */ and certificate leaf[subject.OU] = S7U223QWXJ`
+- **`spctl -a -vv GameLib.app`:** `accepted`, `source=Notarized Developer ID`, `origin=Developer ID Application: grayson mitchell (S7U223QWXJ)`.
+- **`xcrun stapler validate GameLib.app`:** stapled (`The validate action worked!`).
+- **Install-over source on this Mac (read-only check):** `/Applications/GameLib.app` is `0.13.0` with `CDHash=18d7ea76c1f0758325b0976c643496d28c3b861d`, the 87-59 build's CDHash, so the signed 0.13.0 build is what the re-run upgrades from.
+
+**Comparison with the installed 0.13.0 build and the Phase 86 record (baseline):**
+
+| Property | Installed 0.13.0 (87-59, run 45314401170, `/Applications` read now) / Phase 86 record | Phase 87 gap build (run 45455431706) | Equal |
+|----------|-------------------------------------------------------------------------------------|--------------------------------------|-------|
+| Identifier | `com.gamelib.shell` | `com.gamelib.shell` | yes |
+| Leaf authority | Developer ID Application: grayson mitchell (S7U223QWXJ) | same | yes |
+| Chain | Developer ID Certification Authority -> Apple Root CA | same | yes |
+| TeamIdentifier | `S7U223QWXJ` | `S7U223QWXJ` | yes |
+| Designated requirement | the `designated =>` line of the installed 0.13.0 app hashes to sha256 `68d712d0b6d7e715a10a8e79e81b6a50faf2098af411591169238f56d7888b91` (the Phase 86 record's value, per 87-59) | the gap build's `designated =>` line hashes to sha256 `68d712d0b6d7e715a10a8e79e81b6a50faf2098af411591169238f56d7888b91` (compared by script, `shasum -a 256` of the same extracted line from both apps) | yes (byte-identical) |
+| spctl | accepted, Notarized Developer ID | accepted, Notarized Developer ID | yes |
+| stapler | stapled | stapled | yes |
+| Version | 0.13.0 | 0.13.1 | differs, as intended (an upgrade) |
+| CDHash | `18d7ea76...` | `266b7378...` | differs, as expected for a different build; the Keychain ACL binds to the designated requirement |
+
+The identities match, so the gate is `pending`: the live re-run (87-69) is owed.
+
+Gate (gap build): pending (identities match: signed Phase 87 gap build v0.13.1, run 45455431706, `release/v0.13.1` at 97d6d2052 = main 07b194604 + the version bump, same Identifier, Developer ID leaf, TeamIdentifier S7U223QWXJ and byte-identical designated requirement (sha256 68d712d0...) as the installed signed 0.13.0 build (run 45314401170) and the signed Phase 86 build v0.12.0 (run 45056179067); notarized and stapled; contains every 87-60 to 87-67 and 87-70 gap fix)
