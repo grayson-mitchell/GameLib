@@ -26,52 +26,52 @@ IN-* findings were left alone, as instructed.
 
 ## Fixed Issues
 
-### CR-01: Quadratic duplicate-key scan in `JsValue::visit_map`
+### CR-01: Quadratic duplicate-key scan in `JsValue::visit_map` lets a downloaded fix file stall the known-fix runtime
 
 **Files modified:** `src-tauri/crates/gamelib-knownfix/src/jsvalue.rs`
 **Commit:** 52e5daa34
 **Applied fix:** `visit_map` keeps a `HashMap<String, usize>` index, so a repeated key still keeps its first place and takes the last value, and the lookup is linear. The existing order test passes.
 **Left open:** the reviewer's second suggestion (parse under `spawn_blocking`, or a smaller body cap for a fix file) was not done. With the quadratic scan gone, the parse is linear in a 16 MiB body; the cap and the thread are a separate decision.
 
-### CR-02: Windows release build lacks `core.longpaths`
+### CR-02: Windows release build checks out a tree with paths over 260 characters and does not enable `core.longpaths`
 
 **Files modified:** `.github/workflows/release-tauri.yml`
 **Commit:** 776e12d3b
 **Applied fix:** added the same `git config --system core.longpaths true` step, guarded by `runner.os == 'Windows'`, before the first `actions/checkout`. `releaseWorkflow.test.ts` and `rustTestWorkflow.test.ts` pass; prettier check is clean.
 **Left open:** the reviewer's more robust option (shorten the golden fixture folder names and add a meta test that fails on any tracked path of 240 characters or more) was not done. It needs the golden recorder re-run. The longest tracked paths are 246 and 248 characters today, so a Windows contributor who clones without `core.longpaths` still hits the original failure.
 
-### WR-01: Reader warnings echo raw values and key names
+### WR-01: Reader warnings echo raw file values and key names, with no URL redaction and no length bound on key names
 
 **Files modified:** `src-tauri/crates/gamelib-knownfix/src/reader.rs`, `src-tauri/crates/gamelib-knownfix/src/registry.rs`, `src-tauri/crates/gamelib-knownfix/src/overlay/env.rs`
 **Commit:** 6a08dd043
 **Applied fix:** `redact_urls` moved from `overlay/env.rs` to `registry.rs` (`pub(crate)`) and is shared. `echo()` now redacts URLs, and a new `key_shown()` cuts key names at the 200-unit bound and redacts them in all four key warnings. The commit also carries the `rustfmt` change to the CR-01 hunk.
 
-### WR-02: Feed URL embeds an unencoded `app_name`
+### WR-02: The feed URL embeds `app_name` unencoded, and `contained_dest` does not refuse URL metacharacters
 
 **Files modified:** `src-tauri/crates/gamelib-knownfix/src/remote.rs`
 **Commit:** 9b62ca968
 **Applied fix:** `url_safe_app_name` allows only ASCII alphanumerics and `.`, `_`, `-`, and refuses an empty name. `run` checks it before building the URL, with the same "unsafe app name" warning the existing refusal uses. A unit test covers `a?b`, `a#b`, `..%2fx`, whitespace, a newline, `/` and a non-ASCII letter. The golden fetcher replay still passes, so no recorded case uses a name outside the set.
 
-### WR-03: Three ops take an unbounded `appName` and `installPath`
+### WR-03: Three ops take an unbounded `appName` and `installPath`; the other five bound them
 
 **Files modified:** `src-tauri/crates/gamelib-knownfix/src/lib.rs`
 **Commit:** d655ab2a2
 **Applied fix:** `decode_app_runner` (used by `knownfix_read` and `knownfix_status`) and the `knownfix_launch_overrides` arm now apply `bounded_name` to `app_name`. `install_path` is bounded to `MAX_PATH_UNITS` (32,768 UTF-16 units, the Windows extended-length limit). Every refusal is the fixed `<op>:bad-args`. A new test covers an empty name, a 257-unit name and an over-long path.
 **Status note:** the 32,768 bound on `installPath` is my choice; the review named no number.
 
-### WR-04: CLIs panic on non-UTF-8 arguments and environment
+### WR-04: Both CLIs panic on non-UTF-8 arguments, and `gamelib-knownfix-cli` panics on a non-UTF-8 environment variable
 
 **Files modified:** `src-tauri/crates/gamelib-knownfix-cli/src/main.rs`, `src-tauri/crates/gamelib-launch-cli/src/main.rs`
 **Commit:** 2d5d5ecff (shared with WR-05)
 **Applied fix:** both CLIs read `args_os()` and convert lossily; `gamelib-knownfix-cli` builds its `EnvSnapshot` from `vars_os()` the same way. Both CLI test suites pass.
 
-### WR-05: Headless CLIs default to the production relay
+### WR-05: The headless CLIs default to the production relay, so `knownfix_report_detected` with `enabled: true` posts for real
 
 **Files modified:** `src-tauri/crates/gamelib-knownfix-cli/src/main.rs`, `src-tauri/crates/gamelib-launch-cli/src/main.rs`
 **Commit:** 2d5d5ecff (shared with WR-04)
 **Applied fix:** without `--relay-url` the CLIs pass `RELAY_URL_PENDING_SENTINEL`, so `report_detected` answers `no-relay` and cannot post to the deployed relay. The CLI tests pass.
 
-### WR-06: A non-string tier-1 `envVariables` value drops all tier-2 overlay env
+### WR-06: A single non-string tier-1 `envVariables` value rejects the whole overlay-env call, so all tier-2 overlays are silently dropped
 
 **Files modified:** `src/backend/launcher.ts`
 **Commit:** 744f2529e
@@ -79,7 +79,7 @@ IN-* findings were left alone, as instructed.
 **Status:** fixed: requires human verification (behaviour change on a launch path; no new test was added).
 **Left open:** validating the `envVariables` shape in `filterTier1KnownFixes` and its Rust counterpart. The review says to track that as a todo under D-20, because it is a twin-and-golden change, so it was not touched.
 
-### WR-07: The four known-fix channels have no sidecar-side backstop
+### WR-07: The two unbounded known-fix channels have no sidecar-side backstop, so a lost reply hangs the launch
 
 **Files modified:** `src/backend/sidecar/sidecarRpc.ts`, `src/backend/__tests__/dialogOptionForwarding.test.ts`
 **Commit:** c8a670b4a
@@ -87,7 +87,7 @@ IN-* findings were left alone, as instructed.
 **Status:** fixed: requires human verification (timeout policy).
 **Left open:** the alternative of wrapping the shell arms in `catch_unwind` was not attempted.
 
-### WR-08: The overlay archive replay never independently compares gzip bytes
+### WR-08: The overlay archive replay never independently compares gzip bytes; the "same" branch is circular
 
 **Files modified:** `src-tauri/crates/gamelib-knownfix/tests/golden_overlay_archive.rs`
 **Commit:** c8608ba57
@@ -101,21 +101,21 @@ IN-* findings were left alone, as instructed.
 **Commit:** 3d4b1e926
 **Applied fix:** the probe throws if the `build-three-files-sorted-by-bytes` reference case is missing, and a new test logs through `console.info` whether the gzip bytes were compared on the leg. The doc comment no longer claims Rust compares the bytes on all three OSes. The file's 267 tests pass and eslint is clean.
 
-### WR-10: Fetcher and overlay-install replays are `cfg(unix)` only
+### WR-10: The fetcher and overlay-install replays are `cfg(unix)` only, so about 79 golden cases do not run on the Windows leg
 
 **Files modified:** `src-tauri/crates/gamelib-knownfix/tests/golden_fetcher.rs`, `src-tauri/crates/gamelib-knownfix/tests/golden_overlay_install.rs`
 **Commit:** 74f1c6c62
 **Applied fix:** both file headers now say the replay is unix only, and each file has a `#[cfg(not(unix))]` test that prints the skip by name (38 and 41 cases).
 **Left open:** making the fetcher's `snapshot_tree` portable (drop `mode` on non-unix) so the fetcher replay runs on Windows. It could not be run on Windows from this host, so it was left as the documented gap. The 88-17 proof's three-OS claim is also not corrected.
 
-### WR-11: Event level comparison cannot tell info from error
+### WR-11: Event level comparison in the fetcher and report replays cannot tell info from error
 
 **Files modified:** `src-tauri/crates/gamelib-knownfix/tests/golden_fetcher.rs`, `src-tauri/crates/gamelib-knownfix/tests/golden_report.rs`
 **Commit:** 02125e871
 **Applied fix:** a `golden_level` helper maps `warn` to `warning` and leaves other levels alone; both replays compare the level string for equality. Both replays still pass, so no golden line was being matched through the old leniency.
 **Status:** fixed: requires human verification.
 
-### WR-12: The registry replay drops every error-level line
+### WR-12: The launcher-path registry replay drops every error-level log line before comparing events
 
 **Files modified:** `src-tauri/crates/gamelib-knownfix/tests/golden_registry.rs`
 **Commit:** f61c389c9

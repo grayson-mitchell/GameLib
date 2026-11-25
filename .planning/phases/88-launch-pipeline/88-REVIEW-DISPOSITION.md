@@ -5,27 +5,27 @@ titles: json
 findings:
   - id: CR-01
     severity: critical
-    disposition: open
+    disposition: fixed
     title: "Quadratic duplicate-key scan in `JsValue::visit_map` lets a downloaded fix file stall the known-fix runtime"
   - id: WR-01
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "Reader warnings echo raw file values and key names, with no URL redaction and no length bound on key names"
   - id: WR-02
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "The feed URL embeds `app_name` unencoded, and `contained_dest` does not refuse URL metacharacters"
   - id: WR-03
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "Three ops take an unbounded `appName` and `installPath`; the other five bound them"
   - id: WR-04
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "Both CLIs panic on non-UTF-8 arguments, and `gamelib-knownfix-cli` panics on a non-UTF-8 environment variable"
   - id: WR-05
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "The headless CLIs default to the production relay, so `knownfix_report_detected` with `enabled: true` posts for real"
   - id: IN-01
     severity: info
@@ -53,15 +53,15 @@ findings:
     title: "The remote cache's temp file name is per process, so two concurrent fetches of one app collide"
   - id: CR-02
     severity: critical
-    disposition: open
+    disposition: fixed
     title: "Windows release build checks out a tree with paths over 260 characters and does not enable `core.longpaths`"
   - id: WR-06
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "A single non-string tier-1 `envVariables` value rejects the whole overlay-env call, so all tier-2 overlays are silently dropped"
   - id: WR-07
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "The two unbounded known-fix channels have no sidecar-side backstop, so a lost reply hangs the launch"
   - id: IN-07
     severity: info
@@ -85,7 +85,7 @@ findings:
     title: "`KnownFixLaunchOverrides` is declared twice with the same shape"
   - id: WR-08
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "The overlay archive replay never independently compares gzip bytes; the \"same\" branch is circular"
   - id: WR-09
     severity: warning
@@ -93,15 +93,15 @@ findings:
     title: "The TS twin's gzip fields are dropped by a one-case probe that degrades silently"
   - id: WR-10
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "The fetcher and overlay-install replays are `cfg(unix)` only, so about 79 golden cases do not run on the Windows leg"
   - id: WR-11
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "Event level comparison in the fetcher and report replays cannot tell info from error"
   - id: WR-12
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "The launcher-path registry replay drops every error-level log line before comparing events"
   - id: IN-12
     severity: info
@@ -131,40 +131,40 @@ findings:
     severity: info
     disposition: open
     title: "The port-complete gate imports another test file"
-open: 31
+open: 18
 total: 32
-recorded: 2026-11-25T04:11:16.506Z
+recorded: 2026-11-25T04:11:25.347Z
 ---
 
 # Phase 88: Code Review Disposition
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| CR-01 | critical | open | - |
-| WR-01 | warning | open | - |
-| WR-02 | warning | open | - |
-| WR-03 | warning | open | - |
-| WR-04 | warning | open | - |
-| WR-05 | warning | open | - |
+| CR-01 | critical | fixed | 88-REVIEW-FIX.md |
+| WR-01 | warning | fixed | 88-REVIEW-FIX.md |
+| WR-02 | warning | fixed | 88-REVIEW-FIX.md |
+| WR-03 | warning | fixed | 88-REVIEW-FIX.md |
+| WR-04 | warning | fixed | 88-REVIEW-FIX.md |
+| WR-05 | warning | fixed | 88-REVIEW-FIX.md |
 | IN-01 | info | open | - |
 | IN-02 | info | open | - |
 | IN-03 | info | open | - |
 | IN-04 | info | open | - |
 | IN-05 | info | open | - |
 | IN-06 | info | open | - |
-| CR-02 | critical | open | - |
-| WR-06 | warning | open | - |
-| WR-07 | warning | open | - |
+| CR-02 | critical | fixed | 88-REVIEW-FIX.md |
+| WR-06 | warning | fixed | 88-REVIEW-FIX.md |
+| WR-07 | warning | fixed | 88-REVIEW-FIX.md |
 | IN-07 | info | open | - |
 | IN-08 | info | open | - |
 | IN-09 | info | open | - |
 | IN-10 | info | open | - |
 | IN-11 | info | open | - |
-| WR-08 | warning | open | - |
+| WR-08 | warning | fixed | 88-REVIEW-FIX.md |
 | WR-09 | warning | fixed | 88-REVIEW-FIX.md |
-| WR-10 | warning | open | - |
-| WR-11 | warning | open | - |
-| WR-12 | warning | open | - |
+| WR-10 | warning | fixed | 88-REVIEW-FIX.md |
+| WR-11 | warning | fixed | 88-REVIEW-FIX.md |
+| WR-12 | warning | fixed | 88-REVIEW-FIX.md |
 | IN-12 | info | open | - |
 | IN-13 | info | open | - |
 | IN-14 | info | open | - |
