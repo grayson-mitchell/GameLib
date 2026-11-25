@@ -27,6 +27,7 @@ use gamelib_wine::wine_cmd::WineHost;
 use prepare::deps::CtxPrepareDeps;
 use prepare::epic;
 use prepare::launch::{PrepareHost, PrepareLaunchArgs};
+use prepare::wine_begin::PrepareWineBeginArgs;
 use serde::Deserialize;
 use serde_json::Value;
 use std::future::Future;
@@ -41,6 +42,7 @@ pub const OPS: &[&str] = &[
     "launch_epic_service_offline",
     "launch_known_fix_env",
     "launch_prepare",
+    "launch_prepare_wine_begin",
     "launch_setup_env_vars",
     "launch_setup_wine_env_vars",
     "launch_setup_wrapper_env_vars",
@@ -93,6 +95,23 @@ async fn route(op: &str, args: &[Value], ctx: &LaunchCtx) -> Result<Value, Strin
             let reply = prepare::launch::prepare_launch(ctx, &deps, prepare, &host)
                 .await
                 .map_err(|e| format!("{op}:{e}"))?;
+            result_of(serde_json::to_value(reply))
+        }
+        // `prepareWineLaunch` up to the store-setup point (88.1-12). Arguments `[args, host]`: the game and the
+        // settings (`PrepareWineBeginArgs`) and the wine host facts the shell read. Answers the reply, the
+        // launch settings the finish step is handed and the launch log lines. May create a wine prefix
+        // (`wineboot`), which can outlast the sidecar's 60 s bound, so its shim lists the channel as unbounded.
+        "launch_prepare_wine_begin" => {
+            let [begin @ Value::Object(_), host] = args else {
+                return Err(bad());
+            };
+            let begin: PrepareWineBeginArgs =
+                serde_json::from_value(begin.clone()).map_err(|_| bad())?;
+            let host = host_arg(host).ok_or_else(bad)?;
+            let deps = CtxPrepareDeps::new(ctx, &host);
+            let reply = prepare::wine_begin::prepare_wine_begin(ctx, &deps, begin, &host)
+                .await
+                .map_err(|reason| format!("{op}:{reason}"))?;
             result_of(serde_json::to_value(reply))
         }
         // The tier-1 `envVariables` of a game, raw (`{}` when none). Arguments `[appName, runner]`.
@@ -437,8 +456,8 @@ mod tests {
     }
 
     #[test]
-    fn the_eight_launch_ops_are_in_the_table() {
-        assert_eq!(OPS.len(), 8);
+    fn the_nine_launch_ops_are_in_the_table() {
+        assert_eq!(OPS.len(), 9);
         assert!(OPS.iter().all(|op| op.starts_with("launch_")));
     }
 
@@ -747,6 +766,71 @@ mod tests {
         ] {
             let err = dispatch("launch_prepare", &args, &ctx).await.unwrap_err();
             assert_eq!(err, "launch_prepare:bad-args", "{args:?}");
+            assert!(!err.contains(secret));
+        }
+    }
+
+    fn wine_begin_args(extra: Value) -> Value {
+        let mut args = json!({
+            "runner": "gog",
+            "appName": "app1",
+            "title": "A Game",
+            "canRunOffline": true,
+            "storedSettings": {"winePrefix": "/nonexistent/prefix"},
+        });
+        if let (Some(base), Value::Object(extra)) = (args.as_object_mut(), extra) {
+            base.extend(extra);
+        }
+        args
+    }
+
+    #[tokio::test]
+    async fn the_wine_begin_op_stops_when_neither_wine_is_valid_and_never_echoes_what_it_was_sent()
+    {
+        let home = FakeHome::new("launch-lib-");
+        let ctx = ctx(&home);
+        let settings = json!({
+            "winePrefix": "/nonexistent/prefix",
+            "wineVersion": {"bin": "/nonexistent/wine", "name": "W", "type": "proton"},
+        });
+        // No wine exists and the profile holds no default: the step stops with `{ success: false }` and
+        // nothing is created.
+        let got = dispatch(
+            "launch_prepare_wine_begin",
+            &[
+                wine_begin_args(json!({"storedSettings": settings})),
+                json!({}),
+            ],
+            &ctx,
+        )
+        .await
+        .unwrap();
+        assert_eq!(got["success"], json!(false));
+        assert_eq!(got["prefixUpdated"], json!(false));
+        assert_eq!(got["log"], json!([]));
+        assert!(got.get("settings").is_none());
+        assert!(!std::path::Path::new("/nonexistent/prefix").exists());
+
+        let secret = "/Users/someone/secret-profile-path";
+        for args in [
+            vec![],
+            vec![wine_begin_args(json!({}))],
+            vec![wine_begin_args(json!({})), json!(secret)],
+            vec![wine_begin_args(json!({})), json!({"unknownFact": secret})],
+            vec![wine_begin_args(json!({})), json!({}), json!({})],
+            vec![wine_begin_args(json!({"runner": "epic"})), json!({})],
+            vec![wine_begin_args(json!({"extra": secret})), json!({})],
+            vec![
+                wine_begin_args(json!({"storedSettings": secret})),
+                json!({}),
+            ],
+            // Settings that are an object but not game settings (no wine).
+            vec![wine_begin_args(json!({"storedSettings": {}})), json!({})],
+        ] {
+            let err = dispatch("launch_prepare_wine_begin", &args, &ctx)
+                .await
+                .unwrap_err();
+            assert_eq!(err, "launch_prepare_wine_begin:bad-args", "{args:?}");
             assert!(!err.contains(secret));
         }
     }

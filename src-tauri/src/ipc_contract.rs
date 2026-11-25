@@ -230,6 +230,7 @@ pub(crate) enum RustInvokeChannel {
     LaunchVerifyWinePrefix,
     LaunchEpicServiceOffline,
     LaunchPrepare,
+    LaunchPrepareWineBegin,
     ShortcutsExist,
     ShortcutsAdd,
     ShortcutsRemove,
@@ -447,6 +448,7 @@ impl RustInvokeChannel {
         RustInvokeChannel::LaunchVerifyWinePrefix,
         RustInvokeChannel::LaunchEpicServiceOffline,
         RustInvokeChannel::LaunchPrepare,
+        RustInvokeChannel::LaunchPrepareWineBegin,
         RustInvokeChannel::ShortcutsExist,
         RustInvokeChannel::ShortcutsAdd,
         RustInvokeChannel::ShortcutsRemove,
@@ -664,6 +666,7 @@ impl RustInvokeChannel {
             "launch_verify_wine_prefix" => Some(RustInvokeChannel::LaunchVerifyWinePrefix),
             "launch_epic_service_offline" => Some(RustInvokeChannel::LaunchEpicServiceOffline),
             "launch_prepare" => Some(RustInvokeChannel::LaunchPrepare),
+            "launch_prepare_wine_begin" => Some(RustInvokeChannel::LaunchPrepareWineBegin),
             "shortcuts_exist" => Some(RustInvokeChannel::ShortcutsExist),
             "shortcuts_add" => Some(RustInvokeChannel::ShortcutsAdd),
             "shortcuts_remove" => Some(RustInvokeChannel::ShortcutsRemove),
@@ -883,6 +886,7 @@ impl RustInvokeChannel {
             RustInvokeChannel::LaunchVerifyWinePrefix => "launch_verify_wine_prefix",
             RustInvokeChannel::LaunchEpicServiceOffline => "launch_epic_service_offline",
             RustInvokeChannel::LaunchPrepare => "launch_prepare",
+            RustInvokeChannel::LaunchPrepareWineBegin => "launch_prepare_wine_begin",
             RustInvokeChannel::ShortcutsExist => "shortcuts_exist",
             RustInvokeChannel::ShortcutsAdd => "shortcuts_add",
             RustInvokeChannel::ShortcutsRemove => "shortcuts_remove",
@@ -4517,6 +4521,42 @@ impl LaunchPrepareArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let first = args.first().ok_or_else(|| "launch_prepare:bad-args".to_string())?;
         serde_json::from_value(first.clone()).map_err(|_| "launch_prepare:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct LaunchPrepareWineBeginArgs {
+    pub(crate) runner: LaunchPrepareWineBeginArgsRunner,
+    #[serde(rename = "appName")]
+    pub(crate) app_name: String,
+    pub(crate) title: String,
+    #[serde(rename = "canRunOffline")]
+    pub(crate) can_run_offline: bool,
+    #[serde(rename = "folderName")]
+    #[serde(default)]
+    pub(crate) folder_name: Option<String>,
+    #[serde(rename = "storedSettings")]
+    pub(crate) stored_settings: Value,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+pub(crate) enum LaunchPrepareWineBeginArgsRunner {
+    #[serde(rename = "gog")]
+    Gog,
+    #[serde(rename = "legendary")]
+    Legendary,
+    #[serde(rename = "nile")]
+    Nile,
+    #[serde(rename = "sideload")]
+    Sideload,
+    #[serde(rename = "steam")]
+    Steam,
+}
+
+impl LaunchPrepareWineBeginArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "launch_prepare_wine_begin:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "launch_prepare_wine_begin:bad-args".to_string())
     }
 }
 

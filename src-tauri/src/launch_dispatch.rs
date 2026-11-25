@@ -347,6 +347,41 @@ pub(crate) fn rpc_launch_prepare(args: &[Value]) -> Result<Value, String> {
     prepare_over(launch_ctx(), args, prepare_host)
 }
 
+/// The body of the `launch_prepare_wine_begin` arm over a given context and host: the generated decode (one object
+/// of the facts only the TS has), an object check on the stored settings and an arity check first, so a bad call is
+/// rejected the same fixed `<op>:bad-args` literal before and after the install and never echoes the sidecar's
+/// value, then the crate over `[args, host]` (which decodes strictly again). `host` is the shell's own facts
+/// (T-88.1-14), taken only once the context is there.
+fn prepare_wine_begin_over(
+    ctx: Option<&Arc<LaunchCtx>>,
+    args: &[Value],
+    host: impl FnOnce() -> Value,
+) -> Result<Value, String> {
+    let decoded = LaunchPrepareWineBeginArgs::from_args(args)?;
+    if args.len() != 1 {
+        return Err("launch_prepare_wine_begin:bad-args".to_string());
+    }
+    settings_object(decoded.stored_settings, "launch_prepare_wine_begin")?;
+    let ctx = ctx.ok_or_else(|| "launch_prepare_wine_begin:not-ready".to_string())?;
+    rpc_launch_op(
+        Some(ctx),
+        "launch_prepare_wine_begin",
+        &[args[0].clone(), host()],
+    )
+}
+
+/// The `launch_prepare_wine_begin` `rustInvoke` arm (88.1-12, D-19, D-26, D-30): the first half of
+/// `prepareWineLaunch`, up to the store-setup point. It checks the wines, the CrossOver bottle, creates the wine
+/// prefix when it is missing and records the game in its `installed_games`, and answers the reply, the launch
+/// settings the finish step is handed and the per-game log lines the TS `LogWriter` writes. The TS store-setup hook
+/// stays TS and runs between this arm and the finish arm (88.1-13) in the launcher adapter (88.1-15). The shell
+/// appends [`wine_dispatch::wine_run_host`]. A `wineboot` can outlast the sidecar's 60 s `RUST_INVOKE_TIMEOUT_MS`,
+/// so the shim that calls it (88.1-15) lists the channel as unbounded; the wine core's Helper spawn and the shutdown
+/// token end it at exit (T-88.1-30).
+pub(crate) fn rpc_launch_prepare_wine_begin(args: &[Value]) -> Result<Value, String> {
+    prepare_wine_begin_over(launch_ctx(), args, wine_dispatch::wine_run_host)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -696,6 +731,69 @@ mod tests {
         assert!(!err.contains(secret));
     }
 
+    fn wine_begin_args(settings: Value) -> Value {
+        json!({
+            "runner": "gog",
+            "appName": "1234",
+            "title": "A Game",
+            "canRunOffline": false,
+            "storedSettings": settings,
+        })
+    }
+
+    #[test]
+    fn the_wine_begin_arm_is_not_ready_before_the_install_and_answers_the_reply_after() {
+        let home = FakeHome::new("launch-shell-");
+        let ctx = ctx_over(&home);
+        let settings = json!({
+            "winePrefix": "/nonexistent/prefix",
+            "wineVersion": {"bin": "/nonexistent/wine", "name": "W", "type": "wine"},
+        });
+        let args = vec![wine_begin_args(settings)];
+        assert_eq!(
+            prepare_wine_begin_over(None, &args, host),
+            Err("launch_prepare_wine_begin:not-ready".to_string())
+        );
+        // No wine exists and the profile holds no default: the step stops and creates nothing.
+        let got = prepare_wine_begin_over(Some(&ctx), &args, || json!({})).unwrap();
+        assert_eq!(got["success"], json!(false));
+        assert_eq!(got["prefixUpdated"], json!(false));
+        assert_eq!(got["log"], json!([]));
+    }
+
+    #[test]
+    fn the_wine_begin_arm_rejects_a_wrong_call_with_its_fixed_bad_args_before_and_after_the_install(
+    ) {
+        let home = FakeHome::new("launch-shell-");
+        let ctx = ctx_over(&home);
+        let secret = "/Users/someone/secret-profile-path";
+        let wrong: Vec<Vec<Value>> = vec![
+            vec![wine_begin_args(json!(secret))],
+            vec![wine_begin_args(json!({})), json!({})],
+            vec![json!({
+                "runner": "epic", "appName": "1", "title": secret, "canRunOffline": false,
+                "storedSettings": {},
+            })],
+            vec![json!({
+                "runner": "gog", "appName": 1, "title": "t", "canRunOffline": false,
+                "storedSettings": {},
+            })],
+        ];
+        for args in &wrong {
+            for ctx in [None, Some(&ctx)] {
+                let err = prepare_wine_begin_over(ctx, args, host).unwrap_err();
+                assert_eq!(err, "launch_prepare_wine_begin:bad-args", "{args:?}");
+                assert!(!err.contains(secret));
+            }
+        }
+        // An unknown key passes the generated decode and is the crate's to refuse.
+        let mut extra = wine_begin_args(json!({}));
+        extra["extra"] = json!(secret);
+        let err = prepare_wine_begin_over(Some(&ctx), &[extra], || json!({})).unwrap_err();
+        assert_eq!(err, "launch_prepare_wine_begin:bad-args");
+        assert!(!err.contains(secret));
+    }
+
     #[test]
     fn the_prepare_host_reads_the_deck_and_flatpak_facts_the_way_the_ts_constants_do() {
         let env_of = |pairs: &'static [(&'static str, &'static str)]| {
@@ -764,7 +862,7 @@ mod tests {
         let ctx = ctx_over(&home);
         let secret = "/Users/someone/secret-profile-path";
         type Arm = fn(Option<&Arc<LaunchCtx>>, &[Value]) -> Result<Value, String>;
-        let arms: [(&str, Arm); 5] = [
+        let arms: [(&str, Arm); 6] = [
             ("launch_setup_env_vars", |c, a| {
                 setup_env_vars_over(c, a, host)
             }),
@@ -775,6 +873,9 @@ mod tests {
             ("launch_known_fix_env", known_fix_env_over),
             ("launch_verify_wine_prefix", |c, a| {
                 verify_wine_prefix_over(c, a, host)
+            }),
+            ("launch_prepare_wine_begin", |c, a| {
+                prepare_wine_begin_over(c, a, host)
             }),
         ];
         let wrong: Vec<Vec<Value>> = vec![

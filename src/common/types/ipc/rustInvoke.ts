@@ -165,6 +165,7 @@ import {
   RUST_LAUNCH_EPIC_SERVICE_OFFLINE,
   RUST_LAUNCH_KNOWN_FIX_ENV,
   RUST_LAUNCH_PREPARE,
+  RUST_LAUNCH_PREPARE_WINE_BEGIN,
   RUST_LAUNCH_SETUP_ENV_VARS,
   RUST_LAUNCH_SETUP_WINE_ENV_VARS,
   RUST_LAUNCH_SETUP_WRAPPER_ENV_VARS,
@@ -1306,6 +1307,21 @@ export const rustInvokeArgs = {
         isNative: z.boolean(),
         storeExpired: z.boolean(),
         namespace: z.string().optional()
+      })
+      .strict()
+  ]),
+  // Phase 88.1 (SVC-03, 88.1-12, D-19, D-26, D-30): the first half of `prepareWineLaunch`. One strict object with the facts
+  // only the TS has; `storedSettings` is the game's stored settings, opaque to the generated decode (`x-rust-value`) and
+  // checked as a JSON object by the crate. The shell appends the wine host facts itself (T-88.1-14).
+  [RUST_LAUNCH_PREPARE_WINE_BEGIN]: z.tuple([
+    z
+      .object({
+        runner: z.enum(['gog', 'legendary', 'nile', 'sideload', 'steam']),
+        appName: z.string(),
+        title: z.string(),
+        canRunOffline: z.boolean(),
+        folderName: z.string().optional(),
+        storedSettings: knownFixGameSettings
       })
       .strict()
   ])

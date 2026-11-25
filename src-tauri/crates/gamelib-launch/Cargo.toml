@@ -44,6 +44,9 @@ gamelib-proc = { path = "../gamelib-proc" }
 # quote is `None` rather than a typed error, `#` starts a comment, join quotes differently), so the
 # builders carry a port of the npm lexer and this crate is the differential reference in a unit test.
 shlex = "2"
+# The tree snapshot of the prepare_wine replay hashes files the way the TS snapshot does. Already locked
+# (gamelib-engine, gamelib-wine and gamelib-knownfix hash with it), so no new crate enters the tree.
+sha2 = "0.10"
 
 [lints.clippy]
 dbg_macro = "deny"

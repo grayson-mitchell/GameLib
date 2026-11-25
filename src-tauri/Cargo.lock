@@ -1803,6 +1803,7 @@ dependencies = [
  "gamelib-wine",
  "serde",
  "serde_json",
+ "sha2",
  "shlex",
  "tempfile",
  "tokio",

@@ -1604,6 +1604,19 @@ export const RUST_LAUNCH_EPIC_SERVICE_OFFLINE =
  * the unbounded set, the app shutdown still ends it.
  */
 export const RUST_LAUNCH_PREPARE = 'launch_prepare' as const
+/**
+ * Phase 88.1 (SVC-03, 88.1-12, D-01, D-19, D-26, D-30): the first half of `prepareWineLaunch`, up to the store-setup
+ * point. `launch_prepare_wine_begin` takes `[args]` (the runner, app name, title, `canRunOffline`, the folder name and
+ * the game's stored settings: the facts only the TS has; the shell appends the wine host facts itself) and answers
+ * `{ success, failureReason?, prefixUpdated, settings?, log }`: whether the launch goes on, whether the prefix or
+ * CrossOver bottle gained this game (what tells the adapter to run the TS store-setup hook, which stays TS until 88.3),
+ * the launch settings the finish step is handed, and the per-game log lines as `{ level, parts }` or
+ * `{ slot: 'eosOverlay' }` for the adapter to fill from the runner's `isOverlayEnabled` hook. It may create a wine
+ * prefix (`wineboot`), which can outlast the 60 s `RUST_INVOKE_TIMEOUT_MS`; the shim that calls it (88.1-15) lists the
+ * channel in the unbounded set, the app shutdown still ends it.
+ */
+export const RUST_LAUNCH_PREPARE_WINE_BEGIN =
+  'launch_prepare_wine_begin' as const
 export const RUST_ENGINE_STATE_RECORD_DECISION =
   'engine_state_record_decision' as const
 export const RUST_ENGINE_STATE_PUBLISH_OVERLAY_NOTICE =
@@ -2056,6 +2069,7 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_LAUNCH_VERIFY_WINE_PREFIX,
   RUST_LAUNCH_EPIC_SERVICE_OFFLINE,
   RUST_LAUNCH_PREPARE,
+  RUST_LAUNCH_PREPARE_WINE_BEGIN,
   RUST_SHORTCUTS_EXIST,
   RUST_SHORTCUTS_ADD,
   RUST_SHORTCUTS_REMOVE,

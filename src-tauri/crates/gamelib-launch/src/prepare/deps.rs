@@ -1,21 +1,29 @@
-//! The collaborators of `prepare_launch`, as a trait (the pattern of `gamelib_engine::launch::step::StepDeps`).
+//! The collaborators of the prepare steps, as a trait (the pattern of `gamelib_engine::launch::step::StepDeps`).
 //!
 //! Production is [`CtxPrepareDeps`]: every call is the real function over the context (the system-information
 //! read and the anti-cheat lookup of `gamelib-info`, the Epic status check, the PATH scan, the gamescope help
-//! probe, the Wine runtimes and the CrossOver bottle query). The goldens use `testing::ScriptedPrepareDeps`,
-//! which answers the calls the TS scripted (the system information, the anti-cheat answer, the executables on
-//! the PATH, the umu runtime's state) and records each one, and runs the rest for real over the context's seams.
+//! probe, the Wine runtimes and the CrossOver bottle query, and for `prepare_wine_begin` the engine's launch
+//! settings, `validWine`, the global default Wine and the winetricks log read). The goldens use
+//! `testing::ScriptedPrepareDeps`, which answers the calls the TS scripted (the system information, the
+//! anti-cheat answer, the executables on the PATH, the umu runtime's state, the engine's launch settings, each
+//! Wine's validity and the winetricks list) and records each one, and runs the rest for real over the context's
+//! seams.
 
 use std::future::Future;
 use std::pin::Pin;
 
+use gamelib_engine::config::global_settings;
 use gamelib_info::anticheat::{info as anticheat_info, InfoArgs};
 use gamelib_info::sysinfo::format::format_system_info;
 use gamelib_info::sysinfo::get_system_info;
+use gamelib_knownfix::types::Runner;
 use gamelib_wine::runtimes;
 use gamelib_wine::wine_cmd::command::find_on_path;
 use gamelib_wine::wine_cmd::env::GameSettingsView;
-use gamelib_wine::wine_cmd::WineHost;
+use gamelib_wine::wine_cmd::valid::valid_wine;
+use gamelib_wine::wine_cmd::{WineHost, WineInstallation};
+use gamelib_wine::winetricks::install::list_installed;
+use gamelib_wine::winetricks::{HostLauncher, Session, Target, ToolSettings};
 use serde_json::Value;
 
 use super::crossover::crossover_bottle_folder;
@@ -57,6 +65,22 @@ pub trait PrepareDeps: Send + Sync {
 
     /// `getCrossoverBottleFolder`.
     fn crossover_bottle_folder(&self, settings: GameSettingsView) -> Fut<'_, Option<String>>;
+
+    /// `launchSettingsFor`: the stored settings with the running launch's engine overlaid (`key` is the engine
+    /// key of the game, `None` for a game that has none; the settings come back unchanged then).
+    fn launch_settings(&self, key: Option<String>, stored: Value) -> Value;
+
+    /// `validWine`: whether the wine exists on disk as its type requires.
+    fn valid_wine(&self, wine: &WineInstallation) -> bool;
+
+    /// The default wine of the global settings (`config.getSettings().wineVersion`), `None` when there is none
+    /// or it is not a wine installation.
+    fn global_default_wine(&self) -> Option<WineInstallation>;
+
+    /// `winetricksListInstalled`: the lines of the game's `winetricks.log`, read with the settings this launch
+    /// holds (empty when they are unusable or the log is not there).
+    fn winetricks_installed(&self, settings: &Value, runner: Runner, app_name: &str)
+        -> Vec<String>;
 }
 
 /// The collaborators of the app: every one is the real function. `host` is the process facts the shell read
@@ -120,6 +144,51 @@ impl PrepareDeps for CtxPrepareDeps<'_> {
     fn crossover_bottle_folder(&self, settings: GameSettingsView) -> Fut<'_, Option<String>> {
         Box::pin(async move { crossover_bottle_folder(&self.ctx.wine, &settings, self.host).await })
     }
+
+    fn launch_settings(&self, key: Option<String>, stored: Value) -> Value {
+        self.ctx.engine.launch_settings.get_launch_settings(
+            &self.ctx.engine,
+            key.as_deref(),
+            &stored,
+        )
+    }
+
+    fn valid_wine(&self, wine: &WineInstallation) -> bool {
+        valid_wine(
+            Some(wine),
+            self.ctx.engine.platform,
+            self.host.darwin_release.as_deref(),
+            &|path| path.exists(),
+        )
+    }
+
+    fn global_default_wine(&self) -> Option<WineInstallation> {
+        let mut settings = global_settings(&self.ctx.engine);
+        serde_json::from_value(settings.remove("wineVersion")?).ok()
+    }
+
+    fn winetricks_installed(
+        &self,
+        settings: &Value,
+        runner: Runner,
+        app_name: &str,
+    ) -> Vec<String> {
+        let Ok(view) = serde_json::from_value::<GameSettingsView>(settings.clone()) else {
+            return Vec::new();
+        };
+        let launcher = HostLauncher { host: self.host };
+        let session = Session {
+            ctx: &self.ctx.wine,
+            host: self.host,
+            launcher: &launcher,
+        };
+        let target = Target {
+            runner: runner.as_str(),
+            app_name,
+            settings: ToolSettings::Resolved(Box::new(view)),
+        };
+        list_installed(&session, &target)
+    }
 }
 
 /// The scripted collaborators of the goldens (feature `testing`).
@@ -142,6 +211,12 @@ pub mod testing {
         RuntimeIsInstalled(String),
         /// `wine_runtime_download` with the runtime.
         RuntimeDownload(String),
+        /// `engine_launch_settings_get` with the key and the stored settings.
+        LaunchSettings(Option<String>, Value),
+        /// `wine_valid` with the wine.
+        WineValid(WineInstallation),
+        /// `wine_winetricks_list_installed` with the runner, the app and the settings read with.
+        WinetricksInstalled(String, String, Value),
     }
 
     impl Call {
@@ -162,6 +237,19 @@ pub mod testing {
                 Call::RuntimeDownload(name) => json!({
                     "kind": "rust", "channel": "wine_runtime_download", "args": [name]
                 }),
+                Call::LaunchSettings(key, stored) => json!({
+                    "kind": "rust",
+                    "channel": "engine_launch_settings_get",
+                    "args": [{ "key": key, "stored": stored }]
+                }),
+                Call::WineValid(wine) => json!({
+                    "kind": "rust", "channel": "wine_valid", "args": [wine]
+                }),
+                Call::WinetricksInstalled(runner, app_name, settings) => json!({
+                    "kind": "rust",
+                    "channel": "wine_winetricks_list_installed",
+                    "args": [{ "runner": runner, "appName": app_name, "settings": settings }]
+                }),
             }
         }
     }
@@ -181,6 +269,14 @@ pub mod testing {
         pub runtime_installed: bool,
         /// What the umu runtime download answers.
         pub download_answer: bool,
+        /// What the engine's launch-settings overlay answers; `None` answers the stored settings unchanged.
+        pub launch_settings_reply: Option<Value>,
+        /// Each wine's validity, by name; a name that is not listed is valid.
+        pub wine_validity: BTreeMap<String, bool>,
+        /// The default wine of the global settings.
+        pub default_wine: Option<WineInstallation>,
+        /// The lines of the winetricks log.
+        pub winetricks: Vec<String>,
         calls: Mutex<Vec<Call>>,
     }
 
@@ -193,6 +289,10 @@ pub mod testing {
                 executables: BTreeMap::new(),
                 runtime_installed: false,
                 download_answer: true,
+                launch_settings_reply: None,
+                wine_validity: BTreeMap::new(),
+                default_wine: None,
+                winetricks: Vec::new(),
                 calls: Mutex::new(Vec::new()),
             }
         }
@@ -248,6 +348,34 @@ pub mod testing {
 
         fn crossover_bottle_folder(&self, settings: GameSettingsView) -> Fut<'_, Option<String>> {
             self.real.crossover_bottle_folder(settings)
+        }
+
+        fn launch_settings(&self, key: Option<String>, stored: Value) -> Value {
+            self.record(Call::LaunchSettings(key, stored.clone()));
+            self.launch_settings_reply.clone().unwrap_or(stored)
+        }
+
+        fn valid_wine(&self, wine: &WineInstallation) -> bool {
+            self.record(Call::WineValid(wine.clone()));
+            self.wine_validity.get(&wine.name).copied().unwrap_or(true)
+        }
+
+        fn global_default_wine(&self) -> Option<WineInstallation> {
+            self.default_wine.clone()
+        }
+
+        fn winetricks_installed(
+            &self,
+            settings: &Value,
+            runner: Runner,
+            app_name: &str,
+        ) -> Vec<String> {
+            self.record(Call::WinetricksInstalled(
+                runner.as_str().to_string(),
+                app_name.to_string(),
+                settings.clone(),
+            ));
+            self.winetricks.clone()
         }
     }
 }
