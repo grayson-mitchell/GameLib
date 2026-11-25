@@ -85,6 +85,7 @@ import {
   RUST_LAUNCH_PREPARE,
   RUST_LAUNCH_PREPARE_WINE_BEGIN,
   RUST_LAUNCH_PREPARE_WINE_FINISH,
+  RUST_LAUNCH_CHECK_WINE_BEFORE_LAUNCH,
   RUST_LAUNCH_VERIFY_WINE_PREFIX,
   RUST_DIALOG_MESSAGE,
   RUST_DIALOG_OPEN,
@@ -250,6 +251,12 @@ const RUST_INVOKE_TIMEOUT_MS = 60_000
  * Twenty-first (Phase 88.1, 88.1-15): `launch_prepare_wine_finish` may install a Winetricks verb, a DXVK-family tool, the EAC or
  * BattlEye runtime or a known-fix overlay, and run a known fix's programs in the prefix, each of which can exceed 60 s. Rust
  * bounds each step (Helper timeouts, download cancels) and the app shutdown ends them (T-88.1-37).
+ *
+ * Twenty-second (Phase 88.1, 88.1-16): `launch_check_wine_before_launch` asks the user through a native dialog (a human
+ * answers, with no time limit, as the TS `showMessageBox` it replaces) and may download and install a default wine, an
+ * archive of hundreds of megabytes. The dialog waits for the person and the install carries its own cancel; the app
+ * shutdown ends both (T-88.1-41). `launch_epic_service_offline` makes one status request with the engine fetch's own
+ * timeout and stays bounded.
  */
 const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_DIALOG_OPEN,
@@ -299,7 +306,8 @@ const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_LAUNCH_VERIFY_WINE_PREFIX,
   RUST_LAUNCH_PREPARE,
   RUST_LAUNCH_PREPARE_WINE_BEGIN,
-  RUST_LAUNCH_PREPARE_WINE_FINISH
+  RUST_LAUNCH_PREPARE_WINE_FINISH,
+  RUST_LAUNCH_CHECK_WINE_BEFORE_LAUNCH
 ]
 
 /**

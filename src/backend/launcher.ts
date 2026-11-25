@@ -1,4 +1,3 @@
-import type { AbortRegistry } from 'backend/utils/aborthandler/aborthandler'
 import type { Dialogs } from 'backend/host/dialogs'
 import {
   GameInfo,
@@ -24,7 +23,6 @@ import { join, dirname } from 'path'
 import {
   removeQuoteIfNecessary,
   sendGameStatusUpdate,
-  checkWineBeforeLaunch,
   askForceUninstall
 } from './utils'
 import type { StoreLaunchHooks } from 'backend/storeManagers'
@@ -74,6 +72,7 @@ import type { AppRuntimeSlice } from './appRuntime'
 import type LogWriter from './logger/targetWriter'
 import type { RustInvokeDeps } from './host/rustInvokeDeps'
 import {
+  checkWineBeforeLaunch,
   prepareLaunch as prepareLaunchAdapter,
   prepareWineLaunch as prepareWineLaunchAdapter
 } from './launchAdapters'
@@ -123,11 +122,6 @@ export interface LauncherDeps
       | 'knownFixOverlaysPath'
       | 'defaultUmuPath'
     >
-  /**
-   * The boot-owned abort registry. Only `checkWineBeforeLaunch` (utils.ts) still reads it here; it leaves with that
-   * function when 88.1-16 ports it (IN-09).
-   */
-  aborts: Pick<AbortRegistry, 'create' | 'delete'>
   /** The Steam bottle slice the Steam Wine-tool resolver reads (66.3-15). */
   steamBottle: GameCommandSource['steamBottle']
   steamLaunchRuntime: GameCommandSource['steamLaunchRuntime']

@@ -21,14 +21,16 @@ jest.mock('graceful-fs', () => ({
 jest.mock('node:fs/promises', () => ({ readFile: jest.fn() }))
 jest.mock('shlex', () => ({ __esModule: true, default: { split: jest.fn() } }))
 jest.mock('../../../utils', () => ({
-  checkWineBeforeLaunch: (...a: unknown[]) => mockCheckWine(...a),
   sendGameStatusUpdate: jest.fn(),
   spawnAsync: jest.fn()
 }))
 jest.mock('backend/utils', () => ({
-  checkWineBeforeLaunch: (...a: unknown[]) => mockCheckWine(...a),
   sendGameStatusUpdate: jest.fn(),
   spawnAsync: jest.fn()
+}))
+// 88.1-16: the wine self-heal is the adapter's now, so the setups import it from there.
+jest.mock('backend/launchAdapters', () => ({
+  checkWineBeforeLaunch: (...a: unknown[]) => mockCheckWine(...a)
 }))
 jest.mock('../../../launcher', () => ({
   getWinePath: jest.fn(),

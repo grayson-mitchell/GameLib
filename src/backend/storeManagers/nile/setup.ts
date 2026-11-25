@@ -7,7 +7,8 @@ import {
   logWarning,
   getRunnerLogWriter
 } from 'backend/logger'
-import { checkWineBeforeLaunch, sendGameStatusUpdate } from 'backend/utils'
+import { sendGameStatusUpdate } from 'backend/utils'
+import { checkWineBeforeLaunch } from 'backend/launchAdapters'
 import { isWindows } from 'backend/constants/environment'
 import type { GameSettings } from 'common/types'
 import type { ManagerDeps } from 'backend/services/types'

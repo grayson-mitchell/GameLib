@@ -5,17 +5,23 @@
  * golden/prepare_launch case, and the adapter has to write that case's `log.json` in order and answer its
  * `result.json`.
  */
-import { readFileSync } from 'fs'
+import { defined } from 'backend/testUtils/indexed'
+import { readdirSync, readFileSync } from 'fs'
 import { join } from 'path'
-import type { GameInfo, GameSettings } from 'common/types'
-import { RUST_LAUNCH_PREPARE } from 'common/types/sidecarTransport'
+import type { GameInfo, GameSettings, WineInstallation } from 'common/types'
+import {
+  RUST_LAUNCH_CHECK_WINE_BEFORE_LAUNCH,
+  RUST_LAUNCH_PREPARE
+} from 'common/types/sidecarTransport'
 import type LogWriter from 'backend/logger/targetWriter'
 import type { LauncherDeps } from 'backend/launcher'
 import {
+  checkWineBeforeLaunch,
   prepareLaunch,
   prepareWineLaunch,
   writeLaunchLog
 } from 'backend/launchAdapters'
+import type { CheckWineBeforeLaunchDeps } from 'backend/launchAdapters'
 import type { Game } from 'common/types/game_manager'
 import {
   RUST_LAUNCH_PREPARE_WINE_BEGIN,
@@ -391,5 +397,256 @@ describe('prepareWineLaunch adapter', () => {
     await expect(prepareWineLaunch(deps, game, writer)).rejects.toThrow(
       /prepareWineLaunch/
     )
+  })
+})
+
+/**
+ * The `checkWineBeforeLaunch` adapter (88.1-16, D-28, T-88.1-40). `cargo test -p gamelib-launch` proves the Rust check against
+ * golden/check_wine; here a fake `requestRustInvoke` answers the reply that case's recorded outcome implies (`ok` and the wine
+ * the caller ends with from `result.json`, the game and global writes from `writes.json`, the lines from `log.json`), and the
+ * adapter has to make exactly the recorded writes, leave `gameSettings.wineVersion` as `result.json` says, and write the
+ * recorded log in order.
+ */
+const CHECK_WINE_GOLDEN = join(
+  __dirname,
+  '../../../src-tauri/crates/gamelib-launch/tests/fixtures/golden/check_wine/expected'
+)
+
+interface CheckWineCase {
+  id: string
+  input: {
+    call: string
+    gameInfo: { app_name: string; runner: GameInfo['runner'] }
+    storedSettings: { wineVersion: WineInstallation; verboseLogs: boolean }
+    globalSettings: { disableLogs: boolean }
+  }
+  log: Array<{ level: 'info' | 'warning' | 'error'; parts: unknown[] }>
+  writes: Array<{
+    target: 'game' | 'global'
+    appName?: string
+    key: string
+    value: WineInstallation
+    store?: string
+  }>
+  result: { ok?: boolean; wineVersionAfter: WineInstallation }
+}
+
+function readCheckWineCases(): CheckWineCase[] {
+  return readdirSync(CHECK_WINE_GOLDEN)
+    .sort()
+    .map((id) => {
+      const read = (name: string): unknown =>
+        JSON.parse(readFileSync(join(CHECK_WINE_GOLDEN, id, name), 'utf-8'))
+      return {
+        id,
+        input: read('input.json'),
+        log: read('log.json'),
+        writes: read('writes.json'),
+        result: read('result.json')
+      } as CheckWineCase
+    })
+    .filter((c) => c.input.call === 'check' && c.result.ok !== undefined)
+}
+
+/** The Rust reply a case's recorded outcome implies (the crate's `CheckWineReply`). */
+function replyOf(c: CheckWineCase): Record<string, unknown> {
+  const game = c.writes.find((w) => w.target === 'game')
+  const global = c.writes.find((w) => w.target === 'global')
+  return {
+    ok: c.result.ok,
+    ...(game ? { wineVersion: game.value } : {}),
+    persistGameWine: game !== undefined,
+    ...(global ? { globalWineVersion: global.value } : {}),
+    log: c.log
+  }
+}
+
+function checkWineDeps(
+  reply: unknown,
+  disableLogs: boolean
+): {
+  deps: CheckWineBeforeLaunchDeps
+  calls: Array<[string, unknown[]]>
+  globalWrites: unknown[][]
+  gameWrites: Array<{ appName: string; key: string; value: unknown }>
+  kvs: object
+} {
+  const calls: Array<[string, unknown[]]> = []
+  const globalWrites: unknown[][] = []
+  const gameWrites: Array<{ appName: string; key: string; value: unknown }> = []
+  const kvs = { marker: 'kvs' }
+  const deps = {
+    requestRustInvoke: (channel: string, args: unknown[]) => {
+      calls.push([channel, args])
+      return reply instanceof Error
+        ? Promise.reject(reply)
+        : Promise.resolve(reply)
+    },
+    config: {
+      getSettings: () => ({ disableLogs }),
+      setSetting: (...args: unknown[]) => {
+        globalWrites.push(args)
+      }
+    },
+    gameConfigs: {
+      get: (appName: string) => ({
+        setSetting: (key: string, value: unknown) => {
+          gameWrites.push({ appName, key, value })
+        }
+      })
+    },
+    stores: { kvs }
+  } as unknown as CheckWineBeforeLaunchDeps
+  return { deps, calls, globalWrites, gameWrites, kvs }
+}
+
+describe('checkWineBeforeLaunch adapter', () => {
+  const cases = readCheckWineCases()
+
+  it('covers a Yes case, a No case and a download case of the golden', () => {
+    const ids = cases.map((c) => c.id)
+    expect(ids).toEqual(
+      expect.arrayContaining([
+        'check-default-valid-yes',
+        'check-default-valid-no',
+        'check-alternatives-empty-download-success'
+      ])
+    )
+    expect(cases.length).toBeGreaterThanOrEqual(25)
+  })
+
+  it.each(cases.map((c) => [c.id, c] as const))(
+    '%s: makes the recorded writes, leaves the recorded wine in the settings and writes the recorded log',
+    async (_id, c) => {
+      const { deps, calls, globalWrites, gameWrites, kvs } = checkWineDeps(
+        replyOf(c),
+        c.input.globalSettings.disableLogs
+      )
+      const { writer, written } = recordingWriter()
+      const gameSettings = {
+        wineVersion: c.input.storedSettings.wineVersion,
+        verboseLogs: c.input.storedSettings.verboseLogs
+      } as unknown as GameSettings
+      const gameInfo = {
+        app_name: c.input.gameInfo.app_name,
+        runner: c.input.gameInfo.runner
+      } as GameInfo
+
+      const ok = await checkWineBeforeLaunch(
+        deps,
+        gameInfo,
+        gameSettings,
+        writer
+      )
+
+      expect(calls).toEqual([
+        [
+          RUST_LAUNCH_CHECK_WINE_BEFORE_LAUNCH,
+          [
+            {
+              appName: c.input.gameInfo.app_name,
+              runner: c.input.gameInfo.runner,
+              wineVersion: c.input.storedSettings.wineVersion,
+              verboseLogs: c.input.storedSettings.verboseLogs,
+              disableLogs: c.input.globalSettings.disableLogs
+            }
+          ]
+        ]
+      ])
+      expect(ok).toBe(c.result.ok)
+      expect(gameSettings.wineVersion).toEqual(c.result.wineVersionAfter)
+      expect(gameWrites).toEqual(
+        c.writes
+          .filter((w) => w.target === 'game')
+          .map((w) => ({ appName: w.appName, key: w.key, value: w.value }))
+      )
+      expect(globalWrites).toEqual(
+        c.writes
+          .filter((w) => w.target === 'global')
+          .map((w) => [w.key, w.value, kvs])
+      )
+      expect(written).toEqual(
+        c.log.map((entry) => ({ level: entry.level, args: entry.parts }))
+      )
+    }
+  )
+
+  it('writes the global wine before the game wine, as the TypeScript set the downloaded default first', async () => {
+    const c = defined(
+      cases.find((x) => x.id === 'check-alternatives-empty-download-success'),
+      'the download case'
+    )
+    const order: string[] = []
+    const { deps } = checkWineDeps(replyOf(c), false)
+    deps.config.setSetting = (() => {
+      order.push('global')
+    }) as never
+    deps.gameConfigs.get = (() => ({
+      setSetting: () => {
+        order.push('game')
+      }
+    })) as never
+    const { writer } = recordingWriter()
+    await checkWineBeforeLaunch(
+      deps,
+      { app_name: 'a', runner: 'legendary' } as GameInfo,
+      { wineVersion: c.input.storedSettings.wineVersion } as GameSettings,
+      writer
+    )
+    expect(order).toEqual(['global', 'game'])
+  })
+
+  it('writes no config and keeps the game wine when Rust answers no change', async () => {
+    const { deps, globalWrites, gameWrites } = checkWineDeps(
+      { ok: true, persistGameWine: false, log: [] },
+      false
+    )
+    const { writer } = recordingWriter()
+    const wine = { name: 'W', type: 'wine', bin: '/w' } as WineInstallation
+    const gameSettings = { wineVersion: wine } as GameSettings
+    expect(
+      await checkWineBeforeLaunch(
+        deps,
+        { app_name: 'a', runner: 'gog' } as GameInfo,
+        gameSettings,
+        writer
+      )
+    ).toBe(true)
+    expect(gameSettings.wineVersion).toBe(wine)
+    expect(globalWrites).toEqual([])
+    expect(gameWrites).toEqual([])
+  })
+
+  it('refuses a reply of the wrong shape and a wine that is no installation, and rejects when the call could not be made', async () => {
+    const wine = { name: 'W', type: 'wine', bin: '/w' } as WineInstallation
+    const gameInfo = { app_name: 'a', runner: 'gog' } as GameInfo
+    const { writer } = recordingWriter()
+    for (const reply of [
+      null,
+      { log: [] },
+      { ok: true },
+      { ok: true, log: [{ level: 'trace', parts: [] }] },
+      { ok: true, wineVersion: { name: 'x' }, persistGameWine: true, log: [] }
+    ]) {
+      const { deps, globalWrites, gameWrites } = checkWineDeps(reply, false)
+      await expect(
+        checkWineBeforeLaunch(
+          deps,
+          gameInfo,
+          { wineVersion: wine } as GameSettings,
+          writer
+        )
+      ).rejects.toThrow('checkWineBeforeLaunch')
+      expect([globalWrites, gameWrites]).toEqual([[], []])
+    }
+    const { deps } = checkWineDeps(new Error('not-ready'), false)
+    await expect(
+      checkWineBeforeLaunch(
+        deps,
+        gameInfo,
+        { wineVersion: wine } as GameSettings,
+        writer
+      )
+    ).rejects.toThrow('not-ready')
   })
 })

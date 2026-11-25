@@ -183,10 +183,11 @@ const LAUNCH_PREPARE_SHIM_IMPORTERS: readonly string[] = [
 /**
  * Every non-test importer of `launchrust/launchUtils.ts` (the check is per file, so every row of that file lists them all):
  * the three sidecar flow registrations that answer the Epic status or gate on it, the legendary library and the download
- * manager's install and update gates (88.1-16).
+ * manager's install and update gates, and the `checkWineBeforeLaunch` adapter (88.1-16).
  */
 const LAUNCH_UTILS_SHIM_IMPORTERS: readonly string[] = [
   'src/backend/downloadmanager/utils.ts',
+  'src/backend/launchAdapters.ts',
   'src/backend/sidecar/installFlowRegistration.ts',
   'src/backend/sidecar/runnerAuthFlowRegistration.ts',
   'src/backend/sidecar/runnerMiscFlowRegistration.ts',
@@ -1220,6 +1221,18 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     callers: LAUNCH_UTILS_SHIM_IMPORTERS,
     // the three sidecar flow registrations (install, runnerAuth, runnerMisc) are the last callers
     deletedBy: 98
+  },
+  // 88.1-16 (D-28, D-01, D-19): the wine self-heal. The launcher funnel, the GOG and Amazon setups and the Steam bottle
+  // provisioning call the adapter in `launchAdapters.ts`, which applies the writes the reply carries; the Steam bottle
+  // provisioning is the last caller.
+  {
+    name: 'checkWineBeforeLaunchRust',
+    file: 'src/backend/launchrust/launchUtils.ts',
+    shape: 'shim',
+    channel: 'RUST_LAUNCH_CHECK_WINE_BEFORE_LAUNCH',
+    callers: LAUNCH_UTILS_SHIM_IMPORTERS,
+    // the Steam bottle provisioning leaves in 96
+    deletedBy: 96
   },
   // 88-13 (87 D-24): the synchronous known-fix twins, for callers 88 cannot make async. `installFixes` and
   // `getKnownFixesEnvVariables` read the tier-1 fix inline in the launcher until 88.1/97 move them; the env log line goes

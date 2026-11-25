@@ -281,7 +281,10 @@ describe('sidecarRpc UNBOUNDED_RUST_CHANNELS covers every human-gated dialog cha
     // bounds each step and the shutdown ends them. Not dialog channels either.
     'RUST_LAUNCH_PREPARE',
     'RUST_LAUNCH_PREPARE_WINE_BEGIN',
-    'RUST_LAUNCH_PREPARE_WINE_FINISH'
+    'RUST_LAUNCH_PREPARE_WINE_FINISH',
+    // Phase 88.1 plan 16: launch_check_wine_before_launch asks the user a question through a native dialog (a human answers,
+    // no limit) and may download a default wine; the shutdown ends both. Not a dialog-open channel of its own.
+    'RUST_LAUNCH_CHECK_WINE_BEFORE_LAUNCH'
   ]
 
   test('contains exactly the dialog, depot, Rust CM, safety remove, wine runtime download and wine manager channels', () => {

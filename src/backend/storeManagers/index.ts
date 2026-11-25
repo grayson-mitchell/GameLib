@@ -221,7 +221,6 @@ export function createStoreManagers(
     notifications: deps.notifications,
     onlineMonitor: deps.onlineMonitor,
     paths: deps.paths,
-    aborts: deps.aborts,
     appRuntime: deps.appRuntime,
     steamBottle: deps.steamBottle,
     steamLaunchRuntime: deps.steamLaunchRuntime

@@ -3,7 +3,8 @@ import { existsSync } from 'graceful-fs'
 import path from 'node:path'
 import { GameSettings } from 'common/types'
 import type { GogGameInfo, GogInstalledInfo } from 'common/types/gog'
-import { checkWineBeforeLaunch, sendGameStatusUpdate } from '../../utils'
+import { sendGameStatusUpdate } from '../../utils'
+import { checkWineBeforeLaunch } from 'backend/launchAdapters'
 import {
   getRunnerLogWriter,
   logError,

@@ -25,7 +25,7 @@ import {
 } from 'backend/logger'
 import type { SpawnAsync } from 'backend/spawnAsync'
 import type { ProcessRunner } from 'backend/process/types'
-import { checkWineBeforeLaunch } from 'backend/utils'
+import { checkWineBeforeLaunch } from 'backend/launchAdapters'
 import { downloadSetupPayload } from './setupDownloads'
 import {
   DEFAULT_STEAM_BOTTLE_NAME,

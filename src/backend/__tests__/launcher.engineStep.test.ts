@@ -25,7 +25,11 @@ const calls: string[] = []
 const checkWineMock = jest.fn()
 jest.mock('backend/utils', () => ({
   ...jest.requireActual('backend/utils'),
-  sendGameStatusUpdate: jest.fn(),
+  sendGameStatusUpdate: jest.fn()
+}))
+// 88.1-16: the wine self-heal is the adapter's now, so the launcher imports it from there.
+jest.mock('backend/launchAdapters', () => ({
+  ...jest.requireActual('backend/launchAdapters'),
   checkWineBeforeLaunch: (...a: unknown[]) => checkWineMock(...a)
 }))
 
