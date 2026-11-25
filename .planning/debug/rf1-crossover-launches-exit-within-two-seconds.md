@@ -185,7 +185,7 @@ The chain, one hop per file:
   launches (warm from the probe, fail) all line up on one variable, and the desk table shows the two branches equal everywhere
   else.
 
-**Confidence: medium.** The discriminator that would make it certain was not run: D4 (the restore pattern, which also needs a
+**Confidence: medium at Task 3; raised to high by the isolating run below.** The discriminator that would make it certain was not run: D4 (the restore pattern, which also needs a
 DXVK round trip on the real bottle) was not approved, and the one-step version below was not tried. Two things stay open, and
 they matter for the fix:
 
@@ -204,6 +204,22 @@ D0 `ditto` copy as the restore path):** from a shell, with the app closed and no
 window and no wine child (the D1 shape). Then `wineserver -k` for the bottle and the D3 command again: a window. If the warm
 run starts the game, this root cause is wrong and the status returns to `unresolved` with the sync environment and the DXVK
 files as the next two suspects.
+
+### Isolating run, done 2026-11-25 (orchestrator, operator present): confidence raised to high
+
+Run from a shell with the app closed, on the real Trash Goblin bottle (D0 `ditto` copy as the restore path). 0.5 s `ps` samples,
+30 s each, using the unchanged D3 command and env.
+
+| Run | Bottle before replay | legendary | winewrapper `--run` | Game exe | Server |
+|---|---|---|---|---|---|
+| A (warm) | `wine --demo-status` (exit 0, `Standard version`): 1 wineserver up | t=1.0-2.5 s, exit 0 | never | never | gone at t=5.5 s |
+| B (cold) | 0 wineserver | t=1.0-2.0 s, exit 0 | t=3.0 s on | t=3.5 s on, alive at 30 s | alive |
+
+Run A reproduces the D1 shape outside GameLib, and run B starts the game. That is the prediction above, both ways: **a
+wineserver left running by the demo-status probe is sufficient for RF1, and a cold bottle is sufficient to avoid it.** No file
+changed between A and B, so it is the server and not the DXVK files. What stays open is the sync-mode mismatch as the exact
+mechanism inside the warm server. It does not change the fix: stop the probe's server before launching, or start the probe with
+the launch's sync env. The nile line is still not replayed.
 
 ## Fix scope
 
