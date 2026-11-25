@@ -3,7 +3,7 @@ import Typography from '@mui/material/Typography'
 import LinearProgress from '@mui/material/LinearProgress'
 import Paper from '@mui/material/Paper'
 
-import type { SystemInformation } from 'backend/utils/systeminfo'
+import type { SystemInformation } from 'common/types/systemInfo'
 import { useTranslation } from 'react-i18next'
 
 interface Props {

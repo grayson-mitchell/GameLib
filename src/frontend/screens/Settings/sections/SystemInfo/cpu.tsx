@@ -3,7 +3,7 @@ import Grid from '@mui/material/Grid'
 import Paper from '@mui/material/Paper'
 import Typography from '@mui/material/Typography'
 
-import type { SystemInformation } from 'backend/utils/systeminfo'
+import type { SystemInformation } from 'common/types/systemInfo'
 import { useTranslation } from 'react-i18next'
 import VendorLogo from './vendorLogo'
 

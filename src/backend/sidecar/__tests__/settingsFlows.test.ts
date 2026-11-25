@@ -545,21 +545,20 @@ describe('sidecar settings generic reads (Phase 31 Plan 01)', () => {
     expect(typeof response?.result).toBe('boolean')
   })
 
-  it('getSystemInfo resolves without the unported marker and reaches the real (mocked) getSystemInfo(cache)', async () => {
+  // Phase 88.1 (88.1-10, D-19): `getSystemInfo` is a native `info` channel served by Rust, so the sidecar no
+  // longer registers it; the single-flight read and every probe are pinned by `gamelib-info`'s
+  // `golden_sysinfo.rs`, and the argument bounds by the native manifest vectors.
+  it('getSystemInfo is no longer a sidecar handle: it is a native `info` channel', async () => {
     const { input, frames } = boot()
     writeInvoke(input, 'system-info-1', 'getSystemInfo', [false])
     await flush()
 
     const response = frames.find((frame) => frame.id === 'system-info-1') as
-      | { ok: boolean; result?: unknown; error?: string }
+      | { ok: boolean; error?: string }
       | undefined
-    expect(response?.ok).toBe(true)
-    expect(response?.error).toBeUndefined()
-    expect(response?.result).toMatchObject({ isFlatpak: false })
-    expect(mockedGetSystemInfo).toHaveBeenCalledWith(
-      expect.objectContaining({ libraryManagers: expect.anything() }),
-      false
-    )
+    expect(response?.ok).toBe(false)
+    expect(response?.error).toContain(UNPORTED_CHANNEL_MARKER)
+    expect(mockedGetSystemInfo).not.toHaveBeenCalled()
   })
 
   it('hasExecutable resolves a real boolean, not the unported marker', async () => {

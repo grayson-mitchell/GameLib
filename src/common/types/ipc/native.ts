@@ -22,6 +22,7 @@ import type { EngineNoticeDismissal, EngineOption } from '../engine'
 import type { StoreSearchDeal, StoreSearchResponse } from '../storeSearch'
 import type { GetLogFileArgs } from './logger'
 import type { MetadataOverride } from './gameDetails'
+import type { SystemInformation } from '../systemInfo'
 
 /**
  * The renderer's log text: a string, an array of strings, or an Error-like object. A real `Error`
@@ -234,6 +235,12 @@ export interface NativeAsync {
     appName: string,
     runner: Runner
   ) => Promise<GamelibFixStatus | null>
+  // Phase 88.1 (88.1-10, D-19, D-23, D-24): the Settings screen's system information, answered by the Rust
+  // `info` slice (`gamelib-info`'s `sysinfo`): the CPU, memory, GPUs (named from the `pci.ids` mirror and its
+  // two 7-day caches), operating system, Steam Deck, container flags and the four runners' versions. `cache`
+  // absent, null or true shares one read per boot (concurrent callers wait for the same one); `false` always
+  // reads again and refreshes it. Anything else rejects with the invalid-args marker.
+  getSystemInfo: (cache?: boolean | null) => Promise<SystemInformation>
   // Phase 94 (94-13, D-16): the Humble Spares view's gifted-at map (machine name -> the time the user
   // confirmed the gift action, ms) and the ownership-override map (machine name -> the time of the "not the
   // same game" correction, ms), answered by `humble_get_gifted_at` and `humble_get_ownership_overrides` from
@@ -252,4 +259,8 @@ export interface NativeSync {
   storeDelete: (storeName: string, keyPath: string) => void
   // The options are never used (T-27-03): a recognised cache store opens from the store table's row.
   storeNew: (storeName: string, options?: Record<string, unknown>) => void
+  // Phase 88.1 (88.1-10, D-19): Settings' "copy system information", run by the Rust `info` slice: it reads
+  // the same cached information as `getSystemInfo`, formats it as text and writes it to the clipboard. It
+  // takes no argument; a failure is logged as fixed text and the send never rejects.
+  copySystemInfoToClipboard: () => void
 }

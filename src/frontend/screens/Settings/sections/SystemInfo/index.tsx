@@ -21,7 +21,7 @@ import SoftwareInfo from './software'
 
 import './index.scss'
 
-import type { SystemInformation } from 'backend/utils/systeminfo'
+import type { SystemInformation } from 'common/types/systemInfo'
 
 interface SystemSpecificationsProps {
   systemInformation: SystemInformation

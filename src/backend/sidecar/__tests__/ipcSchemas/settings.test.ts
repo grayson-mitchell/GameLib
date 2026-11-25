@@ -98,10 +98,6 @@ const asyncTable: FixtureTable<typeof settingsAsyncArgs> = {
       [{ appName: 'abc', runner: 'gog', extra: 1 }]
     ]
   },
-  getSystemInfo: {
-    valid: [[], [true], [false]],
-    invalid: [['yes'], [true, true]]
-  },
   hasExecutable: {
     valid: [['/usr/bin/wine'], ['wine']],
     invalid: [[''], [5], []]

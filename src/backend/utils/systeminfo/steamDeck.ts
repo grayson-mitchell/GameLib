@@ -1,10 +1,6 @@
 import type { CpuInfo } from 'os'
-import type { GPUInfo } from './index'
+import type { GPUInfo, SteamDeckInfo } from 'common/types/systemInfo'
 import { isSteamDeckGameMode } from 'backend/constants/environment'
-
-type SteamDeckInfo =
-  | { isDeck: true; model: string; mode: 'game' | 'desktop' }
-  | { isDeck: false; model?: undefined }
 
 function getSteamDeckInfo(cpus: CpuInfo[], gpus: GPUInfo[]): SteamDeckInfo {
   if (

@@ -795,13 +795,9 @@
     {
       "channel": "copySystemInfoToClipboard",
       "kind": "send",
-      "owner": "sidecar",
-      "args": {
-        "type": "array",
-        "prefixItems": [],
-        "items": false,
-        "maxItems": 0
-      }
+      "owner": "native",
+      "args": [],
+      "returns": "void"
     },
     {
       "channel": "deleteUploadedLogFile",
@@ -1967,20 +1963,16 @@
     {
       "channel": "getSystemInfo",
       "kind": "invoke",
-      "owner": "sidecar",
-      "args": {
-        "type": "array",
-        "prefixItems": [
-          {
-            "type": [
-              "boolean",
-              "null"
-            ]
-          }
-        ],
-        "items": false,
-        "maxItems": 1
-      }
+      "owner": "native",
+      "args": [
+        {
+          "name": "cache",
+          "type": "boolean",
+          "optional": true,
+          "nullable": true
+        }
+      ],
+      "returns": "SystemInformation"
     },
     {
       "channel": "getUploadedLogFiles",

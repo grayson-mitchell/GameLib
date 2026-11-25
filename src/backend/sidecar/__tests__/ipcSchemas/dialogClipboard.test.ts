@@ -41,8 +41,7 @@ const syncTable: FixtureTable<typeof clipboardSyncArgs> = {
   clipboardWriteText: {
     valid: [['ABCDE-FGHIJ-KLMNO'], ['']],
     invalid: [[], [42], ['x'.repeat(1_000_001)]]
-  },
-  copySystemInfoToClipboard: { valid: [[]], invalid: [['extra']] }
+  }
 }
 
 const asyncTable: FixtureTable<typeof clipboardAsyncArgs> = {

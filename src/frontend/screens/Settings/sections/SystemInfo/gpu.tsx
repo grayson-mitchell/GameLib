@@ -7,7 +7,7 @@ import Grid from '@mui/material/Grid'
 
 import VendorLogo from './vendorLogo'
 
-import type { SystemInformation } from 'backend/utils/systeminfo'
+import type { SystemInformation } from 'common/types/systemInfo'
 
 interface GPUCardProps {
   gpu: SystemInformation['GPUs'][number]

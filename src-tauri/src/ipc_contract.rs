@@ -1152,6 +1152,7 @@ pub(crate) const NATIVE_INVOKE_CHANNELS: &[&str] = &[
     "getLogContent",
     "getPerGameBottleName",
     "getStoreSearchDeals",
+    "getSystemInfo",
     "getUploadedLogFiles",
     "getWikiGameInfo",
     "humbleGetGiftedAt",
@@ -1180,6 +1181,7 @@ pub(crate) const NATIVE_INVOKE_CHANNELS: &[&str] = &[
 
 /// Renderer send channels owned by the Rust native router (Phase 83), sorted.
 pub(crate) const NATIVE_SEND_CHANNELS: &[&str] = &[
+    "copySystemInfoToClipboard",
     "logError",
     "logInfo",
     "openExternalUrl",

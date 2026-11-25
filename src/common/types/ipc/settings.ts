@@ -1,6 +1,5 @@
 import { z } from 'zod'
 
-import type { SystemInformation } from 'backend/utils/systeminfo'
 import type { AppSettings, GameSettings } from '../../types'
 
 import {
@@ -59,7 +58,6 @@ export const settingsAsyncArgs = {
   isNative: z.tuple([
     z.strictObject({ appName: nonEmptyString(), runner: runnerArg() })
   ]),
-  getSystemInfo: z.tuple([optionalArg(z.boolean())]),
   hasExecutable: z.tuple([nonEmptyString()]),
   // D-10: the password is bounded only; its value never reaches a log or a wire error.
   setPrivateBranchPassword: z.tuple([nonEmptyString(), z.string().max(1024)]),
@@ -73,7 +71,6 @@ interface SettingsAsyncReturns {
   requestGameSettings: Promise<GameSettings>
   writeConfig: void
   isNative: boolean
-  getSystemInfo: Promise<SystemInformation>
   hasExecutable: Promise<boolean>
   setPrivateBranchPassword: void
   getPrivateBranchPassword: string

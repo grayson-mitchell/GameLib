@@ -13,8 +13,7 @@ import graph
  * members directly, assert channel + args + logged-not-thrown failures" shape — the closest
  * analog in this codebase for this exact kind of coverage.
  *
- * Mocks ONLY the Rust boundary (`requestRustInvoke`) and the `utils/systeminfo` boundary
- * (`getSystemInfo`/`formatSystemInfo`) — never `clipboard.writeText` itself, never
+ * Mocks ONLY the Rust boundary (`requestRustInvoke`) — never `clipboard.writeText` itself, never
  * `registerClipboardFlows`, and never either handler under test.
  */
 
@@ -33,14 +32,6 @@ jest.mock('os', () => {
 })
 
 // ── electron / electron-store — route Jest's own module resolution at the REAL sidecar shims ──
-// ── utils/systeminfo — mocked so copySystemInfoToClipboard's coverage targets ITS OWN wiring
-// (the curated-import boundary, formatted-string forwarding), not systeminfo's real CPU/GPU/OS
-// gathering ──────────────────────────────────────────────────────────────────────────────────
-jest.mock('../../utils/systeminfo', () => ({
-  createSystemInfoCache: jest.fn(),
-  formatSystemInfo: jest.fn()
-}))
-
 // ── Imports (after mocks) ───────────────────────────────────────────────────────────────────
 import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
 import { createTestStores } from 'backend/testUtils/testServices'
@@ -53,7 +44,6 @@ import { createIpcRegistry } from '../ipcRegistry'
 const ipc = createIpcRegistry()
 import { createTestHostServices } from '../../testUtils/testHostServices'
 const requestRustInvoke = jest.fn()
-import { formatSystemInfo } from '../../utils/systeminfo'
 import {
   RUST_CLIPBOARD_WRITE_TEXT,
   RUST_CLIPBOARD_READ_TEXT
@@ -64,8 +54,6 @@ type ProgrammedOutcome =
   | { type: 'reject'; error: Error }
 
 const mockRequestRustInvoke = requestRustInvoke
-const mockGetSystemInfo = jest.fn()
-const mockFormatSystemInfo = formatSystemInfo as jest.Mock
 
 let program: ProgrammedOutcome | null = null
 let callLog: Array<{ channel: string; args: unknown[] }> = []
@@ -137,9 +125,7 @@ registerClipboardFlows({
   managers: { library: {} } as never,
   stores: createTestStores(),
   infoCaches: {
-    systemInfo: {
-      getSystemInfo: (...args: unknown[]) => mockGetSystemInfo(...args)
-    }
+    systemInfo: { getSystemInfo: jest.fn() }
   },
   paths: createTestAppPaths('/fake/root'),
   runner: {} as never,
@@ -167,8 +153,6 @@ beforeEach(() => {
         : Promise.reject(program.error)
     }
   )
-  mockGetSystemInfo.mockResolvedValue({})
-  mockFormatSystemInfo.mockResolvedValue('')
 })
 
 afterEach(() => {
@@ -246,51 +230,22 @@ describe('sidecar clipboard flows (Phase 34.3 Plan 06 — REQ-34.3-03/REQ-34.3-0
     expect(warned).toBe(true)
   })
 
-  // ── REQ-34.3-03: copySystemInfoToClipboard (send) ─────────────────────────────────────────
+  // ── copySystemInfoToClipboard moved to the Rust native router (88.1-10, D-19) ─────────────
 
-  it('REQ-34.3-03 copySystemInfoToClipboard (send) writes the formatted system info to the real clipboard', async () => {
-    program = { type: 'resolve', value: null }
-    const formatted = 'CPU: 8x Synthetic Test CPU\nMemory: 16 GiB'
-    mockGetSystemInfo.mockResolvedValue({ synthetic: true })
-    mockFormatSystemInfo.mockResolvedValue(formatted)
-
-    invokeListener('copySystemInfoToClipboard')
-    await flush()
-
-    expect(mockFormatSystemInfo).toHaveBeenCalledWith({ synthetic: true })
-    expect(callLog).toEqual([
-      { channel: RUST_CLIPBOARD_WRITE_TEXT, args: [formatted] }
-    ])
-  })
-
-  it('REQ-34.3-03 copySystemInfoToClipboard (send) never crashes the sidecar when getSystemInfo rejects — no unhandled rejection, logs a warning', async () => {
-    mockGetSystemInfo.mockRejectedValue(
-      new Error('synthetic systeminfo failure')
-    )
-
-    expect(() => invokeListener('copySystemInfoToClipboard')).not.toThrow()
-    await flush()
-
-    expect(callLog).toEqual([])
-    expect(warnSpy).toHaveBeenCalled()
-    const warned = warnSpy.mock.calls.some(([first]) =>
-      String(first).includes('copySystemInfoToClipboard')
-    )
-    expect(warned).toBe(true)
+  it('88.1-10 copySystemInfoToClipboard is no longer registered by the sidecar: the Rust `info` slice owns it', () => {
+    expect(
+      (ipc.listenerMap().get('copySystemInfoToClipboard') ?? []).length
+    ).toBe(0)
+    expect(ipc.handlerMap().has('copySystemInfoToClipboard')).toBe(false)
   })
 
   // ── send-vs-handle registration-kind contract (Phase 31 Pitfall 2 / T-34.3-04) ────────────
 
-  it('REQ-34.3-03/REQ-34.3-04 send-vs-handle contract: clipboardWriteText/copySystemInfoToClipboard are listeners, clipboardReadText is a handler -- and NOT the reverse', () => {
+  it('REQ-34.3-03/REQ-34.3-04 send-vs-handle contract: clipboardWriteText is a listener, clipboardReadText is a handler -- and NOT the reverse', () => {
     expect(
       (ipc.listenerMap().get('clipboardWriteText') ?? []).length
     ).toBeGreaterThan(0)
     expect(ipc.handlerMap().has('clipboardWriteText')).toBe(false)
-
-    expect(
-      (ipc.listenerMap().get('copySystemInfoToClipboard') ?? []).length
-    ).toBeGreaterThan(0)
-    expect(ipc.handlerMap().has('copySystemInfoToClipboard')).toBe(false)
 
     expect(ipc.handlerMap().has('clipboardReadText')).toBe(true)
     expect((ipc.listenerMap().get('clipboardReadText') ?? []).length).toBe(0)

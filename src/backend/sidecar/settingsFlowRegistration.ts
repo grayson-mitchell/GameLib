@@ -30,9 +30,9 @@
  * WRITE side + generic reads (Phase 31 Plan 01, REQ-31-01/REQ-31-02/REQ-31-05/
  * REQ-31-07). Registers `setSetting` (send/listener) + `writeConfig` (invoke)
  * — the write path every Settings toggle and `ThemeSelector` depend on — plus
- * generic reads (`getMaxCpus`, `showUpdateSetting`, `getSystemInfo`,
+ * generic reads (`getMaxCpus`, `showUpdateSetting`,
  * `hasExecutable`, `isNative`; `getLogContent` moved to the Rust native router in
- * Phase 84 plan 84-05). See the
+ * Phase 84 plan 84-05, `getSystemInfo` in Phase 88.1 plan 88.1-10). See the
  * write-path block comment above `registerSettingsFlows()`'s body for the
  * accepted D-02 Tauri↔Electron divergence.
  *
@@ -97,7 +97,7 @@ function isContainedGameConfig(
 }
 
 /**
- * Registers the 11 settings read/write channels (10 invoke + 1 send:
+ * Registers the 10 settings read/write channels (9 invoke + 1 send:
  * `setSetting`). The name "the two settings-read invoke handlers" described
  * this module at Phase 30 plan 06 and was never updated as the write side and
  * the slice-6 diagnostics channels landed. Called once from
@@ -254,20 +254,8 @@ export function registerSettingsFlows(deps: {
   // `getLogContent` (logger/ipc_handler.ts:17-20) is served by the Rust native router since
   // Phase 84 plan 84-05 (`nativeChannels.json`); it is no longer registered here.
 
-  // utils/ipc_handler.ts:22
-  deps.ipc.handle('getSystemInfo', async (_event: unknown, cache?: unknown) =>
-    deps.infoCaches.systemInfo.getSystemInfo(
-      {
-        libraryManagers: deps.managers.library,
-        runner: deps.runner,
-        config: deps.config,
-        appInfo: deps.appInfo,
-        stores: deps.stores,
-        paths: deps.paths
-      },
-      cache as boolean | undefined
-    )
-  )
+  // `getSystemInfo` (utils/ipc_handler.ts:22) is served by the Rust native router since Phase 88.1 plan
+  // 88.1-10 (`nativeChannels.json`, the `info` slice); it is no longer registered here.
 
   // utils/ipc_handler.ts:28-30
   deps.ipc.handle(

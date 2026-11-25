@@ -263,8 +263,12 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
   // the TS twin `backend/enginewine/twin.ts` (D-24) instead of `engine/engineConfig`, which no longer
   // exports it. No channel, argument, guard or `steamLibrary.has` gate moved. Prior digest:
   // d05b557e5d0a9c05611b9447b98803e1b9f2d55652d0f2053db8cfacb6175769
+  // Phase 88.1 / 88.1-10 (2026-11-25): re-pin -- the `getSystemInfo` handler was deleted because the Rust
+  // native router serves that channel (`info` slice); the diff is that removal plus docstring wording, no
+  // other channel, guard or `steamLibrary.has` gate moved. Registered set 11 -> 10. Prior digest:
+  // 2470b8a024e20be7f125b02f81fed8f3fb874f512c88dc9aafdc6bbdca7e1052
   const SETTINGS_FLOW_REGISTRATION_SHA256 =
-    '2470b8a024e20be7f125b02f81fed8f3fb874f512c88dc9aafdc6bbdca7e1052'
+    'f49eb0439c169c0755527e3654b7cd3497f7225589a13aca89d26ee7011085da'
 
   it('REQ-34.2-10/D-09 Gate 7: settingsFlowRegistration.ts matches its committed sha256 digest', () => {
     const filePath = join(__dirname, '../settingsFlowRegistration.ts')
@@ -293,7 +297,6 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
     'writeConfig',
     'getMaxCpus',
     'showUpdateSetting',
-    'getSystemInfo',
     'hasExecutable',
     'isNative',
     'requestGameSettings',
@@ -303,7 +306,7 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
     'setPrivateBranchPassword'
   ]
 
-  it('REQ-34.2-10/D-09 Gate 7 semantic pin: settingsFlowRegistration.ts registers exactly these eleven channels', () => {
+  it('REQ-34.2-10/D-09 Gate 7 semantic pin: settingsFlowRegistration.ts registers exactly these ten channels', () => {
     const filePath = join(__dirname, '../settingsFlowRegistration.ts')
     const stripped = stripComments(readFileSync(filePath, 'utf-8'))
     const channelPattern = /deps\.ipc\.(?:handle|on)\(\s*['"]([^'"]+)['"]/g
@@ -317,7 +320,7 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
     // intentional (a REQ-34.2-10 / D-09 do-not-touch file), state the reason
     // in the commit, then update this list AND the sha256 digest above
     // together, never one without the other.
-    expect(found.size).toBe(11)
+    expect(found.size).toBe(10)
     expect([...found].sort()).toEqual(
       [...EXPECTED_SETTINGS_FLOW_CHANNELS].sort()
     )

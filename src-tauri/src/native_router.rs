@@ -132,6 +132,9 @@ pub(crate) enum SendPayload {
     /// `sidecar:store-set-checked` (B-WR-08): a confirmed write queued behind the earlier sends,
     /// answered through its reply slot. Built by the invoke handler, never by a send validator.
     StoreChecked(store_native::RendererWrite, CheckedReply),
+    /// `copySystemInfoToClipboard` (88.1-10): no argument; the `info` slice worker reads the cached
+    /// system information, formats it and writes the clipboard.
+    CopySystemInfo,
 }
 
 /// Where the store slice worker answers a confirmed write: a one-slot channel the invoke handler
@@ -349,10 +352,9 @@ const LOGGER_SLICE: &str = "logger";
 /// writes are applied in send order, one at a time, off the main thread (a write is a persist).
 const STORE_SLICE: &str = "store";
 
-/// The slice that owns the leaf information channels in `nativeChannels.json` (Phase 86): invoke
-/// channels only, so it has no send queue; the handler runs the `gamelib-info` op on the blocking
-/// pool. Named here, with the other slices, for the manifest-slice test.
-#[cfg_attr(not(test), allow(dead_code))]
+/// The slice that owns the leaf information channels in `nativeChannels.json` (Phase 86): the invoke
+/// handlers run the `gamelib-info` op on the blocking pool. Since 88.1-10 it has one send,
+/// `copySystemInfoToClipboard`, so it has a FIFO worker too (a copy waits for the earlier one).
 pub(crate) const INFO_SLICE: &str = "info";
 
 /// The slice that owns the wine channels in `nativeChannels.json` (Phase 87): invoke channels only,
@@ -410,6 +412,10 @@ fn run_send_job(ctx: &Arc<NativeCtx>, job: NativeSendJob) -> Result<(), String> 
         }
         (store_native::STORE_NEW_CHANNEL, SendPayload::StoreNew(new)) => {
             store_native::run_store_new(ctx, &new);
+            Ok(())
+        }
+        ("copySystemInfoToClipboard", SendPayload::CopySystemInfo) => {
+            info_dispatch::copy_system_info_to_clipboard();
             Ok(())
         }
         (other, _) => Err(format!(
@@ -556,6 +562,10 @@ impl NativeRouter {
         // crate's `knownfix_read` (local > bundled > remote, allow-listed). The sidecar no longer
         // registers `getKnownFixes` (one owner).
         invoke.insert("getKnownFixes", knownfix_dispatch::get_known_fixes);
+        // Phase 88.1 (88.1-10, D-19, D-24): the Settings screen's system information, run by the `info` slice
+        // over `gamelib-info`'s `sysinfo` (the probes, the pci.ids names, the runners' versions and the
+        // single-flight cache). The sidecar no longer registers `getSystemInfo` (one owner).
+        invoke.insert("getSystemInfo", info_dispatch::get_system_info);
         // Phase 88 (88-08, D-19): the game page's GameLib row, the same slice, over `knownfix_status`
         // (local and bundled layers only). The sidecar no longer registers `getGamelibFixStatus`.
         invoke.insert(
@@ -608,8 +618,24 @@ impl NativeRouter {
                 validate: |args| store_native::parse_store_new(args).map(SendPayload::StoreNew),
             },
         );
+        // Phase 88.1 (88.1-10, D-19): Settings' "copy system information", a send of the `info` slice: it takes
+        // no argument and is queued behind an earlier copy; the worker reads the cached information, formats
+        // it and writes the clipboard. The sidecar no longer registers it (one owner).
+        send.insert(
+            "copySystemInfoToClipboard",
+            SendRoute {
+                slice: INFO_SLICE,
+                validate: |args| {
+                    if args.is_empty() {
+                        Ok(SendPayload::CopySystemInfo)
+                    } else {
+                        Err("too_big")
+                    }
+                },
+            },
+        );
         let mut queues: HashMap<&'static str, SliceQueue> = HashMap::new();
-        for slice in [APP_SHELL_SLICE, LOGGER_SLICE, STORE_SLICE] {
+        for slice in [APP_SHELL_SLICE, LOGGER_SLICE, STORE_SLICE, INFO_SLICE] {
             let worker_ctx = Arc::clone(&ctx);
             queues.insert(
                 slice,
@@ -941,15 +967,23 @@ mod tests {
         ] {
             assert!(info.contains(&name), "{name}: {info:?}");
         }
+        assert!(info.contains(&"getSystemInfo"), "{info:?}");
+        assert!(info.contains(&"copySystemInfoToClipboard"), "{info:?}");
         for name in info {
-            // The info slice is invoke-only: no send queue exists for it.
+            // The info slice is invoke-only but for one send, the system-information copy (88.1-10),
+            // which is why it has a send queue.
+            if name == "copySystemInfoToClipboard" {
+                assert_eq!(m["channels"][name]["kind"], "send", "{name}");
+                assert!(router.send_validator(name).is_some(), "{name}");
+                continue;
+            }
             assert_eq!(m["channels"][name]["kind"], "invoke", "{name}");
             assert!(
                 router.invoke_handler(name).is_some(),
                 "{name} has no handler"
             );
         }
-        assert!(!router.queues.contains_key(INFO_SLICE));
+        assert!(router.queues.contains_key(INFO_SLICE));
     }
 
     #[test]

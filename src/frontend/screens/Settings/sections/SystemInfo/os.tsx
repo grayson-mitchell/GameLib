@@ -7,7 +7,7 @@ import Typography from '@mui/material/Typography'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faApple, faLinux, faWindows } from '@fortawesome/free-brands-svg-icons'
 
-import type { SystemInformation } from 'backend/utils/systeminfo'
+import type { SystemInformation } from 'common/types/systemInfo'
 import { useTranslation } from 'react-i18next'
 
 interface OSLogoProps {

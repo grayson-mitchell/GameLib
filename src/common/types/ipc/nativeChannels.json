@@ -773,6 +773,29 @@
       "valid": [["k"], [""], ["  padded  "]],
       "invalid": [[], [1], [null], [["k"]], ["a", "b"]]
     },
+    "getSystemInfo": {
+      "kind": "invoke",
+      "slice": "info",
+      "args": [
+        {
+          "name": "cache",
+          "type": "boolean",
+          "optional": true,
+          "nullable": true
+        }
+      ],
+      "returns": "SystemInformation",
+      "valid": [[], [true], [false], [null]],
+      "invalid": [[1], ["yes"], [{}], [[]], [true, false], [null, null]]
+    },
+    "copySystemInfoToClipboard": {
+      "kind": "send",
+      "slice": "info",
+      "args": [],
+      "returns": "void",
+      "valid": [[]],
+      "invalid": [["extra"], [null], [true], [{}]]
+    },
     "isRuntimeInstalled": {
       "kind": "invoke",
       "slice": "wine",

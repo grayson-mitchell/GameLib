@@ -23,6 +23,11 @@ use gamelib_core::emitter::FrontendEmitter;
 use gamelib_info::ctx::{InfoCtx, InfoLog, InfoPaths, Platform};
 use gamelib_info::http::ReqwestHttp;
 use gamelib_info::recent::RecentSink;
+use gamelib_info::sysinfo::format::format_system_info;
+use gamelib_info::sysinfo::host::HostEnv;
+use gamelib_info::sysinfo::versions::AltBinsFn;
+use gamelib_info::sysinfo::SystemInformation;
+use gamelib_proc::spec::SpecProcRunner;
 use gamelib_store::json::Json;
 
 /// The frontend-message channel the renderer listens on for the recent-games list.
@@ -185,6 +190,13 @@ pub(crate) fn install(app: &AppHandle, user_data: &Path) {
         Arc::new(ReqwestHttp::new()),
     );
     ctx.recent_sink = Some(Arc::new(TrayRecentSink::for_app(app)));
+    // 88.1-10: the system-information probes spawn through the shell's `gamelib-proc` runner (a Helper),
+    // read the three environment facts once, and ask the engine settings for the user's alternative
+    // runner binaries each time a read starts.
+    ctx.proc = Arc::new(SpecProcRunner);
+    ctx.host_env = host_env();
+    ctx.runner_settings = Some(Arc::new(AltBinsFn(alt_runner_bin)));
+    install_clipboard_writer(app);
     ctx.secrets = Some(info_secrets::secret_source());
     ctx.log = Some(Arc::new(ShellInfoLog));
     let (baked, env) = (baked_itad_key(), env_itad_key());
@@ -1034,6 +1046,140 @@ pub(crate) fn itad_set_api_key(_ctx: Arc<NativeCtx>, args: Vec<Value>) -> Native
 
 #[cfg(test)]
 use gamelib_store::host::StoreHost;
+// ---------------------------------------------------------------------------------------------
+// System information (88.1-10, SVC-03)
+// ---------------------------------------------------------------------------------------------
+
+/// The environment facts the system information reads, once: `FLATPAK_ID`, `APPIMAGE` and the Steam Deck
+/// game-mode flag (`XDG_CURRENT_DESKTOP === 'gamescope'`). The crate reads no environment variable itself.
+fn host_env() -> HostEnv {
+    HostEnv {
+        flatpak_id: std::env::var("FLATPAK_ID").ok(),
+        appimage: std::env::var("APPIMAGE").ok(),
+        steam_deck_game_mode: std::env::var("XDG_CURRENT_DESKTOP").is_ok_and(|v| v == "gamescope"),
+    }
+}
+
+/// The user's alternative runner binary `key` (`altLegendaryBin`, `altGogdlBin`, `altCometBin` or
+/// `altNileBin`) from the global settings, read when a system-information fetch starts. `None` before the
+/// engine context is installed, and for a setting that is not a string.
+fn alt_runner_bin(key: &str) -> Option<String> {
+    let engine = engine_dispatch::engine_ctx()?;
+    match gamelib_engine::config::global_settings(engine).get(key) {
+        Some(Value::String(path)) => Some(path.clone()),
+        _ => None,
+    }
+}
+
+/// Writes text to the OS clipboard. Set once at [`install`]; the clipboard plugin needs the app handle,
+/// which a native send handler does not carry.
+type ClipboardWriter = Arc<dyn Fn(String) -> Result<(), String> + Send + Sync>;
+static CLIPBOARD_WRITER: OnceLock<ClipboardWriter> = OnceLock::new();
+
+fn install_clipboard_writer(app: &AppHandle) {
+    let app = app.clone();
+    // Runs on the `info` slice worker thread, never the main thread (the plugin's `read_text` must not run
+    // there, and a write has no reason to).
+    let _ = CLIPBOARD_WRITER.set(Arc::new(move |text| {
+        app.clipboard().write_text(text).map_err(|e| e.to_string())
+    }));
+}
+
+/// The decoded argument of `getSystemInfo`: absent, `null` and `true` read through the shared cache,
+/// `false` always reads again.
+fn parse_get_system_info(args: &[Value]) -> Result<bool, Rejection> {
+    match args {
+        [] | [Value::Null] => Ok(true),
+        [Value::Bool(cache)] => Ok(*cache),
+        [_] => Err(("0", "invalid_type")),
+        _ => Err(("(args)", "too_big")),
+    }
+}
+
+/// One system-information read of the context, shared through its cache when `cache` (D-24): the fixed
+/// text of a failure is `getSystemInfo: <what failed>` (a program the probes name or a fixed sentence,
+/// never an answer a program gave).
+async fn read_system_info(info: &InfoCtx, cache: bool) -> Result<Arc<SystemInformation>, String> {
+    gamelib_info::sysinfo::get_system_info(info, cache)
+        .await
+        .map_err(|e| format!("getSystemInfo: {e}"))
+}
+
+/// The renderer's `SystemInformation` for `cache`, inside the crate's shutdown wrapper.
+async fn system_info_value(info: Arc<InfoCtx>, cache: bool) -> Result<Value, String> {
+    gamelib_info::guarded("getSystemInfo", &info, async {
+        read_system_info(&info, cache)
+            .await
+            .map(|read| read.to_value())
+    })
+    .await
+}
+
+/// The native `getSystemInfo` handler (slice `info`, D-24): the optional boolean is validated first, so a
+/// bad call is rejected the same way before and after the context is installed. The read runs on the
+/// blocking pool (the pci.ids caches are file reads) and answers the renderer's `SystemInformation`.
+pub(crate) fn get_system_info(_ctx: Arc<NativeCtx>, args: Vec<Value>) -> NativeFuture {
+    Box::pin(async move {
+        let cache = parse_get_system_info(&args)
+            .map_err(|(path, code)| invalid_args("getSystemInfo", &[path], &[code]))?;
+        let info = info_ctx().ok_or_else(|| "getSystemInfo: not ready".to_string())?;
+        let info = Arc::clone(info);
+        tauri::async_runtime::spawn_blocking(move || {
+            tauri::async_runtime::block_on(system_info_value(info, cache))
+        })
+        .await
+        .map_err(|_| "getSystemInfo: the read did not finish".to_string())?
+    })
+}
+
+/// Formats `info` and hands it to `write`. The failure is a fixed sentence: the text itself (a CPU model, a
+/// GPU name, a version) goes to the clipboard only and never into a log line.
+fn deliver_system_info(
+    info: &SystemInformation,
+    platform: gamelib_info::ctx::Platform,
+    write: &dyn Fn(String) -> Result<(), String>,
+) -> Result<(), &'static str> {
+    write(format_system_info(info, platform)).map_err(|_| "the clipboard write failed")
+}
+
+/// Runs the copy with `write` as the clipboard: the cached read (inside the crate's shutdown wrapper), the
+/// format and the write. The failure is the fixed sentence the caller logs; nothing is thrown (the send has
+/// no reply).
+fn copy_system_info_with(
+    info: Option<&Arc<InfoCtx>>,
+    write: Option<&ClipboardWriter>,
+) -> Result<(), &'static str> {
+    let info = info.ok_or("the information service is not ready")?;
+    let write = write.ok_or("the clipboard is not ready")?;
+    let ctx = Arc::clone(info);
+    let slot: Mutex<Option<Arc<SystemInformation>>> = Mutex::new(None);
+    let outcome = tauri::async_runtime::block_on(gamelib_info::guarded(
+        "copySystemInfoToClipboard",
+        &ctx,
+        async {
+            let read = read_system_info(&ctx, true).await?;
+            if let Ok(mut held) = slot.lock() {
+                *held = Some(read);
+            }
+            Ok(Value::Null)
+        },
+    ));
+    outcome.map_err(|_| "the system information read failed")?;
+    let read = slot
+        .into_inner()
+        .ok()
+        .flatten()
+        .ok_or("the system information read failed")?;
+    deliver_system_info(&read, ctx.platform, &**write)
+}
+
+/// The `info` slice worker's copy job. Failures are one fixed line each in `gamelib.log`.
+pub(crate) fn copy_system_info_to_clipboard() {
+    if let Err(reason) = copy_system_info_with(info_ctx(), CLIPBOARD_WRITER.get()) {
+        shell_log(&format!("copySystemInfoToClipboard: {reason}"));
+    }
+}
+
 #[cfg(test)]
 use gamelib_testutil::FakeHome;
 
@@ -2796,6 +2942,140 @@ mod tests {
             1
         );
         assert!(build_rs.contains("tauri_build::build()"));
+    }
+
+    #[test]
+    fn get_system_info_decodes_one_optional_boolean() {
+        assert_eq!(parse_get_system_info(&[]), Ok(true));
+        assert_eq!(parse_get_system_info(&[json!(null)]), Ok(true));
+        assert_eq!(parse_get_system_info(&[json!(true)]), Ok(true));
+        assert_eq!(parse_get_system_info(&[json!(false)]), Ok(false));
+        for bad in [json!(1), json!("yes"), json!({}), json!([]), json!(0)] {
+            assert_eq!(
+                parse_get_system_info(std::slice::from_ref(&bad)),
+                Err(("0", "invalid_type")),
+                "{bad}"
+            );
+        }
+        assert_eq!(
+            parse_get_system_info(&[json!(true), json!(false)]),
+            Err(("(args)", "too_big"))
+        );
+    }
+
+    #[test]
+    fn get_system_info_answers_not_ready_before_install_and_the_invalid_args_marker_for_a_bad_arg()
+    {
+        // No test installs the global context.
+        assert!(info_ctx().is_none());
+        let router_ctx = Arc::new(crate::native_router::NativeCtx::for_tests(
+            Arc::new(NoHost),
+            None,
+        ));
+        for ok in [
+            vec![],
+            vec![json!(null)],
+            vec![json!(true)],
+            vec![json!(false)],
+        ] {
+            let answer =
+                tauri::async_runtime::block_on(get_system_info(Arc::clone(&router_ctx), ok));
+            assert_eq!(answer, Err("getSystemInfo: not ready".to_string()));
+        }
+        for bad in [
+            vec![json!("yes")],
+            vec![json!(1)],
+            vec![json!(true), json!(true)],
+        ] {
+            let answer =
+                tauri::async_runtime::block_on(get_system_info(Arc::clone(&router_ctx), bad));
+            assert!(answer
+                .unwrap_err()
+                .starts_with(crate::ipc_contract::IPC_INVALID_ARGS_MARKER),);
+        }
+    }
+
+    #[test]
+    fn a_system_information_read_with_no_runner_fails_with_fixed_text_and_is_not_cached() {
+        // `test_ctx` installs no spawn runner, so the first probe cannot start: the read answers the
+        // program it could not run and nothing else, and a second read tries again.
+        let home = FakeHome::new("info-dispatch-");
+        let ctx = Arc::new(test_ctx(&home, None));
+        for _ in 0..2 {
+            let answer = tauri::async_runtime::block_on(system_info_value(Arc::clone(&ctx), true));
+            assert_eq!(answer, Err("getSystemInfo: spawn free failed".to_string()));
+        }
+    }
+
+    #[test]
+    fn the_copy_without_a_context_or_a_clipboard_fails_with_a_fixed_sentence() {
+        assert_eq!(
+            copy_system_info_with(None, None),
+            Err("the information service is not ready")
+        );
+        let home = FakeHome::new("info-dispatch-");
+        let ctx = Arc::new(test_ctx(&home, None));
+        assert_eq!(
+            copy_system_info_with(Some(&ctx), None),
+            Err("the clipboard is not ready")
+        );
+        // A context whose probes cannot start: the read fails, nothing is written.
+        let written = Arc::new(Mutex::new(Vec::<String>::new()));
+        let sink = Arc::clone(&written);
+        let writer: ClipboardWriter = Arc::new(move |text| {
+            sink.lock().unwrap().push(text);
+            Ok(())
+        });
+        assert_eq!(
+            copy_system_info_with(Some(&ctx), Some(&writer)),
+            Err("the system information read failed")
+        );
+        assert!(written.lock().unwrap().is_empty());
+    }
+
+    #[test]
+    fn a_failing_clipboard_write_is_a_fixed_sentence_that_carries_no_text() {
+        use gamelib_info::sysinfo::deck::SteamDeckInfo;
+        use gamelib_info::sysinfo::memory::MemoryInfo;
+        use gamelib_info::sysinfo::versions::SoftwareVersions;
+        use gamelib_info::sysinfo::SystemProbe;
+        let info = SystemInformation {
+            probe: SystemProbe {
+                cpu_model: "SECRET-MODEL".to_string(),
+                cores: 2,
+                memory: MemoryInfo {
+                    total: 2048,
+                    used: 1024,
+                },
+                gpus: Vec::new(),
+                os_platform: "linux",
+                os_name: "Test".to_string(),
+                os_version: "1".to_string(),
+                steam_deck: SteamDeckInfo::NotDeck,
+                is_flatpak: false,
+                is_app_image: false,
+            },
+            total_formatted: "2 KiB".to_string(),
+            used_formatted: "1 KiB".to_string(),
+            software: SoftwareVersions {
+                heroic_version: "1.0.0 Hajrudin".to_string(),
+                legendary_version: "invalid".to_string(),
+                gogdl_version: "invalid".to_string(),
+                comet_version: "invalid".to_string(),
+                nile_version: "invalid".to_string(),
+            },
+        };
+        let seen = Mutex::new(String::new());
+        let ok = deliver_system_info(&info, Platform::Linux, &|text| {
+            *seen.lock().unwrap() = text;
+            Ok(())
+        });
+        assert_eq!(ok, Ok(()));
+        let text = seen.lock().unwrap().clone();
+        assert!(text.starts_with("CPU: 2x SECRET-MODEL\nMemory: 2.05 kB (used: 1.02 kB)\n"));
+        assert!(text.contains("We are not running inside a Flatpak container"));
+        let failed = deliver_system_info(&info, Platform::Mac, &|text| Err(text));
+        assert_eq!(failed, Err("the clipboard write failed"));
     }
 
     /// A host that does nothing: `remove_recent` never reaches the native host.

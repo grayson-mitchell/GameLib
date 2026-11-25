@@ -2,19 +2,19 @@
  * Curated clipboard channel registration (Phase 34.3 Plan 06, D-01/D-02/D-03/D-04,
  * REQ-34.3-03/REQ-34.3-04/REQ-34.3-13).
  *
- * Registers the 3 clipboard channels onto platformApi's `ipcMain` recorder. These are the
+ * Registers the 2 clipboard channels onto platformApi's `ipcMain` recorder. These are the
  * ONLY consumers of the two new `dispatch_rust_channel` arms this slice adds
  * (`clipboard_write_text`/`clipboard_read_text`, Plan 03) — kept in this dedicated module
  * (rather than folded into `shellFilesFlowRegistration.ts`) specifically so the claim "this
  * slice adds exactly two new Rust arms, used by exactly three channels" stays auditable from
  * one file:
  *
- *   send (ipcMain.on, 2):
+ *   send (ipcMain.on, 1):
  *     - `clipboardWriteText` -> `platformApi`'s `deps.appState.writeClipboardText(text)`, itself a real
  *       fire-and-forget forward to `RUST_CLIPBOARD_WRITE_TEXT` (Plan 05, `main.ts:1427`)
- *     - `copySystemInfoToClipboard` -> `utils/systeminfo`'s `getSystemInfo()` +
- *       `formatSystemInfo()`, then `deps.appState.writeClipboardText(formatted)`
- *       (`utils/ipc_handler.ts:23-27`)
+ *     - `copySystemInfoToClipboard` is no longer registered here: since Phase 88.1 (88.1-10, D-19) it is a
+ *       native `info` send of the Rust router, which reads the cached system information, formats it and
+ *       writes the clipboard itself (`nativeChannels.json`).
  *
  *   invoke (ipcMain.handle, 1):
  *     - `clipboardReadText` -> awaits `requestRustInvoke(RUST_CLIPBOARD_READ_TEXT, [])`
@@ -57,7 +57,6 @@ import type { IpcRegistry } from './ipcRegistry'
 import type { AppState } from '../host/appState'
 import type { RequestRustInvoke } from '../host'
 import { RUST_CLIPBOARD_READ_TEXT } from '../../common/types/sidecarTransport'
-import { formatSystemInfo } from '../utils/systeminfo'
 import type { BootServices, StoreManagers, Stores } from '../services/types'
 
 function logSendFailure(channel: string, error: unknown): void {
@@ -85,7 +84,7 @@ export interface ClipboardFlowDeps {
 }
 
 /**
- * Registers this module's 3 clipboard channels. Called once from `handlers.ts` — this module
+ * Registers this module's 2 clipboard channels. Called once from `handlers.ts` — this module
  * owns no side effects at import time beyond the imports above; the caller decides when
  * registration onto the handler registry happens.
  */
@@ -119,30 +118,5 @@ export function registerClipboardFlows(deps: ClipboardFlowDeps): void {
       )
       return ''
     }
-  })
-
-  // ── send (1): copySystemInfoToClipboard — utils/ipc_handler.ts:23-27's exact body,
-  // curated-imported (D-14) from utils/systeminfo directly rather than side-effect-importing
-  // utils/ipc_handler.ts. Wrapped in an async IIFE (`void (async () => {...})()`) because
-  // ipcMain.on listeners are invoked synchronously and discard their return value — an async
-  // listener's own rejection would otherwise be an unhandled rejection ───────────────────────
-
-  deps.ipc.on('copySystemInfoToClipboard', () => {
-    void (async () => {
-      try {
-        const info = await deps.infoCaches.systemInfo.getSystemInfo({
-          libraryManagers: deps.managers.library,
-          runner: deps.runner,
-          config: deps.config,
-          appInfo: deps.appInfo,
-          stores: deps.stores,
-          paths: deps.paths
-        })
-        const formatted = await formatSystemInfo(info)
-        deps.appState.writeClipboardText(formatted)
-      } catch (error) {
-        logSendFailure('copySystemInfoToClipboard', error)
-      }
-    })()
   })
 }

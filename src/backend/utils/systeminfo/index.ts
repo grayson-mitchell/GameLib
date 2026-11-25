@@ -9,7 +9,8 @@ import { filesize } from 'filesize'
 import { getGpuInfo } from './gpu'
 import { getMemoryInfo } from './memory'
 import { getOsInfo } from './osInfo'
-import { getSteamDeckInfo, type SteamDeckInfo } from './steamDeck'
+import { getSteamDeckInfo } from './steamDeck'
+import type { GPUInfo, SystemInformation } from 'common/types/systemInfo'
 import { getHeroicVersion } from './heroicVersion'
 import {
   getCometVersion,
@@ -23,53 +24,6 @@ import type { AppInfo, AppPaths } from 'backend/process/context'
 import type { Stores } from 'backend/services/types'
 import type { GlobalConfigSlice } from 'backend/config'
 import { APP_DISPLAY_NAME } from 'backend/constants/others'
-
-type GPUInfo = {
-  // The PCI device ID of the graphics card (hexadecimal)
-  deviceId: string
-  // The PCI vendor ID of the graphics card (hexadecimal)
-  vendorId: string
-  // The PCI sub-device ID of the graphics card (hexadecimal)
-  subdeviceId?: string
-  // The PCI sub-vendor ID of the graphics card (hexadecimal)
-  subvendorId?: string
-  // If the device has an entry in `pci.ids`, this is its name
-  deviceString?: string
-  // If the vendor has an entry in `pci.ids`, this is their name
-  vendorString?: string
-  // On Windows: The version of the GPU driver (formatted as nicely as possible)
-  // On Linux:   The driver in use (nvidia/nouveau; amdgpu/radeon/etc.)
-  driverVersion?: string
-}
-
-interface SystemInformation {
-  CPU: {
-    model: string
-    cores: number
-  }
-  memory: {
-    used: number
-    total: number
-    usedFormatted: string
-    totalFormatted: string
-  }
-  GPUs: GPUInfo[]
-  OS: {
-    platform: string
-    name: string
-    version: string
-  }
-  steamDeckInfo: SteamDeckInfo
-  isFlatpak: boolean
-  isAppImage: boolean
-  softwareInUse: {
-    heroicVersion: string
-    legendaryVersion: string
-    gogdlVersion: string
-    cometVersion: string
-    nileVersion: string
-  }
-}
 
 /** R1 slice: the runner managers the version probes ask. */
 export type SystemInfoDeps = VersionProbeDeps &

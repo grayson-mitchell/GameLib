@@ -6,7 +6,7 @@ import Grid from '@mui/material/Grid'
 
 import GameLibIcon from 'frontend/assets/gamelib-icon.png'
 
-import type { SystemInformation } from 'backend/utils/systeminfo'
+import type { SystemInformation } from 'common/types/systemInfo'
 import { useTranslation } from 'react-i18next'
 
 interface Props {

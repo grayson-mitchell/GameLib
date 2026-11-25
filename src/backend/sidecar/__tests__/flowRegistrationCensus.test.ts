@@ -84,7 +84,8 @@ const EXPECTED: Record<string, { invoke: number; send: number }> = {
   // Phase 94 Plan 22 (D-27): send 13 -> 14 -- `processShortcut` (ctrl+q/k/j/l) moved here UNCHANGED from the deleted
   // `shortcutsFlowRegistration.ts`, installed by `registerProcessShortcut`.
   'appShellFlowRegistration.ts': { invoke: 6, send: 14 },
-  'clipboardFlowRegistration.ts': { invoke: 1, send: 2 },
+  // Phase 88.1 Plan 10 (D-19): send 2 -> 1 -- `copySystemInfoToClipboard` is a native `info` send.
+  'clipboardFlowRegistration.ts': { invoke: 1, send: 1 },
   // Phase 61 Plan 13 (2026-11-07): the store-agnostic engine domain (getEngineState, listEngineOptions,
   // getDefaultEngine, getPerGameBottleName, dismissEngineNotice)
   // Phase 87 Plan 28 (D-14): invoke 5 -> 2 -- `getPerGameBottleName`, `listEngineOptions` and
@@ -141,7 +142,8 @@ const EXPECTED: Record<string, { invoke: number; send: number }> = {
   'runnerMiscFlowRegistration.ts': { invoke: 11, send: 0 },
   // Phase 84 Plan 05 / 84-05 (2026-11-21): invoke 11 -> 10 -- `getLogContent` is served by the Rust
   // native router (`nativeChannels.json`, slice `logger`); its registration is deleted here.
-  'settingsFlowRegistration.ts': { invoke: 10, send: 1 },
+  // Phase 88.1 Plan 10 (D-19): invoke 10 -> 9 -- `getSystemInfo` is a native `info` channel.
+  'settingsFlowRegistration.ts': { invoke: 9, send: 1 },
   // Phase 72 Plan 09 (2026-11-08): send 17 -> 16 -- the renderer `removeFolder` channel deleted (D-09).
   // Quick 261115-tk8 (2026-11-15, 6254354b2): send 16 -> 11 -- the dead Heroic-era link channels
   // `openWeblate`, `openSupportPage`, `openDiscordLink`, `openGithubSponsorsPage` and
