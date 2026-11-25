@@ -979,15 +979,19 @@ mod wine_begin_replay {
     /// `golden/prepare_wine` holds 391 cases, the MANIFEST floor; a later edit may raise this, never lower it.
     const PREPARE_WINE_FLOOR: usize = 391;
 
-    /// The finish halves the tracer's slice replays (the begin-only early exits are not counted).
-    const FINISH_HALVES_FLOOR: usize = 122;
+    /// 361 of the 391 cases run past the begin half (the other 30 end inside it); the floor is the golden's.
+    const FINISH_HALVES_FLOOR: usize = 361;
 
-    const DELTAS: [&str; 7] = [
+    const DELTAS: [&str; 11] = [
         "in-process-wine-valid",
         "eos-overlay-slot",
         "adapter-writes-prefix-line",
         "wine-spawn-failure-line",
         "dialog-without-ack-id",
+        "game-status-bus-emit",
+        "online-monitor-observation",
+        "winepath-error-line-fixed-text",
+        "dummy-failure-line-fixed-text",
         "settle-warning-fixed-text",
         "tier1-env-line-key-order",
     ];
@@ -1360,31 +1364,6 @@ mod wine_begin_replay {
         tier1.sort_unstable();
         let joined: Vec<&str> = tier1.into_iter().chain(rest).collect();
         format!("{head}{}", joined.join("; "))
-    }
-
-    /// Whether this finish half is the tracer's slice (88.1-13 Task 1): the registry, the overlay env, the env
-    /// line, the wine env and the deadline arm, with no installFixes, GOG dummy, tool or runtime step in it. The
-    /// other halves are counted, and replayed by Task 2.
-    fn tracer_scope(finish_trace: &[Value]) -> bool {
-        finish_trace
-            .iter()
-            .all(|entry| match entry["kind"].as_str() {
-                Some("hook" | "log") => true,
-                Some("rust") => matches!(
-                    entry["channel"].as_str(),
-                    Some(
-                        "knownfix_apply_profile_registry"
-                            | "knownfix_profile_overlay_env"
-                            | "engine_launch_arm_deadline"
-                            | "wine_valid"
-                    )
-                ),
-                Some("backend-log") => {
-                    let text = entry["text"].as_str().unwrap_or_default();
-                    !text.contains("GalaxyCommunication") && !text.contains("wine path")
-                }
-                _ => false,
-            })
     }
 
     /// What the finish half's golden trace holds, in the replay's own vocabulary.
@@ -1863,8 +1842,7 @@ mod wine_begin_replay {
         let begin_calls = deps.calls().len();
         let begin_spawns = scripted_runner.spawns().len();
         let begin_lines = got_lines.len();
-        let in_scope = begin["split"] == "none" || tracer_scope(&finish_trace);
-        if begin["split"] != "none" && in_scope {
+        if begin["split"] != "none" {
             let finish_args = PrepareWineFinishArgs::deserialize(json!({
                 "runner": input["runner"],
                 "appName": input["appName"],
@@ -1992,34 +1970,12 @@ mod wine_begin_replay {
             used.0.insert("finish-half-replayed");
         }
 
-        // The tree afterwards: the whole run's, or for a finish half this step does not replay yet, the begin
-        // half's (the GOG dummy under `drive_c/ProgramData`, and the `drive_c` folder it made under a Proton
-        // prefix that has none yet, are left out of the golden's).
+        // The tree afterwards: the whole run's.
         let got_tree = tree_of(&rig.profile, &laid_out);
-        let got_paths: BTreeSet<&str> = got_tree
-            .iter()
-            .map(|entry| entry["path"].as_str().unwrap())
-            .collect();
-        let golden_tree = read_json(&dir.join("tree.json"));
-        let golden_tree = golden_tree.as_array().unwrap();
-        let finish_made: Vec<&str> = golden_tree
-            .iter()
-            .map(|entry| entry["path"].as_str().unwrap())
-            .filter(|path| path.contains("/drive_c/ProgramData"))
-            .collect();
-        let finish_owned = |path: &str| {
-            !in_scope
-                && (finish_made.contains(&path)
-                    || (!got_paths.contains(path)
-                        && finish_made
-                            .iter()
-                            .any(|made| made.starts_with(&format!("{path}/")))))
-        };
-        let want_tree: Vec<Value> = golden_tree
-            .iter()
-            .filter(|entry| !finish_owned(entry["path"].as_str().unwrap()))
-            .cloned()
-            .collect();
+        let want_tree: Vec<Value> = read_json(&dir.join("tree.json"))
+            .as_array()
+            .unwrap()
+            .clone();
         if want_tree != got_tree {
             let missing: Vec<&Value> = want_tree.iter().filter(|e| !got_tree.contains(e)).collect();
             let extra: Vec<&Value> = got_tree.iter().filter(|e| !want_tree.contains(e)).collect();
@@ -2065,7 +2021,6 @@ mod wine_begin_replay {
         let mut linux = 0usize;
         let mut mac = 0usize;
         let mut finish_halves = 0usize;
-        let mut beyond_the_tracer = 0usize;
         for case in cases {
             let case_dir = wine_dir()
                 .join("expected")
@@ -2074,21 +2029,15 @@ mod wine_begin_replay {
             linux += usize::from(os == "linux");
             mac += usize::from(os == "mac");
             // An early exit (neither wine valid, the bottle missing) ends inside the begin half.
-            let begin = read_json(&case_dir.join("begin.json"));
-            let finish_trace = read_json(&case_dir.join("finish.json"))["trace"]
-                .as_array()
-                .cloned()
-                .unwrap_or_default();
-            let runs_past_begin = begin["split"] != "none";
-            finish_halves += usize::from(runs_past_begin && tracer_scope(&finish_trace));
-            beyond_the_tracer += usize::from(runs_past_begin && !tracer_scope(&finish_trace));
+            finish_halves +=
+                usize::from(read_json(&case_dir.join("begin.json"))["split"] != "none");
             compared += 1;
             if let Err(problem) = replay_wine_case(case, &mut used) {
                 failures.push(problem);
             }
         }
         println!(
-            "golden prepare_wine: compared {compared} (linux {linux}, mac {mac}) of {} floor {PREPARE_WINE_FLOOR}; both halves replayed in {finish_halves} (floor {FINISH_HALVES_FLOOR}), {beyond_the_tracer} finish halves left for Task 2",
+            "golden prepare_wine: compared {compared} (linux {linux}, mac {mac}) of {} floor {PREPARE_WINE_FLOOR}; both halves replayed in {finish_halves} (floor {FINISH_HALVES_FLOOR})",
             cases.len()
         );
         assert!(

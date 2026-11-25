@@ -18,17 +18,24 @@
 //! error text, since the TS ones carried `Error: ...` strings that can name paths (T-88.1-12).
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::path::Path;
 
-use gamelib_engine::jsutil::js_to_string;
+use gamelib_engine::ctx::Platform;
+use gamelib_engine::dxvk::DxvkTool;
+use gamelib_engine::jsutil::{js_to_string, js_truthy};
 use gamelib_knownfix::catalogue::catalogue;
 use gamelib_knownfix::overlay::env::{log_known_fix_env, EnvLine};
 use gamelib_wine::tools::ToolsHost;
+use gamelib_wine::wine_cmd::command::{run_wine_command, WineCommandArgs};
 use gamelib_wine::wine_cmd::env::GameSettingsView;
+use gamelib_wine::wine_cmd::WineKind;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use super::deps::{DeadlineRequest, OverlayEnvRequest, PrepareDeps};
+use super::install_fixes::{install_fixes, FixGame};
 use super::launch::{LogEntry, RunnerArg};
+use super::wine_path::{get_wine_path, PathVariant};
 use crate::builders::env::setup_wine_env_vars;
 use crate::builders::known_fix_env::known_fix_env;
 use crate::ctx::LaunchCtx;
@@ -83,6 +90,14 @@ pub struct PrepareWineFinishReply {
     pub log: Vec<LogEntry>,
 }
 
+/// `C:\ProgramData\GOG.com\Galaxy\redists\GalaxyCommunication.exe`, where the GOG dummy service lives.
+const GALAXY_COMMUNICATION_WIN_PATH: &str =
+    "C:\\ProgramData\\GOG.com\\Galaxy\\redists\\GalaxyCommunication.exe";
+
+/// The line logged when the GOG dummy could not be put in the prefix (the TS appended the error, which names
+/// paths).
+const GALAXY_DUMMY_FAILED: &str = "Failed to install GalaxyCommunication dummy into the prefix";
+
 /// The process-env keys an overlay's env is resolved against (T-88-33): every target env var of the catalogue
 /// plus `GST_PLUGIN_PATH_1_0`, and only those that are set. The rest of the environment never crosses.
 fn overlay_base_env(host: &gamelib_wine::wine_cmd::WineHost) -> BTreeMap<String, String> {
@@ -122,6 +137,70 @@ fn warn(ctx: &LaunchCtx, line: &str) {
     }
 }
 
+fn error(ctx: &LaunchCtx, line: &str) {
+    if let Some(log) = ctx.engine.log.as_ref() {
+        log.error(line);
+    }
+}
+
+/// Puts the GOG Galaxy dummy service in the prefix when it is not there: `winepath` for where it belongs, the
+/// bundled `GalaxyCommunication.exe` copied there, then `sc create` for the service. `Err` is any step that
+/// failed; the caller logs one fixed line and goes on.
+async fn install_galaxy_dummy(
+    ctx: &LaunchCtx,
+    view: &GameSettingsView,
+    host: &ToolsHost,
+) -> Result<(), ()> {
+    let destination = get_wine_path(
+        ctx,
+        view,
+        GALAXY_COMMUNICATION_WIN_PATH,
+        PathVariant::Unix,
+        &host.wine,
+    )
+    .await;
+    // An empty answer is a path the copy could not be made to (T-88.1-33): the TS tried and failed.
+    if destination.is_empty() {
+        return Err(());
+    }
+    let destination = Path::new(&destination);
+    if destination.exists() {
+        return Ok(());
+    }
+    let source = host
+        .public_dir
+        .as_ref()
+        .ok_or(())?
+        .join("bin")
+        .join("x64")
+        .join("win32")
+        .join("GalaxyCommunication.exe");
+    if let Some(folder) = destination.parent() {
+        std::fs::create_dir_all(folder).map_err(|_| ())?;
+    }
+    std::fs::copy(&source, destination).map_err(|_| ())?;
+    run_wine_command(
+        &ctx.wine,
+        WineCommandArgs {
+            game_settings: Some(view.clone()),
+            command_parts: [
+                "sc",
+                "create",
+                "GalaxyCommunication",
+                &format!("binpath={GALAXY_COMMUNICATION_WIN_PATH}"),
+            ]
+            .iter()
+            .map(|part| part.to_string())
+            .collect(),
+            proton_verb: Some("runinprefix".to_string()),
+            ..WineCommandArgs::default()
+        },
+        &host.wine,
+    )
+    .await;
+    Ok(())
+}
+
 /// `prepareWineLaunch` from the store-setup point on. `Err` is a fixed reason: `bad-args` for settings that are
 /// not game settings, `failed` for a step the TS did not settle (an install fix that could not run, a DXVK
 /// family or runtime step that was rejected); the causes are logged as fixed text and never returned.
@@ -132,6 +211,7 @@ pub async fn prepare_wine_finish(
     host: &ToolsHost,
 ) -> Result<PrepareWineFinishReply, &'static str> {
     const BAD_ARGS: &str = "bad-args";
+    const FAILED: &str = "failed";
 
     if !args.settings.is_object() || !args.stored_settings.is_object() {
         return Err(BAD_ARGS);
@@ -143,6 +223,22 @@ pub async fn prepare_wine_finish(
     let label = format!("{} {app_name}", runner.as_str());
     let settings = &args.settings;
     let mut log: Vec<LogEntry> = Vec::new();
+
+    if args.prefix_updated {
+        install_fixes(
+            ctx,
+            deps,
+            FixGame {
+                app_name,
+                runner,
+                folder_name: args.folder_name.as_deref(),
+                install_path: args.install_path.as_deref(),
+            },
+            settings,
+            &args.stored_settings,
+        )
+        .await?;
+    }
 
     // Tier-2 profile registry, every launch: a failure is a warning and the launch goes on.
     if deps
@@ -200,6 +296,48 @@ pub async fn prepare_wine_finish(
             level: "info",
             parts: vec![Value::String(line)],
         });
+    }
+
+    // The GOG Galaxy dummy service: a failure is one fixed line, and the launch goes on.
+    if args.is_gog && args.comet_support != Some(false) {
+        let dummy = install_galaxy_dummy(ctx, &view, host).await;
+        if dummy.is_err() {
+            error(ctx, GALAXY_DUMMY_FAILED);
+        }
+    }
+
+    // The DXVK family, for a wine-type wine only (the install runs in Rust, with the settings this step holds).
+    let linux = ctx.engine.platform == Platform::Linux;
+    if view.wine_version.kind == WineKind::Wine {
+        let wanted = [
+            (DxvkTool::Dxvk, "autoInstallDxvk", true),
+            (DxvkTool::DxvkNvapi, "autoInstallDxvkNvapi", linux),
+            (DxvkTool::Vkd3d, "autoInstallVkd3d", linux),
+        ];
+        for (tool, key, allowed) in wanted {
+            if allowed && settings.get(key).is_some_and(js_truthy) {
+                if let Err(category) = deps.dxvk_backup(settings.clone(), tool).await {
+                    error(
+                        ctx,
+                        &format!("The {} install failed: {category}", tool.as_str()),
+                    );
+                    return Err(FAILED);
+                }
+            }
+        }
+    }
+
+    // The anti-cheat runtimes, when online and absent.
+    for (key, name) in [
+        ("eacRuntime", "eac_runtime"),
+        ("battlEyeRuntime", "battleye_runtime"),
+    ] {
+        if settings.get(key).is_some_and(js_truthy)
+            && host.online
+            && !deps.runtime_is_installed(name).await
+        {
+            deps.runtime_download(name).await;
+        }
     }
 
     let mut env_vars = setup_wine_env_vars(ctx, &view, args.folder_name.as_deref(), &host.wine);

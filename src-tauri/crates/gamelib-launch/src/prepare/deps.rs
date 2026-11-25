@@ -624,6 +624,9 @@ pub mod testing {
         }
     }
 
+    /// What sees each scripted call as it is made.
+    pub type CallObserver = Box<dyn Fn(&Call) + Send + Sync>;
+
     /// The deps of a golden: what the TS scripted is answered from the case's input and recorded; the Epic
     /// check, the gamescope help probe and the CrossOver bottle query run for real over the context's seams
     /// (a replayed fetch and a scripted spawn runner).
@@ -663,6 +666,9 @@ pub mod testing {
         pub tool_settings_replies: Vec<ToolSettingsResult>,
         /// What the launch deadline arm answers (`Err` is a rejection).
         pub deadline_reply: Result<(), String>,
+        /// Called with each call as it is made, for a test that has to see how the calls interleave with another
+        /// effect (the status pushes of an install fix).
+        pub observer: Option<CallObserver>,
         cursors: Mutex<(usize, usize)>,
         calls: Mutex<Vec<Call>>,
     }
@@ -687,6 +693,7 @@ pub mod testing {
                 winetricks_replies: Vec::new(),
                 tool_settings_replies: Vec::new(),
                 deadline_reply: Ok(()),
+                observer: None,
                 cursors: Mutex::new((0, 0)),
                 calls: Mutex::new(Vec::new()),
             }
@@ -698,6 +705,9 @@ pub mod testing {
         }
 
         fn record(&self, call: Call) {
+            if let Some(observer) = &self.observer {
+                observer(&call);
+            }
             self.calls
                 .lock()
                 .unwrap_or_else(|e| e.into_inner())

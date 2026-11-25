@@ -7,13 +7,16 @@
 //!
 //! - [`wine_begin`]: the first half of `prepareWineLaunch`, up to the store-setup point (88.1-12); the
 //!   `installed_games` file it keeps is [`installed_games`].
-//! - [`wine_finish`]: the second half, from the store-setup point to the returned env (88.1-13).
+//! - [`wine_finish`]: the second half, from the store-setup point to the returned env (88.1-13), with
+//!   [`install_fixes`] (the known fix's winetricks verbs and programs) and [`wine_path`] (`getWinePath`).
 
 pub mod crossover;
 pub mod deps;
 pub mod epic;
+pub mod install_fixes;
 pub mod installed_games;
 pub mod launch;
 pub mod settings_log;
 pub mod wine_begin;
 pub mod wine_finish;
+pub mod wine_path;
