@@ -729,6 +729,7 @@
         "reason": {
             "deleteFailed": "Some files could not be removed.",
             "folderLooksShared": "The game's folder also holds other programs, so it may be shared with other software.",
+            "inUse": "The bottle is in use. Quit the game and anything else running in it, then try again.",
             "insideKnownInstall": "This folder is inside the install of {{other}}.",
             "insideKnownInstallUnnamed": "This folder is inside the install of another game.",
             "nestedKnownInstall": "{{other}} is installed inside this folder.",
@@ -736,7 +737,8 @@
             "notAPrefix": "The folder doesn't look like a Wine prefix.",
             "outsideTrustRoot": "The folder isn't inside the expected install location.",
             "protectedRoot": "The folder is a protected location, such as your home folder or the default install folder.",
-            "unconfirmed": "GameLib couldn't confirm the install location."
+            "unconfirmed": "GameLib couldn't confirm the install location.",
+            "unsafeName": "The bottle's name isn't one GameLib made for this game, so it was left alone."
         },
         "title": {
             "cancelInstall": "Couldn't clean up the cancelled install of {{game}}",

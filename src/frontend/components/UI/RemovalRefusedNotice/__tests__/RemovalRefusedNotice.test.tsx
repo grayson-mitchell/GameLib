@@ -154,8 +154,41 @@ describe('RemovalRefusedNotice', () => {
         expect((body?.textContent ?? '').length).toBeGreaterThan(10)
         bodies.add(body?.textContent ?? '')
       }
-      // Eight distinct bodies: the 'unconfirmed' group collapses the check-could-not-run reasons.
-      expect(bodies.size).toBe(8)
+      // Ten distinct bodies: the 'unconfirmed' group collapses the check-could-not-run reasons, and the bottle op's
+      // `in-use` and `unsafe-name` each have their own (87-75).
+      expect(bodies.size).toBe(10)
+    })
+
+    it('words the bottle op refusals in-use and unsafe-name each on their own (87-75, RF6)', () => {
+      const cases = [
+        [
+          'in-use',
+          'The bottle is in use. Quit the game and anything else running in it, then try again.'
+        ],
+        [
+          'unsafe-name',
+          "The bottle's name isn't one GameLib made for this game, so it was left alone."
+        ]
+      ] as const
+      for (const [reason, body] of cases) {
+        cleanup()
+        useRemovalRefusedNotice.setState({ notices: [], nextId: 1 })
+        render(<RemovalRefusedNotice />)
+        push({
+          kind: 'remove-bottle',
+          outcome: 'refused',
+          reason,
+          title: 'Half-Life 2'
+        })
+        expect(
+          screen.getByText("Couldn't remove the bottle for Half-Life 2")
+        ).toBeTruthy()
+        expect(screen.getByText(body)).toBeTruthy()
+        expect(screen.getByText('Nothing was deleted.')).toBeTruthy()
+        expect(document.body.textContent).not.toContain(
+          "GameLib couldn't confirm"
+        )
+      }
     })
 
     it('interpolates the other title for both known-install reasons', () => {

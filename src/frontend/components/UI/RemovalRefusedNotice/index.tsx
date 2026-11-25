@@ -118,6 +118,16 @@ function reasonBody(
         'removalRefused.reason.deleteFailed',
         'Some files could not be removed.'
       )
+    case 'in-use':
+      return t(
+        'removalRefused.reason.inUse',
+        'The bottle is in use. Quit the game and anything else running in it, then try again.'
+      )
+    case 'unsafe-name':
+      return t(
+        'removalRefused.reason.unsafeName',
+        "The bottle's name isn't one GameLib made for this game, so it was left alone."
+      )
     // Every other reason is a check that could not be completed (a malformed or relative path, a
     // missing trust root, an unreadable install list, a failed lookup or reply): the location is
     // unconfirmed, so GameLib refuses rather than guess.
