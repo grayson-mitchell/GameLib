@@ -6,10 +6,10 @@ current_phase: 87
 current_phase_name: Engine, Wine and tools
 status: executing
 stopped_at: Completed 88.1-05-PLAN.md
-last_updated: "2026-11-25T08:09:26.175Z"
+last_updated: "2026-11-25T08:12:52.893Z"
 last_activity: 2026-11-25
 last_activity_desc: Phase 87 execution started
-state_head: 1abfea12533d3b93087e9fe8ffa8e7b15bbcdfb5
+state_head: d41bb6aaf495b4b25e9a6956a2ca639a5a40f1ba
 progress:
   total_phases: 25
   completed_phases: 23
@@ -528,6 +528,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 87 P71 | 25 min | 3 tasks | 4 files |
 | Phase 87 P73 | 35 min | 2 tasks | 7 files |
 | Phase 88.1 P88.1-06 | 95min | 3 tasks | 17 files |
+| Phase 87 P75 | 25 min | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -1186,6 +1187,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 87]: 87-73: launch() dialogs close themselves by dialogId and decide their abort in a microtask, because DialogHandler skips its close when onClose is set and MessageBoxModal runs onClose before a button's onClick
 - [Phase 88.1]: 88.1-06: launch builders port the npm shlex lexer instead of wrapping the Rust shlex crate (the crate differs on six recorded vectors); shlex stays a dev-dependency as the differential reference
 - [Phase 88.1]: 88.1-06: Rust env notes log fixed text, so the TS library-folders line is a named deltas.json entry; known_fix_env returns the raw Value like the TS
+- [Phase 87]: 87-75: the shared default prefix is no removal target on either path (one storedPrefixRemovalTarget rule), so a bottle-backed game reaches its per-game bottle route; in-use and unsafe-name are notice reasons pinned to the op's reason literals
 
 ### Pending Todos
 
