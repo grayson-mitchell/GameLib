@@ -33,6 +33,10 @@ gamelib-launch = { path = ".", features = ["testing"] }
 gamelib-store = { path = "../gamelib-store" }
 gamelib-testutil = { path = "../gamelib-testutil" }
 tempfile = "3"
+# Pitfall 12: the Rust shlex crate disagrees with npm shlex 2.1.2 on recorded vectors (an unterminated
+# quote is `None` rather than a typed error, `#` starts a comment, join quotes differently), so the
+# builders carry a port of the npm lexer and this crate is the differential reference in a unit test.
+shlex = "2"
 
 [lints.clippy]
 dbg_macro = "deny"

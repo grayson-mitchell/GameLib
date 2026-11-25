@@ -1,6 +1,7 @@
 //! The launch services (Phase 88, SVC-03): the launch builders, the runner spawn, the funnel and
-//! re-adoption, ported from the TypeScript sidecar by 88.1 to 88.3. This skeleton owns the dispatch
-//! contract and an empty op list; 88.1 adds the first op.
+//! re-adoption, ported from the TypeScript sidecar by 88.1 to 88.3. This crate owns the dispatch
+//! contract and the op list; [`builders`] holds the pure launch builders (88.1-06), which 91 and 92
+//! also call in process.
 //!
 //! Tauri-free, no environment reads, no `keyring`, and a child process only ever through
 //! `gamelib-proc` (`SpawnClass::Game` for what must outlive GameLib). Every log line goes through
@@ -10,13 +11,17 @@
 //! This crate may depend on `gamelib-engine`, `gamelib-wine` and `gamelib-knownfix`; none of them ever
 //! depends on it (87 D-04, the one-way rule).
 
+pub mod builders;
 pub mod ctx;
 
 /// The cancel token a long op takes, re-exported so the shell, which owns the renderer's cancel, needs
 /// no `tokio-util` of its own.
 pub use tokio_util::sync::CancellationToken;
 
+use builders::wrappers;
 use ctx::LaunchCtx;
+use gamelib_knownfix::types::Runner;
+use serde::Deserialize;
 use serde_json::Value;
 use std::future::Future;
 use std::panic::{catch_unwind, AssertUnwindSafe};
@@ -25,8 +30,8 @@ use std::sync::OnceLock;
 use std::task::{Context, Poll};
 use tokio::runtime::{Builder, Handle, Runtime};
 
-/// Ops reachable from the shell and the CLI. Keep sorted; 88.1 adds the first.
-pub const OPS: &[&str] = &[];
+/// Ops reachable from the shell and the CLI. Keep sorted; each plan adds its own.
+pub const OPS: &[&str] = &["launch_setup_wrapper_env_vars"];
 
 /// Runs `op` over `args`. `Err` is only an unknown op, bad arguments, a shutdown, a wrong thread or a
 /// panic (`<op>:panic`).
@@ -37,9 +42,35 @@ pub async fn dispatch(op: &str, args: &[Value], ctx: &LaunchCtx) -> Result<Value
     guarded(name, ctx, route(name, args, ctx)).await
 }
 
-/// Each plan adds its arms here, in step with `OPS`.
-async fn route(op: &str, _args: &[Value], _ctx: &LaunchCtx) -> Result<Value, String> {
-    Err(format!("unknown op: {op}"))
+/// Each plan adds its arms here, in step with `OPS`. Every arm is a thin wrapper over a function of
+/// [`builders`]; a bad argument is the fixed `<op>:bad-args` and never echoes what was sent.
+async fn route(op: &str, args: &[Value], _ctx: &LaunchCtx) -> Result<Value, String> {
+    let bad = || format!("{op}:bad-args");
+    let result_of =
+        |value: Result<Value, serde_json::Error>| value.map_err(|_| format!("{op}:bad-result"));
+    match op {
+        // `setupWrapperEnvVars`. The one object argument is `{ appName, appRunner }`.
+        "launch_setup_wrapper_env_vars" => {
+            let [arg @ Value::Object(_)] = args else {
+                return Err(bad());
+            };
+            let arg: WrapperEnvArgs = serde_json::from_value(arg.clone()).map_err(|_| bad())?;
+            let runner = Runner::parse(&arg.app_runner).ok_or_else(bad)?;
+            result_of(serde_json::to_value(wrappers::setup_wrapper_env_vars(
+                &arg.app_name,
+                runner,
+            )))
+        }
+        _ => Err(format!("unknown op: {op}")),
+    }
+}
+
+/// The object argument of `launch_setup_wrapper_env_vars`.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct WrapperEnvArgs {
+    app_name: String,
+    app_runner: String,
 }
 
 /// The op wrapper: `work` runs holding a `Shutdown` registrant for exactly its lifetime and is
@@ -117,6 +148,7 @@ mod tests {
     use gamelib_knownfix::ctx::KnownFixCtx;
     use gamelib_store::host::StoreHost;
     use gamelib_testutil::FakeHome;
+    use gamelib_wine::ctx::WineCtx;
     use serde_json::json;
     use std::sync::Arc;
 
@@ -141,7 +173,8 @@ mod tests {
             "https://relay.test",
             "1.2.3",
         ));
-        LaunchCtx::new(engine, knownfix)
+        let wine = Arc::new(WineCtx::new(engine.clone(), root.join("runtimes")));
+        LaunchCtx::new(engine, knownfix, wine)
     }
 
     /// A future that panics when polled: the shape of an op that hits a bug.
@@ -158,7 +191,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn every_name_is_an_unknown_op_until_88_1_adds_the_first() {
+    async fn a_name_outside_the_op_table_is_an_unknown_op() {
         let home = FakeHome::new("launch-lib-");
         let ctx = ctx(&home);
         for op in ["nope", "launch_probe", "", "knownfix_overlay_catalogue"] {
@@ -213,5 +246,51 @@ mod tests {
             .shutdown
             .drain(std::time::Duration::from_millis(50))
             .is_empty());
+    }
+
+    #[tokio::test]
+    async fn every_op_answers_a_fixed_bad_args_and_never_echoes_what_it_was_sent() {
+        let home = FakeHome::new("launch-lib-");
+        let ctx = ctx(&home);
+        let secret = "/Users/someone/secret-profile-path";
+        for op in OPS {
+            for args in [
+                vec![],
+                vec![json!(secret)],
+                vec![json!(secret), json!(secret), json!(secret), json!(secret)],
+                vec![json!({"appName": secret, "bogus": secret})],
+                vec![json!(1), json!(2), json!(3)],
+            ] {
+                let err = dispatch(op, &args, &ctx).await.unwrap_err();
+                assert_eq!(err, format!("{op}:bad-args"), "{op} {args:?}");
+                assert!(!err.contains(secret));
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn the_wrapper_env_op_decodes_strictly_and_answers_the_map() {
+        let home = FakeHome::new("launch-lib-");
+        let ctx = ctx(&home);
+        let got = dispatch(
+            "launch_setup_wrapper_env_vars",
+            &[json!({"appName": "a", "appRunner": "legendary"})],
+            &ctx,
+        )
+        .await
+        .unwrap();
+        assert_eq!(got["STORE"], "egs");
+        for bad in [
+            json!({"appName": "a", "appRunner": "nope"}),
+            json!({"appName": "a", "appRunner": "gog", "extra": 1}),
+            json!({"appName": 1, "appRunner": "gog"}),
+        ] {
+            assert_eq!(
+                dispatch("launch_setup_wrapper_env_vars", &[bad], &ctx)
+                    .await
+                    .unwrap_err(),
+                "launch_setup_wrapper_env_vars:bad-args"
+            );
+        }
     }
 }

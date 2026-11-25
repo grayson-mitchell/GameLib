@@ -1798,6 +1798,7 @@ dependencies = [
  "gamelib-wine",
  "serde",
  "serde_json",
+ "shlex",
  "tempfile",
  "tokio",
  "tokio-util",
@@ -1813,6 +1814,7 @@ dependencies = [
  "gamelib-launch",
  "gamelib-store",
  "gamelib-testutil",
+ "gamelib-wine",
  "serde_json",
 ]
 

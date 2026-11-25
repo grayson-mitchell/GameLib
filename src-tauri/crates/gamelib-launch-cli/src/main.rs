@@ -2,7 +2,7 @@
 //! crate sees is derived from `--user-data`, and the crate has no `keyring` dependency.
 //!
 //! `ops`
-//!     print the op names, one per line (none until 88.1 adds the first)
+//!     print the op names, one per line
 //! `op <name> <json-args> --user-data <dir> [--home <dir>] [--public <dir>] [--relay-url <url>] [--app-version <v>]`
 //!     run one op through `dispatch_sync` over a context rooted in `<dir>` (see `gamelib-knownfix-cli`
 //!     for the layout) and print the JSON result. `<json-args>` is a JSON array of the op's arguments.
@@ -20,6 +20,7 @@ use gamelib_engine::ctx::{EngineCtx, EnginePaths, Platform};
 use gamelib_knownfix::ctx::KnownFixCtx;
 use gamelib_launch::ctx::LaunchCtx;
 use gamelib_store::host::StoreHost;
+use gamelib_wine::ctx::WineCtx;
 
 const USAGE: &str = "usage: gamelib-launch-cli ops\n       gamelib-launch-cli op <name> <json-args> --user-data <dir> [--home <dir>] [--public <dir>] [--relay-url <url>] [--app-version <v>]";
 
@@ -82,6 +83,8 @@ fn run_op(args: &[String]) {
     let relay_url = opt_flag(rest, "--relay-url")
         .unwrap_or(gamelib_knownfix::report::RELAY_URL_PENDING_SENTINEL);
     let app_version = opt_flag(rest, "--app-version").unwrap_or(env!("CARGO_PKG_VERSION"));
+    // Where the wine runtime lives; derived from `--user-data`, never from the real profile.
+    let tools_runtime = user_data.join("tools").join("runtimes");
     let engine = Arc::new(EngineCtx::new(
         Arc::new(StoreHost::new()),
         Arc::new(SystemClock),
@@ -101,7 +104,8 @@ fn run_op(args: &[String]) {
         relay_url,
         app_version,
     ));
-    let ctx = LaunchCtx::new(engine, knownfix);
+    let wine = Arc::new(WineCtx::new(engine.clone(), tools_runtime));
+    let ctx = LaunchCtx::new(engine, knownfix, wine);
     match gamelib_launch::dispatch_sync(name, &op_args, &ctx) {
         Ok(value) => println!("{value}"),
         Err(e) => bad(&e),

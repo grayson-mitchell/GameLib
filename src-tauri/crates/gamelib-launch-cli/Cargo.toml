@@ -15,6 +15,7 @@ gamelib-engine = { path = "../gamelib-engine" }
 gamelib-knownfix = { path = "../gamelib-knownfix" }
 gamelib-launch = { path = "../gamelib-launch" }
 gamelib-store = { path = "../gamelib-store" }
+gamelib-wine = { path = "../gamelib-wine" }
 serde_json = "1"
 
 [dev-dependencies]
