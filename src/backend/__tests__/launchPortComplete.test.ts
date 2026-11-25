@@ -314,6 +314,126 @@ describe('knownFixSurvivors', () => {
   })
 })
 
+/**
+ * 88.1-17, D-18, D-25 and ROADMAP 88.1 SC3 (builder half): the launch builders are Rust's (88.1-03..88.1-10 ported
+ * them, 88.1-07/08 pointed the managers at the shims, 88.1-15/16 retired the prepare steps, the wine self-heal and the
+ * Epic status). The builder TS in `launcher.ts`, `gamescopeCommand.ts` and the replaced `utils.ts` rows (with
+ * `utils/epicServiceStatus.ts`) are deleted, and so are the oracle tests that drove them. Every golden and recording
+ * those oracles wrote stays, because the Rust replays (`gamelib-launch/tests/golden_*.rs`) read them.
+ *
+ * `launchPrepare.oracle.test.ts` and `launchPrepareWine.oracle.test.ts` went with the prepare adapters in 88.1-15, so
+ * they are named here only to hold them deleted.
+ *
+ * `forbiddenIdentifiers` is every export of the deleted TS minus the names something else carries. Candidates left out,
+ * each checked with `git grep -w` on 2026-11-26:
+ *   - installFixes, which `launchrust/knownFixTwins.ts` and `steam/bridgeKnownFixes.ts` define for themselves;
+ *   - setupEnvVars, setupWrapperEnvVars, setupWineEnvVars, setupWrappers, verifyWinePrefix, getKnownFixesEnvVariables,
+ *     prepareLaunch, prepareWineLaunch, isEpicServiceOffline and checkWineBeforeLaunch, which live on as shim, adapter
+ *     or Launcher member names; the two `defines no` tests below hold those instead.
+ */
+const BUILDERS: SliceSpec = {
+  deleted: [
+    'src/backend/gamescopeCommand.ts',
+    'src/backend/__tests__/gamescopeCommand.test.ts',
+    'src/backend/__tests__/launcher_wineLibFolders.test.ts',
+    'src/backend/utils/epicServiceStatus.ts',
+    'src/backend/utils/__tests__/epicServiceStatus.test.ts',
+    'src/backend/__tests__/oracle/launchBuilders.oracle.test.ts',
+    'src/backend/__tests__/oracle/launchGamescope.oracle.test.ts',
+    'src/backend/__tests__/oracle/launchPrepare.oracle.test.ts',
+    'src/backend/__tests__/oracle/epicStatus.oracle.test.ts',
+    'src/backend/__tests__/oracle/launchPrepareWine.oracle.test.ts',
+    'src/backend/__tests__/oracle/checkWine.oracle.test.ts'
+  ],
+  kept: [
+    'src-tauri/crates/gamelib-launch/tests/fixtures/golden/builders',
+    'src-tauri/crates/gamelib-launch/tests/fixtures/golden/gamescope',
+    'src-tauri/crates/gamelib-launch/tests/fixtures/golden/prepare_launch',
+    'src-tauri/crates/gamelib-launch/tests/fixtures/golden/epic_status',
+    'src-tauri/crates/gamelib-launch/tests/fixtures/golden/prepare_wine',
+    'src-tauri/crates/gamelib-launch/tests/fixtures/golden/check_wine',
+    'src-tauri/crates/gamelib-launch/tests/fixtures/golden/classes.json',
+    'src-tauri/crates/gamelib-launch/tests/fixtures/recorded/epic_status'
+  ],
+  forbiddenIdentifiers: [
+    'wrapperStoreEnv',
+    'filterGameSettingsForLog',
+    'getCrossoverBottleFolder',
+    'buildGameScopeCommand',
+    'probeGamescopeHelp',
+    'removeQuoteIfNecessary',
+    'isMacSonomaOrHigher',
+    'constructAndUpdateRPC',
+    'ContinueWithFoundWine',
+    'downloadDefaultWine',
+    'checkEpicServiceOffline',
+    'isNetworkLevelFailure',
+    'getFormattedOsName'
+  ],
+  identifierRoot: 'src/backend',
+  flag: 'GAMELIB_LAUNCH'
+}
+
+describe('buildersPortComplete', () => {
+  runSlice(BUILDERS)
+
+  /** True when `code` declares `name` as a function or a function-valued binding (a member or property name is not one). */
+  const definesFunction = (code: string, name: string): boolean =>
+    new RegExp(
+      `(?:\\bfunction\\s*\\*?\\s+${name}\\b|\\b(?:const|let|var)\\s+${name}\\b)`
+    ).test(code)
+
+  const codeOf = (path: string): string => {
+    const f = tsWalk.files.find((x) => x.path === path)
+    if (f === undefined) throw new Error(`${path} was not read by the walk`)
+    return f.code
+  }
+
+  it('launcher.ts defines none of the builder or prepare functions (the Launcher members are bound to shims and adapters)', () => {
+    const code = codeOf('src/backend/launcher.ts')
+    expect(
+      [
+        'setupEnvVars',
+        'setupWrapperEnvVars',
+        'setupWineEnvVars',
+        'setupWrappers',
+        'verifyWinePrefix',
+        'getKnownFixesEnvVariables',
+        'prepareLaunch',
+        'prepareWineLaunch'
+      ].filter((name) => definesFunction(code, name))
+    ).toEqual([])
+  })
+
+  it('utils.ts defines neither isEpicServiceOffline nor checkWineBeforeLaunch (the names live on as a shim and an adapter)', () => {
+    const code = codeOf('src/backend/utils.ts')
+    expect(
+      ['isEpicServiceOffline', 'checkWineBeforeLaunch'].filter((name) =>
+        definesFunction(code, name)
+      )
+    ).toEqual([])
+  })
+
+  describe('planted violations', () => {
+    it('self-test: a function, an arrow binding and an async function are each found, a member and an import are not', () => {
+      expect(definesFunction('export function a() {}', 'a')).toBe(true)
+      expect(definesFunction('export async function a() {}', 'a')).toBe(true)
+      expect(definesFunction('const a = () => 1', 'a')).toBe(true)
+      expect(definesFunction('const o = { a() {} }\no.a()', 'a')).toBe(false)
+      expect(definesFunction("import { a as aShim } from './x'", 'a')).toBe(
+        false
+      )
+      expect(definesFunction('function ab() {}', 'a')).toBe(false)
+    })
+
+    it('self-test: a function the walk did not read fails loudly instead of passing empty', () => {
+      expect(() => codeOf('src/backend/nothing-here.ts')).toThrow(
+        /was not read by the walk/
+      )
+    })
+  })
+})
+
 describe('noRollbackFlag', () => {
   it('anti-vacuity: the walks read real trees', () => {
     assertAtOrAboveFloor(

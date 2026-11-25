@@ -1,8 +1,6 @@
-import type { AbortRegistry } from 'backend/utils/aborthandler/aborthandler'
 import {
   Runner,
   WineInstallation,
-  RpcClient,
   Release,
   GameInfo,
   GameSettings,
@@ -26,43 +24,32 @@ import {
   logDebug
 } from 'backend/logger'
 import { basename, dirname, join, normalize, relative } from 'path'
-import { homedir, release as osRelease } from 'os'
+import { homedir } from 'os'
 import {
   assertContainedPath,
   assertPlausibleAbsolutePath
 } from './sidecar/rendererPathGuard'
 import { resolveTitleForGame } from './utils/gameTitle'
-import { checkEpicServiceOffline } from './utils/epicServiceStatus'
 import * as fileSize from 'filesize'
-import { Client as discordClient } from '@xhayper/discord-rpc'
 import { showDialogBoxModalAuto, type DialogBoxDeps } from './dialog/dialog'
 import type { SendFrontendMessage } from './host/frontendMessage'
 import type { GlobalConfigSlice } from './config'
 import type { GameConfigs } from './game_config'
 import type { Dialogs } from './host/dialogs'
-import type { Notifications } from './host/notifications'
 import type { OpenExternal } from './host/openExternal'
 import type { AppState } from './host/appState'
-import type { AppInfo, AppPaths } from './process/context'
-import { validWine } from './enginewine/wineCore'
+import type { AppPaths } from './process/context'
 import { killBottleWineServerWith } from './enginewine/bottles'
-import {
-  installWineVersion,
-  listWineReleases,
-  updateWineVersionInfos
-} from './enginewine/wineManager'
 import type { CommandRunner, ManagerDeps, Stores } from './services/types'
 import { readdir, lstat, rm } from 'fs/promises'
-import type { AppRuntimeSlice, StatusUpdateDeps } from './appRuntime'
+import type { StatusUpdateDeps } from './appRuntime'
 import EasyDl from 'easydl'
 
-import type { AppSettings, WineVersionInfo } from 'common/types'
+import type { AppSettings } from 'common/types'
 import { isUmuSupported, type UmuDeps } from './utils/compatibility_layers'
-import { isLinux, isMac, isWindows } from './constants/environment'
+import { isWindows } from './constants/environment'
 import { fixAsarPath } from './process/appPaths'
 
-import type LogWriter from 'backend/logger/targetWriter'
-import type { OnlineMonitor } from './online_monitor'
 import type { Game } from 'common/types/game_manager'
 import type { ProcessRunner } from 'backend/process/types'
 import { isStore } from 'common/storeCapabilities'
@@ -180,51 +167,6 @@ async function getWineFromProton(
   )
 
   return { wineVersion, winePrefix }
-}
-
-async function isEpicServiceOffline(
-  deps: {
-    notifications: Pick<Notifications, 'show'>
-    onlineMonitor: Pick<OnlineMonitor, 'isOnline'>
-  },
-  type: 'Epic Games Store' | 'Fortnite' | 'Rocket League' = 'Epic Games Store'
-) {
-  if (!deps.onlineMonitor.isOnline()) return true
-
-  const epicStatusApi = 'https://status.epicgames.com/api/v2/components.json'
-  const notification = {
-    show: () =>
-      deps.notifications.show({
-        title: `${type} ${t('epic.offline-notification-title', 'offline')}`,
-        body: t(
-          'epic.offline-notification-body',
-          'GameLib will maybe not work probably!'
-        )
-      })
-  }
-
-  return checkEpicServiceOffline(
-    {
-      fetchComponents: async () =>
-        (await axiosClient.get<unknown>(epicStatusApi)).data,
-      notify: () => notification.show(),
-      onError: (error) =>
-        logError(
-          ['Failed to get epic service status with', error],
-          LogPrefix.Backend
-        ),
-      onUnreachable: (error) =>
-        logWarning(
-          [
-            'Could not reach the Epic status page (',
-            (error as { code?: unknown } | undefined)?.code ?? error,
-            '), treating Epic as offline for this launch/install check'
-          ],
-          LogPrefix.Backend
-        )
-    },
-    type
-  )
 }
 
 export async function askForceUninstall(
@@ -649,19 +591,6 @@ export function createNecessaryFolders(deps: {
   })
 }
 
-function getFormattedOsName(): string {
-  switch (process.platform) {
-    case 'linux':
-      return 'Linux'
-    case 'win32':
-      return 'Windows'
-    case 'darwin':
-      return 'macOS'
-    default:
-      return 'Unknown OS'
-  }
-}
-
 /** The one setting the Steam library lookups read: where Steam is installed. */
 export type SteamLibrariesDeps = {
   config: Pick<GlobalConfigSlice, 'getSettings'>
@@ -707,47 +636,6 @@ export async function getSteamLibraries(
   return [...libraries, ...result.paths].filter((path) => existsSync(path))
 }
 
-function constructAndUpdateRPC(
-  deps: { appInfo: Pick<AppInfo, 'version'> },
-  gameInfo: GameInfo
-): RpcClient {
-  const client = new discordClient({
-    clientId: '852942976564723722'
-  })
-
-  const versionText = `GameLib ${deps.appInfo.version}`
-
-  const image = gameInfo.art_icon || gameInfo.art_square
-  const title = gameInfo.title
-
-  const overrides = image.startsWith('http')
-    ? {
-        largeImageKey: image,
-        smallImageKey: 'icon_new',
-        largeImageText: title,
-        smallImageText: versionText
-      }
-    : {
-        largeImageKey: 'icon_new',
-        largeImageText: versionText
-      }
-
-  client.on('ready', async () => {
-    await client.user?.setActivity({
-      name: title,
-      type: 0,
-      startTimestamp: Date.now(),
-      state: 'via GameLib on ' + getFormattedOsName(),
-      statusDisplayType: 0, // Use game title for name plate
-      ...overrides
-    })
-  })
-
-  client.login()
-  logInfo('Started Discord Rich Presence', LogPrefix.Backend)
-  return client
-}
-
 const specialCharactersRegex =
   /('\w)|(\\(\w|\d){5})|(\\"(\\.|[^"])*")|[^((0-9)|(a-z)|(A-Z)|\s)]/g // addeed regex for capturings "'s" + unicodes + remove subtitles in quotes
 const cleanTitle = (title: string) =>
@@ -774,18 +662,6 @@ function quoteIfNecessary(stringToQuote: string) {
   }
 
   return String(stringToQuote)
-}
-
-function removeQuoteIfNecessary(stringToUnquote: string) {
-  if (
-    stringToUnquote &&
-    stringToUnquote.startsWith('"') &&
-    stringToUnquote.endsWith('"')
-  ) {
-    return stringToUnquote.replace(/^"+/, '').replace(/"+$/, '')
-  }
-
-  return String(stringToUnquote)
 }
 
 // Quick task 260922-v2e (D3/D4): the probe is referenced work -- its process
@@ -1064,213 +940,6 @@ const getShellPath = (path: string): Promise<string> =>
       expandPathVariables(path, isWindows, process.env, homedir()).trim()
     )
   )
-
-async function ContinueWithFoundWine(
-  deps: { dialogs: Pick<Dialogs, 'showMessageBox'> },
-  selectedWine: string,
-  foundWine: string
-): Promise<{ response: number }> {
-  const { response } = await deps.dialogs.showMessageBox({
-    title: i18next.t('box.warning.wine-change.title', 'Wine not found!'),
-    message: i18next.t('box.warning.wine-change.message', {
-      defaultValue:
-        'We could not find the selected wine version to launch this title ({{selectedWine}}). {{newline}} We found another one, do you want to continue launching using {{foundWine}} ?',
-      newline: '\n',
-      selectedWine: selectedWine,
-      foundWine: foundWine
-    }),
-    buttons: [tOrFallback('box.yes', 'Yes'), tOrFallback('box.no', 'No')]
-  })
-
-  return { response }
-}
-
-export async function downloadDefaultWine(
-  deps: AppRuntimeSlice<'events'> &
-    RustInvokeDeps & {
-      aborts: Pick<AbortRegistry, 'create' | 'delete'>
-      stores: Pick<Stores, 'kvs'>
-      runner: Pick<ProcessRunner, 'run'>
-      paths: Pick<AppPaths, 'toolsPath' | 'userHome' | 'configPath'>
-      config: Pick<
-        GlobalConfigSlice,
-        'getSettings' | 'getAlternativeWine' | 'setSetting'
-      >
-      sendFrontendMessage: SendFrontendMessage
-    }
-) {
-  if (isWindows) return null
-  // refresh wine list (Rust writes the store; a failed feed is logged there)
-  await updateWineVersionInfos(deps, true)
-  // get list of wines on wineDownloaderInfoStore: read from Rust, which wrote it, not from the sidecar's
-  // mirror of the store, which may not have caught up with that write yet
-  const stored = await listWineReleases(deps)
-  const availableWine: WineVersionInfo[] = Array.isArray(stored)
-    ? (stored as WineVersionInfo[])
-    : []
-  const isMacOSUpToDate = isMacSonomaOrHigher()
-  const release = availableWine.find((version) => {
-    if (isLinux) {
-      return version.type === 'Proton-CachyOS'
-    } else if (isMac) {
-      if (!isMacOSUpToDate) {
-        return version.type === 'Wine-Crossover'
-      } else {
-        return version.type === 'Game-Porting-Toolkit'
-      }
-    }
-    return false
-  })
-
-  if (!release) {
-    logError('Could not find default wine version', LogPrefix.Backend)
-    return null
-  }
-
-  // download the latest version (Rust pushes the same `progressOfWineManager` payload the TS closure did)
-  const result = await installWineVersion(deps, release)
-
-  if (result === 'success') {
-    let downloadedWine = null
-    try {
-      const wineList = await deps.config.getAlternativeWine({
-        runner: deps.runner,
-        paths: deps.paths,
-        sendFrontendMessage: deps.sendFrontendMessage
-      })
-      // update the game config to use that wine
-      const firstWine = wineList[0]
-      if (firstWine === undefined) {
-        throw new Error('No alternative wine version found after installing')
-      }
-      downloadedWine = firstWine
-      logInfo(`Changing wine version to ${downloadedWine.name}`)
-      deps.config.setSetting('wineVersion', downloadedWine, deps.stores.kvs)
-    } catch (error) {
-      logError(
-        ['Error when changing wine version to default', error],
-        LogPrefix.Backend
-      )
-    }
-    return downloadedWine
-  }
-  return null
-}
-
-export async function checkWineBeforeLaunch(
-  deps: AppRuntimeSlice<'events'> &
-    RustInvokeDeps & {
-      aborts: Pick<AbortRegistry, 'create' | 'delete'>
-      stores: Pick<Stores, 'kvs'>
-      runner: Pick<ProcessRunner, 'run'>
-      paths: Pick<AppPaths, 'toolsPath' | 'userHome' | 'configPath'>
-      config: Pick<
-        GlobalConfigSlice,
-        'getSettings' | 'getAlternativeWine' | 'setSetting'
-      >
-      gameConfigs: Pick<GameConfigs, 'get'>
-      dialogs: Pick<Dialogs, 'showMessageBox'>
-      sendFrontendMessage: SendFrontendMessage
-    },
-  gameInfo: GameInfo,
-  gameSettings: GameSettings,
-  logWriter: LogWriter
-): Promise<boolean> {
-  const wineIsValid = await validWine(deps, gameSettings.wineVersion)
-
-  if (wineIsValid) {
-    return true
-  } else {
-    const { disableLogs } = deps.config.getSettings()
-    if (!disableLogs) {
-      logError(
-        `Wine version ${gameSettings.wineVersion.name} is not valid, trying another one.`,
-        LogPrefix.Backend
-      )
-    }
-
-    if (gameSettings.verboseLogs) {
-      logWriter.logWarning([
-        'Wine version',
-        gameSettings.wineVersion.name,
-        'is not valid, trying another one.\n'
-      ])
-    }
-
-    // check if the default wine is valid now
-    const { wineVersion: defaultwine } = deps.config.getSettings()
-    const defaultWineIsValid = await validWine(deps, defaultwine)
-    if (defaultWineIsValid) {
-      const { response } = await ContinueWithFoundWine(
-        deps,
-        gameSettings.wineVersion.name,
-        defaultwine.name
-      )
-
-      if (response === 0) {
-        logInfo(`Changing wine version to ${defaultwine.name}`)
-        if (gameSettings.verboseLogs) {
-          logWriter.logInfo([
-            'Changing wine version to',
-            defaultwine.name,
-            '\n'
-          ])
-        }
-        gameSettings.wineVersion = defaultwine
-        deps.gameConfigs
-          .get(gameInfo.app_name)
-          .setSetting('wineVersion', defaultwine)
-        return true
-      } else {
-        logInfo('User canceled the launch', LogPrefix.Backend)
-        return false
-      }
-    } else {
-      const wineList = await deps.config.getAlternativeWine({
-        runner: deps.runner,
-        paths: deps.paths,
-        sendFrontendMessage: deps.sendFrontendMessage
-      })
-      const firstFoundWine = wineList[0]
-
-      const isValidWine =
-        firstFoundWine !== undefined && (await validWine(deps, firstFoundWine))
-
-      if (!wineList.length || !firstFoundWine || !isValidWine) {
-        const firstFoundWine = await downloadDefaultWine(deps)
-        if (firstFoundWine) {
-          logInfo(`Changing wine version to ${firstFoundWine.name}`)
-          gameSettings.wineVersion = firstFoundWine
-          deps.gameConfigs
-            .get(gameInfo.app_name)
-            .setSetting('wineVersion', firstFoundWine)
-          return true
-        }
-      }
-
-      if (firstFoundWine && isValidWine) {
-        const { response } = await ContinueWithFoundWine(
-          deps,
-          gameSettings.wineVersion.name,
-          firstFoundWine.name
-        )
-
-        if (response === 0) {
-          logInfo(`Changing wine version to ${firstFoundWine.name}`)
-          gameSettings.wineVersion = firstFoundWine
-          deps.gameConfigs
-            .get(gameInfo.app_name)
-            .setSetting('wineVersion', firstFoundWine)
-          return true
-        } else {
-          logInfo('User canceled the launch', LogPrefix.Backend)
-          return false
-        }
-      }
-    }
-  }
-  return false
-}
 
 const RSYNC_PROBE_TIMEOUT_MS = 5_000
 const ROSETTA_PROBE_TIMEOUT_MS = 10_000
@@ -1611,24 +1280,6 @@ export async function checkRosettaInstall(deps: {
       LogPrefix.Backend
     )
   }
-}
-
-export function isMacSonomaOrHigher(): boolean {
-  if (!isMac) return false
-  logInfo('Checking if macOS is Sonoma or higher', LogPrefix.Backend)
-
-  const release = osRelease()
-  const [major] = release.split('.').map(Number)
-  const isMacSonomaOrHigher = major !== undefined && major >= 14
-
-  logInfo(
-    `macOS is ${
-      isMacSonomaOrHigher ? 'Sonoma or higher' : 'not Sonoma or higher'
-    }`,
-    LogPrefix.Backend
-  )
-
-  return isMacSonomaOrHigher
 }
 
 function sendGameStatusUpdate(deps: StatusUpdateDeps, payload: GameStatus) {
@@ -1973,7 +1624,6 @@ export const writeConfig = (
 export {
   errorHandler,
   getCurrentChangelog,
-  isEpicServiceOffline,
   showItemInFolder,
   removeSpecialcharacters,
   clearCache,
@@ -1986,9 +1636,7 @@ export {
   archSpecificBinary,
   MACOS_ONEDIR_RUNNERS,
   formatEpicStoreUrl,
-  constructAndUpdateRPC,
   quoteIfNecessary,
-  removeQuoteIfNecessary,
   detectVCRedist,
   VC_REDIST_PROBE_TIMEOUT_MS,
   shutdownWine,

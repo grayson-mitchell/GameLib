@@ -15,7 +15,8 @@
  * on the command line beside it; that is recorded in the debug record as an observation, not asserted, because
  * the shell replay of the logged command (re-run 1) ran with that flag and started the game.
  *
- * Spawns nothing. Platform flags are mocked per case via jest.isolateModules.
+ * Spawns nothing. Platform flags are mocked per case via jest.isolateModules. The env builder is the test-only copy in
+ * `wine/__tests__/oracle/envBuildersFixture.ts` (88.1-17).
  */
 import type { GameSettings } from 'common/types'
 
@@ -78,8 +79,11 @@ function loadWith(platform: { isMac: boolean; isLinux: boolean }) {
       ...jest.requireActual('backend/constants/environment'),
       ...platform
     }))
+    // `launcher.ts` no longer builds the env (88.1-17 deleted it, Rust owns it); the verbatim test-only copy stands in
+    // for it, so the RF1 invariants keep a TS reading until that copy goes with the command runner twin in 88.2.
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { setupWineEnvVars } = require('backend/launcher')
+    const fixture = require('backend/wine/__tests__/oracle/envBuildersFixture')
+    const { setupWineEnvVars } = fixture
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const compat = require('backend/utils/compatibility_layers')
     setup = (settings, id) =>

@@ -135,9 +135,10 @@ describe('wineDownloadsPortComplete', () => {
 /**
  * 87-24, D-06, D-14, D-15 and D-22: the wine core is Rust's (87-21 ported it, 87-24 switched its callers).
  * The renderer's `wine.isValidVersion` is a native `wine` channel and `validWine` is one scheduled shim
- * (`enginewine/wineCore.ts`). No TS file is deleted outright: the sync env builders (`setupEnvVars`,
- * `setupWineEnvVars`) and the command runner's `runWineCommand` stay as scheduled twins pinned by the
- * same goldens until Phase 88 (D-22), so the fixtures and the wineCore oracle that vector them are kept.
+ * (`enginewine/wineCore.ts`). No TS file is deleted outright: the command runner's `runWineCommand` stays as a
+ * scheduled twin pinned by the same goldens until 88.2 (D-22), so the fixtures and the wineCore oracle that vector it are
+ * kept. The sync env builders (`setupEnvVars`, `setupWineEnvVars`) were deleted from `launcher.ts` in 88.1-17; the oracle
+ * drives the runner through a test-only copy (`wine/__tests__/oracle/envBuildersFixture.ts`) that goes with the twin.
  * The one removed export is `validWine` from `launcher.ts`, which cannot be a forbidden identifier because
  * the shim carries the name; it is asserted below instead.
  */
@@ -658,12 +659,14 @@ describe('noRollbackFlag', () => {
  * shape, wiring); `deletedBy` is held to 88..98 for every row but is not part of the key, because a later plan may move a
  * deleting phase to the latest phase among a row's callers without changing what survives.
  *
- * 73 rows (78 until 88.1-15) and three wiring helpers. The plan's table named 70; the 87-56a and 87-56b splits added five rows the plan was
+ * 69 rows (78 until 88.1-15, 73 until 88.1-17) and three wiring helpers. The plan's table named 70; the 87-56a and 87-56b splits added five rows the plan was
  * written before (`resolveEngineToolSettings`, `resolveNonCrossoverEngine`, `ensureFallbackEngine`, `crossoverBinDirSync`,
  * `parseEngineOverride`), and two rows were created by plans 87-42 (`cancelFallbackBottle`, a bottles shim) and 87-54
  * (`bridgeDeadlines`, the D-24 view over the bridge deadline callbacks) that the plan's table did not list. Plan 87-70
  * added the 78th, `removeGameBottle`, on the user's 2026-11-24 gap decision 5. Plan 88.1-15 deleted five launcher-only rows
  * (`isRuntimeInstalled`, `downloadRuntime`, `dxvkInstallRemove`, `winetricksListInstalled`, `armEngineLaunchDeadline`), 78 to 73.
+ * Plan 88.1-17 deleted four more: the two launcher env builder twins (`setupEnvVars`, `setupWineEnvVars`) and the two wine
+ * manager shims `downloadDefaultWine` called (`installWineVersion`, `listWineReleases`), 73 to 69.
  */
 type ScheduleShape = (typeof SCHEDULE)[number]['shape']
 
@@ -687,15 +690,9 @@ const rowsOf = (
 const EXPECTED_SURVIVORS: readonly Survivor[] = [
   ...rowsOf(`${ENGINEWINE}/wineManager.ts`, 'shim', [
     'updateWineVersionInfos',
-    'installWineVersion',
-    'listWineReleases',
     'wineReleasesInfoReady'
   ]),
   ...rowsOf(`${ENGINEWINE}/wineCore.ts`, 'shim', ['validWine']),
-  ...rowsOf('src/backend/launcher.ts', 'twin', [
-    'setupEnvVars',
-    'setupWineEnvVars'
-  ]),
   ...rowsOf('src/backend/commandRunner.ts', 'twin', ['createCommandRunner']),
   ...rowsOf(`${ENGINEWINE}/wineDiscovery.ts`, 'shim', [
     'discoverAlternativeWine'
@@ -817,8 +814,6 @@ const D23_RESOLVERS: readonly string[] = [
 
 /** D-22: the wine command core's twins that live outside `enginewine/twin.ts`. */
 const D22_TWINS: readonly string[] = [
-  'setupEnvVars',
-  'setupWineEnvVars',
   'createCommandRunner',
   'getDefaultWineBinary'
 ]
@@ -926,13 +921,13 @@ describe('engineWineSurvivors', () => {
       !f.path.startsWith('src/backend/testUtils/')
   )
 
-  it('the table holds 73 rows, three of them naming a wiring helper (anti-vacuity)', () => {
+  it('the table holds 69 rows, three of them naming a wiring helper (anti-vacuity)', () => {
     assertAtOrAboveFloor(
       'EXPECTED_SURVIVORS rows',
       EXPECTED_SURVIVORS.length,
-      73
+      69
     )
-    expect(EXPECTED_SURVIVORS).toHaveLength(73)
+    expect(EXPECTED_SURVIVORS).toHaveLength(69)
     expect(
       EXPECTED_SURVIVORS.filter((r) => r.wiring).map((r) => r.name)
     ).toEqual(['toggleDXVK', 'engineSelectionView', 'armBridgeDeadline'])
@@ -967,7 +962,7 @@ describe('engineWineSurvivors', () => {
     expect(D23_RESOLVERS).toHaveLength(10)
   })
 
-  it('D-22: the twins outside enginewine/twin.ts are exactly setupEnvVars, setupWineEnvVars, createCommandRunner and getDefaultWineBinary', () => {
+  it('D-22: the twins outside enginewine/twin.ts are exactly createCommandRunner and getDefaultWineBinary (88.1-17 deleted the two env builders)', () => {
     const outside = actual.filter(
       (r) => r.shape === 'twin' && r.file !== `${ENGINEWINE}/twin.ts`
     )

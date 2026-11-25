@@ -52,13 +52,14 @@ import { snapshotTree } from 'backend/testUtils/engineWineOracle/treeSnapshot'
 import { createCommandRunner } from 'backend/commandRunner'
 import {
   setupEnvVars,
-  setupWineEnvVars,
-  verifyWinePrefix
-} from 'backend/launcher'
+  setupWineEnvVars
+} from 'backend/wine/__tests__/oracle/envBuildersFixture'
 import * as environment from 'backend/constants/environment'
-import { isMacSonomaOrHigher } from 'backend/utils'
+import type { AppPaths } from 'backend/process/context'
+import type { CommandRunner } from 'backend/services/types'
 import { getUmuPath, isUmuSupported } from 'backend/utils/compatibility_layers'
 import type {
+  ExecResult,
   GameSettings,
   WineCommandArgs,
   WineInstallation
@@ -74,12 +75,23 @@ const ENV_FLOOR = 40
 const VALID_FLOOR = 14
 
 /**
+ * `isMacSonomaOrHigher` as `utils.ts` had it until 88.1-17 deleted it (the Rust wine core owns the Sonoma rule now), minus
+ * its two log lines. It reads `isMac` through the environment module and `release` through the `os` module object at
+ * call time, so `mockPlatform` and the `os.release()` spy both reach it.
+ */
+function isMacSonomaOrHigher(): boolean {
+  if (!environment.isMac) return false
+  const [major] = osModule().release().split('.').map(Number)
+  return major !== undefined && major >= 14
+}
+
+/**
  * `validWine` as the TS had it before Phase 87 (87-24, D-22): the launcher's function is now a shim over
  * the Rust `wine_valid` (`enginewine/wineCore.ts`), so the recorded vectors are driven through this
  * verbatim body, the way the removed handler bodies live in `wineManager.oracle.test.ts`. It reads
  * `isMac` through the environment module at call time, as the launcher did, so `mockPlatform` reaches it.
  * The Rust replay of the same vectors is `golden_wine_core.rs`; this copy and the vectors stay until
- * Phase 88 deletes the twins.
+ * the command runner twin goes in 88.2.
  */
 function validWine(wineVersion: WineInstallation): Promise<boolean> {
   if (!wineVersion) {
@@ -97,13 +109,50 @@ function validWine(wineVersion: WineInstallation): Promise<boolean> {
 }
 
 /**
- * The `rustInvoke` leg of the launcher's `validWine` shim, answered by the TS copy above, so
- * `verifyWinePrefix` (which calls the shim) is driven over the same rule.
+ * The wine prefix check as `launcher.ts` had it until 88.1-17 deleted it (the Rust wine core owns it now), kept here as the
+ * async stand-in the command runner twin's `wine.verifyWinePrefix` binding calls. The body is the original's, with its
+ * `validWine` shim call answered by the copy above and its log line dropped; the two spawns it makes through the runner
+ * are what the `missing-prefix-verify` and `partial-proton-prefix-verify` goldens record.
  */
-const oracleRustInvoke = (
-  _channel: string,
-  args: unknown[]
-): Promise<unknown> => validWine(args[0] as WineInstallation)
+async function verifyWinePrefixStandIn(
+  deps: {
+    commandRunner: Pick<CommandRunner, 'runWineCommand'>
+    paths: Pick<AppPaths, 'defaultUmuPath' | 'sharedWinePrefix'>
+  },
+  settings: GameSettings
+): Promise<{ res: ExecResult }> {
+  const { winePrefix = deps.paths.sharedWinePrefix, wineVersion } = settings
+
+  if (!(await validWine(wineVersion))) {
+    return { res: { stdout: '', stderr: '' } }
+  }
+
+  if (wineVersion.type === 'crossover') {
+    return { res: { stdout: '', stderr: '' } }
+  }
+
+  if (!existsSync(winePrefix) && !(await isUmuSupported(deps, settings))) {
+    mkdirSync(winePrefix, { recursive: true })
+  }
+
+  // If the registry isn't available yet, things like DXVK installers might fail. So we have to wait on wineboot then
+  const systemRegPath =
+    wineVersion.type === 'proton'
+      ? join(winePrefix, 'pfx', 'system.reg')
+      : join(winePrefix, 'system.reg')
+  const haveToWait = !existsSync(systemRegPath)
+
+  const result = await deps.commandRunner.runWineCommand({
+    commandParts: (await isUmuSupported(deps, settings))
+      ? ['createprefix']
+      : ['wineboot', '--init'],
+    wait: haveToWait,
+    gameSettings: settings,
+    protonVerb: 'run',
+    skipPrefixCheckIKnowWhatImDoing: true
+  })
+  return { res: result }
+}
 
 /** The `process.env` keys the two env builders read. */
 const ENV_KEYS = [
@@ -925,7 +974,7 @@ describeSkipOnWindows('wine core oracle (87-08)', () => {
               wine: {
                 getDefaultSettings: () => settings as GameSettings,
                 verifyWinePrefix: (s) =>
-                  verifyWinePrefix(
+                  verifyWinePrefixStandIn(
                     {
                       commandRunner: {
                         runWineCommand: (a) => {
@@ -933,8 +982,7 @@ describeSkipOnWindows('wine core oracle (87-08)', () => {
                           return self.runner.runWineCommand(a)
                         }
                       },
-                      paths: profile.paths,
-                      requestRustInvoke: oracleRustInvoke as never
+                      paths: profile.paths
                     },
                     s
                   ),

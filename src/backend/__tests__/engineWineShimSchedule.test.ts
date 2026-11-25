@@ -97,20 +97,9 @@ interface ScheduleRow extends ShimRow {
   deletedBy: number
 }
 
-/** Every non-test importer of `launcher.ts` and of `commandRunner.ts` (the twin check is per file). */
-const LAUNCHER_IMPORTERS: readonly string[] = [
-  // 88.1-15: the interim prepare adapters take the `LauncherDeps` type.
-  'src/backend/launchAdapters.ts',
-  'src/backend/services/types.ts',
-  // 88.1-08: bootstrap.ts no longer imports `launcher.ts` (its command-runner `wine` binding goes through the shims).
-  'src/backend/storeManagers/index.ts',
-  // 88.1-01: the launch oracle's fake deps import the `LauncherDeps` type to build the real Launcher over fakes.
-  'src/backend/testUtils/launchOracle/fakeLauncherDeps.ts'
-]
 /** Every non-test importer of `utils/compatibility_layers.ts` (the twin check is per file). */
 const COMPATIBILITY_LAYERS_IMPORTERS: readonly string[] = [
   'src/backend/config.ts',
-  'src/backend/launcher.ts',
   'src/backend/sidecar/bootstrap.ts',
   'src/backend/storeManagers/gog/games.ts',
   'src/backend/storeManagers/legendary/games.ts',
@@ -210,8 +199,7 @@ const KNOWN_FIX_SHIM_IMPORTERS: readonly string[] = [
 ]
 /**
  * Every non-test importer of `launchrust/knownFixTwins.ts` (the check is per file, so every row of that file lists them
- * all): the launcher's `installFixes` and `getKnownFixesEnvVariables` and its env log line, and storeManagerCommon's
- * `withKnownFixEnv` (88-13), and the Steam bridge's known-fix application (the profile and launch-override reads, the
+ * all): storeManagerCommon's `withKnownFixEnv` (88-13; the launcher's own reads left with its builders in 88.1-17), and the Steam bridge's known-fix application (the profile and launch-override reads, the
  * env lookup) and the steamclient layer install (the overlay archive reader) (88-14), and the Steam library's
  * synchronous readers (the DRM and macArch known-fix hints, the overlay launch gate, the shared-redist install)
  * (88-15), and the two build scripts that write and verify overlay archives (`readOverlayTarGz`, `buildOverlayTarGz`),
@@ -220,7 +208,6 @@ const KNOWN_FIX_SHIM_IMPORTERS: readonly string[] = [
 const KNOWN_FIX_TWIN_IMPORTERS: readonly string[] = [
   'meta/buildOverlayArchive.ts',
   'meta/buildSteamClientLayerArchive.ts',
-  'src/backend/launcher.ts',
   'src/backend/storeManagers/steam/bridge/drm/steamclientLayerInstall.ts',
   'src/backend/storeManagers/steam/bridge/sharedRedistInstall.ts',
   'src/backend/storeManagers/steam/bridgeKnownFixes.ts',
@@ -316,55 +303,25 @@ const COMMAND_RUNNER_IMPORTERS: readonly string[] = [
  */
 export const SCHEDULE: readonly ScheduleRow[] = [
   // 87-18 (D-15): the launcher's pre-launch runtime step. Phase 88 moves launch into Rust and deletes both.
-  // 87-20 (D-15): the wine manager. utils.ts's default-wine download (checkWineBeforeLaunch, reached from the
-  // launch path and the bottle provisioning) and the `releasesInfoReady` listener go with Phase 88's launch
-  // port; the sidecar's refresh at the `releasesInfoReady` listener goes with the config in Phase 98. `callers`
-  // lists every importer of the file (the check is per file), so each of the four rows names both (87-26: config.ts
-  // no longer imports it, the empty-list refresh inside `getAlternativeWine` is Rust's own).
+  // 87-20 (D-15): the wine manager. The `releasesInfoReady` listener's shim goes with the config in Phase 98. `callers`
+  // lists every importer of the file (the check is per file), so each row names the same set (87-26: config.ts no longer
+  // imports it, the empty-list refresh inside `getAlternativeWine` is Rust's own). 88.1-17 deleted `installWineVersion`
+  // and `listWineReleases` with `downloadDefaultWine` (the wine self-heal is Rust's since 88.1-16), which also took
+  // `utils.ts` off the importer list; `updateWineVersionInfos` has no TS caller left and stays until the 98 sweep.
   {
     name: 'updateWineVersionInfos',
     file: 'src/backend/enginewine/wineManager.ts',
     shape: 'shim',
     channel: 'RUST_WINE_MANAGER_REFRESH',
-    callers: [
-      'src/backend/sidecar/engineWineResolvers.ts',
-      'src/backend/utils.ts'
-    ],
+    callers: ['src/backend/sidecar/engineWineResolvers.ts'],
     deletedBy: 98
-  },
-  {
-    name: 'installWineVersion',
-    file: 'src/backend/enginewine/wineManager.ts',
-    shape: 'shim',
-    channel: 'RUST_WINE_MANAGER_INSTALL',
-    callers: [
-      'src/backend/sidecar/engineWineResolvers.ts',
-      'src/backend/utils.ts'
-    ],
-    // Last call site: utils.ts:1131, `downloadDefaultWine`, which 88.1 ports (D-28, D-30); the resolver caller goes with the same sub-phase.
-    deletedBy: 88.1
-  },
-  {
-    name: 'listWineReleases',
-    file: 'src/backend/enginewine/wineManager.ts',
-    shape: 'shim',
-    channel: 'RUST_WINE_MANAGER_LIST',
-    callers: [
-      'src/backend/sidecar/engineWineResolvers.ts',
-      'src/backend/utils.ts'
-    ],
-    // Last call site: utils.ts:1107, `downloadDefaultWine`, which 88.1 ports (D-28, D-30).
-    deletedBy: 88.1
   },
   {
     name: 'wineReleasesInfoReady',
     file: 'src/backend/enginewine/wineManager.ts',
     shape: 'shim',
     channel: 'RUST_WINE_RELEASES_INFO_READY',
-    callers: [
-      'src/backend/sidecar/engineWineResolvers.ts',
-      'src/backend/utils.ts'
-    ],
+    callers: ['src/backend/sidecar/engineWineResolvers.ts'],
     // Only caller: the `releasesInfoReady` listener in engineWineResolvers.ts:426, emitted by utils/releases.ts; not a launch path, so it goes with the resolvers in 98 (88-02, RESEARCH open question 8).
     deletedBy: 98
   },
@@ -375,11 +332,7 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     file: 'src/backend/enginewine/wineCore.ts',
     shape: 'shim',
     channel: 'RUST_WINE_VALID',
-    callers: [
-      'src/backend/launcher.ts',
-      'src/backend/sidecar/bootstrap.ts',
-      'src/backend/utils.ts'
-    ],
+    callers: ['src/backend/launcher.ts', 'src/backend/sidecar/bootstrap.ts'],
     // Last reach: the command runner's `validWine` binding (commandRunner.ts:302, sidecar/bootstrap.ts:1893), ported in 88.2 (D-30).
     deletedBy: 88.2
   },
@@ -865,30 +818,14 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     callers: COMPATIBILITY_LAYERS_IMPORTERS,
     deletedBy: 98
   },
-  // 87-24 (D-22 deviation, for the checker and the operator): the sync `setupEnvVars` and `setupWineEnvVars` (called
-  // synchronously from the launch paths) and the command runner's `runWineCommand` (its `onSpawn` hands callers a live
-  // ChildHandle) cannot become same-signature async shims without rewriting Phase 88-92 launch code, so these three
-  // TS twins stay, pinned to the Rust `wine_env` and `wine_command` goldens that one oracle test records and both languages replay.
+  // 87-24 (D-22 deviation, for the checker and the operator): the command runner's `runWineCommand` (its `onSpawn` hands
+  // callers a live ChildHandle) cannot become a same-signature async shim without rewriting Phase 88-92 launch code, so
+  // this TS twin stays, pinned to the Rust `wine_command` goldens that one oracle test records and both languages replay.
+  // 88.1-17: the sync env builders it awaited (`setupEnvVars`, `setupWineEnvVars`) were deleted from `launcher.ts`; the
+  // oracle drives the runner through a test-only copy (`wine/__tests__/oracle/envBuildersFixture.ts`) pinned to the
+  // `wine_env.json` vectors, and both go with this twin in 88.2.
   // 87-57: the oracle harness (`testUtils/engineWineOracle/`) is trimmed to what that one oracle test imports and is deleted with
-  // these twins' vector test in Phase 88.
-  {
-    name: 'setupEnvVars',
-    file: 'src/backend/launcher.ts',
-    shape: 'twin',
-    vectors: 'src/backend/wine/__tests__/oracle/wineCore.oracle.test.ts',
-    callers: LAUNCHER_IMPORTERS,
-    // Twin of the launcher's env builder, ported to Rust in 88.1 (D-30).
-    deletedBy: 88.1
-  },
-  {
-    name: 'setupWineEnvVars',
-    file: 'src/backend/launcher.ts',
-    shape: 'twin',
-    vectors: 'src/backend/wine/__tests__/oracle/wineCore.oracle.test.ts',
-    callers: LAUNCHER_IMPORTERS,
-    // Twin of the launcher's wine env builder, ported to Rust in 88.1 (D-30).
-    deletedBy: 88.1
-  },
+  // this twin's vector test.
   {
     name: 'createCommandRunner',
     file: 'src/backend/commandRunner.ts',
@@ -1234,9 +1171,9 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     // the Steam bottle provisioning leaves in 96
     deletedBy: 96
   },
-  // 88-13 (87 D-24): the synchronous known-fix twins, for callers 88 cannot make async. `installFixes` and
-  // `getKnownFixesEnvVariables` read the tier-1 fix inline in the launcher until 88.1/97 move them; the env log line goes
-  // with them. `withKnownFixEnv` builds the settings storeManagerCommon launches with, which the sideload and
+  // 88-13 (87 D-24): the synchronous known-fix twins, for callers 88 cannot make async. The launcher's `installFixes`
+  // and `getKnownFixesEnvVariables` read the tier-1 fix inline until 88.1-17 deleted them; the Steam bridge keeps its own
+  // reads until 97. `withKnownFixEnv` builds the settings storeManagerCommon launches with, which the sideload and
   // store-manager phase (92) replaces. Each is pinned to the Rust `golden/reader` and `golden/overlay_install` answers by
   // `knownFixTwins.vectors.test.ts`.
   {
@@ -2017,17 +1954,9 @@ describe('engineWineShimSchedule detector (planted fixtures)', () => {
       expect(rowsDueIn(rows, 88)).toEqual([])
       expect(rowsDueIn([], 98)).toEqual([])
       expect(rowsDueIn(SCHEDULE, 88)).toEqual([])
-      // 88.1-15 retired every row the TS prepare steps called; what is left is what 88.1-16 and 88.1-17 remove.
-      expect(
-        rowsDueIn(SCHEDULE, 88.1)
-          .map((r) => r.name)
-          .sort()
-      ).toEqual([
-        'installWineVersion',
-        'listWineReleases',
-        'setupEnvVars',
-        'setupWineEnvVars'
-      ])
+      // 88.1-15 retired every row the TS prepare steps called, 88.1-16 the Epic status and wine self-heal rows, and 88.1-17
+      // the two env builder twins and the two wine manager shims `downloadDefaultWine` called: nothing is due in 88.1 now.
+      expect(rowsDueIn(SCHEDULE, 88.1)).toEqual([])
       expect(rowsDueIn(SCHEDULE, 88.2).length).toBeGreaterThanOrEqual(2)
     })
 

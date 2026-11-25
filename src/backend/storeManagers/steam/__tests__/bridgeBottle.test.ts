@@ -23,7 +23,7 @@ import {
 import { readFileSync as readRealFile } from 'node:fs'
 import { dirname as dirnameOf, join as joinPath } from 'node:path'
 import { createContainedHomeAppPaths } from 'backend/testUtils/testAppPaths'
-import { checkWineBeforeLaunch, downloadFile } from 'backend/utils'
+import { downloadFile } from 'backend/utils'
 import { createTestStores } from 'backend/testUtils/testServices'
 import { createSteamBottle, DEFAULT_BRIDGE_BOTTLE_NAME } from '../bottle'
 import {
@@ -71,7 +71,6 @@ jest.mock('../stores', () => ({
 }))
 
 jest.mock('backend/utils', () => ({
-  checkWineBeforeLaunch: jest.fn(),
   downloadFile: jest.fn()
 }))
 
@@ -161,7 +160,6 @@ const spawnDeps = {
   runner: createScriptedRunner([])
 }
 const mockedDownloadFile = downloadFile as jest.Mock
-const mockedCheckWineBeforeLaunch = checkWineBeforeLaunch as jest.Mock
 // The legacy launcher runWineCommand is gone (66.1-24); the bottle code reaches the command runner.
 const mockedRunWineCommand = jest.fn()
 
@@ -184,7 +182,6 @@ describe('bottle.ts', () => {
     mockedSet.mockReset()
     mockedSpawnAsync.mockReset()
     mockedDownloadFile.mockReset()
-    mockedCheckWineBeforeLaunch.mockReset()
     mockedRunWineCommand.mockReset()
 
     // Sensible defaults so provisionBottle()/dispatch tests that don't care
@@ -194,7 +191,6 @@ describe('bottle.ts', () => {
     })
     mockedSpawnAsync.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
     mockedDownloadFile.mockResolvedValue(undefined)
-    mockedCheckWineBeforeLaunch.mockResolvedValue(true)
     mockedRunWineCommand.mockResolvedValue({ stdout: '', stderr: '', code: 0 })
     // Default cxbottle.conf contents to a win64 prefix so the new
     // GAP-17-CEF-RENDER pre-guard in provisionBottle() (bottleWineArch check)

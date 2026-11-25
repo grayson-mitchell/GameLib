@@ -17,7 +17,7 @@ import {
   rmSync
 } from 'graceful-fs'
 import { createContainedHomeAppPaths } from 'backend/testUtils/testAppPaths'
-import { checkWineBeforeLaunch, downloadFile } from 'backend/utils'
+import { downloadFile } from 'backend/utils'
 import {
   createSteamBottle,
   getBottleSteamappsDir,
@@ -58,7 +58,6 @@ jest.mock('../stores', () => ({
 }))
 
 jest.mock('backend/utils', () => ({
-  checkWineBeforeLaunch: jest.fn(),
   downloadFile: jest.fn()
 }))
 
@@ -120,7 +119,6 @@ const steamBottle = createSteamBottle({
 // Recording fakes handed to the code under test through its deps slice (66.1 R5).
 const mockedSpawnAsync = jest.fn()
 const mockedDownloadFile = downloadFile as jest.Mock
-const mockedCheckWineBeforeLaunch = checkWineBeforeLaunch as jest.Mock
 const mockedRunWineCommand = jest.fn()
 
 const defaultWine: WineInstallation = {
@@ -142,7 +140,6 @@ describe('bottle.ts', () => {
     mockedSet.mockReset()
     mockedSpawnAsync.mockReset()
     mockedDownloadFile.mockReset()
-    mockedCheckWineBeforeLaunch.mockReset()
     mockedRunWineCommand.mockReset()
 
     // Sensible defaults so provisionBottle()/dispatch tests that don't care
@@ -152,7 +149,6 @@ describe('bottle.ts', () => {
     })
     mockedSpawnAsync.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
     mockedDownloadFile.mockResolvedValue(undefined)
-    mockedCheckWineBeforeLaunch.mockResolvedValue(true)
     mockedRunWineCommand.mockResolvedValue({ stdout: '', stderr: '', code: 0 })
     // Default cxbottle.conf contents to a win64 prefix so the new
     // GAP-17-CEF-RENDER pre-guard in provisionBottle() (bottleWineArch check)

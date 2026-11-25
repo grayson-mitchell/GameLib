@@ -55,14 +55,11 @@ const OVERRIDES_CALLERS = [
 ] as const
 
 /**
- * `anticheat.ts` is imported by the sidecar boot (the `releasesInfoReady` listener calls the status
- * and download shims) and by the launcher (the launch-time lookup). `callers` is per FILE, so all
- * three rows list both importers.
+ * `anticheat.ts` is imported by the sidecar boot alone (the `releasesInfoReady` listener calls the status
+ * and download shims); the launcher's launch-time lookup left with `prepareWineLaunch` in 88.1-15. `callers` is
+ * per FILE, so all three rows list the one importer.
  */
-const ANTICHEAT_CALLERS = [
-  'src/backend/launcher.ts',
-  'src/backend/sidecar/bootstrap.ts'
-] as const
+const ANTICHEAT_CALLERS = ['src/backend/sidecar/bootstrap.ts'] as const
 
 /**
  * Every importer of `info/wiki.ts` (86-23); `callers` is checked per file, so the two wiki rows share it.

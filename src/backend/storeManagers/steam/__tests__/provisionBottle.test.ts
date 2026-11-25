@@ -21,7 +21,7 @@ import {
 // R6 "no Windows Steam installer reference in provisionBridgeBottle" guard
 // below. Distinct local name so it never collides with the mocked
 // `graceful-fs` `readFileSync` import above (manifest.test.ts precedent).
-import { checkWineBeforeLaunch, downloadFile } from 'backend/utils'
+import { downloadFile } from 'backend/utils'
 import { createSteamBottle } from '../bottle'
 import { getBottleDir } from 'backend/enginewine/twin'
 import { createTestSteamLaunchRuntime } from 'backend/testUtils/testSteamLaunchRuntime'
@@ -53,7 +53,6 @@ jest.mock('../stores', () => ({
 }))
 
 jest.mock('backend/utils', () => ({
-  checkWineBeforeLaunch: jest.fn(),
   downloadFile: jest.fn()
 }))
 
@@ -122,7 +121,6 @@ const steamBottle = createSteamBottle({
 const mockedSpawnAsync = jest.fn()
 const mockedRunWineCommand = jest.fn()
 const mockedDownloadFile = downloadFile as jest.Mock
-// checkWineBeforeLaunch is mocked in this file, so the store slices are never read.
 const provisionDeps = {
   sendFrontendMessage: jest.fn(),
   // Reads through the recording config mock (66.3-08: provisionBottle takes the slice).
@@ -135,7 +133,6 @@ const provisionDeps = {
   spawnAsync: mockedSpawnAsync,
   commandRunner: { runWineCommand: mockedRunWineCommand }
 } as unknown as Parameters<typeof provisionBottle>[0]
-const mockedCheckWineBeforeLaunch = checkWineBeforeLaunch as jest.Mock
 
 const defaultWine: WineInstallation = {
   bin: '/usr/bin/wine',
@@ -156,7 +153,6 @@ describe('bottle.ts', () => {
     mockedSet.mockReset()
     mockedSpawnAsync.mockReset()
     mockedDownloadFile.mockReset()
-    mockedCheckWineBeforeLaunch.mockReset()
     mockedRunWineCommand.mockReset()
 
     // Sensible defaults so provisionBottle()/dispatch tests that don't care
@@ -166,7 +162,6 @@ describe('bottle.ts', () => {
     })
     mockedSpawnAsync.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
     mockedDownloadFile.mockResolvedValue(undefined)
-    mockedCheckWineBeforeLaunch.mockResolvedValue(true)
     mockedRunWineCommand.mockResolvedValue({ stdout: '', stderr: '', code: 0 })
     // Default cxbottle.conf contents to a win64 prefix so the new
     // GAP-17-CEF-RENDER pre-guard in provisionBottle() (bottleWineArch check)

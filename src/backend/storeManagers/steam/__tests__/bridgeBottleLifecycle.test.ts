@@ -34,7 +34,7 @@ import {
 import { readFileSync as readRealFile } from 'node:fs'
 import { basename as basenameOf, join as joinPath } from 'node:path'
 import { createContainedHomeAppPaths } from 'backend/testUtils/testAppPaths'
-import { checkWineBeforeLaunch, downloadFile } from 'backend/utils'
+import { downloadFile } from 'backend/utils'
 import * as bottlesModule from 'backend/enginewine/bottles'
 import { ENGINE_PINS, getBottleDir } from 'backend/enginewine/twin'
 import {
@@ -95,7 +95,6 @@ jest.mock('../stores', () => ({
 }))
 
 jest.mock('backend/utils', () => ({
-  checkWineBeforeLaunch: jest.fn(),
   downloadFile: jest.fn()
 }))
 
@@ -228,7 +227,6 @@ const spawnDeps = withSafety()
 const depsWithSafety = (options: FakeSafetyOptions) =>
   withSafety(fakeSafetyRustInvoke(options).requestRustInvoke)
 const mockedDownloadFile = downloadFile as jest.Mock
-const mockedCheckWineBeforeLaunch = checkWineBeforeLaunch as jest.Mock
 const mockedRunWineCommand = jest.fn()
 
 const defaultWine: WineInstallation = {
@@ -250,7 +248,6 @@ describe('bottle.ts', () => {
     mockedSet.mockReset()
     mockedSpawnAsync.mockReset()
     mockedDownloadFile.mockReset()
-    mockedCheckWineBeforeLaunch.mockReset()
     mockedRunWineCommand.mockReset()
 
     // Sensible defaults so provisionBottle()/dispatch tests that don't care
@@ -260,7 +257,6 @@ describe('bottle.ts', () => {
     })
     mockedSpawnAsync.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
     mockedDownloadFile.mockResolvedValue(undefined)
-    mockedCheckWineBeforeLaunch.mockResolvedValue(true)
     mockedRunWineCommand.mockResolvedValue({ stdout: '', stderr: '', code: 0 })
     // Default cxbottle.conf contents to a win64 prefix so the new
     // GAP-17-CEF-RENDER pre-guard in provisionBottle() (bottleWineArch check)

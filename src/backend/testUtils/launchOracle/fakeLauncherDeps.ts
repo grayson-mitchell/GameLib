@@ -263,7 +263,6 @@ export function createFakeLauncherDeps(
     gameConfigs: unscripted('gameConfigs'),
     infoCaches: unscripted('infoCaches'),
     appInfo: unscripted('appInfo'),
-    aborts: unscripted('aborts'),
     steamBottle: unscripted('steamBottle'),
     steamLaunchRuntime: unscripted('steamLaunchRuntime'),
     ...options.overrides

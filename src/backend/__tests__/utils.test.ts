@@ -67,19 +67,6 @@ describe('backend/utils.ts', () => {
     })
   })
 
-  test('removeQuotesIfNeccessary', () => {
-    const testCases = new Map<string, string>([
-      ['path/without/quotes', 'path/without/quotes'],
-      ['"path/with/quotes"', 'path/with/quotes']
-    ])
-
-    testCases.forEach((expectString, inputString) => {
-      expect(utils.removeQuoteIfNecessary(inputString)).toStrictEqual(
-        expectString
-      )
-    })
-  })
-
   test('semverGt', () => {
     // target: vx.x.x or vx.x.x-beta.x
     // base: x.x.x or x.x.x-beta.x
