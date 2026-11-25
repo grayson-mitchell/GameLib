@@ -520,7 +520,8 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     // Phase 88.1 plan 11: 211 -> 213, launch_epic_service_offline and launch_prepare.
     // Phase 88.1 plan 12: 213 -> 214, launch_prepare_wine_begin.
     // Phase 88.1 plan 13: 214 -> 215, launch_prepare_wine_finish.
-    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(215)
+    // Phase 88.1 plan 14: 215 -> 216, launch_check_wine_before_launch.
+    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(216)
     expect(router).not.toContain('_ =>')
   })
 
@@ -1104,6 +1105,9 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       // Phase 88.1 plan 13: the second half of the wine prepare step (no shim until 88.1-15). PROVEN: `launch_dispatch::tests` drives the arm's decode,
       // not-ready and the host facts the shell builds; `gamelib-launch`'s `golden_launch.rs` replays the finish half of golden/prepare_wine.
       'launch_prepare_wine_finish',
+      // Phase 88.1 plan 14: `checkWineBeforeLaunch`, the wine self-heal (no shim until 88.1-16). PROVEN: `launch_dispatch::tests` drives the arm's decode,
+      // not-ready and the dismissal of a context with no dialog source; `gamelib-launch`'s `utils_pieces.rs` replays golden/check_wine.
+      'launch_check_wine_before_launch',
       // Phase 94 plan 11: the shortcut exists check (`shortcutsResolvers.ts` resolver). PROVEN: `shortcuts_dispatch::tests`
       // drives the arm's decode, not-ready and a real exists answer on a FakeHome; `golden_paths.rs` replays the TS goldens.
       'shortcuts_exist',

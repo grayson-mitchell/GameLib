@@ -25,6 +25,7 @@ use gamelib_knownfix::types::Runner;
 use gamelib_wine::tools::ToolsHost;
 use gamelib_wine::wine_cmd::env::GameSettingsView;
 use gamelib_wine::wine_cmd::WineHost;
+use prepare::check_wine::CheckWineArgs;
 use prepare::deps::CtxPrepareDeps;
 use prepare::epic;
 use prepare::launch::{PrepareHost, PrepareLaunchArgs};
@@ -41,6 +42,7 @@ use tokio::runtime::{Builder, Handle, Runtime};
 
 /// Ops reachable from the shell and the CLI. Keep sorted; each plan adds its own.
 pub const OPS: &[&str] = &[
+    "launch_check_wine_before_launch",
     "launch_epic_service_offline",
     "launch_known_fix_env",
     "launch_prepare",
@@ -132,6 +134,23 @@ async fn route(op: &str, args: &[Value], ctx: &LaunchCtx) -> Result<Value, Strin
             let host = tools_host_arg(host).ok_or_else(bad)?;
             let deps = CtxPrepareDeps::new(ctx, &host.wine).with_tools(&host);
             let reply = prepare::wine_finish::prepare_wine_finish(ctx, &deps, finish, &host)
+                .await
+                .map_err(|reason| format!("{op}:{reason}"))?;
+            result_of(serde_json::to_value(reply))
+        }
+        // `checkWineBeforeLaunch` (88.1-14). Arguments `[args, host]`: the game's wine, its log flags and the runner
+        // and app (`CheckWineArgs`), and the wine host facts the shell read (the Darwin release the macOS release
+        // choice reads). Answers `{ ok, wineVersion?, persistGameWine, globalWineVersion?, log }`: the writes are
+        // data the TS adapter applies, Rust writes no config. It may ask the user a question and may download a
+        // wine, which can outlast the sidecar's 60 s bound, so its shim lists the channel as unbounded.
+        "launch_check_wine_before_launch" => {
+            let [check @ Value::Object(_), host] = args else {
+                return Err(bad());
+            };
+            let check: CheckWineArgs = serde_json::from_value(check.clone()).map_err(|_| bad())?;
+            let host = host_arg(host).ok_or_else(bad)?;
+            let deps = CtxPrepareDeps::new(ctx, &host);
+            let reply = prepare::check_wine::check_wine_before_launch(ctx, &deps, check, &host)
                 .await
                 .map_err(|reason| format!("{op}:{reason}"))?;
             result_of(serde_json::to_value(reply))
@@ -488,8 +507,8 @@ mod tests {
     }
 
     #[test]
-    fn the_ten_launch_ops_are_in_the_table() {
-        assert_eq!(OPS.len(), 10);
+    fn the_eleven_launch_ops_are_in_the_table() {
+        assert_eq!(OPS.len(), 11);
         assert!(OPS.iter().all(|op| op.starts_with("launch_")));
     }
 
@@ -913,6 +932,43 @@ mod tests {
                 .await
                 .unwrap_err();
             assert_eq!(err, "launch_prepare_wine_finish:bad-args", "{args:?}");
+            assert!(!err.contains(secret));
+        }
+    }
+
+    fn check_wine_args(extra: Value) -> Value {
+        let mut args = json!({
+            "appName": "app1",
+            "runner": "gog",
+            "wineVersion": {"type": "wine", "bin": "/nonexistent/wine", "name": "Wine-9"},
+        });
+        if let (Some(base), Value::Object(extra)) = (args.as_object_mut(), extra) {
+            base.extend(extra);
+        }
+        args
+    }
+
+    #[tokio::test]
+    async fn the_check_wine_op_decodes_strictly_and_never_echoes_what_it_was_sent() {
+        let home = FakeHome::new("launch-lib-");
+        let ctx = ctx(&home);
+        let secret = "/Users/someone/secret-profile-path";
+        for args in [
+            vec![],
+            vec![check_wine_args(json!({}))],
+            vec![check_wine_args(json!({})), json!(secret)],
+            vec![check_wine_args(json!({})), json!({"unknownFact": secret})],
+            vec![check_wine_args(json!({})), json!({}), json!({})],
+            vec![check_wine_args(json!({"runner": "epic"})), json!({})],
+            vec![check_wine_args(json!({"extra": secret})), json!({})],
+            vec![check_wine_args(json!({"verboseLogs": secret})), json!({})],
+            // A game wine that is not an object.
+            vec![check_wine_args(json!({"wineVersion": secret})), json!({})],
+        ] {
+            let err = dispatch("launch_check_wine_before_launch", &args, &ctx)
+                .await
+                .unwrap_err();
+            assert_eq!(err, "launch_check_wine_before_launch:bad-args", "{args:?}");
             assert!(!err.contains(secret));
         }
     }

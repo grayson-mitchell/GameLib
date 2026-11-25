@@ -1630,6 +1630,20 @@ export const RUST_LAUNCH_PREPARE_WINE_BEGIN =
  */
 export const RUST_LAUNCH_PREPARE_WINE_FINISH =
   'launch_prepare_wine_finish' as const
+/**
+ * Phase 88.1 (SVC-03, 88.1-14, D-28, D-19, D-30): `checkWineBeforeLaunch` and `downloadDefaultWine`, the wine self-heal
+ * before a launch. `launch_check_wine_before_launch` takes `[args]` (the runner, app name, the game's own `wineVersion`,
+ * its `verboseLogs` and the global `disableLogs`; the shell appends the wine host facts, the Darwin release the macOS
+ * release choice reads) and answers `{ ok, wineVersion?, persistGameWine, globalWineVersion?, log }`: whether the launch
+ * goes on, the wine the caller ends up with when it is not the game's own, and the settings writes as DATA (the game's
+ * `wineVersion` when `persistGameWine`, the global `wineVersion` when `globalWineVersion` is set; Rust writes no config,
+ * the adapter applies them), with the per-game log lines as `{ level, parts }` for the adapter's `LogWriter`. It may ask
+ * the user (the shell's native message box, a dismissal is "No") and may download a wine, which can outlast the 60 s
+ * `RUST_INVOKE_TIMEOUT_MS`; the shim that calls it (88.1-16) lists the channel in the unbounded set, the app shutdown
+ * still ends it.
+ */
+export const RUST_LAUNCH_CHECK_WINE_BEFORE_LAUNCH =
+  'launch_check_wine_before_launch' as const
 export const RUST_ENGINE_STATE_RECORD_DECISION =
   'engine_state_record_decision' as const
 export const RUST_ENGINE_STATE_PUBLISH_OVERLAY_NOTICE =
@@ -2084,6 +2098,7 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_LAUNCH_PREPARE,
   RUST_LAUNCH_PREPARE_WINE_BEGIN,
   RUST_LAUNCH_PREPARE_WINE_FINISH,
+  RUST_LAUNCH_CHECK_WINE_BEFORE_LAUNCH,
   RUST_SHORTCUTS_EXIST,
   RUST_SHORTCUTS_ADD,
   RUST_SHORTCUTS_REMOVE,

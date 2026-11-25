@@ -666,6 +666,9 @@ pub mod testing {
         pub tool_settings_replies: Vec<ToolSettingsResult>,
         /// What the launch deadline arm answers (`Err` is a rejection).
         pub deadline_reply: Result<(), String>,
+        /// Whether a wine `wine_validity` does not list is valid (default `true`; a check-wine case lists the
+        /// valid ones and every other wine is not).
+        pub unlisted_wines_valid: bool,
         /// Called with each call as it is made, for a test that has to see how the calls interleave with another
         /// effect (the status pushes of an install fix).
         pub observer: Option<CallObserver>,
@@ -693,6 +696,7 @@ pub mod testing {
                 winetricks_replies: Vec::new(),
                 tool_settings_replies: Vec::new(),
                 deadline_reply: Ok(()),
+                unlisted_wines_valid: true,
                 observer: None,
                 cursors: Mutex::new((0, 0)),
                 calls: Mutex::new(Vec::new()),
@@ -767,7 +771,10 @@ pub mod testing {
 
         fn valid_wine(&self, wine: &WineInstallation) -> bool {
             self.record(Call::WineValid(wine.clone()));
-            self.wine_validity.get(&wine.name).copied().unwrap_or(true)
+            self.wine_validity
+                .get(&wine.name)
+                .copied()
+                .unwrap_or(self.unlisted_wines_valid)
         }
 
         fn global_default_wine(&self) -> Option<WineInstallation> {

@@ -9,6 +9,8 @@ use gamelib_info::ctx::InfoCtx;
 use gamelib_knownfix::ctx::KnownFixCtx;
 use gamelib_wine::ctx::WineCtx;
 
+use crate::prepare::dialogs::LaunchDialogs;
+
 /// The shell (or the CLI) builds one `LaunchCtx` and every op takes `&LaunchCtx`. Cloning gives another
 /// handle on the same contexts (all four are shared behind an `Arc`).
 #[derive(Clone)]
@@ -24,6 +26,9 @@ pub struct LaunchCtx {
     /// In the shell this is the one `info_dispatch` context, so the native system-information channel and
     /// the launch log share one single-flight cache (88.1-11).
     pub info: Arc<InfoCtx>,
+    /// The modal the prepare steps ask (`checkWineBeforeLaunch`'s "use another wine?"). The shell sets one over its
+    /// native message box; the CLI and a headless run leave it `None`, and every ask is then a dismissal.
+    pub dialogs: Option<Arc<dyn LaunchDialogs>>,
 }
 
 impl LaunchCtx {
@@ -38,6 +43,13 @@ impl LaunchCtx {
             knownfix,
             wine,
             info,
+            dialogs: None,
         }
+    }
+
+    /// The same context with a dialog source (the shell's native message box).
+    pub fn with_dialogs(mut self, dialogs: Arc<dyn LaunchDialogs>) -> LaunchCtx {
+        self.dialogs = Some(dialogs);
+        self
     }
 }

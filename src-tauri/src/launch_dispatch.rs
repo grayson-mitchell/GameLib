@@ -19,10 +19,15 @@
 //!
 //! T-88.1-14: the host facts the env builders read (the process environment, the Darwin release) are
 //! [`wine_dispatch::wine_run_host`], appended here; the sidecar sends neither.
+//!
+//! 88.1-14 (D-28): the context carries a dialog source, [`ShellDialogs`], the same native message box
+//! `dialog_message` shows, so `checkWineBeforeLaunch` asks its question from Rust. A dismissal is `None`, never
+//! index 0 (CR-04).
 
 use super::*;
 
 use gamelib_launch::ctx::LaunchCtx;
+use gamelib_launch::prepare::dialogs::LaunchDialogs;
 
 /// The one context, set once by [`install`].
 static LAUNCH_CTX: OnceLock<Arc<LaunchCtx>> = OnceLock::new();
@@ -32,10 +37,34 @@ pub(crate) fn launch_ctx() -> Option<&'static Arc<LaunchCtx>> {
     LAUNCH_CTX.get()
 }
 
-/// Builds the launch context from the engine, known-fix, wine and information contexts and stores it. A no-op
-/// when any of the four was not installed (no home directory), so every launch channel answers not ready. A
-/// second call is ignored (the first context stays).
-pub(crate) fn install() {
+/// The prepare steps' modal over the shell's native message box: the same box `dialog_message` builds
+/// ([`dialogs::rpc_dialog_message`]: two labels are an `OkCancelCustom`, built and shown on the main thread and
+/// awaited on a spawned one). The call blocks the worker thread that runs the op until the user answers, as the
+/// `dialog_message` arm blocks its own. A dismissal, a failure to show it and any answer that is not a button index
+/// are all `None` (CR-04, T-88.1-34): a failed dialog is never read as "Yes".
+struct ShellDialogs {
+    app: AppHandle,
+}
+
+impl LaunchDialogs for ShellDialogs {
+    fn ask(&self, title: &str, message: &str, buttons: &[String]) -> Option<usize> {
+        let answer = dialogs::rpc_dialog_message(
+            &[serde_json::json!({ "title": title, "message": message, "buttons": buttons })],
+            &self.app,
+        )
+        .ok()?;
+        // A dismissal is `null`; a click is the button's index, which must be one of the labels shown.
+        answer
+            .as_u64()
+            .map(|index| index as usize)
+            .filter(|index| *index < buttons.len())
+    }
+}
+
+/// Builds the launch context from the engine, known-fix, wine and information contexts and stores it, with the
+/// dialog source over the app's native message box. A no-op when any of the four was not installed (no home
+/// directory), so every launch channel answers not ready. A second call is ignored (the first context stays).
+pub(crate) fn install(app: &AppHandle) {
     let (Some(engine), Some(knownfix), Some(wine), Some(info)) = (
         engine_dispatch::engine_ctx(),
         knownfix_dispatch::knownfix_ctx(),
@@ -49,7 +78,8 @@ pub(crate) fn install() {
         Arc::clone(knownfix),
         Arc::clone(wine),
         Arc::clone(info),
-    );
+    )
+    .with_dialogs(Arc::new(ShellDialogs { app: app.clone() }));
     let _ = LAUNCH_CTX.set(Arc::new(ctx));
 }
 
@@ -417,6 +447,41 @@ fn prepare_wine_finish_over(
 /// core's Helper spawns and the shutdown token end it at exit (T-88.1-30).
 pub(crate) fn rpc_launch_prepare_wine_finish(args: &[Value]) -> Result<Value, String> {
     prepare_wine_finish_over(launch_ctx(), args, wine_dispatch::tools_host_value)
+}
+
+/// The body of the `launch_check_wine_before_launch` arm over a given context and host: the generated decode (one
+/// object of the facts only the TS has), an object check on the game's wine and an arity check first, so a bad call
+/// is rejected the same fixed `<op>:bad-args` literal before and after the install and never echoes the sidecar's
+/// value, then the crate over `[args, host]` (which decodes strictly again). `host` is the shell's own facts
+/// (T-88.1-14), taken only once the context is there.
+fn check_wine_before_launch_over(
+    ctx: Option<&Arc<LaunchCtx>>,
+    args: &[Value],
+    host: impl FnOnce() -> Value,
+) -> Result<Value, String> {
+    let decoded = LaunchCheckWineBeforeLaunchArgs::from_args(args)?;
+    if args.len() != 1 {
+        return Err("launch_check_wine_before_launch:bad-args".to_string());
+    }
+    settings_object(decoded.wine_version, "launch_check_wine_before_launch")?;
+    let ctx = ctx.ok_or_else(|| "launch_check_wine_before_launch:not-ready".to_string())?;
+    rpc_launch_op(
+        Some(ctx),
+        "launch_check_wine_before_launch",
+        &[args[0].clone(), host()],
+    )
+}
+
+/// The `launch_check_wine_before_launch` `rustInvoke` arm (88.1-14, D-28, D-19, D-30): `checkWineBeforeLaunch`, the
+/// wine self-heal before a launch. It checks the game's wine, then the default wine (asking the user through
+/// [`ShellDialogs`] whether to continue with it), then the wines installed here, and downloads the default wine for the
+/// OS when none works. It answers `{ ok, wineVersion?, persistGameWine, globalWineVersion?, log }`: the writes are data
+/// for the TS adapter to apply, Rust writes no config (Pitfall 7). The shell appends
+/// [`wine_dispatch::wine_run_host`]. A question waits for the user and a download can take minutes, both past the
+/// sidecar's 60 s `RUST_INVOKE_TIMEOUT_MS`, so the shim that calls it (88.1-16) lists the channel as unbounded; the
+/// crate's `guarded` registrant and the shutdown token end it at exit.
+pub(crate) fn rpc_launch_check_wine_before_launch(args: &[Value]) -> Result<Value, String> {
+    check_wine_before_launch_over(launch_ctx(), args, wine_dispatch::wine_run_host)
 }
 
 #[cfg(test)]
@@ -978,7 +1043,7 @@ mod tests {
         let ctx = ctx_over(&home);
         let secret = "/Users/someone/secret-profile-path";
         type Arm = fn(Option<&Arc<LaunchCtx>>, &[Value]) -> Result<Value, String>;
-        let arms: [(&str, Arm); 7] = [
+        let arms: [(&str, Arm); 8] = [
             ("launch_setup_env_vars", |c, a| {
                 setup_env_vars_over(c, a, host)
             }),
@@ -995,6 +1060,9 @@ mod tests {
             }),
             ("launch_prepare_wine_finish", |c, a| {
                 prepare_wine_finish_over(c, a, host)
+            }),
+            ("launch_check_wine_before_launch", |c, a| {
+                check_wine_before_launch_over(c, a, host)
             }),
         ];
         let wrong: Vec<Vec<Value>> = vec![
@@ -1024,6 +1092,59 @@ mod tests {
         assert_eq!(
             known_fix_env_over(Some(&ctx), &[json!("1"), json!("epic")]),
             Err("launch_known_fix_env:bad-args".to_string())
+        );
+    }
+
+    fn check_wine_args(wine: Value) -> Value {
+        json!({
+            "appName": "1234",
+            "runner": "gog",
+            "wineVersion": wine,
+            "verboseLogs": false,
+            "disableLogs": false,
+        })
+    }
+
+    #[test]
+    fn the_check_wine_arm_is_not_ready_before_the_install_and_rejects_a_wrong_call_after() {
+        let home = FakeHome::new("launch-shell-");
+        let ctx = ctx_over(&home);
+        let secret = "/Users/someone/secret-profile-path";
+        let wine = json!({"bin": "/nonexistent/wine", "name": "W", "type": "wine"});
+        assert_eq!(
+            check_wine_before_launch_over(None, &[check_wine_args(wine.clone())], host),
+            Err("launch_check_wine_before_launch:not-ready".to_string())
+        );
+        // A game wine that is not an object is refused before and after the install, without echoing it.
+        for ctx in [None, Some(&ctx)] {
+            let err = check_wine_before_launch_over(ctx, &[check_wine_args(json!(secret))], host)
+                .unwrap_err();
+            assert_eq!(err, "launch_check_wine_before_launch:bad-args");
+            assert!(!err.contains(secret));
+        }
+        // An unknown key and a runner outside the five are refused by the generated decode.
+        let mut extra = check_wine_args(wine.clone());
+        extra["extra"] = json!(secret);
+        let mut epic = check_wine_args(wine);
+        epic["runner"] = json!("epic");
+        for args in [extra, epic] {
+            let err = check_wine_before_launch_over(Some(&ctx), &[args], host).unwrap_err();
+            assert_eq!(err, "launch_check_wine_before_launch:bad-args");
+            assert!(!err.contains(secret));
+        }
+    }
+
+    #[test]
+    fn a_context_with_no_dialog_source_answers_every_question_as_a_dismissal() {
+        // The context the CLI builds (and `ctx_over` here) has no dialog source: the question is never shown and the
+        // answer is a dismissal, which `checkWineBeforeLaunch` reads as "No" (T-88.1-34).
+        let home = FakeHome::new("launch-shell-");
+        let ctx = ctx_over(&home);
+        assert!(ctx.dialogs.is_none());
+        let buttons = ["YES".to_string(), "NO".to_string()];
+        assert_eq!(
+            gamelib_launch::prepare::dialogs::ask(&ctx, "title", "message", &buttons),
+            None
         );
     }
 }

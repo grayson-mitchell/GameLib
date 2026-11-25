@@ -9,9 +9,13 @@
 //!   `installed_games` file it keeps is [`installed_games`].
 //! - [`wine_finish`]: the second half, from the store-setup point to the returned env (88.1-13), with
 //!   [`install_fixes`] (the known fix's winetricks verbs and programs) and [`wine_path`] (`getWinePath`).
+//! - [`check_wine`]: `checkWineBeforeLaunch` and `downloadDefaultWine` (D-28, 88.1-14), with the answered-dialog seam
+//!   of [`dialogs`].
 
+pub mod check_wine;
 pub mod crossover;
 pub mod deps;
+pub mod dialogs;
 pub mod epic;
 pub mod install_fixes;
 pub mod installed_games;

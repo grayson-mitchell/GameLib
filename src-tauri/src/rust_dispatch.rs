@@ -354,6 +354,9 @@ pub(crate) fn dispatch_rust_channel(
         RustInvokeChannel::LaunchPrepareWineFinish => {
             launch_dispatch::rpc_launch_prepare_wine_finish(args)
         }
+        RustInvokeChannel::LaunchCheckWineBeforeLaunch => {
+            launch_dispatch::rpc_launch_check_wine_before_launch(args)
+        }
         RustInvokeChannel::ShortcutsExist => shortcuts_dispatch::rpc_shortcuts_exist(args),
         RustInvokeChannel::ShortcutsAdd => shortcuts_dispatch::rpc_shortcuts_add(args),
         RustInvokeChannel::ShortcutsRemove => shortcuts_dispatch::rpc_shortcuts_remove(args),

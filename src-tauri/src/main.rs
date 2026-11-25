@@ -1947,7 +1947,7 @@ fn run_setup(
         knownfix_dispatch::install(info_dispatch::bundled_public_dir(app.handle()));
         // Phase 88.1 (88.1-07, D-20): the launch context, over the engine, known-fix and wine contexts just built.
         // Nothing here reads a file or spawns; a launch channel before this answers not ready.
-        launch_dispatch::install();
+        launch_dispatch::install(app.handle());
     }
     // Phase 94 (SVC-05, D-20): the one shortcuts context, built right after the host opened. Nothing here
     // spawns a process or waits; an op before this answers not-ready.

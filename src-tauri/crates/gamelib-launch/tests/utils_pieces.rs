@@ -14,6 +14,17 @@
 //!
 //! A count floor lives in this file, so editing the JSON alone cannot lower the bar, and an empty case list
 //! fails.
+//!
+//! The second half of the file replays `golden/check_wine` (88.1-04, 49 cases): `checkWineBeforeLaunch` and
+//! `downloadDefaultWine` over [`ScriptedPrepareDeps`] (each wine's validity, the stored release list, the install
+//! answer and each discovery are scripted from the case's `input.json`) and a scripted dialog source. Per case it
+//! compares the answer, the wine the caller ends up with, the settings writes (which Rust returns as data, never
+//! writes), the dialogs with their answers, the per-game log lines, and the in-process calls, the dialogs and the
+//! backend log lines in the one order the TS made them (each golden entry carries a `seq` from one counter, so the
+//! three are merged by it and compared as one timeline). Replay-level differences, each required to be used by a
+//! case or the test fails: `discovery-rejection-fixed-reason` (the TS let the discovery's rejection escape with its
+//! text; Rust answers the fixed reason `failed`). The backend log lines are compared by level and text; the line
+//! prefix (`Backend`) is the shell log's, not the crate's.
 
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
@@ -27,21 +38,41 @@ use gamelib_engine::ctx::{EngineCtx, EnginePaths, Platform};
 use gamelib_engine::fetch::{
     DownloadOutcome, Fetch, FetchError, FetchFuture, FetchRequest, FetchResponse, Progress, Replay,
 };
+use gamelib_engine::sinks::EngineLog;
 use gamelib_engine::testing::{RecordingLog, RecordingUi, UiEvent};
 use gamelib_info::ctx::{InfoCtx, InfoPaths, Platform as InfoPlatform};
 use gamelib_info::http::ReqwestHttp;
 use gamelib_knownfix::ctx::KnownFixCtx;
+use gamelib_knownfix::types::Runner;
 use gamelib_launch::ctx::LaunchCtx;
+use gamelib_launch::prepare::check_wine::{check_wine_before_launch, CheckWineArgs};
+use gamelib_launch::prepare::deps::testing::{Call, ScriptedPrepareDeps};
+use gamelib_launch::prepare::dialogs::testing::ScriptedDialogs;
+use gamelib_launch::prepare::dialogs::LaunchDialogs;
 use gamelib_launch::prepare::epic::{
     check_epic_service_offline, epic_service_offline, Callback, EpicService, StatusFailure,
 };
+use gamelib_launch::prepare::launch::RunnerArg;
 use gamelib_store::host::StoreHost;
 use gamelib_testutil::FakeHome;
 use gamelib_wine::ctx::WineCtx;
+use gamelib_wine::wine_cmd::{WineHost, WineInstallation};
 use serde_json::{json, Value};
 
 /// `golden/epic_status` holds 70 cases, the MANIFEST floor; a later edit may raise this, never lower it.
 const EPIC_STATUS_FLOOR: usize = 70;
+
+/// `golden/check_wine` holds 49 cases, the MANIFEST floor; a later edit may raise this, never lower it.
+const CHECK_WINE_FLOOR: usize = 49;
+
+/// The `call` kinds of `golden/check_wine` this file replays. The test fails when `cases.json` holds a kind that
+/// is not listed, so a new kind cannot be counted without being compared.
+const CHECK_WINE_CALLS: [&str; 2] = ["check", "download"];
+
+/// The replay difference `golden/check_wine` documents at test level (`deltas.json` stays empty): the TS let a
+/// rejected alternative-wine discovery escape `checkWineBeforeLaunch` with the rejection's text; Rust answers the
+/// fixed reason `failed` and never the text.
+const REJECTION_DELTA: &str = "discovery-rejection-fixed-reason";
 
 /// The `call.op` kinds this file replays. The test fails when `cases.json` holds a kind that is not listed, so
 /// a new kind cannot be counted without being compared.
@@ -539,4 +570,488 @@ fn the_status_request_is_one_json_get_and_the_offline_app_makes_none() {
     assert_eq!(lines.len(), 1);
     assert_eq!(lines[0].0, "warn");
     assert!(!lines[0].1.contains("epicgames"));
+}
+
+// ---------------------------------------------------------------------------------------------
+// golden/check_wine
+// ---------------------------------------------------------------------------------------------
+
+fn check_wine_dir() -> PathBuf {
+    fixtures().join("golden/check_wine")
+}
+
+/// The one ordered record of what a case did that the golden also orders: each in-process call, each dialog
+/// and each backend log line, as text.
+type Timeline = Arc<std::sync::Mutex<Vec<String>>>;
+
+fn push(timeline: &Timeline, entry: String) {
+    timeline
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .push(entry);
+}
+
+/// The backend log, recorded into the timeline as `log:<level>:<text>`.
+struct TimelineLog(Timeline);
+
+impl EngineLog for TimelineLog {
+    fn info(&self, line: &str) {
+        push(&self.0, format!("log:info:{line}"));
+    }
+    fn warn(&self, line: &str) {
+        push(&self.0, format!("log:warn:{line}"));
+    }
+    fn error(&self, line: &str) {
+        push(&self.0, format!("log:error:{line}"));
+    }
+}
+
+/// The scripted dialog source, recording each question into the timeline as `dialog`.
+struct TimelineDialogs {
+    inner: Arc<ScriptedDialogs>,
+    timeline: Timeline,
+}
+
+impl LaunchDialogs for TimelineDialogs {
+    fn ask(&self, title: &str, message: &str, buttons: &[String]) -> Option<usize> {
+        push(&self.timeline, "dialog".to_string());
+        self.inner.ask(title, message, buttons)
+    }
+}
+
+/// A context over a fake HOME on one platform, with the recording sinks, the English catalogue and a scripted
+/// dialog source. Nothing here opens a socket or spawns a process.
+struct CheckRig {
+    _home: FakeHome,
+    ctx: LaunchCtx,
+    ui: Arc<RecordingUi>,
+    dialogs: Arc<ScriptedDialogs>,
+    timeline: Timeline,
+}
+
+impl CheckRig {
+    fn new(platform: Platform, answers: Vec<Option<usize>>) -> CheckRig {
+        let home = FakeHome::new("launch-check-wine-");
+        let root = home.root().to_path_buf();
+        let app_folder = root.join(".config").join("GameLib");
+        let timeline: Timeline = Arc::default();
+        let ui = Arc::new(RecordingUi::new());
+        let engine = Arc::new(
+            EngineCtx::new(
+                Arc::new(StoreHost::new()),
+                Arc::new(SystemClock),
+                platform,
+                EnginePaths {
+                    tools_path: app_folder.join("tools"),
+                    user_data: app_folder.clone(),
+                    app_folder: app_folder.clone(),
+                    user_home: root.clone(),
+                    temp: root.join("tmp"),
+                },
+                Shutdown::new(),
+            )
+            .with_ui(ui.clone())
+            .with_log(Arc::new(TimelineLog(timeline.clone())))
+            .with_i18n(Arc::new(gamelib_i18n::Catalog::load(&locales_dir(), "en")))
+            .with_app_version(ORACLE_VERSION),
+        );
+        let knownfix = Arc::new(KnownFixCtx::new(
+            engine.clone(),
+            None,
+            "https://relay.test",
+            ORACLE_VERSION,
+        ));
+        let wine = Arc::new(WineCtx::new(engine.clone(), app_folder.join("tools")));
+        let info = Arc::new(InfoCtx::new(
+            Arc::new(StoreHost::new()),
+            Arc::new(SystemClock),
+            InfoPlatform::Linux,
+            InfoPaths {
+                app_folder: app_folder.clone(),
+                user_data: app_folder,
+                temp: root.join("tmp"),
+                public_dir: None,
+            },
+            ORACLE_VERSION.to_string(),
+            Shutdown::new(),
+            Arc::new(ReqwestHttp::new()),
+        ));
+        let dialogs = Arc::new(ScriptedDialogs::new(answers));
+        let ctx =
+            LaunchCtx::new(engine, knownfix, wine, info).with_dialogs(Arc::new(TimelineDialogs {
+                inner: dialogs.clone(),
+                timeline: timeline.clone(),
+            }));
+        CheckRig {
+            _home: home,
+            ctx,
+            ui,
+            dialogs,
+            timeline,
+        }
+    }
+}
+
+fn wine_of(value: &Value) -> WineInstallation {
+    serde_json::from_value(value.clone()).unwrap_or_else(|e| panic!("{value}: {e}"))
+}
+
+fn platform_named(name: &str) -> Platform {
+    match name {
+        "linux" => Platform::Linux,
+        "mac" => Platform::Mac,
+        "windows" => Platform::Windows,
+        other => panic!("unknown platform {other}"),
+    }
+}
+
+/// What the case scripted for the dialog: `none` (nothing was asked in the TS), `null` (a dismissal) or the index
+/// of the button clicked.
+fn scripted_answers(input: &Value) -> Vec<Option<usize>> {
+    match &input["scripted"]["dialog"] {
+        Value::String(none) if none == "none" => Vec::new(),
+        Value::Null => vec![None],
+        index => vec![Some(index.as_u64().expect("a button index") as usize)],
+    }
+}
+
+/// Whether the tracer's slice handles the case: the game's own wine is valid, or the global default is.
+fn in_tracer_slice(input: &Value) -> bool {
+    if input["call"] != "check" {
+        return false;
+    }
+    let valid: Vec<&str> = input["scripted"]["validWines"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(Value::as_str)
+        .collect();
+    let game = input["storedSettings"]["wineVersion"]["name"]
+        .as_str()
+        .unwrap();
+    let default = input["globalSettings"]["wineVersion"]["name"]
+        .as_str()
+        .unwrap();
+    valid.contains(&game) || valid.contains(&default)
+}
+
+/// The golden's trace entries that are ordered against each other, as the timeline's text, sorted by `seq`.
+fn golden_timeline(dir: &Path) -> Vec<String> {
+    let mut entries: Vec<(u64, String)> = Vec::new();
+    for request in read_json(&dir.join("requests.json")).as_array().unwrap() {
+        entries.push((
+            request["seq"].as_u64().unwrap(),
+            format!(
+                "call:{}:{}",
+                request["channel"].as_str().unwrap(),
+                request["args"]
+            ),
+        ));
+    }
+    for dialog in read_json(&dir.join("dialogs.json")).as_array().unwrap() {
+        entries.push((dialog["seq"].as_u64().unwrap(), "dialog".to_string()));
+    }
+    for event in read_json(&dir.join("events.json")).as_array().unwrap() {
+        let level = match event["level"].as_str().unwrap() {
+            "warning" => "warn",
+            other => other,
+        };
+        entries.push((
+            event["seq"].as_u64().unwrap(),
+            format!("log:{level}:{}", event["text"].as_str().unwrap()),
+        ));
+    }
+    entries.sort_by_key(|(seq, _)| *seq);
+    entries.into_iter().map(|(_, text)| text).collect()
+}
+
+/// The timeline entry of one scripted call, in the golden's vocabulary (`call:<channel>:<args>`).
+fn call_entry(call: &Call) -> String {
+    let request = call.to_request();
+    format!(
+        "call:{}:{}",
+        request["channel"].as_str().unwrap(),
+        request["args"]
+    )
+}
+
+/// The golden's writes without the TS-only keys (`seq`, and the `store` marker of the global write).
+fn golden_writes(dir: &Path) -> Vec<Value> {
+    read_json(&dir.join("writes.json"))
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|write| {
+            let mut write = write.clone();
+            let object = write.as_object_mut().unwrap();
+            object.remove("seq");
+            object.remove("store");
+            write
+        })
+        .collect()
+}
+
+fn replay_check_wine(case: &Value, used: &mut BTreeSet<&'static str>) -> Result<(), String> {
+    let id = case["id"].as_str().unwrap();
+    let dir = check_wine_dir().join("expected").join(id);
+    let input = read_json(&dir.join("input.json"));
+    let scripted = &input["scripted"];
+    let rig = CheckRig::new(
+        platform_named(input["platform"].as_str().unwrap()),
+        scripted_answers(&input),
+    );
+    let host = WineHost {
+        darwin_release: input["osRelease"].as_str().map(str::to_string),
+        ..WineHost::default()
+    };
+    let game_wine_value = input["storedSettings"]["wineVersion"].clone();
+    let game_wine = wine_of(&game_wine_value);
+    let default_wine = wine_of(&input["globalSettings"]["wineVersion"]);
+    let app_name = input["gameInfo"]["app_name"].as_str().unwrap().to_string();
+
+    let mut deps = ScriptedPrepareDeps::new(&rig.ctx, &host);
+    deps.unlisted_wines_valid = false;
+    let valid: Vec<&str> = scripted["validWines"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(Value::as_str)
+        .collect();
+    for wine in [&game_wine, &default_wine] {
+        deps.wine_validity
+            .insert(wine.name.clone(), valid.contains(&wine.name.as_str()));
+    }
+    deps.default_wine = Some(default_wine);
+    let timeline = rig.timeline.clone();
+    deps.observer = Some(Box::new(move |call| push(&timeline, call_entry(call))));
+
+    let want_result = read_json(&dir.join("result.json"));
+    let mut got_writes: Vec<Value> = Vec::new();
+    let mut got_log = json!([]);
+    let got_result = {
+        let args = CheckWineArgs {
+            app_name: app_name.clone(),
+            runner: RunnerArg(
+                Runner::parse(input["gameInfo"]["runner"].as_str().unwrap()).expect("a runner"),
+            ),
+            wine_version: game_wine_value.clone(),
+            verbose_logs: input["storedSettings"]["verboseLogs"] == true,
+            disable_logs: input["globalSettings"]["disableLogs"] == true,
+        };
+        match runtime().block_on(check_wine_before_launch(&rig.ctx, &deps, args, &host)) {
+            Ok(reply) => {
+                let wine_after = reply
+                    .wine_version
+                    .as_ref()
+                    .map_or(game_wine_value.clone(), |wine| json!(wine));
+                if let Some(wine) = &reply.global_wine_version {
+                    got_writes
+                        .push(json!({"target": "global", "key": "wineVersion", "value": wine}));
+                }
+                if reply.persist_game_wine {
+                    got_writes.push(json!({
+                        "target": "game", "appName": app_name, "key": "wineVersion", "value": reply.wine_version
+                    }));
+                }
+                got_log = serde_json::to_value(&reply.log).unwrap();
+                json!({"ok": reply.ok, "wineVersionAfter": wine_after})
+            }
+            Err(_) => {
+                // The TS let the rejection escape with its text; Rust answers a fixed reason.
+                if want_result["error"].is_string() {
+                    used.insert(REJECTION_DELTA);
+                    json!({"error": want_result["error"], "wineVersionAfter": game_wine_value})
+                } else {
+                    json!({"error": "failed"})
+                }
+            }
+        }
+    };
+    if got_result != want_result {
+        return Err(format!("{id}: result want {want_result} got {got_result}"));
+    }
+    if got_writes != golden_writes(&dir) {
+        return Err(format!(
+            "{id}: writes want {:?} got {got_writes:?}",
+            golden_writes(&dir)
+        ));
+    }
+    if got_log
+        != read_json(&dir.join("log.json"))
+            .as_array()
+            .map_or(json!([]), |entries| {
+                Value::Array(
+                    entries
+                        .iter()
+                        .map(|e| json!({"level": e["level"], "parts": e["parts"]}))
+                        .collect(),
+                )
+            })
+    {
+        return Err(format!("{id}: the per-game log differs: got {got_log}"));
+    }
+
+    // The dialogs: the question, its answer and that the window was raised before it.
+    let want_dialogs = read_json(&dir.join("dialogs.json"));
+    let want_dialogs = want_dialogs.as_array().unwrap();
+    let asked = rig.dialogs.asked();
+    if asked.len() != want_dialogs.len() {
+        return Err(format!(
+            "{id}: {} dialog(s) recorded, {} asked",
+            want_dialogs.len(),
+            asked.len()
+        ));
+    }
+    let answers = scripted_answers(&input);
+    for (want, got) in want_dialogs.iter().zip(&asked) {
+        let same = want["title"] == json!(got.title)
+            && want["message"] == json!(got.message)
+            && want["buttons"] == json!(got.buttons);
+        if !same {
+            return Err(format!("{id}: dialog want {want} got {got:?}"));
+        }
+        let answer = answers.first().copied().flatten();
+        let scripted_answer = answer.map_or(Value::Null, |index| json!(index));
+        // A dismissal is mapped to the last button, "No" (index 1), exactly as the TS dialog layer mapped it.
+        if want["scriptedAnswer"] != scripted_answer
+            || want["response"] != json!(answer.unwrap_or(1))
+        {
+            return Err(format!("{id}: dialog answer want {want}"));
+        }
+        if want["raisedMainWindow"] != true {
+            return Err(format!(
+                "{id}: a dialog the TS asked without raising the window"
+            ));
+        }
+    }
+    let raised = rig
+        .ui
+        .events()
+        .iter()
+        .filter(|event| matches!(event, UiEvent::RaiseMainWindow))
+        .count();
+    if raised != want_dialogs.len() {
+        return Err(format!(
+            "{id}: the main window was raised {raised} time(s) for {} dialog(s)",
+            want_dialogs.len()
+        ));
+    }
+
+    // The calls, the dialogs and the backend log lines in the one order the TS made them.
+    let want_timeline = golden_timeline(&dir);
+    let got_timeline = rig
+        .timeline
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .clone();
+    if want_timeline != got_timeline {
+        return Err(format!(
+            "{id}: timeline\n  want {want_timeline:#?}\n  got  {got_timeline:#?}"
+        ));
+    }
+    Ok(())
+}
+
+#[test]
+fn every_golden_check_wine_case_replays() {
+    let cases = read_json(&check_wine_dir().join("cases.json"));
+    let cases = cases.as_array().expect("cases.json is an array");
+    check_floor("golden check_wine", cases.len(), CHECK_WINE_FLOOR).unwrap();
+    let manifest = read_json(&check_wine_dir().join("MANIFEST.json"));
+    assert_eq!(
+        manifest["count"].as_u64().unwrap() as usize,
+        cases.len(),
+        "MANIFEST count"
+    );
+    assert!(
+        manifest["floor"].as_u64().unwrap() as usize <= CHECK_WINE_FLOOR,
+        "the MANIFEST floor is above the one this file holds"
+    );
+
+    let mut failures = Vec::new();
+    let mut used = BTreeSet::new();
+    let mut compared = 0usize;
+    let mut left = 0usize;
+    for case in cases {
+        let call = case["call"].as_str().unwrap();
+        assert!(
+            CHECK_WINE_CALLS.contains(&call),
+            "{}: a call kind this replay does not handle: {call}",
+            case["id"]
+        );
+        let input = read_json(
+            &check_wine_dir()
+                .join("expected")
+                .join(case["id"].as_str().unwrap())
+                .join("input.json"),
+        );
+        // Task 1 (the tracer) replays the cases its slice handles; Task 2 replays them all.
+        if !in_tracer_slice(&input) {
+            left += 1;
+            continue;
+        }
+        compared += 1;
+        if let Err(problem) = replay_check_wine(case, &mut used) {
+            failures.push(problem);
+        }
+    }
+    println!(
+        "golden check_wine: compared {compared} floor {CHECK_WINE_FLOOR} (cases {}, left for the next task {left})",
+        cases.len()
+    );
+    assert!(
+        failures.is_empty(),
+        "{} case(s) differ:\n{}",
+        failures.len(),
+        failures.join("\n")
+    );
+    assert!(compared > 0, "the replay compared nothing");
+    assert_eq!(compared + left, cases.len());
+}
+
+#[test]
+fn an_empty_check_wine_case_list_is_below_the_floor() {
+    assert!(check_floor("golden check_wine", 0, CHECK_WINE_FLOOR).is_err());
+    assert!(check_floor("golden check_wine", CHECK_WINE_FLOOR, CHECK_WINE_FLOOR).is_ok());
+}
+
+#[test]
+fn a_context_with_no_dialog_source_answers_every_question_as_a_dismissal() {
+    // The CLI has no window: the question is never shown, and the launch is not continued with another wine.
+    let rig = CheckRig::new(Platform::Linux, vec![Some(0)]);
+    let ctx = LaunchCtx::new(
+        rig.ctx.engine.clone(),
+        rig.ctx.knownfix.clone(),
+        rig.ctx.wine.clone(),
+        rig.ctx.info.clone(),
+    );
+    assert!(ctx.dialogs.is_none());
+    let buttons = ["Yes".to_string(), "No".to_string()];
+    assert_eq!(
+        gamelib_launch::prepare::dialogs::ask(&ctx, "t", "m", &buttons),
+        None
+    );
+    // And no window was raised for a question nobody saw.
+    assert!(rig.ui.events().is_empty());
+
+    let host = WineHost::default();
+    let mut deps = ScriptedPrepareDeps::new(&ctx, &host);
+    deps.unlisted_wines_valid = false;
+    deps.default_wine = Some(wine_of(
+        &json!({"name": "Wine-Default-9.0", "type": "wine", "bin": "/d/wine", "wineserver": "/d/wineserver"}),
+    ));
+    deps.wine_validity
+        .insert("Wine-Default-9.0".to_string(), true);
+    let args = CheckWineArgs {
+        app_name: "app".to_string(),
+        runner: RunnerArg(Runner::Gog),
+        wine_version: json!({"name": "Wine-Game-8.0", "type": "wine", "bin": "/g/wine"}),
+        verbose_logs: false,
+        disable_logs: false,
+    };
+    let reply = runtime()
+        .block_on(check_wine_before_launch(&ctx, &deps, args, &host))
+        .unwrap();
+    assert!(!reply.ok);
+    assert!(reply.wine_version.is_none() && !reply.persist_game_wine);
 }

@@ -167,6 +167,7 @@ import {
   RUST_LAUNCH_PREPARE,
   RUST_LAUNCH_PREPARE_WINE_BEGIN,
   RUST_LAUNCH_PREPARE_WINE_FINISH,
+  RUST_LAUNCH_CHECK_WINE_BEFORE_LAUNCH,
   RUST_LAUNCH_SETUP_ENV_VARS,
   RUST_LAUNCH_SETUP_WINE_ENV_VARS,
   RUST_LAUNCH_SETUP_WRAPPER_ENV_VARS,
@@ -1344,6 +1345,21 @@ export const rustInvokeArgs = {
         mergesTier1Env: z.boolean(),
         isGog: z.boolean(),
         cometSupport: z.boolean().optional()
+      })
+      .strict()
+  ]),
+  // Phase 88.1 (SVC-03, 88.1-14, D-28, D-19, D-30): `checkWineBeforeLaunch`. One strict object with the facts only the TS has;
+  // `wineVersion` (the game's own wine) is opaque to the generated decode (`x-rust-value`, the shell-style six-key decode is
+  // the crate's). The shell appends the wine host facts itself (T-88.1-14). The crate answers the check and the writes as
+  // data; it writes no config (Pitfall 7).
+  [RUST_LAUNCH_CHECK_WINE_BEFORE_LAUNCH]: z.tuple([
+    z
+      .object({
+        appName: z.string(),
+        runner: z.enum(['gog', 'legendary', 'nile', 'sideload', 'steam']),
+        wineVersion: wineInstallation,
+        verboseLogs: z.boolean().optional(),
+        disableLogs: z.boolean().optional()
       })
       .strict()
   ])
