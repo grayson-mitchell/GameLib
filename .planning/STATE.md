@@ -4,12 +4,12 @@ milestone: v0.11
 milestone_name: Node Sidecar Retirement
 current_phase: 88
 current_phase_name: Launch scaffolding and known fixes
-status: executing
-stopped_at: Completed 88-16-PLAN.md
-last_updated: "2026-11-25T00:03:50.751Z"
+status: verifying
+stopped_at: Completed 88-17-PLAN.md
+last_updated: "2026-11-25T02:48:53.746Z"
 last_activity: 2026-11-25
 last_activity_desc: Phase 88 execution started
-state_head: 2c2848a140eecbbd09cfbd634667eafac7ac63f9
+state_head: 1063508ecf687baf955e2096d2800f5b0e9b575a
 progress:
   total_phases: 25
   completed_phases: 23
@@ -78,7 +78,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 
 Phase: 88 (Launch scaffolding and known fixes) — EXECUTING
 Plan: 17 of 17
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-11-25 — Phase 88 execution started
 Progress: [█████████░] 92%
 
@@ -497,6 +497,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 88 P14 | 16min | 3 tasks | 22 files |
 | Phase 88 P15 | 35min | 2 tasks | 27 files |
 | Phase 88 P16 | 50 min | 2 tasks | 43 files |
+| Phase 88 P17 | 3h30m | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -1096,6 +1097,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 88]: 88-14: the overlay single flight left appRuntime.ts (Rust's KnownFixCtx owns it); knownFixOverlays.ts names its own slice type until 88-16 deletes it
 - [Phase 88]: 88-15: the Steam detected-fix report channel (knownfix_report_detected) stays bounded (one 8 s POST); enabled is the caller's shareDetectedFixes === true boolean and the rejection log names the app id only
 - [Phase 88]: 88-16: the known-fix TS (eight modules, 18 unit tests, five oracle tests, the fetch oracle's cases file) is deleted behind knownFixPortComplete (RED first) and knownFixSurvivors; goldens and recordings kept for the Rust replays — The overlay archive build scripts and the steamclient layer notice test read archives through launchrust/knownFixTwins (listed in KNOWN_FIX_TWIN_IMPORTERS); golden_report.rs no longer reads the deleted TS report client; knownFixLaunchReply.ts stays
+- [Phase 88]: 88-17: sub-phase 88 closes on goldens plus three-OS CI (rust-test.yml green on windows, macos, ubuntu at c5ae345ae, run 45533129411); the operator chose push with CI-only follow-up fixes allowed; release-tauri.yml has the same Windows long-path checkout exposure and was left alone
 
 ### Pending Todos
 
@@ -1377,8 +1379,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-25T00:03:47.935Z
-Stopped at: Completed 88-16-PLAN.md
+Last session: 2026-11-25T02:48:50.928Z
+Stopped at: Completed 88-17-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
