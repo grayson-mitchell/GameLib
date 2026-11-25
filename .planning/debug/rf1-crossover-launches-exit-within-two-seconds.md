@@ -1,5 +1,5 @@
 ---
-status: root-cause-named
+status: fixed-pending-live
 trigger: "RF1: non-Steam CrossOver launches started by GameLib (engine=crossover reason=cx-healthy) exit within 1 to 2 s on the signed 0.13.1 build, while Wine-Staging launches and a shell-run of the logged command work."
 created: 2026-11-25
 updated: 2026-11-25
@@ -245,3 +245,39 @@ else running in that bottle starts from a cold server, as the restore branch's l
 - **Live proof** is re-run 2 item 3 (`87-RERUN-2-HUMAN-UAT.md`): two plain CrossOver launches in a row of Trash Goblin and
   Caravan SandWitch both stay up.
 
+## Fix
+
+87-77, 2026-11-25. The isolating run the record listed as 87-77's first step had already been done (commit `8f56d4a9b`, the
+section above), so this plan started from `root-cause-named` with high confidence and did not repeat it.
+
+- **Layer and symbol:** `src-tauri/crates/gamelib-engine/src/launch/step.rs`, `select_engine_for_launch`, the `on_bottle` block
+  after `deps.prepare` returns and before the ledger marks the game running. A new helper `prepare_left_server_warm` answers
+  whether the bottle's server may be the probe's: the pre-flight came back `Healthy`, the selection is CrossOver, the prepare
+  outcome is `Prepared` and it did not switch (`switched` false). When it does and `ctx.ledger.games_running_in(bottle)` is
+  empty, the step calls the existing `kill_bottle_wineserver` (CrossOver's own `wineserver -k`, `WINEPREFIX` the bottle's
+  directory, `CX_ROOT` the bin dir's parent, capped by `KILL_TIMEOUT_MS`), exactly what the restore branch's `kill_previous`
+  runs. Commit `3dc67f794`.
+- **Guard stricter than the record's text:** the record named `other_games_running(bottle, key)`. The step uses
+  `games_running_in(bottle)`, which also counts the launching game's own key, so a second Play on a game still marked running
+  never stops the server under it. Both a running other game and the same game leave the server alone.
+- **Not touched:** the engine decision, the offline gate, the refusal dialogs, `launch/settings.rs`, `launcher.ts` and the TS
+  test (the cause is state, not the spawn shape: both branches already hand the launch the same `launchSettings` and env).
+  `decision/preflight.rs` and `crossover/demo_status.rs`, the alternatives outside the plan's files, were not edited.
+- **Tests, red then green** (`src-tauri/crates/gamelib-engine/tests/crossover_launch_shape.rs`):
+  - `the_plain_branch_stops_the_wineserver_its_own_probe_started_before_the_launch`: red at `7aeac966b` (`left: 0, right: 1`,
+    the runner recorded only the `plutil` build read and the `--demo-status` probe, no `engine-wineserver-kill`), green at
+    `3dc67f794`. It also asserts the kill runs CrossOver's `wineserver` with `-k`, `WINEPREFIX` the game's bottle, after the probe.
+  - Guards, green before and after: no kill while another game runs in the bottle, none while the same game is marked running,
+    none added after a switch that ran (the restore branch).
+  - The 87-72 invariants (both branches hand the launch the same wine, bottle, prefix and `launchSettings`) and
+    `launcher.crossoverEnv.test.ts` are unchanged and green; neither held an expected-to-fail form, so none was flipped.
+- **Suites:** `cargo test -p gamelib-engine --features testing` (all), clippy `-D warnings`, `cargo fmt --check`,
+  `launcher.crossoverEnv`, `launcher.engineStep`, `launcher_launchSingleFlight` (35 passed) and `pnpm codecheck` pass.
+  `golden_launch` (8), `offline_refusal` (17) and `offline_state_verdict` (6) needed no golden change.
+- **Phase 88.1 goldens:** a grep of `src-tauri/crates/gamelib-launch/tests/fixtures/golden/` for `wineserver`, `-k`,
+  `engine-wineserver-kill`, `engine_launch_select` and `demo-status` finds no case that records the engine step's spawns. The
+  fix changes a side effect of the engine step (one `wineserver -k` spawn), not a settings field or env variable the launch
+  goldens carry, so no case records the pre-fix behaviour and no todo was created.
+- **Still open:** the live proof (re-run 2 item 3, scored by 87-79: two plain CrossOver launches in a row of Trash Goblin and
+  Caravan SandWitch stay up). The nile `--wine-prefix <shared prefix>` observation was not replayed and is not changed by this fix;
+  if Caravan SandWitch still exits after it, that is the second contribution the record kept open.
