@@ -89,7 +89,7 @@ findings:
     title: "The overlay archive replay never independently compares gzip bytes; the \"same\" branch is circular"
   - id: WR-09
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "The TS twin's gzip fields are dropped by a one-case probe that degrades silently"
   - id: WR-10
     severity: warning
@@ -131,9 +131,9 @@ findings:
     severity: info
     disposition: open
     title: "The port-complete gate imports another test file"
-open: 32
+open: 31
 total: 32
-recorded: 2026-11-25T03:06:37.929Z
+recorded: 2026-11-25T04:11:16.506Z
 ---
 
 # Phase 88: Code Review Disposition
@@ -161,7 +161,7 @@ recorded: 2026-11-25T03:06:37.929Z
 | IN-10 | info | open | - |
 | IN-11 | info | open | - |
 | WR-08 | warning | open | - |
-| WR-09 | warning | open | - |
+| WR-09 | warning | fixed | 88-REVIEW-FIX.md |
 | WR-10 | warning | open | - |
 | WR-11 | warning | open | - |
 | WR-12 | warning | open | - |
