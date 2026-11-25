@@ -110,13 +110,13 @@ status: issues_found
 
 # Phase 88 — Code Review
 
-Split review (three parallel gsd-code-reviewer lanes at standard depth) because the phase scope was 124 non-fixture files / ~109k lines. Findings keep their lane prefix (A/B/C), so IDs stay stable for a later `--fix` or re-review.
+Split review (three parallel gsd-code-reviewer lanes at standard depth) because the phase scope was 124 non-fixture files / ~109k lines. Finding IDs are numbered straight through lane A, then B, then C (CR-01..02, WR-01..12, IN-01..18). A re-review must continue this numbering (see the round-2 collision note).
 
 Orchestrator verification notes (2026-11-25):
-- CR-A01 confirmed by reading `jsvalue.rs` `visit_map`: linear duplicate-key scan per key.
-- WR-A05 is CLI-only: the shell's `relay_url_from` already defaults to the production relay, so the shell's behaviour is unchanged; the CLI default matches it.
-- WR-C01 confirmed by reading `golden_overlay_archive.rs` `run_step`: the gzip size/sha/base64 come from the golden whenever the replay's sha differs, so gzip output is never independently compared. This contradicts the 88-17 SUMMARY's "Rust still compares the gzip bytes on all three OSes". Tar bytes and headers are compared.
-- CR-B01 matches the 88-17 executor's own note on `release-tauri.yml`.
+- CR-01 confirmed by reading `jsvalue.rs` `visit_map`: linear duplicate-key scan per key.
+- WR-05 is CLI-only: the shell's `relay_url_from` already defaults to the production relay, so the shell's behaviour is unchanged; the CLI default matches it.
+- WR-08 confirmed by reading `golden_overlay_archive.rs` `run_step`: the gzip size/sha/base64 come from the golden whenever the replay's sha differs, so gzip output is never independently compared. This contradicts the 88-17 SUMMARY's "Rust still compares the gzip bytes on all three OSes". Tar bytes and headers are compared.
+- CR-02 matches the 88-17 executor's own note on `release-tauri.yml`.
 - Already recorded and not re-reported: `registry.rs` `shown()` without `redact_urls`, `launch.rs` echoing a rejected exeOverride (88-SECURITY.md observations).
 
 ## Lane A — Rust crates (gamelib-knownfix, gamelib-launch, CLIs)
@@ -159,7 +159,7 @@ The Info section holds six lower-severity items. I did not run a necessity asses
 
 ### Critical Issues
 
-### CR-A01: Quadratic duplicate-key scan in `JsValue::visit_map` lets a downloaded fix file stall the known-fix runtime
+### CR-01: Quadratic duplicate-key scan in `JsValue::visit_map` lets a downloaded fix file stall the known-fix runtime
 
 **File:** `src-tauri/crates/gamelib-knownfix/src/jsvalue.rs:206-216` (reached from `remote.rs:181`, `reader.rs:160`)
 **Issue:** `visit_map` finds a repeated key with `entries.iter_mut().find(|(existing, _)| *existing == key)`
@@ -203,7 +203,7 @@ sensible one here).
 
 ### Warnings
 
-### WR-A01: Reader warnings echo raw file values and key names, with no URL redaction and no length bound on key names
+### WR-01: Reader warnings echo raw file values and key names, with no URL redaction and no length bound on key names
 
 **File:** `src-tauri/crates/gamelib-knownfix/src/reader.rs:65-71, 249-256, 259-273, 344-355`
 **Issue:** This is the same class as the recorded `registry.rs shown()` item, at a different and more
@@ -222,7 +222,7 @@ format!("... {reason}, ignoring {}.", redact_urls(&echo(value)))
 let key_shown = redact_urls(&slice_units(key));
 ```
 
-### WR-A02: The feed URL embeds `app_name` unencoded, and `contained_dest` does not refuse URL metacharacters
+### WR-02: The feed URL embeds `app_name` unencoded, and `contained_dest` does not refuse URL metacharacters
 
 **File:** `src-tauri/crates/gamelib-knownfix/src/remote.rs:47-59, 161, 174`
 **Issue:** `contained_dest` only guards the on-disk destination (one plain entry, no leading `..`). The
@@ -241,7 +241,7 @@ if !app_name.bytes().all(|b| b.is_ascii_alphanumeric() || matches!(b, b'.' | b'_
 ```
 Or percent-encode the file segment. Add a test with `a?b`, `a#b` and `..%2fx`.
 
-### WR-A03: Three ops take an unbounded `appName` and `installPath`; the other five bound them
+### WR-03: Three ops take an unbounded `appName` and `installPath`; the other five bound them
 
 **File:** `src-tauri/crates/gamelib-knownfix/src/lib.rs:74-100, 315-330`
 **Issue:** `knownfix_apply_profile_registry`, `knownfix_apply_registry`, `knownfix_profile_overlay_env`,
@@ -258,7 +258,7 @@ all of them.
 if !bounded_name(app_name) { return Err(format!("{op}:bad-args")); }
 ```
 
-### WR-A04: Both CLIs panic on non-UTF-8 arguments, and `gamelib-knownfix-cli` panics on a non-UTF-8 environment variable
+### WR-04: Both CLIs panic on non-UTF-8 arguments, and `gamelib-knownfix-cli` panics on a non-UTF-8 environment variable
 
 **File:** `src-tauri/crates/gamelib-knownfix-cli/src/main.rs:109, 121`; `src-tauri/crates/gamelib-launch-cli/src/main.rs:109`
 **Issue:** `std::env::vars()` panics if any variable name or value is not valid Unicode, and
@@ -274,7 +274,7 @@ EnvSnapshot::from_pairs(std::env::vars_os().map(|(k, v)| {
 let argv: Vec<String> = std::env::args_os().skip(1).map(|a| a.to_string_lossy().into_owned()).collect();
 ```
 
-### WR-A05: The headless CLIs default to the production relay, so `knownfix_report_detected` with `enabled: true` posts for real
+### WR-05: The headless CLIs default to the production relay, so `knownfix_report_detected` with `enabled: true` posts for real
 
 **File:** `src-tauri/crates/gamelib-knownfix-cli/src/main.rs:86`, `src-tauri/crates/gamelib-launch-cli/src/main.rs:80`, `src-tauri/crates/gamelib-knownfix/src/report.rs:194-200`
 **Issue:** `--relay-url` defaults to `""`, and `report::relay_url` turns an empty string into
@@ -290,7 +290,7 @@ reach the live relay by omission.
 
 ### Info
 
-### IN-A01: `target_already_there` mixes raw errno values from different OS namespaces
+### IN-01: `target_already_there` mixes raw errno values from different OS namespaces
 
 **File:** `src-tauri/crates/gamelib-knownfix/src/overlay/install.rs:289-292`
 **Issue:** `Some(17 | 39 | 66 | 145 | 183)` lists Linux (17, 39), macOS (66) and Windows (145, 183) codes in
@@ -302,7 +302,7 @@ already verifies. The list reads as a correctness claim it does not make.
 `ErrorKind::DirectoryNotEmpty` when the MSRV (1.77.2) allows it (the latter is 1.83). Add a comment that
 the verify is the real guard.
 
-### IN-A02: `guarded`, `CatchUnwind`, `runtime` and `dispatch_sync` are copy-pasted across crates
+### IN-02: `guarded`, `CatchUnwind`, `runtime` and `dispatch_sync` are copy-pasted across crates
 
 **File:** `src-tauri/crates/gamelib-knownfix/src/lib.rs:342-406`, `src-tauri/crates/gamelib-launch/src/lib.rs:45-109`
 **Issue:** The two crates, and `gamelib-wine` per their own comments, carry the same hand-written
@@ -311,7 +311,7 @@ Fixes to one (for example making `register` observe an already-begun shutdown) w
 **Fix:** Move the generic wrapper and `dispatch_sync` into `gamelib-core` (or the engine crate), taking
 the registrant and thread names as parameters.
 
-### IN-A03: Unused dependencies and feature flags in the new manifests
+### IN-03: Unused dependencies and feature flags in the new manifests
 
 **File:** `src-tauri/crates/gamelib-knownfix/Cargo.toml:16-34`, `src-tauri/crates/gamelib-launch/Cargo.toml:11-25`
 **Issue:** `gamelib-knownfix` declares `gamelib-proc` and nothing in `src/` uses it, so the comment
@@ -324,7 +324,7 @@ convention.
 **Fix:** Drop the unused entries until a plan needs them, move `gamelib-core` to `[dev-dependencies]` in
 `gamelib-knownfix`, and keep the spawn rule documented rather than implied by a dependency.
 
-### IN-A04: Cancelling the install that is initialising a cell removes the cell while a joiner is still using it
+### IN-04: Cancelling the install that is initialising a cell removes the cell while a joiner is still using it
 
 **File:** `src-tauri/crates/gamelib-knownfix/src/ctx.rs:98-112`, `src-tauri/crates/gamelib-knownfix/src/overlay/install.rs:481-493, 510-521`
 **Issue:** `Forget::drop` removes the table entry whenever the cell it holds is the current one. If caller
@@ -336,7 +336,7 @@ overlay" claim in the doc comment.
 **Fix:** Remove the entry only when the cell has been initialised (`cell.initialized()`), or only on the
 path where this caller ran the initialiser.
 
-### IN-A05: A corrupt compiled-in catalogue is reported as "unknown overlay id"
+### IN-05: A corrupt compiled-in catalogue is reported as "unknown overlay id"
 
 **File:** `src-tauri/crates/gamelib-knownfix/src/catalogue.rs:84-86`, `src-tauri/crates/gamelib-knownfix/src/overlay/env.rs:178-185`
 **Issue:** `lookup` does `catalogue().ok()?`, discarding the `overlay-catalogue:corrupt-table` error. A
@@ -347,7 +347,7 @@ failure is an error, never an empty catalogue", and `lookup` keeps the error fro
 **Fix:** Have `validate_overlay_entries` call `catalogue()` once and warn with the fixed
 `overlay-catalogue:corrupt-table` word when it is `Err`, before the per-entry loop.
 
-### IN-A06: The remote cache's temp file name is per process, so two concurrent fetches of one app collide
+### IN-06: The remote cache's temp file name is per process, so two concurrent fetches of one app collide
 
 **File:** `src-tauri/crates/gamelib-knownfix/src/remote.rs:199-206`
 **Issue:** `tmp = <file>.tmp-<pid>` is the TS's name. Two `fetch_remote_known_fixes` calls for the same
@@ -381,13 +381,13 @@ The settle helpers hold up. Every call site that awaits a known-fix Rust call go
 
 Three problems stand out:
 
-- **CR-B01:** a checkout failure on the Windows release leg, caused by the long golden-fixture paths.
-- **WR-B01:** one malformed tier-1 env value now silently drops all tier-2 overlay env for the launch. The old TS did not do this.
-- **WR-B02:** the two unbounded channels have no sidecar-side backstop.
+- **CR-02:** a checkout failure on the Windows release leg, caused by the long golden-fixture paths.
+- **WR-06:** one malformed tier-1 env value now silently drops all tier-2 overlay env for the launch. The old TS did not do this.
+- **WR-07:** the two unbounded channels have no sidecar-side backstop.
 
 ### Critical Issues
 
-### CR-B01: Windows release build checks out a tree with paths over 260 characters and does not enable `core.longpaths`
+### CR-02: Windows release build checks out a tree with paths over 260 characters and does not enable `core.longpaths`
 
 **File:** `.github/workflows/release-tauri.yml:207` (the matrix leg at `:158`); the fix applied only in `.github/workflows/rust-test.yml:88-95`
 **Issue:** 88-17 added golden fixture folders named after test titles, and tracked paths reach 248 characters. For example:
@@ -401,7 +401,7 @@ With the `D:\a\GameLib\GameLib\` prefix that is about 269 characters, over `MAX_
 
 ### Warnings
 
-### WR-B01: A single non-string tier-1 `envVariables` value rejects the whole overlay-env call, so all tier-2 overlays are silently dropped
+### WR-06: A single non-string tier-1 `envVariables` value rejects the whole overlay-env call, so all tier-2 overlays are silently dropped
 
 **File:** `src/backend/launcher.ts:1060-1075` (`tier1Env` from `getKnownFixesEnvVariables`, `:1254-1262`); the zod arg schema is in `src/common/types/ipc/rustInvoke.ts:1064-1073`; the unvalidated filter is in `src/backend/launchrust/knownFixTwins.ts:216-245`
 **Issue:** `filterTier1KnownFixes` allow-lists the `envVariables` key but never checks its value shape. A tier-1 file can therefore carry `{"envVariables": {"X": 1}}` or an array. Tier 1 includes the remote layer, so a downloaded fix can do this too. `getKnownFixesEnvVariables` returns it as-is, typed `Record<string,string>` but not string at runtime. The old TS used `tier1Env[k]` only to look up base values, so a malformed entry cost nothing. The new code sends `tier1Env` whole as `{ tier1Env }`, and two layers require a pure string map:
@@ -418,7 +418,7 @@ const tier1Env = Object.fromEntries(
 ```
 Also validate the `envVariables` shape in `filterTier1KnownFixes` and its Rust counterpart. This is a twin-and-golden change, so do it as a todo per D-20 and not as a drive-by edit.
 
-### WR-B02: The two unbounded known-fix channels have no sidecar-side backstop, so a lost reply hangs the launch
+### WR-07: The two unbounded known-fix channels have no sidecar-side backstop, so a lost reply hangs the launch
 
 **File:** `src/backend/sidecar/sidecarRpc.ts:243-290` (entries added for `RUST_KNOWNFIX_APPLY_PROFILE_REGISTRY`, `_PROFILE_OVERLAY_ENV`, `_APPLY_REGISTRY` and `_RESOLVE_OVERLAY_ENV`); the call sites are `launcher.ts:1047-1075` and `bridgeKnownFixes.ts:226-238` and `:360-373`
 **Issue:** These four channels now carry no timer (`timer: null`). Every launch `await`s two of them, through `settleKnownFixRegistry` and `settleKnownFixOverlayEnv`, before the game starts. The settle helpers guard against rejection, but not against a promise that never settles. The shell answers by `thread::spawn` in `sidecar.rs:573-582` with no `catch_unwind`. If that thread dies without writing a response, or the response frame is lost, the sidecar waits forever and the game never launches. There is no log line either, because nothing times out. The justification in the comments is that Rust bounds each step (15 s per `reg add`, 120 s per download). That is true of the crate's own `guarded` wrapper, but `dispatch_sync` setup, the argument decode and the shell arm sit outside it.
@@ -426,25 +426,25 @@ Also validate the `envVariables` shape in `filterTier1KnownFixes` and its Rust c
 
 ### Info
 
-### IN-B01: Comments overstate how strict the shell's generated decode is, and one catalogue comment names a removed function
+### IN-07: Comments overstate how strict the shell's generated decode is, and one catalogue comment names a removed function
 
 **File:** `src/common/types/ipc/rustInvoke.ts:1027-1029` and `src-tauri/src/ipc_contract.rs:3822-3840`; `src/common/knownFixOverlayCatalogue.ts:6`
 **Issue:** The `rustInvoke.ts` comment says the Rust serde decode takes the fields with `deny_unknown_fields`, and the shell "decodes the same set again". The generated structs (`KnownfixLaunchOverridesArgs`, `KnownfixFetchRemoteArgs`, and the others) derive only `Deserialize` with no `deny_unknown_fields`. The shell's own test says "the crate's strict decode ... refuses what the generated decode lets through". Strictness exists at the zod layer and the crate, not in the shell layer as documented. Separately, the catalogue header still says a profile entry "can only name an overlay `id` (see validateOverlayEntries)". That function now lives in Rust, so the pointer is dead.
 **Fix:** Correct both comments, or add `#[serde(deny_unknown_fields)]` to the generator template if the shell layer is meant to be strict.
 
-### IN-B02: `overlayArchiveUrl` is exported but used only by tests, and the bridge duplicates `overlayBaseEnv`
+### IN-08: `overlayArchiveUrl` is exported but used only by tests, and the bridge duplicates `overlayBaseEnv`
 
 **File:** `src/common/knownFixOverlayCatalogue.ts:84`; `src/backend/storeManagers/steam/bridgeKnownFixes.ts:357-361`
 **Issue:** `overlayArchiveUrl` has no non-test consumer. It is an unused export, kept alive by `src/common/__tests__/knownFixOverlayCatalogue.test.ts` and the Rust pin. The bridge re-implements the base-env loop (`lastEnvOption(merged, key) ?? process.env[key]` over `KNOWN_FIX_OVERLAY_BASE_ENV_KEYS`) next to the shared `overlayBaseEnv(env)`. The base-env key list is the T-88-33 allow-list, so two code paths building it is a drift risk.
 **Fix:** Drop the unused export, or note that it is a test and Rust-pin seam. Build the bridge's base from `overlayBaseEnv({ ...process.env, ...mergedEnvAsRecord })`, or add an optional lookup argument to `overlayBaseEnv`.
 
-### IN-B03: `aborts` is a dead dependency of `LauncherDeps` and `BridgeKnownFixDeps`
+### IN-09: `aborts` is a dead dependency of `LauncherDeps` and `BridgeKnownFixDeps`
 
 **File:** `src/backend/launcher.ts:156`; `src/backend/storeManagers/steam/bridgeKnownFixes.ts:184`
 **Issue:** `aborts: Pick<AbortRegistry, 'create' | 'delete'>` was there for the known-fix overlay downloads, which are Rust's now (the old `knownFixOverlayInstall.ts` registered `known-fix-overlay:<id>` in it). Neither file reads `deps.aborts` any more. `BridgeKnownFixDeps` forces every caller and test to supply it. The `LauncherDeps` doc comment still mentions "known-fix overlay downloads".
 **Fix:** Remove the field and the comment text from both interfaces, after confirming no test builds a deps literal that depends on it.
 
-### IN-B04: `getSettings()` is evaluated outside the `.catch` on the three fire-and-forget report call sites
+### IN-10: `getSettings()` is evaluated outside the `.catch` on the three fire-and-forget report call sites
 
 **File:** `src/backend/storeManagers/steam/library/macArch.ts:160-174` and `:187-197`; `src/backend/storeManagers/steam/bridgeInstallState.ts:43-57`
 **Issue:** These calls read `deps.config.getSettings().shareDetectedFixes === true` as an argument, so the read runs synchronously before `reportDetectedFix(...).catch(...)` begins. The previous design was a never-throw fire-and-forget. `getSettings()` can run `mkdirSync` and read the settings doc on a cold cache, so it can in principle throw synchronously. That would abort `applyMacArchVerdict` or `persistBridgeDrmSignal` after the library state is written and before the later steps (`promptI386Recovery`, the forced-bridge branch).
@@ -454,7 +454,7 @@ void (async () => reportDetectedFix(deps, fix, deps.config.getSettings().shareDe
 ```
 Or compute `enabled` through a small `reportEnabled(deps)` helper that catches and returns `false`. This also removes the three-way duplication.
 
-### IN-B05: `KnownFixLaunchOverrides` is declared twice with the same shape
+### IN-11: `KnownFixLaunchOverrides` is declared twice with the same shape
 
 **File:** `src/backend/knownFixLaunchReply.ts:13`; `src/backend/launchrust/knownFixTwins.ts:380`
 **Issue:** The settle helper exports the interface. The twin file has a private copy, with `exeOverride?: string` in both. The sync twin and the async shim path produce the same type through two declarations, and a future field addition on one side will not fail compilation on the other.
@@ -485,9 +485,9 @@ Fake HOME isolation is sound everywhere I looked. Every Rust rig uses `gamelib_t
 
 The weaknesses are about what the replays do not compare:
 
-- **Gzip bytes are never compared.** In the overlay archive replay the gzip-byte comparison is circular (WR-C01), and the 88-17 TS fix hides its own degradation (WR-C02).
-- **About 79 golden cases do not run on the Windows leg.** The fetcher and overlay-install replays are `cfg(unix)` only (WR-C03).
-- **Two event comparisons are lossy.** The fetcher and report replays cannot tell info from error (WR-C04), and the launcher-path registry replay drops error-level lines entirely (WR-C05).
+- **Gzip bytes are never compared.** In the overlay archive replay the gzip-byte comparison is circular (WR-08), and the 88-17 TS fix hides its own degradation (WR-09).
+- **About 79 golden cases do not run on the Windows leg.** The fetcher and overlay-install replays are `cfg(unix)` only (WR-10).
+- **Two event comparisons are lossy.** The fetcher and report replays cannot tell info from error (WR-11), and the launcher-path registry replay drops error-level lines entirely (WR-12).
 
 None of these is a defect in shipped code. They are places where a green run proves less than its header says.
 
@@ -495,7 +495,7 @@ I did not assess necessity (#4100) in this lane, so there is no `necessity:` cou
 
 ### Warnings
 
-### WR-C01: The overlay archive replay never independently compares gzip bytes; the "same" branch is circular
+### WR-08: The overlay archive replay never independently compares gzip bytes; the "same" branch is circular
 
 **File:** `src-tauri/crates/gamelib-knownfix/tests/golden_overlay_archive.rs:152-175` (also `:179-196` for `buildPair`)
 **Issue:** `run_step` decides whether the compressed bytes are comparable with `golden["sha256"] == sha256(&out)`. When they match, it reports `size` and `sha256` from `out`, which equal the golden by construction. When they differ, it copies `size`, `sha256` and `base64` out of the golden. No path asserts that Rust's gzip equals the golden. The `compressed.identical` and `compressed.differing` counters are only printed.
@@ -518,7 +518,7 @@ assert!(
 ```
 Also correct the 88-17 commit-message and doc claim.
 
-### WR-C02: The TS twin's gzip fields are dropped by a one-case probe that degrades silently
+### WR-09: The TS twin's gzip fields are dropped by a one-case probe that degrades silently
 
 **File:** `src/backend/launchrust/__tests__/knownFixTwins.vectors.test.ts:652-680`
 **Issue:** `exactGzip` is computed from the single case `build-three-files-sorted-by-bytes`.
@@ -526,7 +526,7 @@ Also correct the 88-17 commit-message and doc claim.
 - When the probe is `false`, nothing is logged, so a CI leg that compares no gzip bytes looks the same as one that does.
 - The planted-mismatch self-test was moved from `sha256` to `tarSha256`, so it no longer exercises the dropped fields. That is consistent, but it also means nothing proves the gzip comparison is live when `exactGzip` is true.
 
-Because of WR-C01, the "Rust compares them instead" fallback does not hold either. Compressed bytes end up checked nowhere on Linux and Windows.
+Because of WR-08, the "Rust compares them instead" fallback does not hold either. Compressed bytes end up checked nowhere on Linux and Windows.
 
 **Fix:** Fail loudly if the reference case is missing, and make the mode visible:
 ```ts
@@ -539,7 +539,7 @@ it('reports whether the gzip bytes were compared', () => {
 })
 ```
 
-### WR-C03: The fetcher and overlay-install replays are `cfg(unix)` only, so about 79 golden cases do not run on the Windows leg
+### WR-10: The fetcher and overlay-install replays are `cfg(unix)` only, so about 79 golden cases do not run on the Windows leg
 
 **File:** `src-tauri/crates/gamelib-knownfix/tests/golden_fetcher.rs:19,178-179,281,332`; `src-tauri/crates/gamelib-knownfix/tests/golden_overlay_install.rs:23,550,1053,1109`
 **Issue:** In both files `snapshot_tree`, `run_case` and the main `#[tokio::test]` are `#[cfg(unix)]`, with `#![cfg_attr(not(unix), allow(dead_code, unused_imports))]` hiding the dead code. On Windows only the floor, manifest and "has recorded exchanges" tests remain. The 38 fetcher cases and 41 overlay-install cases are never replayed, and `check_floor("... cases compared")` is never reached.
@@ -560,7 +560,7 @@ fn the_unix_only_replays_are_named_as_skipped() {
 ```
 - Record the Windows gap in the 88-17 proof so the three-OS claim is accurate.
 
-### WR-C04: Event level comparison in the fetcher and report replays cannot tell info from error
+### WR-11: Event level comparison in the fetcher and report replays cannot tell info from error
 
 **File:** `src-tauri/crates/gamelib-knownfix/tests/golden_fetcher.rs:309-315`; `src-tauri/crates/gamelib-knownfix/tests/golden_report.rs:784-789`
 **Issue:** Both replays compare levels with `(want["level"] == "warning") == (got.1 == "warn")`. A golden `info` accepts a Rust `error` (and a `debug`), and the reverse also passes. The goldens carry 110 info lines in the report slice and 24 in the fetcher slice. A regression that downgrades a warning-worthy path to an error, or an info line to an error, passes. The fetcher adds `want["level"] != "error"`, which only constrains the golden side. `golden_reader.rs`, `golden_launch_overrides.rs` and `golden_registry.rs` compare the level string exactly, so these two are inconsistent with them.
@@ -571,7 +571,7 @@ let got_level = if got.1 == "warn" { "warning" } else { got.1.as_str() };
 want["level"].as_str() == Some(got_level)
 ```
 
-### WR-C05: The launcher-path registry replay drops every error-level log line before comparing events
+### WR-12: The launcher-path registry replay drops every error-level log line before comparing events
 
 **File:** `src-tauri/crates/gamelib-knownfix/tests/golden_registry.rs:703-707`
 **Issue:** `run_real_case` builds `events` with `.filter(|(level, _)| *level != "error")`. That hides everything the wine command core and the registry module log at error level for the five wine-core cases, and the comparison against `events.json` never sees it. The goldens contain no error-level lines, so the intent is clearly to ignore the wine core's "missing library folders" note (the later test comment says as much). But the filter is blanket: a new error line from `apply_known_fix_profile_registry`, for example a failed `reg add`, is dropped.
@@ -584,31 +584,31 @@ Or assert the error lines are exactly the expected set, so any new one fails.
 
 ### Info
 
-### IN-C01: The golden_registry `prefixDir` fold uses a raw string prefix and folds every separator outside the profile
+### IN-12: The golden_registry `prefixDir` fold uses a raw string prefix and folds every separator outside the profile
 
 **File:** `src-tauri/crates/gamelib-knownfix/tests/golden_registry.rs:469-488`
 **Issue:** The 88-17 fix decides `inside` with `text.starts_with(rig.root().to_string_lossy())`, a string prefix with no path-boundary check. A sibling such as `<root>X` counts as inside. For paths outside the profile on Windows, every `\` becomes `/` before comparing. Rust returning `\x\pfx` for a recorded `/x/pfx` is therefore accepted, which is the stated intent. But mixed-separator drift in `prefix_dir` on Windows is also invisible now. The separator fold in `normalise_text` is likewise applied to the whole string whenever any placeholder is present.
 **Fix:** Use `Path::new(&text).starts_with(rig.root())` for `inside`, and fold only the segment that follows the root.
 
-### IN-C02: The `normalise_text` replacement table puts the real-path HOME entry last, so on macOS it is dead
+### IN-13: The `normalise_text` replacement table puts the real-path HOME entry last, so on macOS it is dead
 
 **File:** `src-tauri/crates/gamelib-knownfix/tests/golden_reader.rs:113-132`; `golden_launch_overrides.rs:121-142`; `golden_registry.rs:219-237`
 **Issue:** The comment says "most specific root first", but `<HOME>` real (`/private/var/...`) is pushed after `<HOME>` original (`/var/...`). The original is a substring of the real path, so a real HOME path is rewritten to `/private<HOME>` and the real entry never fires. The TS side compensates with `dropRealpathPrefix`; the Rust side does not. This is latent only because no current Rust output contains a canonical HOME path. If one ever does, the failure would be a confusing `/private<HOME>` mismatch.
 **Fix:** Insert the real `<HOME>` before the original (`table.insert(0, ...)`), as is already done for `<APPFOLDER>`.
 
-### IN-C03: Loose time and grace bounds in the registry replay
+### IN-14: Loose time and grace bounds in the registry replay
 
 **File:** `src-tauri/crates/gamelib-knownfix/tests/golden_registry.rs:~864` (`started.elapsed() < 10s`) and the `Stuck` test (`< 2 * (REGISTRY_FIX_TIMEOUT + 10s)`)
 **Issue:** The wall-clock bound on a 57-case replay (`std::time::Instant`, real time) can flake on a slow Windows or Linux runner. The `a_run_that_ignores_the_cancel...` bound allows a 50 s span, so it would not notice a doubled or removed grace period. It asserts "bounded", not "bounded at the specified value".
 **Fix:** Assert the exact virtual duration (`REGISTRY_FIX_TIMEOUT + GRACE`) in the paused-clock test, and either drop or widen the wall-clock bound.
 
-### IN-C04: The Windows leg skips the four symlink launch-override cases, including the escape-rejection ones
+### IN-15: The Windows leg skips the four symlink launch-override cases, including the escape-rejection ones
 
 **File:** `src-tauri/crates/gamelib-knownfix/tests/golden_launch_overrides.rs:30-40,371-377`
 **Issue:** This is documented and the skipped ids are named and pinned, which is the right shape. Two of the skipped cases (`rejects-a-symlinked-file-escaping-the-install`, `rejects-a-path-through-a-symlinked-dir-...`) pin a path-escape defence that therefore has no Windows coverage. `fold_not_found` also accepts either `os error 2` or `3` for any not-found line, so a Windows regression that returned the wrong kind of not-found would pass. Both are acceptable for a Windows-only gap, but note them in the 88-17 proof.
 **Fix:** If the Windows runner can create symlinks (admin runners can), run the four cases there, using `std::os::windows::fs::symlink_file` and `symlink_dir`. Otherwise keep the skip.
 
-### IN-C05: Test-environment hygiene nits
+### IN-16: Test-environment hygiene nits
 
 **File:** `src/backend/testUtils/launchOracle/__tests__/baseEnv.test.ts:44-52`; `src-tauri/crates/gamelib-knownfix/tests/bundled_seeds.rs:171-190`; `src-tauri/crates/gamelib-knownfix-cli/tests/cli.rs:~228`
 **Issue:**
@@ -617,13 +617,13 @@ Or assert the error lines are exactly the expected set, so any new one fails.
 - The knownfix-cli report-detected assertion accepts either `"disabled"` or `"not-mac"` for a call with `enabled:false`, which should deterministically be `"disabled"` if the opt-in check runs before the platform check. It also leaves a `println!("resolved exe ...")` debug line.
 **Fix:** Save and restore all three env keys; skip dot-files in the seeds walk; assert the exact word and drop the debug print.
 
-### IN-C06: Tautological checks
+### IN-17: Tautological checks
 
 **File:** `src/common/__tests__/knownFixOverlayCatalogue.test.ts:26-40`; the `the_floor_matches_the_manifest_and_an_empty_list_fails` tests in the Rust golden files
 **Issue:** The TS "field for field" test compares the catalogue view to the JSON it is built from. The "anti-vacuity" tampered-clone test compares a clone to the original. Only the pinned literals (sha `57e5f7...`, size 8279592, the two URLs) are real checks, and the Rust CLI test pins the same sha. The `check_floor("...", 0, FLOOR).unwrap_err()` assertions test a local helper copy rather than the production comparison. This is harmless, but the "anti-vacuity" label overstates what these prove.
 **Fix:** Keep the literals as the contract, and rename or remove the tautologies.
 
-### IN-C07: The port-complete gate imports another test file
+### IN-18: The port-complete gate imports another test file
 
 **File:** `src/backend/__tests__/launchPortComplete.test.ts:50`
 **Issue:** `import { rowsDueIn, SCHEDULE } from './engineWineShimSchedule.test'` re-registers every `describe` of the schedule test inside this file, so the schedule suite runs twice. This already exists in `engineWinePortComplete.test.ts` and is acknowledged there at line 405, so I record it only so the duplicate runs are not mistaken for extra coverage.
