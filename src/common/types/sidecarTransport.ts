@@ -1593,6 +1593,17 @@ export const RUST_LAUNCH_VERIFY_WINE_PREFIX =
  */
 export const RUST_LAUNCH_EPIC_SERVICE_OFFLINE =
   'launch_epic_service_offline' as const
+/**
+ * Phase 88.1 (SVC-03, 88.1-11, D-01, D-19, D-30): the prepare step of a launch, `prepareLaunch`. `launch_prepare` takes
+ * `[args]` (the settings, runner, app name, title, `canRunOffline`, the third-party app, the install path, `isNative`,
+ * the legendary `storeExpired` flag and the Epic namespace: the facts only the TS has; the shell appends the process
+ * environment, the Steam Deck, Flatpak and Darwin facts itself) and answers the TS reply (`success`, `failureReason`,
+ * `mangoHudCommand`, `gameModeBin`, `gameScopeCommand`, `offlineMode`) plus `log`, the per-game log lines as
+ * `{ level, parts }` for the TS `LogWriter` to write (it stays the only writer until 88.3). It may download the umu
+ * runtime, which can outlast the 60 s `RUST_INVOKE_TIMEOUT_MS`; the shim that calls it (88.1-15) lists the channel in
+ * the unbounded set, the app shutdown still ends it.
+ */
+export const RUST_LAUNCH_PREPARE = 'launch_prepare' as const
 export const RUST_ENGINE_STATE_RECORD_DECISION =
   'engine_state_record_decision' as const
 export const RUST_ENGINE_STATE_PUBLISH_OVERLAY_NOTICE =
@@ -2044,6 +2055,7 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_LAUNCH_KNOWN_FIX_ENV,
   RUST_LAUNCH_VERIFY_WINE_PREFIX,
   RUST_LAUNCH_EPIC_SERVICE_OFFLINE,
+  RUST_LAUNCH_PREPARE,
   RUST_SHORTCUTS_EXIST,
   RUST_SHORTCUTS_ADD,
   RUST_SHORTCUTS_REMOVE,

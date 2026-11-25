@@ -164,6 +164,7 @@ import {
   RUST_KNOWNFIX_RESOLVE_OVERLAY_ENV,
   RUST_LAUNCH_EPIC_SERVICE_OFFLINE,
   RUST_LAUNCH_KNOWN_FIX_ENV,
+  RUST_LAUNCH_PREPARE,
   RUST_LAUNCH_SETUP_ENV_VARS,
   RUST_LAUNCH_SETUP_WINE_ENV_VARS,
   RUST_LAUNCH_SETUP_WRAPPER_ENV_VARS,
@@ -1288,6 +1289,25 @@ export const rustInvokeArgs = {
       .enum(['Epic Games Store', 'Fortnite', 'Rocket League'])
       .optional()
       .meta({ title: 'service' })
+  ]),
+  // Phase 88.1 (SVC-03, 88.1-11, D-19, D-30): the prepare step of a launch. One strict object with the facts only the TS has;
+  // `settings` is the merged game settings, opaque to the generated decode (`x-rust-value`) and checked as a JSON object by
+  // the crate. The shell appends the process facts itself (T-88.1-14). The crate answers the TS reply plus `log`.
+  [RUST_LAUNCH_PREPARE]: z.tuple([
+    z
+      .object({
+        settings: knownFixGameSettings,
+        runner: z.enum(['gog', 'legendary', 'nile', 'sideload', 'steam']),
+        appName: z.string(),
+        title: z.string(),
+        canRunOffline: z.boolean(),
+        thirdPartyManagedApp: z.string().optional(),
+        installPath: z.string().optional(),
+        isNative: z.boolean(),
+        storeExpired: z.boolean(),
+        namespace: z.string().optional()
+      })
+      .strict()
   ])
 } satisfies Record<RustInvokeChannel, z.ZodTuple>
 

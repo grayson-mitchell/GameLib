@@ -347,6 +347,7 @@ pub(crate) fn dispatch_rust_channel(
         RustInvokeChannel::LaunchEpicServiceOffline => {
             launch_dispatch::rpc_launch_epic_service_offline(args)
         }
+        RustInvokeChannel::LaunchPrepare => launch_dispatch::rpc_launch_prepare(args),
         RustInvokeChannel::ShortcutsExist => shortcuts_dispatch::rpc_shortcuts_exist(args),
         RustInvokeChannel::ShortcutsAdd => shortcuts_dispatch::rpc_shortcuts_add(args),
         RustInvokeChannel::ShortcutsRemove => shortcuts_dispatch::rpc_shortcuts_remove(args),

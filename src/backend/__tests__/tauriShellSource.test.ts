@@ -517,8 +517,8 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     // Phase 88.1 plan 07: 205 -> 210, launch_setup_wrapper_env_vars, launch_setup_env_vars, launch_setup_wine_env_vars,
     // launch_setup_wrappers and launch_known_fix_env.
     // Phase 88.1 plan 08: 210 -> 211, launch_verify_wine_prefix.
-    // Phase 88.1 plan 11: 211 -> 212, launch_epic_service_offline.
-    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(212)
+    // Phase 88.1 plan 11: 211 -> 213, launch_epic_service_offline and launch_prepare.
+    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(213)
     expect(router).not.toContain('_ =>')
   })
 
@@ -1093,6 +1093,9 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       // Phase 88.1 plan 11: the Epic status check (no shim until 88.1-15). PROVEN: `launch_dispatch::tests` drives the arm's decode, not-ready and
       // the offline answer over a FakeHome; `gamelib-launch`'s `utils_pieces.rs` replays golden/epic_status over recorded exchanges.
       'launch_epic_service_offline',
+      // Phase 88.1 plan 11: the prepare step (no shim until 88.1-15). PROVEN: `launch_dispatch::tests` drives the arm's decode, not-ready, the
+      // reply with its log and the host facts the shell reads; `gamelib-launch`'s `golden_launch.rs` replays golden/prepare_launch.
+      'launch_prepare',
       // Phase 94 plan 11: the shortcut exists check (`shortcutsResolvers.ts` resolver). PROVEN: `shortcuts_dispatch::tests`
       // drives the arm's decode, not-ready and a real exists answer on a FakeHome; `golden_paths.rs` replays the TS goldens.
       'shortcuts_exist',

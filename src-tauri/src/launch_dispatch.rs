@@ -276,6 +276,77 @@ pub(crate) fn rpc_launch_epic_service_offline(args: &[Value]) -> Result<Value, S
     epic_service_offline_over(launch_ctx(), args)
 }
 
+/// The process facts the prepare step reads that are not the wine host's: `isSteamDeckGameMode`, `isSteamDeck`,
+/// `isFlatpak` and `flatpakRuntimeVersion` of `constants/environment.ts`. `env` reads one variable and `manifest`
+/// the Flatpak manifest (`/app/manifest.json`), so a test can drive both; `wine` is [`wine_dispatch::wine_run_host`].
+fn prepare_host_over(
+    env: &dyn Fn(&str) -> Option<String>,
+    manifest: &dyn Fn() -> Option<String>,
+    wine: Value,
+) -> Value {
+    let has = |key: &str, test: &dyn Fn(&str) -> bool| env(key).is_some_and(|value| test(&value));
+    let game_mode = has("XDG_CURRENT_DESKTOP", &|v| v == "gamescope");
+    let desktop = has("SESSION_MANAGER", &|v| v.contains("unix/steamdeck"))
+        && has("HOME", &|v| v == "/home/deck")
+        && has("DESKTOP_SESSION", &|v| v.contains("steamos"));
+    let flatpak = has("FLATPAK_ID", &|v| !v.is_empty());
+    // The runtime version the Flatpak manifest names, `unknown` when it cannot be read, and empty off Flatpak.
+    let runtime = if flatpak {
+        manifest()
+            .and_then(|text| serde_json::from_str::<Value>(&text).ok())
+            .and_then(|manifest| manifest["runtime-version"].as_str().map(str::to_string))
+            .unwrap_or_else(|| "unknown".to_string())
+    } else {
+        String::new()
+    };
+    serde_json::json!({
+        "wine": wine,
+        "steamDeckGameMode": game_mode,
+        "steamDeck": game_mode || desktop,
+        "flatpak": flatpak,
+        "flatpakRuntimeVersion": runtime,
+    })
+}
+
+/// [`prepare_host_over`] over this process: its environment and the Flatpak manifest, built by the shell and never
+/// taken from the sidecar (T-88.1-26).
+fn prepare_host() -> Value {
+    prepare_host_over(
+        &|key| std::env::var(key).ok(),
+        &|| std::fs::read_to_string("/app/manifest.json").ok(),
+        wine_dispatch::wine_run_host(),
+    )
+}
+
+/// The body of the `launch_prepare` arm over a given context and host: the generated decode (one object of the
+/// facts only the TS has), an object check on the settings and an arity check first, so a bad call is rejected the
+/// same fixed `<op>:bad-args` literal before and after the install and never echoes the sidecar's value, then the
+/// crate over `[args, host]` (which decodes strictly again). `host` is the shell's own facts (T-88.1-26), taken only
+/// once the context is there.
+fn prepare_over(
+    ctx: Option<&Arc<LaunchCtx>>,
+    args: &[Value],
+    host: impl FnOnce() -> Value,
+) -> Result<Value, String> {
+    let decoded = LaunchPrepareArgs::from_args(args)?;
+    if args.len() != 1 {
+        return Err("launch_prepare:bad-args".to_string());
+    }
+    settings_object(decoded.settings, "launch_prepare")?;
+    let ctx = ctx.ok_or_else(|| "launch_prepare:not-ready".to_string())?;
+    rpc_launch_op(Some(ctx), "launch_prepare", &[args[0].clone(), host()])
+}
+
+/// The `launch_prepare` `rustInvoke` arm (88.1-11, D-19, D-30): the prepare step of a launch (`prepareLaunch`).
+/// It decides offline mode, finds the Linux wrappers, may fetch the umu runtime, and answers the TS reply plus
+/// `log`, the per-game log lines the TS `LogWriter` writes (the only writer until 88.3). The shell appends the
+/// process facts ([`prepare_host`]). The umu download can outlast the sidecar's 60 s `RUST_INVOKE_TIMEOUT_MS`, so
+/// the shim that calls it (88.1-15) lists the channel as unbounded; the crate's `guarded` registrant and the
+/// shutdown token end it at exit.
+pub(crate) fn rpc_launch_prepare(args: &[Value]) -> Result<Value, String> {
+    prepare_over(launch_ctx(), args, prepare_host)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -558,6 +629,133 @@ mod tests {
                 assert!(!err.contains(secret));
             }
         }
+    }
+
+    fn prepare_args(settings: Value) -> Value {
+        json!({
+            "settings": settings,
+            "runner": "gog",
+            "appName": "1234",
+            "title": "A Game",
+            "canRunOffline": false,
+            "isNative": true,
+            "storeExpired": false,
+            "installPath": "/games/a",
+        })
+    }
+
+    #[test]
+    fn the_prepare_arm_is_not_ready_before_the_install_and_answers_the_reply_with_its_log_after() {
+        let home = FakeHome::new("launch-shell-");
+        let ctx = ctx_over(&home);
+        let args = vec![prepare_args(json!({}))];
+        assert_eq!(
+            prepare_over(None, &args, host),
+            Err("launch_prepare:not-ready".to_string())
+        );
+        // A Linux context that is not online: offline mode, no wrappers (none were asked for), a log.
+        let got = prepare_over(Some(&ctx), &args, || json!({"wine": {"env": {}}})).unwrap();
+        assert_eq!(got["success"], json!(true));
+        assert_eq!(got["offlineMode"], json!(true));
+        assert_eq!(got["mangoHudCommand"], json!([]));
+        assert_eq!(got["log"][0]["level"], json!("warning"));
+        assert!(got["log"].as_array().unwrap().len() >= 6);
+    }
+
+    #[test]
+    fn the_prepare_arm_rejects_a_wrong_call_with_its_fixed_bad_args_before_and_after_the_install() {
+        let home = FakeHome::new("launch-shell-");
+        let ctx = ctx_over(&home);
+        let secret = "/Users/someone/secret-profile-path";
+        let wrong: Vec<Vec<Value>> = vec![
+            vec![],
+            vec![json!(secret)],
+            vec![prepare_args(json!(secret))],
+            vec![prepare_args(json!({})), json!({})],
+            vec![
+                json!({"settings": {}, "runner": "epic", "appName": "1", "title": secret,
+                        "canRunOffline": false, "isNative": true, "storeExpired": false}),
+            ],
+            vec![
+                json!({"settings": {}, "runner": "gog", "appName": 1, "title": "t",
+                        "canRunOffline": false, "isNative": true, "storeExpired": false}),
+            ],
+        ];
+        for args in &wrong {
+            for ctx in [None, Some(&ctx)] {
+                let err = prepare_over(ctx, args, host).unwrap_err();
+                assert_eq!(err, "launch_prepare:bad-args", "{args:?}");
+                assert!(!err.contains(secret));
+            }
+        }
+        // An unknown key passes the generated decode and is the crate's to refuse.
+        let mut extra = prepare_args(json!({}));
+        extra["extra"] = json!(secret);
+        let err = prepare_over(Some(&ctx), &[extra], || json!({})).unwrap_err();
+        assert_eq!(err, "launch_prepare:bad-args");
+        assert!(!err.contains(secret));
+    }
+
+    #[test]
+    fn the_prepare_host_reads_the_deck_and_flatpak_facts_the_way_the_ts_constants_do() {
+        let env_of = |pairs: &'static [(&'static str, &'static str)]| {
+            move |key: &str| {
+                pairs
+                    .iter()
+                    .find(|(k, _)| *k == key)
+                    .map(|(_, v)| (*v).to_string())
+            }
+        };
+        let none = || None;
+        let wine = json!({"env": {}});
+        let plain = prepare_host_over(&env_of(&[]), &none, wine.clone());
+        assert_eq!(
+            plain,
+            json!({"wine": {"env": {}}, "steamDeckGameMode": false, "steamDeck": false,
+                   "flatpak": false, "flatpakRuntimeVersion": ""})
+        );
+        let game_mode = prepare_host_over(
+            &env_of(&[("XDG_CURRENT_DESKTOP", "gamescope")]),
+            &none,
+            wine.clone(),
+        );
+        assert_eq!(game_mode["steamDeckGameMode"], json!(true));
+        assert_eq!(game_mode["steamDeck"], json!(true));
+        // Desktop mode needs all three of its variables.
+        let desktop = prepare_host_over(
+            &env_of(&[
+                ("SESSION_MANAGER", "local/x,unix/steamdeck:/tmp/ICE"),
+                ("HOME", "/home/deck"),
+                ("DESKTOP_SESSION", "plasma-steamos-wayland"),
+            ]),
+            &none,
+            wine.clone(),
+        );
+        assert_eq!(desktop["steamDeckGameMode"], json!(false));
+        assert_eq!(desktop["steamDeck"], json!(true));
+        let partial = prepare_host_over(
+            &env_of(&[
+                ("SESSION_MANAGER", "unix/steamdeck"),
+                ("HOME", "/home/deck"),
+            ]),
+            &none,
+            wine.clone(),
+        );
+        assert_eq!(partial["steamDeck"], json!(false));
+        // Flatpak: the version the manifest names, `unknown` when it cannot be read, nothing off Flatpak.
+        let manifest = || Some(r#"{"runtime-version": "24.08"}"#.to_string());
+        let flatpak = prepare_host_over(
+            &env_of(&[("FLATPAK_ID", "io.x.App")]),
+            &manifest,
+            wine.clone(),
+        );
+        assert_eq!(flatpak["flatpak"], json!(true));
+        assert_eq!(flatpak["flatpakRuntimeVersion"], json!("24.08"));
+        let unreadable =
+            prepare_host_over(&env_of(&[("FLATPAK_ID", "io.x.App")]), &none, wine.clone());
+        assert_eq!(unreadable["flatpakRuntimeVersion"], json!("unknown"));
+        let off = prepare_host_over(&env_of(&[]), &manifest, wine);
+        assert_eq!(off["flatpakRuntimeVersion"], json!(""));
     }
 
     #[test]

@@ -27,6 +27,7 @@ use serde_json::{json, Value};
 
 use super::deps::PrepareDeps;
 use super::settings_log::{filter_game_settings_for_log, js_truthy};
+use crate::builders::gamescope::{build_gamescope_command, GamescopeSettings};
 use crate::ctx::LaunchCtx;
 
 /// A runner name, one of the closed set of five.
@@ -294,13 +295,121 @@ pub async fn prepare_launch(
         |list| format!("Anticheats: {}\n\n", js_to_string(list))
     )])]));
 
-    // If we are not on Linux, we can return here. (The Linux branch is 88.1-11 Task 3.)
+    let offline = Some(offline_mode);
+    // If we are not on Linux, we can return here.
+    if platform != Platform::Linux {
+        return Ok(PrepareLaunchReply {
+            success: true,
+            offline_mode: offline,
+            log,
+            ..PrepareLaunchReply::default()
+        });
+    }
+
+    // Figure out where MangoHud, GameMode and Gamescope are, if they are enabled.
+    let mut mango_hud_command: Vec<String> = Vec::new();
+    let mut game_mode_bin: Option<String> = None;
+    let mut game_scope_command: Vec<String> = Vec::new();
+    let failed = |reason: String, log: Vec<LogEntry>| PrepareLaunchReply {
+        success: false,
+        failure_reason: Some(reason),
+        log,
+        ..PrepareLaunchReply::default()
+    };
+
+    if settings_flag(settings, "showMangohud") && !host.steam_deck_game_mode {
+        let Some(bin) = deps.search_on_path("mangohud") else {
+            let mut reason =
+                "Mangohud is enabled, but `mangohud` executable could not be found on $PATH"
+                    .to_string();
+            if host.flatpak {
+                reason = format!(
+                    "{reason}. Make sure to install Mangohud's flatpak package with runtime {} and restart GameLib.",
+                    host.flatpak_runtime_version
+                );
+            }
+            return Ok(failed(reason, log));
+        };
+        mango_hud_command = vec![bin, "--dlsym".to_string()];
+    }
+
+    if settings_flag(settings, "useGameMode") {
+        game_mode_bin = deps.search_on_path("gamemoderun");
+        if game_mode_bin.is_none() {
+            return Ok(failed(
+                "GameMode is enabled, but `gamemoderun` executable could not be found on $PATH"
+                    .to_string(),
+                log,
+            ));
+        }
+    }
+
+    let gamescope = settings.get("gamescope").filter(|group| js_truthy(group));
+    let gamescope_on = |key: &str| gamescope.is_some_and(|group| settings_flag(group, key));
+    if (gamescope_on("enableLimiter") || gamescope_on("enableUpscaling"))
+        && !host.steam_deck_game_mode
+    {
+        match deps.search_on_path("gamescope") {
+            None => {
+                let mut warning =
+                    "Gamescope is enabled, but `gamescope` executable could not be found on $PATH"
+                        .to_string();
+                if host.flatpak {
+                    warning = format!(
+                        "{warning}. Make sure to install Gamescope's flatpak package with runtime {}",
+                        host.flatpak_runtime_version
+                    );
+                }
+                if let Some(app_log) = &ctx.engine.log {
+                    app_log.warn(&warning);
+                }
+            }
+            Some(bin) => {
+                // Gamescope does not provide a version option; the --help text decides.
+                let help = deps.gamescope_help(bin.clone()).await;
+                let group: GamescopeSettings = serde_json::from_value(
+                    gamescope.cloned().unwrap_or(Value::Null),
+                )
+                .map_err(|_| "the gamescope settings have an unexpected shape".to_string())?;
+                game_scope_command = build_gamescope_command(
+                    &bin,
+                    &group,
+                    &help,
+                    settings_flag(settings, "showMangohud"),
+                )
+                .map_err(|e| e.message().to_string())?;
+            }
+        }
+    }
+
+    if umu_supported(settings)
+        && ctx.engine.is_online()
+        && !deps.runtime_is_installed("umu").await
+        && deps.umu_path_is_default()
+    {
+        deps.runtime_download("umu").await;
+    }
+
     Ok(PrepareLaunchReply {
         success: true,
-        offline_mode: Some(offline_mode),
+        mango_hud_command: Some(mango_hud_command),
+        game_mode_bin,
+        game_scope_command: Some(game_scope_command),
+        offline_mode: offline,
         log,
         ..PrepareLaunchReply::default()
     })
+}
+
+/// `isUmuSupported(deps, settings, false)` on Linux: a Proton game that has not disabled umu (only a literal
+/// `true` does). The umu runtime's own presence is not asked (`checkUmuInstalled` is false).
+fn umu_supported(settings: &Value) -> bool {
+    let proton = settings
+        .get("wineVersion")
+        .and_then(|wine| wine.get("type"))
+        .and_then(Value::as_str)
+        == Some("proton");
+    proton && settings.get("disableUMU") != Some(&Value::Bool(true))
 }
 
 #[cfg(test)]

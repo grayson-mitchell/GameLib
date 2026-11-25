@@ -24,7 +24,9 @@ use ctx::LaunchCtx;
 use gamelib_knownfix::types::Runner;
 use gamelib_wine::wine_cmd::env::GameSettingsView;
 use gamelib_wine::wine_cmd::WineHost;
+use prepare::deps::CtxPrepareDeps;
 use prepare::epic;
+use prepare::launch::{PrepareHost, PrepareLaunchArgs};
 use serde::Deserialize;
 use serde_json::Value;
 use std::future::Future;
@@ -38,6 +40,7 @@ use tokio::runtime::{Builder, Handle, Runtime};
 pub const OPS: &[&str] = &[
     "launch_epic_service_offline",
     "launch_known_fix_env",
+    "launch_prepare",
     "launch_setup_env_vars",
     "launch_setup_wine_env_vars",
     "launch_setup_wrapper_env_vars",
@@ -71,6 +74,26 @@ async fn route(op: &str, args: &[Value], ctx: &LaunchCtx) -> Result<Value, Strin
             Ok(epic::offline_reply(
                 epic::epic_service_offline(ctx, service).await,
             ))
+        }
+        // `prepareLaunch`. Arguments `[args, host]`: the game and the TS-only facts (`PrepareLaunchArgs`) and
+        // the process facts the shell read (`PrepareHost`). Answers the TS reply plus its per-game `log`
+        // lines. May fetch the umu runtime, which can outlast the sidecar's 60 s bound, so its shim lists the
+        // channel as unbounded (the shutdown token still ends it).
+        "launch_prepare" => {
+            let [prepare @ Value::Object(_), host @ Value::Object(_)] = args else {
+                return Err(bad());
+            };
+            let prepare: PrepareLaunchArgs =
+                serde_json::from_value(prepare.clone()).map_err(|_| bad())?;
+            if !prepare.settings.is_object() {
+                return Err(bad());
+            }
+            let host: PrepareHost = serde_json::from_value(host.clone()).map_err(|_| bad())?;
+            let deps = CtxPrepareDeps::new(ctx, &host.wine);
+            let reply = prepare::launch::prepare_launch(ctx, &deps, prepare, &host)
+                .await
+                .map_err(|e| format!("{op}:{e}"))?;
+            result_of(serde_json::to_value(reply))
         }
         // The tier-1 `envVariables` of a game, raw (`{}` when none). Arguments `[appName, runner]`.
         "launch_known_fix_env" => {
@@ -414,8 +437,8 @@ mod tests {
     }
 
     #[test]
-    fn the_seven_launch_ops_are_in_the_table() {
-        assert_eq!(OPS.len(), 7);
+    fn the_eight_launch_ops_are_in_the_table() {
+        assert_eq!(OPS.len(), 8);
         assert!(OPS.iter().all(|op| op.starts_with("launch_")));
     }
 
@@ -639,6 +662,92 @@ mod tests {
                 "launch_epic_service_offline:bad-args",
                 "{args:?}"
             );
+        }
+    }
+
+    fn prepare_args(extra: Value) -> Value {
+        let mut args = json!({
+            "settings": {"offlineMode": false},
+            "runner": "gog",
+            "appName": "app1",
+            "title": "A Game",
+            "canRunOffline": true,
+            "isNative": true,
+            "storeExpired": false,
+            "installPath": "/games/a",
+        });
+        if let (Some(base), Value::Object(extra)) = (args.as_object_mut(), extra) {
+            base.extend(extra);
+        }
+        args
+    }
+
+    #[tokio::test]
+    async fn the_prepare_op_answers_the_reply_with_its_log_over_a_context_with_no_tools() {
+        let home = FakeHome::new("launch-lib-");
+        let ctx = ctx(&home);
+        // The context is not online, so the game goes offline; the information context's runner starts
+        // nothing, so the system-information line says it could not be read; nothing is on the PATH.
+        let got = dispatch(
+            "launch_prepare",
+            &[prepare_args(json!({})), json!({})],
+            &ctx,
+        )
+        .await
+        .unwrap();
+        assert_eq!(got["success"], json!(true));
+        assert_eq!(got["offlineMode"], json!(true));
+        assert_eq!(got["mangoHudCommand"], json!([]));
+        assert_eq!(got["gameScopeCommand"], json!([]));
+        assert!(got.get("gameModeBin").is_none());
+        let log = got["log"].as_array().unwrap();
+        assert_eq!(log[0]["level"], json!("info"));
+        assert_eq!(log[0]["parts"], json!([["Launching", "\"A Game\" (gog)"]]));
+        let text = got["log"].to_string();
+        assert!(
+            text.contains("System information could not be read."),
+            "{text}"
+        );
+        assert!(text.contains("GamesConfig/app1.json"), "{text}");
+
+        // A missing GameMode binary is a refusal with its reason, after the log lines were written.
+        let refused = dispatch(
+            "launch_prepare",
+            &[
+                prepare_args(json!({"settings": {"useGameMode": true}})),
+                json!({"wine": {"env": {"PATH": "/nonexistent"}}}),
+            ],
+            &ctx,
+        )
+        .await
+        .unwrap();
+        assert_eq!(refused["success"], json!(false));
+        assert_eq!(
+            refused["failureReason"],
+            json!("GameMode is enabled, but `gamemoderun` executable could not be found on $PATH")
+        );
+        assert!(refused.get("offlineMode").is_none());
+        assert!(!refused["log"].as_array().unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn the_prepare_op_decodes_strictly_and_never_echoes_what_it_was_sent() {
+        let home = FakeHome::new("launch-lib-");
+        let ctx = ctx(&home);
+        let secret = "/Users/someone/secret-profile-path";
+        for args in [
+            vec![prepare_args(json!({})), json!(secret)],
+            vec![prepare_args(json!({})), Value::Null],
+            vec![prepare_args(json!({})), json!({"unknownFact": secret})],
+            vec![prepare_args(json!({"runner": "epic"})), json!({})],
+            vec![prepare_args(json!({"extra": secret})), json!({})],
+            vec![prepare_args(json!({"settings": secret})), json!({})],
+            vec![prepare_args(json!({})), json!({}), json!({})],
+            vec![prepare_args(json!({}))],
+        ] {
+            let err = dispatch("launch_prepare", &args, &ctx).await.unwrap_err();
+            assert_eq!(err, "launch_prepare:bad-args", "{args:?}");
+            assert!(!err.contains(secret));
         }
     }
 

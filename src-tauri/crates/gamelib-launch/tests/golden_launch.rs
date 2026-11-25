@@ -62,9 +62,6 @@ use serde_json::{json, Map, Value};
 /// `golden/prepare_launch` holds 582 cases, the MANIFEST floor; a later edit may raise this, never lower it.
 const PREPARE_LAUNCH_FLOOR: usize = 582;
 
-/// Whether the Linux cases are replayed (the Linux branch is 88.1-11 Task 3).
-const REPLAY_LINUX: bool = false;
-
 /// The version the oracle's requests carried in their `User-Agent` (`GameLib/oracle (+...)`).
 const ORACLE_VERSION: &str = "oracle";
 
@@ -799,20 +796,17 @@ fn every_golden_prepare_launch_case_replays() {
     let mut used = Used::default();
     // The key order of the settings is never compared (JSON values are), so that delta is always in play.
     used.0.insert("settings-key-order");
-    let (mut compared, mut skipped_linux) = (0usize, 0usize);
+    let mut compared = 0usize;
+    let mut linux = 0usize;
     for case in cases {
-        let os = case["os"].as_str().unwrap();
-        if os == "linux" && !REPLAY_LINUX {
-            skipped_linux += 1;
-            continue;
-        }
+        linux += usize::from(case["os"] == "linux");
         compared += 1;
         if let Err(problem) = replay_case(case, &mut used) {
             failures.push(problem);
         }
     }
     println!(
-        "golden prepare_launch: compared {compared} (linux skipped {skipped_linux}) of {} floor {PREPARE_LAUNCH_FLOOR}",
+        "golden prepare_launch: compared {compared} (linux {linux}) of {} floor {PREPARE_LAUNCH_FLOOR}",
         cases.len()
     );
     assert!(
@@ -826,7 +820,8 @@ fn every_golden_prepare_launch_case_replays() {
             .collect::<Vec<_>>()
             .join("\n")
     );
-    assert_eq!(compared + skipped_linux, cases.len());
+    assert_eq!(compared, cases.len());
+    assert!(linux > 0, "the Linux cases are in the replay");
     for delta in DELTAS {
         assert!(
             used.0.contains(delta),
