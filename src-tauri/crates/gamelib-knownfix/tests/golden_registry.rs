@@ -679,7 +679,11 @@ async fn run_real_case(case: &Value) -> RealRun {
         .log
         .lines()
         .into_iter()
-        .filter(|(level, _)| *level != "error")
+        // Only the wine core's note about a bare installation's missing library folders is dropped; any
+        // other error-level line is compared with the golden, so a new one fails the case (WR-12).
+        .filter(|(level, line)| {
+            !(*level == "error" && line.contains("wine library folders are missing"))
+        })
         .map(|(level, line)| {
             json!({
                 "step": 0,
