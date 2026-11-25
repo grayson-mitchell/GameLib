@@ -484,3 +484,23 @@ is mapped to the item or sub-check that carries it.
 - Windows and Linux for every item: no live gate is claimed (D-13). CI goldens on the three-OS matrix are the proof.
 - GPTK, a DXMT engine and bottled Steam as a fallback target: not engines the engine step selects (D-20), so no item scores
   them.
+
+## Re-run 1 (87-69)
+
+The gap-closure re-run `87-RERUN-1-HUMAN-UAT.md` (authored by 87-60, run by 87-69 on 2026-11-24 on the signed and notarized gap
+build 0.13.1, CDHash `266b7378...`) re-ran the halves below. The 87-59 results above stay as written; this table only points at
+the re-run's item and its new result. The halves 87-59 scored MET or pass (item 1 (a) to (c), item 2, item 3 reuse, item 4 (d)
+and (e)) were not re-run and keep their 87-59 result. New findings are RF1 to RF6 in the re-run's `## Findings and observations`.
+
+| 87-59 half superseded | Re-run item | New result |
+|---|---|---|
+| 1 (d) offline refusal (F1) | 1 | issue: the refusal fires with "(offline)" and no download (`verdict=blocked:crossover-missing`, F1 does not reproduce), but the Play button stays on launching (RF2) |
+| 1 (e) 180 s no-raise hold | 3 | blocked: no title the matcher cannot see was named |
+| 3 removal half (F5) | 7 | issue: the dialog names and enables the bottle toggle, but the uninstall is refused `is-protected-root` before the bottle route runs (RF4); the sibling stayed byte-identical; Cancel removed the Steam shortcut (RF3) |
+| 4 (a) wine-manager install of a never-installed entry (F2) | 6 | pass: Wine-11.18 installed and removed, 0 `installWineVersion` IPC rejections |
+| 4 (b) Wine Manager list follows (F4) | 6 | pass: the row flipped on install and on remove without a restart or tab switch |
+| 4 (c) Winetricks on the game's own bottle, failure shown (F3) | 4 | pass: `fontsmooth=bgr` in the bottle's own `winetricks.log`, no shared prefix created, offline `tahoma` ended "install failed" |
+| Stop on a non-Steam CrossOver game (F3, related) | 5 | blocked: no CrossOver game stayed running to press Stop (RF1) |
+| IMPOSSIBLE log row: engine download and `[engine-notice]` lines | 2 | pass: 12 download lines and 4 notice lines across the archives; engine-origin lines carry no home path, account, argument line or token |
+| IMPOSSIBLE log row: launch-deadline fired and notice lines | 3 | blocked: REACHABLE now, but not emitted because the hold did not run |
+| IMPOSSIBLE log row: DXMT skip line | 6 | pass: `Not creating DXMT copy of` logged once, path as `~` |

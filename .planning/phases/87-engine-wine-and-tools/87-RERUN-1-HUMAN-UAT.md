@@ -1,11 +1,11 @@
 ---
-status: pending
+status: partial
 phase: 87-engine-wine-and-tools
 source: [87-CONTEXT.md D-06 D-11 D-12 D-13 D-19 D-21, 87-HUMAN-UAT.md F1 F2 F3 F4 F5]
 authored_by: 87-60
 run_by: 87-69
-started:
-updated:
+started: 2026-11-24T18:43:11Z
+updated: 2026-11-25T04:10:00Z
 ---
 
 This is re-run 1 of the D-11 live macOS gate for the Phase 87 gap closure. The 87-59 run scored item 1 issue, item 3 blocked
@@ -116,31 +116,31 @@ Record each result in `"$S/notes.log"` before launch 1. Record process names, co
 
 ### 1. Offline refusal before any download
 expected: Under `no-crossover.sb` with the pinned engine absent and the app's connectivity monitor offline (network off only for the Play press), Play on the named non-Steam CrossOver game shows the modal refusal whose text reads "(offline)", no download is attempted, the game page leaves `engine-download`, and gamelib.log carries the refusal's warning line.
-result: pending
+result: issue — launch 2, under `sandbox-exec -f no-crossover.sb` with the pin moved aside (`gamelib-launch-2.log`, `notes.log` ITEM 1). The refusal itself is right and F1 does not reproduce: `tools/steam-engines/` listed empty after the move aside; the monitor's `offline via no-interface` line (19:04:55Z) precedes Play (19:05:01Z), Wi-Fi `en1` off 19:04:50Z to 19:06:06Z only; the `offline gate:` line (1) reads `request-offline=true context-online=false crossover-missing=true current-pin-installed=false` and `verdict=blocked:crossover-missing`; the WARNING `launch blocked before pre-flight while offline (crossover-missing)` (1); `[engine-notice] ... tag=engine-download-failed` pending then `display=confirmed` (2 lines); 0 `Engine: downloading` lines before the network came back, `steam-engines` still empty. Operator's dialog text: "GameLib couldn't download its built-in engine (offline). Check your connection and try again". NOT MET: the game page did not leave the launch state. After the refusal the backend logged the launch start and display-sleep prevention (19:05:01Z) and no launch end (no `Stopping Display Power Saver` line until the later online run ended at 19:10:00Z); the operator closed the dialog at 19:05:12Z and the Play button stayed on launching until they navigated away and back (RF2). The generic "game might not play properly offline" warning showed before the refusal (RF5).
 
 ### 2. Engine lines reach gamelib.log, redacted
 expected: Online in the same sandboxed session, the pinned engine's first-need download writes its downloading, verifying and extracting lines, item 1's refusal wrote its engine-notice display lines, and no engine-origin line in any archived log carries the operator's home path (it reads `~`), account name, a full argument line or a token.
-result: pending
+result: pass — launch 2, online in the same sandboxed session (`gamelib-launch-2.log`), with the redaction check over all 8 archived logs (`gamelib-launch-1..4.log`, `gamelib-old-after-launch-1..4.log`, 5041 lines). Download: `Engine: downloading|verifying|extracting` lines for `dxvk` (19:08:45Z to 19:08:46Z) and `wine` 11.20 (19:08:46Z to 19:08:57Z), 6 in `gamelib-launch-2.log` and 12 across the archives (the launch-2 log also lives on as `gamelib-old-after-launch-3.log`); progress and toast seen by the operator; `engine=pinned ... reason=cx-missing` (3 lines); the game ran on the pinned Staging engine (operator: "everything worked as expected"); `tools/steam-engines` repopulated; Trash Goblin's marker kind pinned. Item 1's `[engine-notice]` display lines: 4 across the archives (2 distinct). Redaction: presence control live, 211 non-engine lines carry the raw home path. Engine-origin selection (`Engine:|[engine-notice]|engine=|steam-engines|engineSwitch|wine-staging|dxvk`) 148 lines: home path 0, account name 0, `args=[` 0, unredacted `token=` or `--token=` 0, after excluding one launcher-origin line counted twice (launch 2 and its `.old` copy): the `[Legendary]` `Launching <game>:` line, which the selection matched only through the pinned-engine paths in its env and which is not engine-origin (observation O1). Counts only; no line was pasted.
 
 ### 3. The 180 s no-match notice does not raise the window
 expected: A launch of the operator-named title held past 180 s, with the operator watching which application is frontmost, shows the system notification and the in-app notice without raising GameLib's window, and gamelib.log carries the deadline-fired line and the notice line with `raise=false`.
-result: pending
+result: blocked — no launch. P5 (d) named no title: the operator said launcher titles exist but none can be identified as one the matcher cannot see without launching each game in the library ("block for now"). The gap is named as the plan's flagged assumption and as 87-59 left it: the 180 s no-raise hold still needs a Windows title whose game process the matcher cannot see. The deadline lines (`launch deadline fired (`, `raise=false`) are REACHABLE but were not emitted (0 in every archive), because no hold ran; their absence is not a finding.
 
 ### 4. Winetricks acts on the game's own bottle and a failure shows
 expected: A verb applied from the game's Wine settings runs against the game's own bottle with progress lines, the bottle's `winetricks.log` gains the verb, the shared default prefix directory is not created, and a download verb applied with the network off only for the Apply ends with its row in the failed state and the failure in the log panel.
-result: pending
+result: pass — launch 1, Trash Goblin (Epic, bottle `GameLib-legendary-54f7949350c949c6a2c47f12e7b15636`), Winetricks tab (`gamelib-launch-1.log`, `notes.log` ITEM 4). Success verb `fontsmooth=bgr`, online: progress lines, row installed; the bottle's `winetricks.log` created holding `fontsmooth=bgr`; its `user.reg` FontSmoothing values changed (sha256 `41ef382aeb0d...` to `f1ae3726917d...`); regedit ran through CrossOver's wine (syswow64 and system32) with no `was not found` line; `~/Games/GameLib/Prefixes/shared` NOT created and no other new `winetricks.log`. Failure verb `tahoma` with Wi-Fi `en1` off 18:53:55Z to 18:55:10Z only: download timeouts, `winetricks exited with code 1` (1), the row ended "install failed" and the failure showed in the log panel; `WINEARCH=win64`. 0 `store frame rejected` and 0 `refused a store write:` lines in any archive.
 
 ### 5. Stop ends a non-Steam game on CrossOver
 expected: Stop from the game page of the running named game ends it, and within 15 s no game process and no wineserver for its bottle remain.
-result: pending
+result: blocked — by RF1, launches 1 and 3 (`gamelib-launch-1.log`, `gamelib-launch-3.log`, `notes.log` ITEM 5, DIAG, F6). No non-Steam CrossOver game stayed running long enough to press Stop. Trash Goblin, Play twice (18:57:18Z, 18:57:32Z), `engine=crossover reason=cx-healthy`, then `launch deadline cancelled (launcher-exited)` 1 to 2 s later with no wine or game process left (7 `launcher-exited` lines in launch 1). Deviation (operator decision 18:59:48Z): the item moved to Caravan SandWitch (Amazon, own bottle), which exited the same way (nile `Process exited with code 1`). Launch 3: the one CrossOver launch right after the pinned-to-crossover restore ran normally (19:11:49Z to 19:12:08Z) but the operator closed it before Stop was pressed; the next two (19:13:52Z, 19:14:03Z) dropped again. Stop's 87-65 route was never exercised live.
 
 ### 6. Wine manager installs a never-installed release and the list follows
 expected: Install on the named never-installed entry downloads with progress and toasts, `tools/wine/<version>` appears with no temporary sibling, the row shows installed without a restart or a tab switch, Remove flips it back the same way, gamelib.log has no IPC argument rejection for `installWineVersion`, and a Wine-Staging-macOS install either creates its `-DXMT` copy or logs the DXMT skip line.
-result: pending
+result: pass — launch 1, entry Wine-11.18 (P5 (e); no Wine-11.19 entry exists) (`gamelib-launch-1.log`, `notes.log` ITEM 6). Install showed progress and the start and finish toasts; the log carries the start, finish and removed lines (18:50:10Z to 18:51:11Z); the row flipped to installed without a restart or a tab switch, and Remove flipped it back with the removal toast. 0 `GAMELIB_IPC_INVALID_ARGS` lines for `installWineVersion` in any archive. The DXMT skip line `Not creating DXMT copy of` is present (1, WARNING, path written as `~`; `winemac.so` lacks the macdrv metal exports), so the half scores on the line; a checksum-absent warning was logged. After Remove: `tools/wine/` back to `Wine-11.21` and `Wine-Staging-macOS-latest`, 0 temporary entries; the stored Wine-11.18 entry `isInstalled=false`, `hasUpdate=false`, `installDir` empty.
 
 ### 7. Removing a game's bottle leaves its sibling byte-identical
 expected: The uninstall dialog of the named game offers an enabled toggle that names the game's own bottle; with it on, the uninstall removes that bottle and nothing else, so the sibling's bottle, marker and files equal the P4 record; a refusal shows the removal-refused notice instead; and the toggle's disabled state (a game on the shared default prefix) is legible in the Midnight Mirage, Gruvbox Dark and Dracula themes.
-result: pending
+result: issue — launch 4, Trash Goblin with its bottle, operator-approved before the action (`gamelib-launch-4.log`, `notes.log` ITEM 7). The dialog control is right: its toggle reads "Remove this game's bottle: GameLib-legendary-54f7949350c949c6a2c47f12e7b15636", enabled, and the amber risk warning appears when it is on. NOT MET: the uninstall with the toggle on was refused before the bottle route ran: "Couldn't uninstall Trash Goblin / The folder is a protected location ... / Nothing was deleted.", `[safety] uninstall refused: is-protected-root` (1, 19:20:22Z), 0 `removePerGameBottle:` and 0 `Removed the game bottle` lines (RF4). The refusal notice works; the removal half was never exercised. Pressing Cancel in the dialog first removed the game's Steam shortcut (RF3). Sibling compare with the app closed and P2 clean: Caravan SandWitch's bottle 1902 files, `sibling-after.sha` equal to the retaken `sibling-before.sha` (0 diff lines, both sha256 `883fdc1fd0e3589b...`), marker kind crossover; Trash Goblin's bottle intact (2434 files), marker kind crossover. The three-theme legibility of the disabled toggle was not runnable: no installed game shows the disabled toggle (Racine, the planned case, is missing on disk; Bloody Hell has its own prefix), so `disabledContrast.test.ts` is the only evidence for that half.
 
 ## Run order
 
@@ -482,11 +482,121 @@ their CONDITIONAL marks). Each gesture is traced to the component that renders i
 8. The three log rows that were IMPOSSIBLE in 87-59 are scored from `gamelib-launch-N.log` only after the redaction presence
    control passes (a non-engine line carries the home path; the engine selection does not).
 
+## Run record
+
+Run by plan 87-69 with the operator, 2026-11-24 18:43Z to 19:21Z (launch 4 stayed open until the operator quit it; the closing
+compare was taken with the app closed, 2026-11-25 about 03:57Z). `gamelib.log` writes the local clock (UTC+13). `$S` is
+`gamelib-gate-87r1-2026-11-24T184311Z` under the session scratchpad in `/private/tmp` (P1, mode 0700), never the 87-59 one. The
+transcript is `$S/notes.log` (76 lines, 4 `=== GATE LAUNCH N` delimiters), every write `tee -a`.
+
+- **Build (P8):** the signed gap build `0.13.1` installed over the signed 0.13.0 build at 18:49:04Z.
+  `Identifier=com.gamelib.shell`, Developer ID Application leaf, `TeamIdentifier=S7U223QWXJ`,
+  `CDHash=266b7378d08b90e305efe37d2573270b01b146dd` (equal to 87-68's record), `spctl` accepted, `source=Notarized Developer ID`,
+  designated requirement sha256 `68d712d0...` (byte-identical to the 0.13.0 and Phase 86 records). P8 met; every item ran on it.
+- **P5 as run:** (a) the non-Steam CrossOver game Trash Goblin (Epic, `GameLib-legendary-54f7949350c949c6a2c47f12e7b15636`);
+  (b) the sibling Caravan SandWitch (Amazon, its own `GameLib-nile-...` bottle); (c) the game to uninstall with its bottle: Trash
+  Goblin, last (Age of Decadence was rejected as Steam-only, Bloody Hell because its stored `wineCrossoverBottle` is empty and
+  its wine type is toolkit); (d) none named, so item 3 is blocked; (e) Wine-11.18 (no Wine-11.19 entry exists). The launch-once
+  step was skipped: both gate bottles already existed with `kind=crossover` markers.
+- **P3/P4:** the first P3 attempt (18:47:15Z) was discarded because GameLib 0.13.0 was still running during the copy; the copies
+  were removed and P3 redone with P2 clean (18:48:18Z): `profile-before/` (5.6G), `bottles-before/` for both gate bottles (667M),
+  `steam-engines-before/` (890M), licence existence only (present). P4 `baseline.txt` and `sibling-before.sha` (1900 files, the
+  three registry files excluded by name). P7 `no-crossover.sb` copied (sha256 `c3f5c4b43ac04742...`). The 0.13.0 session's logs
+  archived as `preexisting-gamelib.log*`.
+- **Launches:** 1 plain (pid 67538; items 6, 4, then 5); 2 under `sandbox-exec -f no-crossover.sb` with the pin moved aside
+  (pid 18831; item 1 offline, then item 2 online); 3 plain (pid 88966; re-adopt, item 5 re-attempted); 4 plain (pid 37450;
+  item 7). P2 was clean before every launch and after every quit (no GameLib, reaper, sidecar or wineserver); each launch's
+  `gamelib.log` and `.old` were archived before the next launch.
+- **Launch 3 re-adopt:** met. `engine=crossover reason=cx-healthy` (19:11:32Z), marker pinned to crossover, `saveinfo.dat`
+  sha256 `7eb70257593da06f...` equal before and after.
+- **Operator decisions, recorded in `notes.log` before the actions they cover:** the pin move aside for launch 2 (approved);
+  the uninstall of Trash Goblin with its bottle removed (approved); item 5 moved to Caravan SandWitch (18:59:48Z); a diagnostic
+  that created an EMPTY `~/Games/GameLib/Prefixes/shared` to test whether the absent `--wine-prefix` broke the launch (approved;
+  it did not help and was removed again at 19:01:47Z); `sibling-before.sha` retaken after the diagnostic Caravan run with the app
+  closed (1902 files, 2 diff lines against the P4 original, which is kept as `sibling-before-p4.sha`); continuing the gate after
+  item 5 blocked; restores: keep.
+- **Deviations from the run order:** item 5 ran on the sibling as well as on the named game and was re-attempted in launch 3;
+  item 3 did not run (no title); the disabled-toggle legibility check in item 7 was not runnable (no installed game reaches the
+  disabled state).
+
+## Findings and observations
+
+Not fixed here (D-06): each goes to a further gap cycle through `/gsd-plan-phase 87 --gaps`. Evidence is in `$S/notes.log` and the
+archived logs named in each result; counts and timestamps only.
+
+**Findings (new, for a further gap cycle)**
+
+- **RF1 (was F6), items 5 and 7's premise: CrossOver launches from GameLib exit within 1 to 2 s.** Trash Goblin (legendary,
+  18:57Z twice and 19:13:52Z, 19:14:03Z, `launch deadline cancelled (launcher-exited)`) and Caravan SandWitch (nile
+  `Process exited with code 1`, 19:00Z to 19:01Z) on `engine=crossover reason=cx-healthy`. Wine-Staging launches work (19:09Z); the
+  single CrossOver launch right after the pinned-to-crossover restore (DXVK and overrides removed, stock DLLs restored, the
+  restore's wineserver stopped) ran normally. The operator reports it is not intermittent: it is the same pattern as 87-59 (drops
+  on CrossOver, works on Wine, then works once on CrossOver). The same nile command run from a shell starts the game, also under
+  the sidecar's minimal environment (`env -i`, `PATH=/usr/bin:/bin:/usr/sbin:/sbin`), so the failure is in GameLib's spawn or its
+  state between launches, not the bottle or the game. An empty recreated shared prefix did not help. Suspected: the TS launch
+  path's CrossOver spawn and what the engine-switch restore resets (`src/backend/launcher.ts` and the CrossOver overlay in
+  `src-tauri/crates/gamelib-engine/src/launch/settings.rs`). Existing todo:
+  `.planning/todos/pending/2026-11-24-bottled-games-exit-about-one-second-after-the-wine-command.md`.
+- **RF2 (was F7), item 1: Play stays on launching after the offline refusal.** The refusal fired, but the backend had already
+  logged the launch start and display-sleep prevention (19:05:01Z) and never ended the launch: no `Stopping Display Power Saver`
+  until the later online run ended (19:10:00Z). The dialog closed at 19:05:12Z and the button stayed on launching until the
+  operator left the page and came back. Suspected: the TS launch caller does not end the launch (status and power-save blocker)
+  when the engine step answers blocked (`src/backend/launcher.ts` around the engine-step reply; `GamePage/index.tsx:196`).
+- **RF3 (was F8), item 7: Cancel in the uninstall dialog removed the game's Steam shortcut.** At 19:16:59Z, `[Shortcuts]` logged
+  the Steam image removal and "Trash Goblin was successfully removed from Steam." with a "Removed from Steam" notification; the
+  bottle and the game directory stayed. No runner `Uninstalling` line exists in launch 4, so the uninstall path did not run; a
+  `[Frontend]` Warning naming the uninstall Modal was logged the second before. `UninstallModal/index.tsx` has no Steam-shortcut
+  path on Cancel. Suspected: the click falling through to the game page's Steam-shortcut control
+  (`src/frontend/screens/Game/GamePage/actions/useSteamShortcut.ts` `handleAddToSteam` -> `removeFromSteam`,
+  `src/backend/sidecar/shortcutsFlowRegistration.ts:405-412`); not traced.
+- **RF4 (was F9), item 7: the bottle removal can never run for a game whose stored prefix is the shared default.** With the
+  toggle on, the uninstall was refused `is-protected-root` and nothing was deleted. Cause: in `src/backend/utils/uninstaller.ts`
+  (`:385-409`) the D-14 pre-flight `checkRemoval` runs on the stored `winePrefix` (the shared default
+  `~/Games/GameLib/Prefixes/shared`) before the 87-70 per-game-bottle route, so every bottle-backed game on the default prefix is
+  refused outright. 87-70's SUMMARY flagged this for item 7.
+- **RF5, item 1 (UX): the generic offline warning precedes a refusal.** The "game might not play properly offline" warning is
+  shown first and is pointless when the launch is about to be refused. Suspected: the TS pre-launch offline prompt runs before the
+  engine step's verdict.
+- **RF6, item 7 (open, by reading): two removal reasons have no notice wording.** The bottle op answers `in-use` and
+  `unsafe-name`, which are not in `REMOVAL_REASONS` (`src/common/types/safety.ts:51`); `noticeReason`
+  (`src/backend/utils/uninstaller.ts:131-139`) renders them as `bad-reply`. Not seen live (RF4 stopped the route first).
+
+**Observations (not findings against the items)**
+
+- **O1:** the launcher's `[Legendary] Launching <game>:` line logs the full environment and command, including the raw home path
+  and the pinned-engine paths (2 hits in the archives, one line duplicated). It is launcher-origin, pre-existing Heroic-era
+  behaviour and outside item 2's engine-origin contract, but it is the one place the redaction does not reach.
+- **O2:** an orphaned `steam-bridge-helper-signin` (ppid 1, about 11 h old) from the helperIntegration jest run was found at P2
+  and killed: that test can orphan its helper.
+- **O3:** ending a shell-started CrossOver game needed `WINEPREFIX=<bottle dir> wineserver -k`; `CX_BOTTLE` alone did not end it.
+  87-65's `engine_bottle_kill_wineserver` sets `WINEPREFIX` to the bottle directory
+  (`src-tauri/crates/gamelib-engine/src/bottles/lifecycle.rs:121-126`), which matches what worked; it was not exercised live (item 5).
+- The disabled bottle toggle's legibility in the three themes is still unproven live (no reachable state; Racine missing on disk,
+  the known `library-install-state-disagrees-with-disk` todo).
+
+## Closing inventory
+
+Taken with the app closed and P2 clean (no `gamelib-shell`, sidecar or wineserver process). Restore decision (operator): **keep**,
+no restores from the P3 copies.
+
+- **Restored:** nothing.
+- **Unchanged:** Caravan SandWitch's bottle (1902 files equal to the retaken `sibling-before.sha`, marker kind crossover); Trash
+  Goblin's save (`saveinfo.dat` sha256 `7eb70257...`); the CrossOver licence (existence only, never read or copied).
+- **Left changed, the operator's to restore from the P3 copies if wanted:** Trash Goblin's non-Steam Steam shortcut was removed
+  (RF3); the pinned engine in `tools/steam-engines` is the fresh launch-2 download (the original directories are in `$S/pin-aside/`,
+  890M); Trash Goblin's bottle `user.reg` carries the item 4 font-smoothing change and its `winetricks.log` holds `fontsmooth=bgr`;
+  Trash Goblin's marker is kind crossover again, as before the run. Trash Goblin and its bottle are still installed (RF4 refused
+  the removal). `tools/wine/` holds the same two versions as before (Wine-11.18 installed and removed).
+- **Created and removed:** the empty `~/Games/GameLib/Prefixes/shared` made for the RF1 diagnostic.
+- **Installed:** `/Applications/GameLib.app` is the signed 0.13.1 gap build.
+- **Captures:** `$S` holds 28 entries, 8.3G (profile, bottle and pin copies, per-launch logs, `notes.log`, the sibling hashes),
+  directory mode 0700, never committed; the operator deletes it once Phase 87 is verified.
+
 ## Summary
 
 total: 7
-passed: 0
-issues: 0
-pending: 7
+passed: 3
+issues: 2
+pending: 0
 skipped: 0
-blocked: 0
+blocked: 2
