@@ -45,6 +45,12 @@ regex = { version = "1", default-features = false, features = ["std", "perf"] }
 # Fixed-offset civil time only (the cache timestamps): no tz database is read.
 jiff = { version = "0.2", default-features = false, features = ["std"] }
 
+# The Windows host facts (`os.cpus()`, `os.release()` and `os.totalmem()` of the system-information
+# probes, 88.1-09): the registry and `GlobalMemoryStatusEx`. windows-sys 0.61.2 is already locked for
+# steampoll, steamfiles, depot and proc, so no new lockfile package name enters.
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_System_Registry", "Win32_System_SystemInformation"] }
+
 [features]
 # `Replay` (a recorded-case `Http`) and `MemorySecretSource` for the golden tests and the CLI.
 testing = []
@@ -52,6 +58,9 @@ testing = []
 [dev-dependencies]
 gamelib-info = { path = ".", features = ["testing"] }
 gamelib-testutil = { path = "../gamelib-testutil" }
+# `ScriptedSpecRunner`, the scripted spawn seam the golden replay of the system-information probes
+# answers from (the engine's golden tests use the same fake). Test-only; no lockfile package name.
+gamelib-engine = { path = "../gamelib-engine", features = ["testing"] }
 tempfile = "3"
 
 [lints.clippy]

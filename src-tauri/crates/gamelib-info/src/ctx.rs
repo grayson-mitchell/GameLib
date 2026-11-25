@@ -5,6 +5,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use gamelib_core::clock::Clock;
+use gamelib_core::process::{BoxFuture, LineSink, ProcSpec, SpecOutput, SpecRunner};
 use gamelib_core::shutdown::Shutdown;
 use gamelib_store::host::StoreHost;
 
@@ -39,6 +40,22 @@ pub struct InfoPaths {
 /// never a URL, a key, a token or any text a server sent.
 pub trait InfoLog: Send + Sync {
     fn line(&self, text: &str);
+}
+
+/// The default [`InfoCtx::proc`]: answers every spawn as "could not start", so a headless run (the CLI,
+/// a test that installs no runner) probes nothing. The shell installs its `SpecProcRunner` instead.
+pub struct NoSpecRunner;
+
+impl SpecRunner for NoSpecRunner {
+    fn run(&self, spec: ProcSpec, _on_line: Option<LineSink>) -> BoxFuture<SpecOutput> {
+        Box::pin(async move {
+            SpecOutput {
+                code: None,
+                stderr: format!("spawn {}: no process runner installed", spec.program),
+                ..SpecOutput::default()
+            }
+        })
+    }
 }
 
 /// Everything an op needs from outside the crate. Fields are public so the shell can fill the ones
@@ -79,6 +96,9 @@ pub struct InfoCtx {
     /// The HowLongToBeat search credentials (86-21): fetched on first use, held in memory only, never
     /// persisted (the TS kept them in a boot-owned `info-caches:hltb` scratch state).
     pub hltb: HltbState,
+    /// The one spawn seam of the system-information probes (88.1-09, D-21): the shell's
+    /// `SpecProcRunner`, a Helper. [`NoSpecRunner`] until the shell installs it.
+    pub proc: Arc<dyn SpecRunner>,
 }
 
 impl InfoCtx {
@@ -109,6 +129,7 @@ impl InfoCtx {
             log: None,
             crossover: CrossoverState::new(),
             hltb: HltbState::new(),
+            proc: Arc::new(NoSpecRunner),
         }
     }
 

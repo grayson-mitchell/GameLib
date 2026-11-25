@@ -1,1 +1,51 @@
-[]
+[
+  {
+    "id": "*",
+    "file": "spawns.json",
+    "kind": "env-inherited",
+    "programs": ["free"],
+    "reason": "The TS runs `free -b` with a replaced environment: a copy of its own process.env plus LANG=C (replaceEnv true). The Rust crate reads no environment variable (D-13), so it hands the runner LANG=C to add to the environment the child inherits (replaceEnv false): the child sees the same variables, and no PATH lookup depends on a cleared environment."
+  },
+  {
+    "id": "system-information-probes-spawn-through-the-runner-free-rejects-on-enoent",
+    "file": "result.json",
+    "kind": "replace",
+    "rust": { "error": "spawn free failed" },
+    "reason": "The TS rejects with Node's own spawn error text, 'spawn free ENOENT', which carries the errno word. The Rust error names the program that could not start in fixed text ('spawn <program> failed'); the read still fails as a whole, at the same probe."
+  },
+  {
+    "id": "mac-sysctl-spawn-failure-rejects-the-whole-read",
+    "file": "result.json",
+    "kind": "replace",
+    "rust": { "error": "spawn sysctl failed" },
+    "reason": "The TS rejects with Node's own spawn error text, 'spawn sysctl ENOENT', which carries the errno word. The Rust error names the program that could not start in fixed text ('spawn <program> failed'); the read still fails as a whole, at the same probe, before vm_stat is spawned."
+  },
+  {
+    "id": "getgpuinfo-linux-resolves-on-enoent",
+    "file": "events.json",
+    "kind": "replace",
+    "rust": [{ "level": "warning", "text": "Could not list GPUs: lspci missing or failed" }],
+    "reason": "The TS line appends the String of the spawn error ('Error: spawn lspci ENOENT'). The Rust note is fixed text and never carries an error string (prohibition 1). One line per failed probe, as in the TS; the log level is the shell log's."
+  },
+  {
+    "id": "getgpuinfo-tolerance-resolves-when-lspci-is-missing-on-linux",
+    "file": "events.json",
+    "kind": "replace",
+    "rust": [{ "level": "warning", "text": "Could not list GPUs: lspci missing or failed" }],
+    "reason": "The TS line appends the String of the spawn error ('Error: spawn lspci ENOENT'). The Rust note is fixed text and never carries an error string (prohibition 1). One line per failed probe, as in the TS; the log level is the shell log's."
+  },
+  {
+    "id": "getgpuinfo-linux-resolves-on-non-zero-exit",
+    "file": "events.json",
+    "kind": "replace",
+    "rust": [{ "level": "warning", "text": "Could not list GPUs: lspci did not exit successfully" }],
+    "reason": "The TS line prints the exit code and signal name ('lspci exited with 1 null'). The Rust note is fixed text without them; it is one line for each unsuccessful exit and the timeout case below, as in the TS."
+  },
+  {
+    "id": "getgpuinfo-linux-resolves-on-timeout",
+    "file": "events.json",
+    "kind": "replace",
+    "rust": [{ "level": "warning", "text": "Could not list GPUs: lspci did not exit successfully" }],
+    "reason": "The TS line prints the exit code and signal name ('lspci exited with null null'). The Rust note is fixed text without them; a timeout is an unsuccessful exit, one line, as in the TS."
+  }
+]

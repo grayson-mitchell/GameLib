@@ -2,7 +2,8 @@
 //! index, store search and discounts, anti-cheat info, recent games, per-game overrides and the
 //! SteamGridDB artwork, ported from the TypeScript sidecar.
 //!
-//! Tauri-free, no environment reads, no `keyring` and no child process (D-19, D-20). Paths, the
+//! Tauri-free, no environment reads, no `keyring` and no child process of its own (D-19, D-20); the
+//! [`sysinfo`] probes spawn through the context's `proc` runner, a Helper the shell installs (D-21). Paths, the
 //! clock, the platform, the API keys and the baked ITAD key all arrive in [`ctx::InfoCtx`], so the
 //! crate runs headlessly on a fake HOME (`gamelib-info-cli`) and in the shell alike. Every op goes
 //! through [`dispatch`], which answers `unknown op: <op>` for a name not in [`OPS`].
@@ -24,6 +25,7 @@ pub mod recent;
 pub mod runner_caps;
 pub mod secrets;
 pub mod steamgrid;
+pub mod sysinfo;
 pub mod umu;
 pub mod wiki;
 
