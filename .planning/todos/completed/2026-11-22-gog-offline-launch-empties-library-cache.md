@@ -47,3 +47,10 @@ The gate dir `/tmp/gamelib-gate-2026-11-22T03:38:53Z/` holds `launch1-gog_librar
 
 An offline launch with a populated GOG cache leaves both files byte-identical and shows the cached games.
 A jest case covers "refresh with every fetch failing keeps the cache".
+
+## Resolution (2026-11-25)
+
+Fixed in 92d9c391a, live-verified 2026-11-25. Session: `.planning/debug/resolved/gog-offline-empties-cache.md`.
+The two-part account above is wrong: the renderer read path is fine, and offline refresh() writes nothing.
+The writer was the version-change clearCache(false, true), which now waits for a connection. The
+"all fetches failed" guard was added anyway, since an online refresh could overwrite the cache that way.

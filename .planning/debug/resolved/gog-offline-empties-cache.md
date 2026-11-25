@@ -1,8 +1,8 @@
 ---
-status: awaiting_human_verify
+status: resolved
 trigger: "An offline launch empties the GOG library cache (gog_library.json, gog_api_info.json) — todo .planning/todos/pending/2026-11-22-gog-offline-launch-empties-library-cache.md"
 created: 2026-11-22
-updated: 2026-11-22
+updated: 2026-11-25
 ---
 
 ## Symptoms
@@ -44,7 +44,7 @@ reasoning_checkpoint:
   and_gate: "yes. The loss needs the clear (version change) AND offline together; fix 1 breaks the conjunction. Separately, an online refresh with every per-game fetch failing could overwrite the cache; fix 2 covers that independent path."
 test: live — offline launch after a version change leaves gog_library.json / gog_api_info.json byte-identical and shows the cached GOG games; back online the deferred clear runs and the library refetches.
 expecting: shasum of both files identical before/after the offline launch; GOG shows its cached games; log has `Updated to a new version` but no `No cache found`.
-next_action: awaiting human verification (checkpoint returned to the orchestrator). Prepared 2026-11-23: sidecar build/main/sidecar.js (02:19) already carries the fix; pre-test copy of both cache files + before.sha in the session scratchpad gog-cache-backup/; read-only check script gog-offline-check.sh next to it. Steps: online launch, set localStorage last_version to '0.0.1' via the auto-opened devtools console, quit; Wi-Fi off; relaunch; run the script; Wi-Fi on.
+next_action: none, resolved 2026-11-25 (live verified by the operator). Prepared 2026-11-23: sidecar build/main/sidecar.js (02:19) already carries the fix; pre-test copy of both cache files + before.sha in the session scratchpad gog-cache-backup/; read-only check script gog-offline-check.sh next to it. Steps: online launch, set localStorage last_version to '0.0.1' via the auto-opened devtools console, quit; Wi-Fi off; relaunch; run the script; Wi-Fi on.
 
 ## Evidence
 
@@ -109,7 +109,7 @@ verification:
   adjacent_tests: { result: pass, suites_run: ["src/backend/sidecar (all)", "src/backend/storeManagers/gog (all)", "src/backend/__tests__ (all)", "src/backend/stores (all)"], detail: "251 suites passed, 6132 tests, 5 pre-existing skips; tsc --noEmit clean; eslint --quiet clean on the 7 touched files; prettier --check clean" }
   revert_and_reconfirm: { result: pass, bug_returned_on_revert: true, fixed_on_reapply: true, detail: "source files restored from HEAD (only my four were touched): 5 tests failed (1 shellFilesFlows offline, 2 cache discard, 2 gog library); reapplied: 69/69 pass" }
   guardrail_verdict: accepted
-  live_verification: pending (human: offline launch after a version change, see checkpoint)
+  live_verification: { result: pass, date: 2026-11-25, detail: "Operator, live pnpm tauri:dev. Pre-launch hashes taken with GameLib quit (gog_library.json 13756 B, gog_api_info.json 104359 B, mtime 17:14). Offline version-change launch 17:21:37: log `Updated to a new version` at 17:21:39, NO `No cache found` while offline, files untouched (next mtime 17:22:32, 5 s after `Connectivity: online` at 17:22:27); operator confirmed GOG showed its cached games offline (no cover art, separate pre-existing issue). On reconnect the deferred clear ran and GOG refetched (`Getting GOG library`, `Saved games data`), sizes back to 13756 / 104359. Online version-change run 17:24:45 refetched GOG and ended with its games." }
 files_changed:
   - src/backend/sidecar/shellFilesFlowRegistration.ts
   - src/backend/sidecar/handlers.ts
@@ -118,3 +118,10 @@ files_changed:
   - src/backend/sidecar/__tests__/shellFilesFlows.test.ts
   - src/backend/storeManagers/gog/__tests__/library.test.ts
   - src/backend/__tests__/cache.test.ts
+
+## Follow-ups (filed 2026-11-25, out of scope for this fix)
+
+- Online version-change launch: the startup GOG refresh (17:24:46) starts before the renderer's version-change clear (17:24:47), so the clear empties gog_api_info.json (66 B) after the refresh filled it. Same timing before the fix (the online path is unchanged). Todo: 2026-11-25-version-change-clear-races-startup-gog-refresh.md
+- On reconnect after an offline launch, `Getting GOG library` runs twice back to back (17:22:28 and 17:22:32). Todo: 2026-11-25-gog-double-refresh-on-reconnect.md
+- Offline, library tiles show no cover art (art is remote). Todo: 2026-11-25-offline-library-shows-no-cover-art.md
+- Code landed in 92d9c391a (committed as WIP by another session before Phase 87 execution); this archive closes it.
