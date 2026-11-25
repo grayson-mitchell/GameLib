@@ -206,6 +206,33 @@ pub(crate) fn rpc_launch_known_fix_env(args: &[Value]) -> Result<Value, String> 
     known_fix_env_over(launch_ctx(), args)
 }
 
+/// The body of the `launch_verify_wine_prefix` arm over a given context and host: the generated decode
+/// (`[gameSettings]`), an object check and an arity check first, so a bad call is rejected the same fixed
+/// `<op>:bad-args` literal before and after the install and never echoes the sidecar's value, then the crate over
+/// `[settings, host]`. `host` is the shell's own facts (T-88.1-14), taken only once the context is there.
+fn verify_wine_prefix_over(
+    ctx: Option<&Arc<LaunchCtx>>,
+    args: &[Value],
+    host: impl FnOnce() -> Value,
+) -> Result<Value, String> {
+    let decoded = LaunchVerifyWinePrefixArgs::from_args(args)?;
+    if args.len() != 1 {
+        return Err("launch_verify_wine_prefix:bad-args".to_string());
+    }
+    let settings = settings_object(decoded.game_settings, "launch_verify_wine_prefix")?;
+    let ctx = ctx.ok_or_else(|| "launch_verify_wine_prefix:not-ready".to_string())?;
+    rpc_launch_op(Some(ctx), "launch_verify_wine_prefix", &[settings, host()])
+}
+
+/// The `launch_verify_wine_prefix` `rustInvoke` arm (the managers' and the save sync's `verifyWinePrefix` shim,
+/// 88.1-08): creates a game's wine prefix when it is missing, as a `wineboot --init` or umu's `createprefix` run
+/// through the wine command core (a Helper spawn), and answers `{ res: { stdout, stderr } }`. The shell appends
+/// [`wine_dispatch::wine_run_host`]. It waits on the wineboot of a cold prefix, so the sidecar lists the channel as
+/// unbounded (`UNBOUNDED_RUST_CHANNELS`); the crate's `guarded` registrant and the shutdown token end it at exit.
+pub(crate) fn rpc_launch_verify_wine_prefix(args: &[Value]) -> Result<Value, String> {
+    verify_wine_prefix_over(launch_ctx(), args, wine_dispatch::wine_run_host)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -358,6 +385,27 @@ mod tests {
     }
 
     #[test]
+    fn the_verify_prefix_arm_answers_not_ready_before_the_install_and_an_empty_res_for_a_crossover_wine(
+    ) {
+        let home = FakeHome::new("launch-shell-");
+        let ctx = ctx_over(&home);
+        let crossover = json!({
+            "wineVersion": {"type": "crossover", "bin": "/cx/wine", "name": "CrossOver"},
+            "winePrefix": home.root().join("never-made").to_string_lossy(),
+        });
+        assert_eq!(
+            verify_wine_prefix_over(None, &[crossover.clone()], host),
+            Err("launch_verify_wine_prefix:not-ready".to_string())
+        );
+        // A crossover bottle has no prefix of its own: nothing spawns and nothing is created.
+        assert_eq!(
+            verify_wine_prefix_over(Some(&ctx), &[crossover], host),
+            Ok(json!({"res": {"stdout": "", "stderr": ""}}))
+        );
+        assert!(!home.root().join("never-made").exists());
+    }
+
+    #[test]
     fn the_wrappers_arm_joins_the_words_in_order_and_tells_an_empty_gamescope_from_none() {
         let home = FakeHome::new("launch-shell-");
         let ctx = ctx_over(&home);
@@ -417,7 +465,7 @@ mod tests {
         let ctx = ctx_over(&home);
         let secret = "/Users/someone/secret-profile-path";
         type Arm = fn(Option<&Arc<LaunchCtx>>, &[Value]) -> Result<Value, String>;
-        let arms: [(&str, Arm); 4] = [
+        let arms: [(&str, Arm); 5] = [
             ("launch_setup_env_vars", |c, a| {
                 setup_env_vars_over(c, a, host)
             }),
@@ -426,6 +474,9 @@ mod tests {
             }),
             ("launch_setup_wrappers", setup_wrappers_over),
             ("launch_known_fix_env", known_fix_env_over),
+            ("launch_verify_wine_prefix", |c, a| {
+                verify_wine_prefix_over(c, a, host)
+            }),
         ];
         let wrong: Vec<Vec<Value>> = vec![
             vec![],

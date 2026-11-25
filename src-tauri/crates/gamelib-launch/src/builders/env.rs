@@ -15,6 +15,9 @@ use gamelib_wine::wine_cmd::WineHost;
 
 pub use gamelib_wine::wine_cmd::env::remove_quote_if_necessary;
 
+use gamelib_wine::wine_cmd::prefix::verify_wine_prefix as wine_verify_wine_prefix;
+use serde_json::{json, Value};
+
 use crate::ctx::LaunchCtx;
 
 /// `setupEnvVars`: GPU offload, the HUD, the install path, the user's own variables and an empty
@@ -93,4 +96,21 @@ pub fn is_mac_sonoma_or_higher(ctx: &LaunchCtx, darwin_release: Option<&str>) ->
         });
     }
     answer
+}
+
+/// `verifyWinePrefix`: creates the game's wine prefix when it is missing, through the wine command core
+/// (a `wineboot --init`, or umu's `createprefix`, run as a Helper; 87 D-22 and D-21). The answer is the TS
+/// reply shape, `{ res: { stdout, stderr } }` (plus `code` when a command ran). An invalid wine and a
+/// CrossOver bottle answer an empty result without running anything. `Err` is the fixed
+/// `launch_verify_wine_prefix:failed`: the prefix directory could not be made, and the reason (which names a
+/// path in the log, never here) is not echoed (T-88.1-13).
+pub async fn verify_wine_prefix(
+    ctx: &LaunchCtx,
+    settings: &GameSettingsView,
+    host: &WineHost,
+) -> Result<Value, String> {
+    match wine_verify_wine_prefix(&ctx.wine, settings, host).await {
+        Ok(result) => Ok(json!({ "res": result.to_json() })),
+        Err(_) => Err("launch_verify_wine_prefix:failed".to_string()),
+    }
 }

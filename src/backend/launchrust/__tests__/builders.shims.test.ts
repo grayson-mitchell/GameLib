@@ -8,9 +8,9 @@ import { rustInvokeArgs } from 'common/types/ipc/rustInvoke'
 import {
   RUST_LAUNCH_KNOWN_FIX_ENV,
   RUST_LAUNCH_SETUP_ENV_VARS,
-  RUST_LAUNCH_SETUP_WINE_ENV_VARS,
   RUST_LAUNCH_SETUP_WRAPPER_ENV_VARS,
-  RUST_LAUNCH_SETUP_WRAPPERS
+  RUST_LAUNCH_SETUP_WRAPPERS,
+  RUST_LAUNCH_VERIFY_WINE_PREFIX
 } from 'common/types/sidecarTransport'
 import type { GameSettings } from 'common/types'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
@@ -19,7 +19,8 @@ import {
   getKnownFixesEnvVariables,
   setupEnvVars,
   setupWrapperEnvVars,
-  setupWrappers
+  setupWrappers,
+  verifyWinePrefix
 } from '../builders'
 
 const settings = {
@@ -205,12 +206,32 @@ describe('getKnownFixesEnvVariables', () => {
   })
 })
 
-describe('the wine env channel', () => {
-  it('is reached by no shim yet (88.1-08 wires it with its callers) and its schema takes the settings and a game id', () => {
-    expect(RUST_LAUNCH_SETUP_WINE_ENV_VARS).toBe('launch_setup_wine_env_vars')
-    const schema = rustInvokeArgs[RUST_LAUNCH_SETUP_WINE_ENV_VARS]
-    expect(() => schema.parse([settings, null])).not.toThrow()
-    expect(() => schema.parse([settings, 'g1'])).not.toThrow()
-    expect(() => schema.parse(['not an object', null])).toThrow()
+describe('verifyWinePrefix', () => {
+  it('sends one launch_verify_wine_prefix call carrying only the settings and answers what Rust did', async () => {
+    const reply = { res: { stdout: '', stderr: '' } }
+    const deps = fakeTransport(reply)
+    expect(await verifyWinePrefix(deps, settings)).toBe(reply)
+    expect(deps.calls).toEqual([[RUST_LAUNCH_VERIFY_WINE_PREFIX, [settings]]])
+    expect(RUST_LAUNCH_VERIFY_WINE_PREFIX).toBe('launch_verify_wine_prefix')
+  })
+
+  it('sends arguments that pass the channel schema, which takes the settings alone and refuses anything else', async () => {
+    const deps = fakeTransport({})
+    await verifyWinePrefix(deps, settings)
+    const schema = rustInvokeArgs[RUST_LAUNCH_VERIFY_WINE_PREFIX]
+    for (const [, args] of deps.calls) {
+      expect(() => schema.parse(args)).not.toThrow()
+    }
+    expect(() => schema.parse(['not an object'])).toThrow()
+    expect(() => schema.parse([])).toThrow()
+    expect(() => schema.parse([settings, { env: {} }])).toThrow()
+  })
+
+  it('passes the fixed failure of an uncreatable prefix on to the caller and never falls back', async () => {
+    const deps = fakeTransport(new Error('launch_verify_wine_prefix:failed'))
+    await expect(verifyWinePrefix(deps, settings)).rejects.toThrow(
+      'launch_verify_wine_prefix:failed'
+    )
+    expect(deps.calls).toHaveLength(1)
   })
 })

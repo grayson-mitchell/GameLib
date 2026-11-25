@@ -87,11 +87,13 @@ import {
   getKnownFixesEnvVariables as getKnownFixesEnvVariablesShim,
   setupEnvVars as setupEnvVarsShim,
   setupWrapperEnvVars as setupWrapperEnvVarsShim,
-  setupWrappers as setupWrappersShim
+  setupWrappers as setupWrappersShim,
+  verifyWinePrefix as verifyWinePrefixShim
 } from './launchrust/builders'
 import {
   settleEnvMap,
   settleKnownFixEnv,
+  settleVerifyPrefixReply,
   settleWordList
 } from './launchBuilderReply'
 import {
@@ -1765,9 +1767,7 @@ export interface Launcher {
   validWine(
     ...a: DropFirst<Parameters<typeof validWine>>
   ): ReturnType<typeof validWine>
-  verifyWinePrefix(
-    ...a: DropFirst<Parameters<typeof verifyWinePrefix>>
-  ): ReturnType<typeof verifyWinePrefix>
+  verifyWinePrefix(gameSettings: GameSettings): Promise<{ res: ExecResult }>
   /**
    * The boot's sidecar -> Rust request leg, which the launcher already holds (LauncherDeps extends
    * RustInvokeDeps). Exposed so a flow that builds `RustInvokeDeps` for a Rust-backed shim (the
@@ -1823,7 +1823,11 @@ export function createLauncher(deps: LauncherDeps): Launcher {
         await getKnownFixesEnvVariablesShim(deps, appName, runner)
       ),
     validWine: (...a) => validWine(deps, ...a),
-    verifyWinePrefix: (...a) => verifyWinePrefix(deps, ...a),
+    verifyWinePrefix: async (gameSettings) =>
+      settleVerifyPrefixReply(
+        await verifyWinePrefixShim(deps, gameSettings),
+        'verifyWinePrefix'
+      ),
     // A getter, so a getter-backed deps object stays call-time like the members above.
     get requestRustInvoke() {
       return deps.requestRustInvoke

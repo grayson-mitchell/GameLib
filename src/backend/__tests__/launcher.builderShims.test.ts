@@ -10,7 +10,8 @@ import {
   RUST_LAUNCH_KNOWN_FIX_ENV,
   RUST_LAUNCH_SETUP_ENV_VARS,
   RUST_LAUNCH_SETUP_WRAPPER_ENV_VARS,
-  RUST_LAUNCH_SETUP_WRAPPERS
+  RUST_LAUNCH_SETUP_WRAPPERS,
+  RUST_LAUNCH_VERIFY_WINE_PREFIX
 } from 'common/types/sidecarTransport'
 
 const settings = { winePrefix: '/p' } as unknown as GameSettings
@@ -72,5 +73,17 @@ describe('the launcher builder members', () => {
     await expect(words.launcher.setupWrappers(settings)).rejects.toThrow(
       'setupWrappers: the reply was not a list of words'
     )
+  })
+
+  it('verifyWinePrefix sends its channel with the settings alone and answers the result, and an answer of the wrong shape is an error', async () => {
+    const reply = { res: { stdout: 'a', stderr: 'b', code: 0 } }
+    const { launcher, calls } = launcherAnswering(reply)
+    expect(await launcher.verifyWinePrefix(settings)).toEqual(reply)
+    expect(calls).toEqual([[RUST_LAUNCH_VERIFY_WINE_PREFIX, [settings]]])
+    for (const wrong of [null, {}, { res: null }, { res: { stdout: 1 } }]) {
+      await expect(
+        launcherAnswering(wrong).launcher.verifyWinePrefix(settings)
+      ).rejects.toThrow('verifyWinePrefix: the reply was not a command result')
+    }
   })
 })

@@ -6,6 +6,7 @@
  * environment or joins it into a `--wrapper` flag, so a reply of the wrong shape is an error at the call and never
  * a malformed variable in a game's environment.
  */
+import type { ExecResult } from 'common/types'
 
 /** A string-to-string map: a plain object whose every value is a string. */
 export function settleEnvMap(
@@ -40,4 +41,29 @@ export function settleKnownFixEnv(reply: unknown): Record<string, string> {
   return reply === null || reply === undefined
     ? {}
     : (reply as Record<string, string>)
+}
+
+/**
+ * The reply of the wine prefix check: `{ res: { stdout, stderr } }`, with the exit `code` of a command that ran. The
+ * TypeScript it replaced answered `{ res }` and callers read nothing but its arrival, so this checks the shape and
+ * hands on the object as it came.
+ */
+export function settleVerifyPrefixReply(
+  reply: unknown,
+  builder: string
+): { res: ExecResult } {
+  if (typeof reply === 'object' && reply !== null && 'res' in reply) {
+    const { res } = reply
+    if (
+      typeof res === 'object' &&
+      res !== null &&
+      'stdout' in res &&
+      typeof res.stdout === 'string' &&
+      'stderr' in res &&
+      typeof res.stderr === 'string'
+    ) {
+      return reply as { res: ExecResult }
+    }
+  }
+  throw new Error(`${builder}: the reply was not a command result`)
 }

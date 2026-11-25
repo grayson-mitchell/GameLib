@@ -3,7 +3,8 @@ import {
   RUST_LAUNCH_KNOWN_FIX_ENV,
   RUST_LAUNCH_SETUP_ENV_VARS,
   RUST_LAUNCH_SETUP_WRAPPER_ENV_VARS,
-  RUST_LAUNCH_SETUP_WRAPPERS
+  RUST_LAUNCH_SETUP_WRAPPERS,
+  RUST_LAUNCH_VERIFY_WINE_PREFIX
 } from 'common/types/sidecarTransport'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 
@@ -48,6 +49,19 @@ export async function setupEnvVars(
 }
 
 /**
+ * Creates the game's wine prefix when it is missing, with a `wineboot --init` (or umu's `createprefix`) that Rust runs
+ * as a Helper, and answers `{ res: { stdout, stderr } }`. A crossover bottle and an invalid wine answer an empty
+ * result without running anything. The wineboot of a cold prefix is awaited, which can pass the 60 s transport bound,
+ * so the channel is unbounded (`UNBOUNDED_RUST_CHANNELS`). Rejects when the prefix directory cannot be made.
+ */
+export async function verifyWinePrefix(
+  deps: RustInvokeDeps,
+  gameSettings: GameSettings
+): Promise<unknown> {
+  return deps.requestRustInvoke(RUST_LAUNCH_VERIFY_WINE_PREFIX, [gameSettings])
+}
+
+/**
  * The wrapper words of a launch in order, gamescope first: the gamescope command, the user's wrapper options (each
  * `args` split like a shell would), mangohud behind an empty gamescope command and gamemode. Each of the three
  * commands is absent when the caller has none. Rejects when a wrapper option has an unterminated quote.
@@ -69,7 +83,7 @@ export async function setupWrappers(
 
 /**
  * The tier-1 known-fix `envVariables` of a game as its file holds them (`{}` when there is none), local over bundled
- * over remote. The wine env shim arrives in 88.1-08 with its callers.
+ * over remote.
  */
 export async function getKnownFixesEnvVariables(
   deps: RustInvokeDeps,

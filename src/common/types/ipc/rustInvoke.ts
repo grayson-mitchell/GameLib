@@ -167,6 +167,7 @@ import {
   RUST_LAUNCH_SETUP_WINE_ENV_VARS,
   RUST_LAUNCH_SETUP_WRAPPER_ENV_VARS,
   RUST_LAUNCH_SETUP_WRAPPERS,
+  RUST_LAUNCH_VERIFY_WINE_PREFIX,
   RUST_WINE_MANAGER_LIST,
   RUST_WINE_MANAGER_REFRESH,
   RUST_WINE_RELEASES_INFO_READY,
@@ -1275,7 +1276,10 @@ export const rustInvokeArgs = {
     z
       .enum(['gog', 'legendary', 'nile', 'sideload', 'steam'])
       .meta({ title: 'runner' })
-  ])
+  ]),
+  // Phase 88.1 (SVC-03, 88.1-08, D-19): the prefix check. `[gameSettings]`; the shell appends the process environment and
+  // the Darwin release itself (T-88.1-14).
+  [RUST_LAUNCH_VERIFY_WINE_PREFIX]: z.tuple([knownFixGameSettings])
 } satisfies Record<RustInvokeChannel, z.ZodTuple>
 
 /** The positional args a `rustInvoke` call for channel `C` sends (input side of the schema). */

@@ -1574,6 +1574,16 @@ export const RUST_LAUNCH_SETUP_WRAPPERS = 'launch_setup_wrappers' as const
  * the 60 s `RUST_INVOKE_TIMEOUT_MS`.
  */
 export const RUST_LAUNCH_KNOWN_FIX_ENV = 'launch_known_fix_env' as const
+/**
+ * Phase 88.1 (SVC-03, 88.1-08, D-01, D-19): the prefix check of a game, reached through `verifyWinePrefix` in
+ * `launchrust/builders.ts`. `launch_verify_wine_prefix` takes `[gameSettings]` (the shell appends the process
+ * environment and the Darwin release itself, T-88.1-14) and answers `{ res: { stdout, stderr, code? } }`, the TS reply
+ * shape. It creates the prefix with a `wineboot --init` (or umu's `createprefix`) run as a Helper when the registry is
+ * missing, and that wait can pass the 60 s `RUST_INVOKE_TIMEOUT_MS`, so the channel is in the unbounded set. A prefix
+ * directory that cannot be made rejects with `launch_verify_wine_prefix:failed`.
+ */
+export const RUST_LAUNCH_VERIFY_WINE_PREFIX =
+  'launch_verify_wine_prefix' as const
 export const RUST_ENGINE_STATE_RECORD_DECISION =
   'engine_state_record_decision' as const
 export const RUST_ENGINE_STATE_PUBLISH_OVERLAY_NOTICE =
@@ -2023,6 +2033,7 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_LAUNCH_SETUP_WINE_ENV_VARS,
   RUST_LAUNCH_SETUP_WRAPPERS,
   RUST_LAUNCH_KNOWN_FIX_ENV,
+  RUST_LAUNCH_VERIFY_WINE_PREFIX,
   RUST_SHORTCUTS_EXIST,
   RUST_SHORTCUTS_ADD,
   RUST_SHORTCUTS_REMOVE,

@@ -82,6 +82,7 @@ import {
   RUST_WINE_WINETRICKS_INSTALL,
   RUST_WINE_RUN_COMMAND_FOR_GAME,
   RUST_WINE_TOOL_CALL,
+  RUST_LAUNCH_VERIFY_WINE_PREFIX,
   RUST_DIALOG_MESSAGE,
   RUST_DIALOG_OPEN,
   RUST_DIALOG_SAVE,
@@ -228,6 +229,12 @@ const RUST_INVOKE_TIMEOUT_MS = 60_000
  * Seventeenth (Phase 87, 87-56a): `engine_fallback_ensure` is the first-need download of the pinned engine, a ~228 MB archive
  * the TS reporter let run with no cap of its own beyond the caller's abort. Rust bounds it by its cancel id
  * (`engine_cancel`) and the app shutdown (D-17), so no entry can outlive the sidecar.
+ *
+ * Eighteenth (Phase 88.1, 88.1-08): `launch_verify_wine_prefix` creates a missing wine prefix with a `wineboot --init`
+ * (or umu's `createprefix`) and waits for it when the prefix has no registry yet, which a cold prefix can take past 60 s
+ * (`haveToWait`); the TS it replaces had no cap. The wine command core runs it as a Helper, bounds and reaps it, and
+ * the app shutdown cancels it, so no entry can outlive the sidecar. The other `launch_*` channels are pure computations
+ * or one disk read and stay bounded.
  */
 const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_DIALOG_OPEN,
@@ -273,7 +280,8 @@ const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_WINE_WINETRICKS_AVAILABLE,
   RUST_WINE_WINETRICKS_INSTALL,
   RUST_WINE_RUN_COMMAND_FOR_GAME,
-  RUST_WINE_TOOL_CALL
+  RUST_WINE_TOOL_CALL,
+  RUST_LAUNCH_VERIFY_WINE_PREFIX
 ]
 
 /**

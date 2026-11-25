@@ -1202,6 +1202,17 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     // legendary's launch leaves in 91, gog's and nile's in 92
     deletedBy: 92
   },
+  // 88.1-08 (D-01, D-19, 87 D-22): the prefix check. The save-path sync and the GOG and Amazon setup reach it through the
+  // launcher's member; it goes when the save sync and the setup modules leave (92).
+  {
+    name: 'verifyWinePrefix',
+    file: 'src/backend/launchrust/builders.ts',
+    shape: 'shim',
+    channel: 'RUST_LAUNCH_VERIFY_WINE_PREFIX',
+    callers: LAUNCH_BUILDER_SHIM_IMPORTERS,
+    // save_sync and the setup modules leave in 92
+    deletedBy: 92
+  },
   // 88-13 (87 D-24): the synchronous known-fix twins, for callers 88 cannot make async. `installFixes` and
   // `getKnownFixesEnvVariables` read the tier-1 fix inline in the launcher until 88.1/97 move them; the env log line goes
   // with them. `withKnownFixEnv` builds the settings storeManagerCommon launches with, which the sideload and

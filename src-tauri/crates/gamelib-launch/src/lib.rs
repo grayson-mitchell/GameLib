@@ -39,6 +39,7 @@ pub const OPS: &[&str] = &[
     "launch_setup_wine_env_vars",
     "launch_setup_wrapper_env_vars",
     "launch_setup_wrappers",
+    "launch_verify_wine_prefix",
 ];
 
 /// Runs `op` over `args`. `Err` is only an unknown op, bad arguments, a shutdown, a wrong thread or a
@@ -124,7 +125,26 @@ async fn route(op: &str, args: &[Value], ctx: &LaunchCtx) -> Result<Value, Strin
             .map_err(|e| format!("{op}:{}", e.message()))?;
             result_of(serde_json::to_value(words))
         }
+        // `verifyWinePrefix`. Arguments `[settings, host]`. May run a wineboot as a Helper, which waits on a
+        // fresh prefix, so the shell lists the channel as unbounded (the app shutdown still ends it).
+        "launch_verify_wine_prefix" => {
+            let [settings @ Value::Object(_), host] = args else {
+                return Err(bad());
+            };
+            let settings = serde_json::from_value(settings.clone()).map_err(|_| bad())?;
+            let host = host_arg(host).ok_or_else(bad)?;
+            env::verify_wine_prefix(ctx, &settings, &host).await
+        }
         _ => Err(format!("unknown op: {op}")),
+    }
+}
+
+/// The host facts argument: `null` is none, an object is the facts, anything else (or an unknown fact) is `None`.
+fn host_arg(host: &Value) -> Option<WineHost> {
+    match host {
+        Value::Null => Some(WineHost::default()),
+        Value::Object(_) => serde_json::from_value(host.clone()).ok(),
+        _ => None,
     }
 }
 
@@ -179,11 +199,7 @@ fn settings_arg(
         Value::String(text) => Some(text.clone()),
         _ => return Err(bad()),
     };
-    let host = match host {
-        Value::Null => WineHost::default(),
-        Value::Object(_) => serde_json::from_value(host.clone()).map_err(|_| bad())?,
-        _ => return Err(bad()),
-    };
+    let host = host_arg(host).ok_or_else(bad)?;
     Ok((settings, text, host))
 }
 
@@ -368,8 +384,8 @@ mod tests {
     }
 
     #[test]
-    fn the_five_builder_ops_are_in_the_table() {
-        assert_eq!(OPS.len(), 5);
+    fn the_six_launch_ops_are_in_the_table() {
+        assert_eq!(OPS.len(), 6);
         assert!(OPS.iter().all(|op| op.starts_with("launch_")));
     }
 
@@ -510,6 +526,54 @@ mod tests {
             .unwrap_err(),
             "launch_setup_wine_env_vars:bad-args"
         );
+    }
+
+    #[tokio::test]
+    async fn the_verify_prefix_op_answers_an_empty_res_without_spawning_for_a_crossover_wine() {
+        let home = FakeHome::new("launch-lib-");
+        let ctx = ctx(&home);
+        let prefix = home.root().join("never-made");
+        let settings = json!({
+            "wineVersion": {"type": "crossover", "bin": "/cx/wine", "name": "CrossOver"},
+            "winePrefix": prefix.to_string_lossy(),
+        });
+        let got = dispatch(
+            "launch_verify_wine_prefix",
+            &[settings.clone(), Value::Null],
+            &ctx,
+        )
+        .await
+        .unwrap();
+        assert_eq!(got, json!({"res": {"stdout": "", "stderr": ""}}));
+        // Nothing ran, so nothing created the prefix either.
+        assert!(!prefix.exists());
+        let host = json!({"env": {}, "darwinRelease": "24.1.0"});
+        assert_eq!(
+            dispatch("launch_verify_wine_prefix", &[settings, host], &ctx)
+                .await
+                .unwrap(),
+            json!({"res": {"stdout": "", "stderr": ""}})
+        );
+    }
+
+    #[tokio::test]
+    async fn the_verify_prefix_op_refuses_a_malformed_call_with_its_fixed_bad_args() {
+        let home = FakeHome::new("launch-lib-");
+        let ctx = ctx(&home);
+        let secret = "/Users/someone/secret-profile-path";
+        for args in [
+            vec![wine_settings()],
+            vec![Value::Null, Value::Null],
+            vec![wine_settings(), json!(secret)],
+            vec![wine_settings(), json!({"unknownFact": secret})],
+            vec![wine_settings(), Value::Null, Value::Null],
+        ] {
+            let err = dispatch("launch_verify_wine_prefix", &args, &ctx)
+                .await
+                .unwrap_err();
+            assert_eq!(err, "launch_verify_wine_prefix:bad-args", "{args:?}");
+            assert!(!err.contains(secret));
+        }
     }
 
     #[tokio::test]

@@ -341,6 +341,9 @@ pub(crate) fn dispatch_rust_channel(
         }
         RustInvokeChannel::LaunchSetupWrappers => launch_dispatch::rpc_launch_setup_wrappers(args),
         RustInvokeChannel::LaunchKnownFixEnv => launch_dispatch::rpc_launch_known_fix_env(args),
+        RustInvokeChannel::LaunchVerifyWinePrefix => {
+            launch_dispatch::rpc_launch_verify_wine_prefix(args)
+        }
         RustInvokeChannel::ShortcutsExist => shortcuts_dispatch::rpc_shortcuts_exist(args),
         RustInvokeChannel::ShortcutsAdd => shortcuts_dispatch::rpc_shortcuts_add(args),
         RustInvokeChannel::ShortcutsRemove => shortcuts_dispatch::rpc_shortcuts_remove(args),
