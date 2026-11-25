@@ -3,19 +3,21 @@
  * TypeScript it replaced never threw, so a failed call or an odd reply is a warning and no overrides. 88-13 adds
  * the same for the launcher's registry step and overlay env: neither fails a launch.
  */
-import { logWarning } from 'backend/logger'
+import * as logger from 'backend/logger'
 import {
   settleKnownFixLaunchOverrides,
   settleKnownFixOverlayEnv,
   settleKnownFixRegistry
 } from '../knownFixLaunchReply'
 
-jest.mock('backend/logger', () => ({
-  logWarning: jest.fn(),
-  LogPrefix: { Backend: 'Backend' }
-}))
+let logWarning: jest.SpyInstance
 
-beforeEach(() => jest.mocked(logWarning).mockClear())
+beforeEach(() => {
+  logWarning = jest
+    .spyOn(logger, 'logWarning')
+    .mockImplementation(() => undefined)
+})
+afterEach(() => logWarning.mockRestore())
 
 describe('settleKnownFixLaunchOverrides', () => {
   it('answers the launch args and the checked exe override of a good reply', async () => {

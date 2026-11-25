@@ -16,7 +16,7 @@
     "src/backend/__tests__/notificationFailureLogging.test.ts": 3,
     "src/backend/__tests__/onlineMonitor.test.ts": 1,
     "src/backend/__tests__/protocol.test.ts": 7,
-    "src/backend/__tests__/steamBridgeKnownFixes.test.ts": 7,
+    "src/backend/__tests__/steamBridgeKnownFixes.test.ts": 6,
     "src/backend/__tests__/storeChangeNotifier.test.ts": 1,
     "src/backend/__tests__/storeLaunchHooks.test.ts": 6,
     "src/backend/__tests__/utils.test.ts": 4
