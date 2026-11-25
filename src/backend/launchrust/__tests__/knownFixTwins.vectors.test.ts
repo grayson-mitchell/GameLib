@@ -645,7 +645,7 @@ describeSkipOnWindows(
       /**
        * The goldens hold the gzip bytes the recorded Node's zlib produced. Another zlib build deflates the same tar
        * to other bytes (Node on the Linux CI runner gave 134 bytes where the macOS recording has 127), which is the
-       * zlib build and not the twin; Rust's replay compares those bytes on all three OSes. So the compressed-only
+       * zlib build and not the twin. Rust's replay compares the gzip bytes only for the cases whose bytes match the golden (and requires at least one to). So the compressed-only
        * fields (size, sha256, base64 of the gzip) are compared only where this Node's zlib reproduces the recorded
        * archive of a reference case; elsewhere they are dropped from both sides, and everything that is not
        * compression (the tar bytes and their digest, the header fields, the gzip header, round trips, errors) is
@@ -655,8 +655,15 @@ describeSkipOnWindows(
         const ref = cases.find(
           (x) => x.id === 'build-three-files-sorted-by-bytes'
         )
-        const step = ref?.steps[0]
-        const want = ref ? golden(ref.id).steps[0] : undefined
+        // A renamed or removed reference case must fail loudly: returning false here would drop the gzip
+        // fields from the comparison on every OS, macOS included, and nothing would notice (WR-09).
+        if (!ref) {
+          throw new Error(
+            'reference case build-three-files-sorted-by-bytes missing from golden/overlay_archive'
+          )
+        }
+        const step = ref.steps[0]
+        const want = golden(ref.id).steps[0]
         if (step?.op !== 'build' || !want) return false
         return (
           buildOverlayTarGz(filesOf(step.files)).toString('base64') ===
@@ -677,6 +684,16 @@ describeSkipOnWindows(
           })
         }
       }
+
+      it('reports whether the gzip bytes were compared on this leg', () => {
+        // Surfaced so a degraded leg (another zlib build) is visible in the log and not silent.
+        console.info(
+          exactGzip
+            ? 'overlay archive twin: gzip bytes compared against the golden'
+            : 'overlay archive twin: gzip bytes NOT compared on this leg (zlib build differs); Rust compares them'
+        )
+        expect(typeof exactGzip).toBe('boolean')
+      })
 
       it('visits every recorded case, and every step kind is among them', () => {
         expect(cases.length).toBeGreaterThanOrEqual(ARCHIVE_FLOOR)
