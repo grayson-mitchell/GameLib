@@ -535,10 +535,6 @@ export interface LaunchPreperationResult {
   offlineMode?: boolean
 }
 
-export interface RpcClient {
-  destroy(): void
-}
-
 /** The handle shape a spawned child is reported through (structurally the runner's ChildHandle). */
 interface SpawnedChildHandle {
   readonly pid: number | undefined

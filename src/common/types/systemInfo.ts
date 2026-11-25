@@ -5,7 +5,7 @@
  * `backend/`.
  */
 
-export type GPUInfo = {
+type GPUInfo = {
   // The PCI device ID of the graphics card (hexadecimal)
   deviceId: string
   // The PCI vendor ID of the graphics card (hexadecimal)
@@ -23,7 +23,7 @@ export type GPUInfo = {
   driverVersion?: string
 }
 
-export type SteamDeckInfo =
+type SteamDeckInfo =
   | { isDeck: true; model: string; mode: 'game' | 'desktop' }
   | { isDeck: false; model?: undefined }
 

@@ -197,7 +197,7 @@ interface SurvivorRow {
  * Both directions between the exported values of `files` and the schedule rows that name those files: an export with
  * no row is unscheduled, a row naming something the file does not export is orphaned.
  */
-function knownFixSurvivorDiff(
+function survivorDiff(
   files: readonly StrippedFile[],
   schedule: readonly SurvivorRow[],
   survivorFiles: readonly string[] = KNOWN_FIX_SURVIVOR_FILES
@@ -238,7 +238,7 @@ describe('knownFixSurvivors', () => {
   })
 
   it('every export under launchrust/knownFixes.ts and knownFixTwins.ts is a schedule row, and every row is exported', () => {
-    expect(knownFixSurvivorDiff(tsWalk.files, SCHEDULE)).toEqual({
+    expect(survivorDiff(tsWalk.files, SCHEDULE)).toEqual({
       unscheduled: [],
       orphaned: []
     })
@@ -274,9 +274,10 @@ describe('knownFixSurvivors', () => {
         planted(shims, 'export async function a() {}\nexport const b = 1'),
         planted(twins, 'export function c() {}')
       ]
-      expect(
-        knownFixSurvivorDiff(files, [row(shims, 'a'), row(twins, 'c')])
-      ).toEqual({ unscheduled: [`${shims}#b`], orphaned: [] })
+      expect(survivorDiff(files, [row(shims, 'a'), row(twins, 'c')])).toEqual({
+        unscheduled: [`${shims}#b`],
+        orphaned: []
+      })
     })
 
     it('self-test: a schedule row naming something the file does not export is reported orphaned, and a type export is not a value', () => {
@@ -285,7 +286,7 @@ describe('knownFixSurvivors', () => {
         planted(twins, 'export function c() {}')
       ]
       expect(
-        knownFixSurvivorDiff(files, [
+        survivorDiff(files, [
           row(shims, 'a'),
           row(twins, 'c'),
           row(twins, 'gone')
@@ -295,7 +296,7 @@ describe('knownFixSurvivors', () => {
 
     it('self-test: a survivor file the walk did not read fails loudly instead of passing empty', () => {
       expect(() =>
-        knownFixSurvivorDiff([planted(shims, 'export function a() {}')], [])
+        survivorDiff([planted(shims, 'export function a() {}')], [])
       ).toThrow(/was not read by the walk/)
     })
 
@@ -431,6 +432,175 @@ describe('buildersPortComplete', () => {
       expect(() => codeOf('src/backend/nothing-here.ts')).toThrow(
         /was not read by the walk/
       )
+    })
+  })
+})
+
+/** The three launch TS files 88.1 leaves as scheduled shims: the builders, the prepare steps and the launch utilities. */
+const BUILDERS_SURVIVOR_FILES = [
+  'src/backend/launchrust/builders.ts',
+  'src/backend/launchrust/prepare.ts',
+  'src/backend/launchrust/launchUtils.ts'
+] as const
+
+/**
+ * The interim glue 88.1 leaves, a named table with the phase that deletes each name (88.1-19, ROADMAP 88.1 SC3, and
+ * 88 verification warning W-5). These are not schedule rows: they are adapters and reply settlers around the shims, not
+ * shims themselves. `launchAdapters.ts` gathers the TS-only facts, makes the one shim call and applies the writes the
+ * reply carries (the launch log, the wine self-heal's settings); the three launchers' own `launch()` leave in 92, the
+ * Steam bottle provisioning behind `checkWineBeforeLaunch` in 96. `knownFixLaunchReply.ts` turns a rejected known-fix
+ * reply into the warning the TS used to log, for the Steam bridge, which leaves in 97.
+ */
+const INTERIM_GLUE: readonly SurvivorRow[] = [
+  {
+    file: 'src/backend/launchAdapters.ts',
+    name: 'writeLaunchLog',
+    deletedBy: 92
+  },
+  {
+    file: 'src/backend/launchAdapters.ts',
+    name: 'prepareLaunch',
+    deletedBy: 92
+  },
+  {
+    file: 'src/backend/launchAdapters.ts',
+    name: 'prepareWineLaunch',
+    deletedBy: 92
+  },
+  {
+    file: 'src/backend/launchAdapters.ts',
+    name: 'checkWineBeforeLaunch',
+    deletedBy: 96
+  },
+  {
+    file: 'src/backend/knownFixLaunchReply.ts',
+    name: 'settleKnownFixLaunchOverrides',
+    deletedBy: 97
+  },
+  {
+    file: 'src/backend/knownFixLaunchReply.ts',
+    name: 'settleKnownFixRegistry',
+    deletedBy: 97
+  },
+  {
+    file: 'src/backend/knownFixLaunchReply.ts',
+    name: 'settleKnownFixOverlayEnv',
+    deletedBy: 97
+  }
+]
+
+/** The two files the interim glue table covers. */
+const INTERIM_GLUE_FILES = [
+  'src/backend/launchAdapters.ts',
+  'src/backend/knownFixLaunchReply.ts'
+] as const
+
+/** The phases that may delete an interim glue name: the launchers (92), the Steam bottle provisioning (96), the bridge (97). */
+const INTERIM_GLUE_DELETED_BY: readonly number[] = [92, 96, 97]
+
+/**
+ * 88.1-19, D-25 and ROADMAP 88.1 SC3: with 88.1-17 and 88.1-18 the slice's TS is gone, so what is left is a named
+ * survivor. Every export of `launchrust/builders.ts`, `prepare.ts` and `launchUtils.ts` is a schedule row and every such
+ * row's export exists; every export of the two interim glue files is in the named table above and every table row's
+ * export exists (both ways each); nothing is due in 88.1.
+ */
+describe('buildersSurvivors', () => {
+  const shimRows = SCHEDULE.filter((r) =>
+    (BUILDERS_SURVIVOR_FILES as readonly string[]).includes(r.file)
+  )
+
+  it('anti-vacuity: the three shim files are read and 11 rows are scheduled, and the glue table names 7 survivors in 2 files', () => {
+    // 6 builder shims, 3 prepare shims and 2 launch-utility shims, measured on 2026-11-26.
+    assertAtOrAboveFloor('builders shim rows', shimRows.length, 11)
+    for (const file of BUILDERS_SURVIVOR_FILES) {
+      expect(tsWalk.files.some((f) => f.path === file)).toBe(true)
+      expect(shimRows.some((r) => r.file === file)).toBe(true)
+    }
+    assertAtOrAboveFloor('interim glue rows', INTERIM_GLUE.length, 7)
+    for (const file of INTERIM_GLUE_FILES) {
+      expect(tsWalk.files.some((f) => f.path === file)).toBe(true)
+      expect(INTERIM_GLUE.some((r) => r.file === file)).toBe(true)
+    }
+  })
+
+  it('every export of launchrust/builders.ts, prepare.ts and launchUtils.ts is a schedule row, and every row is exported', () => {
+    expect(
+      survivorDiff(tsWalk.files, SCHEDULE, BUILDERS_SURVIVOR_FILES)
+    ).toEqual({ unscheduled: [], orphaned: [] })
+  })
+
+  it('every export of launchAdapters.ts and knownFixLaunchReply.ts is in the interim glue table, and every table row is exported', () => {
+    expect(
+      survivorDiff(tsWalk.files, INTERIM_GLUE, INTERIM_GLUE_FILES)
+    ).toEqual({ unscheduled: [], orphaned: [] })
+  })
+
+  it('every interim glue row names a deletion phase of 92, 96 or 97, and none is also a schedule row', () => {
+    expect(
+      INTERIM_GLUE.filter(
+        (r) => !INTERIM_GLUE_DELETED_BY.includes(r.deletedBy)
+      ).map((r) => `${r.file}#${r.name}: ${String(r.deletedBy)}`)
+    ).toEqual([])
+    expect(
+      SCHEDULE.filter((r) =>
+        (INTERIM_GLUE_FILES as readonly string[]).includes(r.file)
+      ).map((r) => `${r.file}#${r.name}`)
+    ).toEqual([])
+  })
+
+  it('no row is due in 88.1 (nothing the sub-phase ports leaves a survivor due inside it)', () => {
+    expect(rowsDueIn(SCHEDULE, 88.1)).toEqual([])
+  })
+
+  describe('planted violations', () => {
+    const planted = (path: string, code: string): StrippedFile => ({
+      path,
+      raw: code,
+      code
+    })
+    const [adapters, reply] = INTERIM_GLUE_FILES
+    const glue = (file: string, name: string, deletedBy = 92): SurvivorRow => ({
+      file,
+      name,
+      deletedBy
+    })
+
+    it('self-test: an export of an interim glue file that is not in the table is reported unscheduled', () => {
+      const files = [
+        planted(adapters, 'export function a() {}\nexport const stray = 1'),
+        planted(reply, 'export async function b() {}')
+      ]
+      expect(
+        survivorDiff(
+          files,
+          [glue(adapters, 'a'), glue(reply, 'b', 97)],
+          INTERIM_GLUE_FILES
+        )
+      ).toEqual({ unscheduled: [`${adapters}#stray`], orphaned: [] })
+    })
+
+    it('self-test: a glue table row naming something the file does not export is reported orphaned', () => {
+      const files = [
+        planted(adapters, 'export function a() {}'),
+        planted(reply, 'export async function b() {}')
+      ]
+      expect(
+        survivorDiff(
+          files,
+          [glue(adapters, 'a'), glue(reply, 'b', 97), glue(reply, 'gone', 97)],
+          INTERIM_GLUE_FILES
+        )
+      ).toEqual({ unscheduled: [], orphaned: [`${reply}#gone`] })
+    })
+
+    it('self-test: a planted row due in 88.1 is found, and a glue phase outside 92, 96 and 97 is found', () => {
+      const due = [glue(adapters, 'a', 88.1), glue(reply, 'b', 97)]
+      expect(rowsDueIn(due, 88.1).map((r) => r.name)).toEqual(['a'])
+      expect(
+        [glue(adapters, 'a', 93), glue(reply, 'b', 97)]
+          .filter((r) => !INTERIM_GLUE_DELETED_BY.includes(r.deletedBy))
+          .map((r) => r.name)
+      ).toEqual(['a'])
     })
   })
 })

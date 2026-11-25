@@ -36,7 +36,7 @@ const RUNNERS: readonly Runner[] = [
 ]
 
 /** One library entry a case scripts: what `getGame(app)` answers for it. */
-export interface FakeGame {
+interface FakeGame {
   native?: boolean
   info?: Partial<GameInfo>
   settings?: Partial<GameSettings>
