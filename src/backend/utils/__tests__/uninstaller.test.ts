@@ -1033,8 +1033,25 @@ describe('uninstallGameCallback per-game bottle (87-70)', () => {
     expect(statuses()).toEqual(['uninstalling', 'done'])
   })
 
-  it('a crate-only refusal word reads as bad-reply in the closed notice vocabulary', async () => {
-    const t = transport({ outcome: 'refused', reason: 'in-use' })
+  it.each(['in-use', 'unsafe-name'])(
+    'the bottle op refusal %s reaches the notice as itself (87-75, RF6)',
+    async (reason) => {
+      const t = transport({ outcome: 'refused', reason })
+
+      await run(t.deps)
+
+      expect(notices()).toEqual([
+        expect.objectContaining({
+          kind: 'remove-bottle',
+          outcome: 'refused',
+          reason
+        })
+      ])
+    }
+  )
+
+  it('a refusal word outside the vocabulary still reads as bad-reply', async () => {
+    const t = transport({ outcome: 'refused', reason: 'brand-new-word' })
 
     await run(t.deps)
 

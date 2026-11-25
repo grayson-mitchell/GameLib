@@ -47,10 +47,18 @@ export const SAFETY_ADAPTER_REASONS = [
   'bad-reply'
 ] as const
 
-/** Every reason a caller can be handed: the Rust set, then the adapter's. */
+/**
+ * Reasons only the engine's per-game bottle op answers (87-66, `remove_per_game.rs`): the bottle's name is not one
+ * GameLib made for this game, or a game is running in it. Never on the gamelib-safety wire; the parity test pins
+ * every `reason:` literal of the op to this set.
+ */
+export const BOTTLE_REMOVAL_REASONS = ['in-use', 'unsafe-name'] as const
+
+/** Every reason a caller can be handed: the Rust set, then the adapter's, then the bottle op's. */
 export const REMOVAL_REASONS = [
   ...SAFETY_REASONS,
-  ...SAFETY_ADAPTER_REASONS
+  ...SAFETY_ADAPTER_REASONS,
+  ...BOTTLE_REMOVAL_REASONS
 ] as const
 
 export type SafetyVerdict = (typeof SAFETY_VERDICTS)[number]

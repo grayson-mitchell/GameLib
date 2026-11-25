@@ -6,6 +6,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { defined } from 'backend/testUtils/indexed'
 import {
+  BOTTLE_REMOVAL_REASONS,
   REMOVAL_REASONS,
   SAFETY_ADAPTER_REASONS,
   SAFETY_OUTCOMES,
@@ -18,6 +19,16 @@ const ROOT = join(__dirname, '..', '..', '..')
 const CRATE_SRC = join(ROOT, 'src-tauri/crates/gamelib-safety/src')
 const wireRs = readFileSync(join(CRATE_SRC, 'wire.rs'), 'utf8')
 const triRs = readFileSync(join(CRATE_SRC, 'tri.rs'), 'utf8')
+const bottleOpRs = readFileSync(
+  join(ROOT, 'src-tauri/crates/gamelib-engine/src/bottles/remove_per_game.rs'),
+  'utf8'
+)
+
+/** Every `reason: "<word>"` literal of a Rust source, in order of appearance. */
+const reasonLiterals = (source: string) =>
+  [...source.matchAll(/\breason:\s*"([a-z][a-z-]*)"/g)].map((m) =>
+    defined(m[1], 'reason literal')
+  )
 
 /** The variant names of `pub enum <name> { ... }`, in declaration order. */
 function extractVariants(source: string, enumName: string): string[] {
@@ -68,13 +79,34 @@ describe('gamelib-safety wire parity (plan 82-03)', () => {
     expect([...SAFETY_VERDICTS]).toEqual(kebabVariants(triRs, 'Tri'))
   })
 
-  it('REMOVAL_REASONS is the Rust reasons then the TS-only adapter reasons, with no overlap', () => {
+  it('REMOVAL_REASONS is the Rust reasons, the adapter reasons, then the bottle op reasons, with no overlap', () => {
     expect([...REMOVAL_REASONS]).toEqual([
       ...SAFETY_REASONS,
-      ...SAFETY_ADAPTER_REASONS
+      ...SAFETY_ADAPTER_REASONS,
+      ...BOTTLE_REMOVAL_REASONS
     ])
-    for (const r of SAFETY_ADAPTER_REASONS) {
+    expect(new Set(REMOVAL_REASONS).size).toBe(REMOVAL_REASONS.length)
+    for (const r of [...SAFETY_ADAPTER_REASONS, ...BOTTLE_REMOVAL_REASONS]) {
       expect(kebabVariants(wireRs, 'Reason')).not.toContain(r)
     }
+  })
+
+  it('every reason literal the bottle op answers is in REMOVAL_REASONS (87-75, RF6)', () => {
+    const words = reasonLiterals(bottleOpRs)
+    // Anti-vacuity: the op's own two words and a guard word are among what the extractor found.
+    expect(words).toEqual(
+      expect.arrayContaining(['unsafe-name', 'in-use', 'delete-failed'])
+    )
+    for (const word of words) {
+      expect(REMOVAL_REASONS as readonly string[]).toContain(word)
+    }
+  })
+
+  it('a reason literal the vocabulary lacks is found by the same check (negative fixture)', () => {
+    const mutated = `${bottleOpRs}\nRefused { reason: "brand-new-word", other_key: None }`
+    const missing = reasonLiterals(mutated).filter(
+      (w) => !(REMOVAL_REASONS as readonly string[]).includes(w)
+    )
+    expect(missing).toEqual(['brand-new-word'])
   })
 })
