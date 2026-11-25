@@ -974,7 +974,6 @@ export default class LegendaryGame implements Game {
     const {
       success: launchPrepSuccess,
       failureReason: launchPrepFailReason,
-      rpcClient,
       mangoHudCommand,
       gameModeBin,
       gameScopeCommand,
@@ -986,7 +985,6 @@ export default class LegendaryGame implements Game {
     )
     if (!launchPrepSuccess) {
       logWriter.logError(['Launch aborted:', launchPrepFailReason])
-      this.deps.launcher.launchCleanup()
       showDialogBoxModalAuto(this.deps, {
         title: t('box.error.launchAborted', 'Launch aborted'),
         message: launchPrepFailReason!,
@@ -1156,8 +1154,6 @@ export default class LegendaryGame implements Game {
         logWriters: gameSettings.verboseLogs ? [logWriter] : [],
         onOutput: (chunk) => launchOutput.onOutput(chunk)
       })
-
-    this.deps.launcher.launchCleanup(rpcClient)
 
     const loginFailure = classifyLegendaryLaunchFailure({
       output: launchOutput.text(),

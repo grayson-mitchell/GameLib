@@ -529,7 +529,6 @@ export interface UpdateParams {
 export interface LaunchPreperationResult {
   success: boolean
   failureReason?: string
-  rpcClient?: RpcClient
   mangoHudCommand?: string[]
   gameModeBin?: string
   gameScopeCommand?: string[]

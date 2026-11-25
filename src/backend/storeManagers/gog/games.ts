@@ -637,7 +637,6 @@ export default class GOGGame implements Game {
     const {
       success: launchPrepSuccess,
       failureReason: launchPrepFailReason,
-      rpcClient,
       mangoHudCommand,
       gameScopeCommand,
       gameModeBin
@@ -648,7 +647,6 @@ export default class GOGGame implements Game {
     )
     if (!launchPrepSuccess) {
       logWriter.logError(['Launch aborted:', launchPrepFailReason])
-      this.deps.launcher.launchCleanup()
       showDialogBoxModalAuto(this.deps, {
         title: t('box.error.launchAborted', 'Launch aborted'),
         message: launchPrepFailReason!,
@@ -952,7 +950,6 @@ export default class GOGGame implements Game {
       comet.unregister()
       comet.kill()
     }
-    this.deps.launcher.launchCleanup(rpcClient)
 
     if (abort) {
       return true

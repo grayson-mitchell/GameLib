@@ -99,6 +99,8 @@ interface ScheduleRow extends ShimRow {
 
 /** Every non-test importer of `launcher.ts` and of `commandRunner.ts` (the twin check is per file). */
 const LAUNCHER_IMPORTERS: readonly string[] = [
+  // 88.1-15: the interim prepare adapters take the `LauncherDeps` type.
+  'src/backend/launchAdapters.ts',
   'src/backend/services/types.ts',
   // 88.1-08: bootstrap.ts no longer imports `launcher.ts` (its command-runner `wine` binding goes through the shims).
   'src/backend/storeManagers/index.ts',
@@ -174,6 +176,10 @@ const TOOLS_SHIM_IMPORTERS: readonly string[] = [
 const LAUNCH_BUILDER_SHIM_IMPORTERS: readonly string[] = [
   'src/backend/launcher.ts',
   'src/backend/sidecar/bootstrap.ts'
+]
+/** Every non-test importer of `launchrust/prepare.ts` (the check is per file): the interim prepare adapters (88.1-15). */
+const LAUNCH_PREPARE_SHIM_IMPORTERS: readonly string[] = [
+  'src/backend/launchAdapters.ts'
 ]
 /**
  * Every non-test importer of `launchrust/knownFixes.ts` (the check is per file, so every row of that file lists them
@@ -1223,6 +1229,18 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     channel: 'RUST_LAUNCH_VERIFY_WINE_PREFIX',
     callers: LAUNCH_BUILDER_SHIM_IMPORTERS,
     // save_sync and the setup modules leave in 92
+    deletedBy: 92
+  },
+  // 88.1-15 (D-01, D-19, D-30): the prepare step. The Launcher's `prepareLaunch` is bound to the interim adapter in
+  // `launchAdapters.ts`, which gathers the TS-only facts, makes this one call and replays the log; 88.3 replaces the adapter
+  // and the managers' launch leaves in 91 and 92.
+  {
+    name: 'prepareLaunch',
+    file: 'src/backend/launchrust/prepare.ts',
+    shape: 'shim',
+    channel: 'RUST_LAUNCH_PREPARE',
+    callers: LAUNCH_PREPARE_SHIM_IMPORTERS,
+    // legendary's launch leaves in 91, gog's and nile's in 92
     deletedBy: 92
   },
   // 88-13 (87 D-24): the synchronous known-fix twins, for callers 88 cannot make async. `installFixes` and

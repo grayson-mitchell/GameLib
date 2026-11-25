@@ -126,7 +126,7 @@ describe('createStoreManagers: late-bound map (RESEARCH Pattern B)', () => {
 })
 
 describe('createStoreManagers: launch hooks read the injected stores', () => {
-  it('legendary resolveOfflineMode forces offline on when deps.stores.legendary says expired', () => {
+  it('legendary storeExpired is true when deps.stores.legendary says expired', () => {
     const legendaryStores = {
       legendaryConfigStore: {
         get_nodefault: (key: string) => key === 'expired'
@@ -135,28 +135,17 @@ describe('createStoreManagers: launch hooks read the injected stores', () => {
     const built = build({
       stores: createTestStores({ legendary: legendaryStores })
     })
-    const input = {
-      offlineMode: false,
-      runner: 'legendary' as const,
-      canRunOffline: true
-    }
-    expect(built.launchHooks.legendary.resolveOfflineMode?.(input)).toBe(true)
+    expect(built.launchHooks.legendary.storeExpired?.()).toBe(true)
   })
 
-  it('not expired leaves offline mode off', () => {
+  it('not expired answers false', () => {
     const legendaryStores = {
       legendaryConfigStore: { get_nodefault: () => false }
     } as unknown as Stores['legendary']
     const built = build({
       stores: createTestStores({ legendary: legendaryStores })
     })
-    expect(
-      built.launchHooks.legendary.resolveOfflineMode?.({
-        offlineMode: false,
-        runner: 'legendary',
-        canRunOffline: true
-      })
-    ).toBe(false)
+    expect(built.launchHooks.legendary.storeExpired?.()).toBe(false)
   })
 })
 

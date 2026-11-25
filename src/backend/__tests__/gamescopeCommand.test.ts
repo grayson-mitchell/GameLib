@@ -138,12 +138,12 @@ describe('launcher.ts gamescope wiring', () => {
   const launcher = stripSourceComments(
     readFileSync(join(__dirname, '..', 'launcher.ts'), 'utf-8')
   )
-  test('calls buildGameScopeCommand and holds no flag mapping itself', () => {
-    expect(launcher).toContain('buildGameScopeCommand(')
+  test("holds no flag mapping and does not call the builder: the prepare step is Rust's since 88.1-15", () => {
+    expect(launcher).not.toContain('buildGameScopeCommand(')
     expect(launcher).not.toContain("'-F, --filter'")
   })
-  test('probes through the runner with a 5 s timeout and spawns nothing itself', () => {
-    expect(launcher).toContain('probeGamescopeHelp(')
+  test('holds no probe and spawns nothing itself: the Rust prepare step probes through a Helper', () => {
+    expect(launcher).not.toContain('probeGamescopeHelp(')
     expect(launcher).not.toContain('spawnSync')
     expect(launcher).not.toContain('child_process')
   })

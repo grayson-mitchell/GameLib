@@ -7,7 +7,6 @@ import SteamLibraryManager from 'backend/storeManagers/steam/library'
 import gogSetup from 'backend/storeManagers/gog/setup'
 import nileSetup from 'backend/storeManagers/nile/setup'
 import { legendarySetup } from 'backend/storeManagers/legendary/setup'
-import { resolveEpicOfflineMode } from 'backend/storeManagers/legendary/epicOfflineMode'
 import gogPresence from 'backend/storeManagers/gog/presence'
 import { isEnabled as isEosOverlayEnabled } from 'backend/storeManagers/legendary/eos_overlay/eos_overlay'
 import { createLauncher } from 'backend/launcher'
@@ -25,12 +24,6 @@ import type LogWriter from 'backend/logger/targetWriter'
 // launcher.ts reaches store-specific code only through this module (D-13).
 export type { LegendaryCommand } from 'backend/storeManagers/legendary/commands'
 
-interface OfflineModeInput {
-  offlineMode: boolean
-  runner: Runner
-  canRunOffline: boolean
-}
-
 /**
  * Store-specific launch work that launcher.ts used to branch on by runner.
  * Members are optional because most runners have none of them; the Record type
@@ -44,8 +37,11 @@ export interface StoreLaunchHooks {
   setPresence?: (appName: string) => Promise<void>
   /** Presence cleared after the game process ends. */
   clearPresence?: () => Promise<void>
-  /** Turns offline mode on for an expired store; never turns it off. */
-  resolveOfflineMode?: (input: OfflineModeInput) => boolean
+  /**
+   * Whether the store's session has expired: a fact the prepare step in Rust reads once per launch (the expired-store
+   * rule, R8, Phase 49, is Rust's since 88.1-11; it turns offline mode on for a game that can run offline).
+   */
+  storeExpired?: () => boolean
   /** Whether the store's overlay is enabled for this game. */
   isOverlayEnabled?: (appName: string) => Promise<boolean>
   /** Persists the bottle wine version (lazy import keeps module load timing). */
@@ -84,13 +80,10 @@ export function buildLaunchHooks(
         await legendarySetup(deps, appName, logWriter)
       },
       // R8 (Phase 49): the expired flag is read here, once per launch.
-      resolveOfflineMode: (input) =>
-        resolveEpicOfflineMode({
-          ...input,
-          storeExpired: Boolean(
-            deps.stores.legendary.legendaryConfigStore.get_nodefault('expired')
-          )
-        }),
+      storeExpired: () =>
+        Boolean(
+          deps.stores.legendary.legendaryConfigStore.get_nodefault('expired')
+        ),
       isOverlayEnabled: (appName) => isEosOverlayEnabled(deps, appName)
     },
     nile: {

@@ -357,7 +357,6 @@ export default class NileGameManager implements Game {
     const {
       success: launchPrepSuccess,
       failureReason: launchPrepFailReason,
-      rpcClient,
       mangoHudCommand,
       gameModeBin,
       gameScopeCommand
@@ -369,7 +368,6 @@ export default class NileGameManager implements Game {
 
     if (!launchPrepSuccess) {
       logWriter.logError(['Launch aborted:', launchPrepFailReason])
-      this.deps.launcher.launchCleanup()
       showDialogBoxModalAuto(this.deps, {
         title: t('box.error.launchAborted', 'Launch aborted'),
         message: launchPrepFailReason!,
@@ -515,8 +513,6 @@ export default class NileGameManager implements Game {
     if (error) {
       logError(['Error launching game:', error], LogPrefix.Nile)
     }
-
-    this.deps.launcher.launchCleanup(rpcClient)
 
     return !error
   }

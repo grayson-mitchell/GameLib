@@ -171,15 +171,13 @@ export function createFakeLauncherDeps(
             typeof scripted === 'function'
               ? (scripted as (...a: unknown[]) => unknown)(...args)
               : scripted
-          return name === 'resolveOfflineMode'
-            ? answer
-            : Promise.resolve(answer)
+          return name === 'storeExpired' ? answer : Promise.resolve(answer)
         }
       const stub: StoreLaunchHooks = {
         prepareLaunch: member('prepareLaunch') as never,
         setPresence: member('setPresence') as never,
         clearPresence: member('clearPresence') as never,
-        resolveOfflineMode: member('resolveOfflineMode') as never,
+        storeExpired: member('storeExpired') as never,
         isOverlayEnabled: member('isOverlayEnabled') as never,
         persistBottleWineVersion: member('persistBottleWineVersion') as never
       }

@@ -339,7 +339,6 @@ describe('GOGGame.launch: comet on the process runner', () => {
       runner,
       launcher: {
         prepareLaunch: jest.fn(async () => ({ success: true })),
-        launchCleanup: jest.fn(),
         setupWrapperEnvVars: jest.fn(async () => ({})),
         setupEnvVars: jest.fn(async () => ({})),
         getKnownFixesEnvVariables: jest.fn(async () => ({})),

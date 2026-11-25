@@ -82,6 +82,7 @@ import {
   RUST_WINE_WINETRICKS_INSTALL,
   RUST_WINE_RUN_COMMAND_FOR_GAME,
   RUST_WINE_TOOL_CALL,
+  RUST_LAUNCH_PREPARE,
   RUST_LAUNCH_VERIFY_WINE_PREFIX,
   RUST_DIALOG_MESSAGE,
   RUST_DIALOG_OPEN,
@@ -235,6 +236,10 @@ const RUST_INVOKE_TIMEOUT_MS = 60_000
  * (`haveToWait`); the TS it replaces had no cap. The wine command core runs it as a Helper, bounds and reaps it, and
  * the app shutdown cancels it, so no entry can outlive the sidecar. The other `launch_*` channels are pure computations
  * or one disk read and stay bounded.
+ *
+ * Nineteenth (Phase 88.1, 88.1-15): `launch_prepare` may download the umu runtime when the game runs under Proton, is online
+ * and no `umu-run` is on the `PATH` (an archive of tens of megabytes plus an extraction, T-88.1-27), and probes Gamescope
+ * with a helper. Rust bounds every spawn and download and the app shutdown ends them, so no entry can outlive the sidecar.
  */
 const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_DIALOG_OPEN,
@@ -281,7 +286,8 @@ const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_WINE_WINETRICKS_INSTALL,
   RUST_WINE_RUN_COMMAND_FOR_GAME,
   RUST_WINE_TOOL_CALL,
-  RUST_LAUNCH_VERIFY_WINE_PREFIX
+  RUST_LAUNCH_VERIFY_WINE_PREFIX,
+  RUST_LAUNCH_PREPARE
 ]
 
 /**

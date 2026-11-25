@@ -1,5 +1,4 @@
 import type { AbortRegistry } from 'backend/utils/aborthandler/aborthandler'
-import { asStoreGame } from 'common/gameInfoNarrowing'
 import type { Dialogs } from 'backend/host/dialogs'
 import {
   GameInfo,
@@ -8,12 +7,9 @@ import {
   WrapperEnv,
   WrapperVariable,
   ExecResult,
-  LaunchPreperationResult,
-  RpcClient,
   GameSettings,
   LaunchParams,
-  StatusPromise,
-  AntiCheatInfo
+  StatusPromise
 } from 'common/types'
 // This handles launching games, prefix creation etc..
 
@@ -27,8 +23,6 @@ import { existsSync, mkdirSync } from 'graceful-fs'
 import { join, dirname } from 'path'
 
 import {
-  constructAndUpdateRPC,
-  isEpicServiceOffline,
   removeQuoteIfNecessary,
   sendGameStatusUpdate,
   checkWineBeforeLaunch,
@@ -57,11 +51,9 @@ import type {
 } from './services/types'
 import shlex from 'shlex'
 import type { ProcessRunner } from './process/types'
-import { buildGameScopeCommand, probeGamescopeHelp } from './gamescopeCommand'
 import type { OnlineMonitor } from './online_monitor'
 import { showDialogBoxModalAuto, type DialogBoxDeps } from './dialog/dialog'
 import { readFileSync, writeFileSync } from 'fs'
-import { searchForExecutableOnPath } from './utils/os/path'
 import { downloadRuntime, isRuntimeInstalled } from './enginewine/runtimes'
 import {
   dxvkInstallRemove,
@@ -70,7 +62,7 @@ import {
 } from './enginewine/tools'
 import { validWine } from './enginewine/wineCore'
 import { recordPlaySession } from './runsForMe'
-import { getUmuPath, isUmuSupported } from './utils/compatibility_layers'
+import { isUmuSupported } from './utils/compatibility_layers'
 import { copyFile } from 'fs/promises'
 import { addRecentGame } from './info/recentGames'
 import { logKnownFixEnv, readKnownFixes } from './launchrust/knownFixTwins'
@@ -97,27 +89,16 @@ import {
   settleVerifyPrefixReply,
   settleWordList
 } from './launchBuilderReply'
-import {
-  isCLINoGui,
-  isLinux,
-  isMac,
-  isSteamDeckGameMode,
-  isWindows,
-  isSteamDeck,
-  isFlatpak,
-  flatpakRuntimeVersion
-} from './constants/environment'
-import { formatSystemInfo } from './utils/systeminfo'
-import { gameAnticheatInfo } from './info/anticheat'
+import { isCLINoGui, isLinux, isMac } from './constants/environment'
 import { armEngineLaunchDeadline, endEngineLaunch } from './enginewine/launch'
 import { launchSettingsFor, runLaunchEngineStep } from './launchEngineStep'
 import { engineKeyFor } from './enginewine/twin'
 
 import type { AppRuntimeSlice } from './appRuntime'
-import type { PartialDeep } from 'type-fest'
 import type LogWriter from './logger/targetWriter'
 import { Game } from 'common/types/game_manager'
 import type { RustInvokeDeps } from './host/rustInvokeDeps'
+import { prepareLaunch as prepareLaunchAdapter } from './launchAdapters'
 
 /** What the launcher is built from (66.1, D-02): constructed once per boot by createStoreManagers. */
 export interface LauncherDeps
@@ -569,354 +550,6 @@ const launchEventCallback = (
     },
     () => runLaunchEventCallback(deps, params)
   )
-
-function filterGameSettingsForLog(
-  originalSettings: GameSettings,
-  notNative: boolean
-): PartialDeep<GameSettings> {
-  const gameSettings: PartialDeep<GameSettings> =
-    structuredClone(originalSettings)
-
-  // this is irrelevant for support
-  delete gameSettings.enableQuickSavesMenu
-  // if this is visible, it means verboseLogs is true, no need to print it
-  delete gameSettings.verboseLogs
-
-  // remove gamescope settings if it's disabled
-  if (gameSettings.gamescope) {
-    if (!gameSettings.gamescope.enableLimiter) {
-      delete gameSettings.gamescope.fpsLimiter
-      delete gameSettings.gamescope.fpsLimiterNoFocus
-    }
-    if (!gameSettings.gamescope.enableUpscaling) {
-      delete gameSettings.gamescope.upscaleMethod
-      delete gameSettings.gamescope.upscaleHeight
-      delete gameSettings.gamescope.upscaleWidth
-      delete gameSettings.gamescope.gameHeight
-      delete gameSettings.gamescope.gameWidth
-      delete gameSettings.gamescope.windowType
-    }
-  }
-
-  // remove settings that are not used on Linux
-  if (isLinux) {
-    delete gameSettings.enableMsync
-    delete gameSettings.wineCrossoverBottle
-    delete gameSettings.advertiseAvxForRosetta
-
-    if (notNative) {
-      const wineVersion = gameSettings.wineVersion
-      if (wineVersion) {
-        if (wineVersion.type === 'proton') {
-          delete gameSettings.autoInstallDxvk
-          delete gameSettings.autoInstallVkd3d
-        }
-      }
-
-      if (isSteamDeck) {
-        delete gameSettings.autoInstallDxvkNvapi
-      }
-    } else {
-      // remove settings that are not used on native Linux games
-      delete gameSettings.wineVersion
-      delete gameSettings.winePrefix
-      delete gameSettings.autoInstallDxvk
-      delete gameSettings.autoInstallDxvkNvapi
-      delete gameSettings.autoInstallVkd3d
-      delete gameSettings.enableFsync
-      delete gameSettings.enableEsync
-      delete gameSettings.enableFSR
-      delete gameSettings.enableWineWayland
-      delete gameSettings.enableHDR
-      delete gameSettings.enableWoW64
-      delete gameSettings.showFps
-      delete gameSettings.enableDXVKFpsLimit
-      delete gameSettings.eacRuntime
-      delete gameSettings.battlEyeRuntime
-      delete gameSettings.useGameMode
-    }
-  }
-
-  // remove settings that are not used on Mac
-  if (isMac) {
-    delete gameSettings.useGameMode
-    delete gameSettings.gamescope
-    delete gameSettings.nvidiaPrime
-    delete gameSettings.battlEyeRuntime
-    delete gameSettings.eacRuntime
-    delete gameSettings.enableFSR
-    delete gameSettings.enableWineWayland
-    delete gameSettings.enableHDR
-    delete gameSettings.enableWoW64
-    delete gameSettings.showMangohud
-    delete gameSettings.disableUMU
-    delete gameSettings.enableFsync
-
-    if (notNative) {
-      const wineType = gameSettings.wineVersion
-      delete gameSettings.preferSystemLibs
-      delete gameSettings.autoInstallVkd3d
-      delete gameSettings.autoInstallDxvkNvapi
-      if (wineType) {
-        if (wineType.type === 'wine') {
-          delete gameSettings.wineCrossoverBottle
-          delete gameSettings.advertiseAvxForRosetta
-          if (wineType.name?.includes('DXMT')) {
-            delete gameSettings.autoInstallDxvk
-          }
-        }
-
-        if (wineType.type === 'toolkit') {
-          delete gameSettings.autoInstallDxvk
-          delete gameSettings.wineCrossoverBottle
-        }
-
-        if (wineType.type === 'crossover') {
-          delete gameSettings.autoInstallDxvk
-          delete gameSettings.winePrefix
-        }
-      }
-    } else {
-      // remove settings that are not used on native Mac games
-      delete gameSettings.enableDXVKFpsLimit
-      delete gameSettings.wineVersion
-      delete gameSettings.winePrefix
-      delete gameSettings.wineCrossoverBottle
-      delete gameSettings.advertiseAvxForRosetta
-      delete gameSettings.autoInstallDxvk
-      delete gameSettings.autoInstallDxvkNvapi
-      delete gameSettings.autoInstallVkd3d
-    }
-  }
-
-  // remove settings that are not used on Windows
-  if (isWindows) {
-    delete gameSettings.enableMsync
-    delete gameSettings.enableFSR
-    delete gameSettings.enableEsync
-    delete gameSettings.enableFsync
-    delete gameSettings.enableWineWayland
-    delete gameSettings.enableHDR
-    delete gameSettings.enableWoW64
-    delete gameSettings.enableDXVKFpsLimit
-    delete gameSettings.DXVKFpsCap
-    delete gameSettings.autoInstallDxvk
-    delete gameSettings.autoInstallDxvkNvapi
-    delete gameSettings.autoInstallVkd3d
-    delete gameSettings.gamescope
-    delete gameSettings.useGameMode
-    delete gameSettings.showMangohud
-    delete gameSettings.showFps
-    delete gameSettings.preferSystemLibs
-    delete gameSettings.wineCrossoverBottle
-    delete gameSettings.winePrefix
-    delete gameSettings.wineVersion
-    delete gameSettings.battlEyeRuntime
-    delete gameSettings.eacRuntime
-    delete gameSettings.nvidiaPrime
-    delete gameSettings.disableUMU
-    delete gameSettings.advertiseAvxForRosetta
-  }
-
-  return gameSettings
-}
-
-async function prepareLaunch(
-  deps: LauncherDeps,
-  gameSettings: GameSettings,
-  logWriter: LogWriter,
-  gameInfo: GameInfo
-): Promise<LaunchPreperationResult> {
-  const globalSettings = deps.config.getSettings()
-
-  let offlineMode = gameSettings.offlineMode || !deps.onlineMonitor.isOnline()
-
-  if (!offlineMode && isStore(gameInfo, 'legendary')) {
-    offlineMode = await isEpicServiceOffline(deps)
-  }
-
-  // R8 (Phase 49): an expired Epic store goes offline for games that can run
-  // offline. The flag is read ONCE, here; a probe that latches it after this
-  // point only affects the next launch, never one already in flight.
-  offlineMode =
-    deps.launchHooks[gameInfo.runner].resolveOfflineMode?.({
-      offlineMode,
-      runner: gameInfo.runner,
-      canRunOffline: Boolean(gameInfo.canRunOffline)
-    }) ?? offlineMode
-
-  // Check if the game needs an internet connection
-  if (!gameInfo.canRunOffline && offlineMode) {
-    logWriter.logWarning(
-      'Offline Mode is on but the game does not allow offline mode explicitly.'
-    )
-  }
-
-  // Update Discord RPC if enabled
-  let rpcClient = undefined
-  if (globalSettings.discordRPC) {
-    rpcClient = constructAndUpdateRPC(deps, gameInfo)
-  }
-
-  await logWriter.logInfo([
-    'Launching',
-    `"${gameInfo.title}" (${gameInfo.runner})`
-  ])
-  const native = deps.libraryManagers[gameInfo.runner]
-    .getGame(gameInfo.app_name)
-    .isNative()
-  await logWriter.logInfo(['Native?', native])
-
-  const isThirdPartyManagedApp = gameInfo && !!gameInfo.thirdPartyManagedApp
-
-  if (isThirdPartyManagedApp) {
-    if (!isWindows) {
-      let prefixOrBottleFolder: string | null = gameSettings.winePrefix
-      if (isMac && gameSettings.wineVersion.type === 'crossover') {
-        prefixOrBottleFolder = await getCrossoverBottleFolder(
-          deps,
-          gameSettings
-        )
-      }
-      if (prefixOrBottleFolder)
-        await logWriter.logInfo(['Installed in:', prefixOrBottleFolder])
-    }
-
-    await logWriter.logInfo([
-      'Managed by a third-party app:',
-      gameInfo.thirdPartyManagedApp,
-      '\n\n'
-    ])
-  } else {
-    const installPath = isStore(gameInfo, 'sideload')
-      ? gameInfo.folder_name
-      : gameInfo.install.install_path
-
-    await logWriter.logInfo(['Installed in:', installPath, '\n\n'])
-  }
-
-  await logWriter.logInfo([
-    'System Info:',
-    deps.infoCaches.systemInfo
-      .getSystemInfo({
-        libraryManagers: deps.libraryManagers,
-        runner: deps.runner,
-        config: deps.config,
-        appInfo: deps.appInfo,
-        stores: deps.stores,
-        paths: deps.paths
-      })
-      .then(formatSystemInfo)
-      .then((s) => `\n${s}\n\n`)
-  ])
-
-  await logWriter.logInfo([
-    'Game Settings:',
-    filterGameSettingsForLog(gameSettings, !native),
-    '\n',
-    `Stored at: ${join(deps.paths.gamesConfigPath, gameInfo.app_name + '.json')}`,
-    '\n\n'
-  ])
-
-  const acInfoPromise = gameAnticheatInfo(
-    deps,
-    asStoreGame(gameInfo, 'legendary')?.namespace
-  ) as Promise<AntiCheatInfo | null>
-  logWriter.logInfo(
-    acInfoPromise.then((info) =>
-      info?.status ? `Anticheat Status: ${info.status}` : ''
-    )
-  )
-  logWriter.logInfo([
-    acInfoPromise.then((info) =>
-      info?.anticheats ? `Anticheats: ${info.anticheats}\n\n` : ''
-    )
-  ])
-
-  // If we're not on Linux, we can return here
-  if (!isLinux) {
-    return { success: true, rpcClient, offlineMode }
-  }
-
-  // Figure out where MangoHud/GameMode/Gamescope are located, if they're enabled
-  let mangoHudCommand: string[] = []
-  let gameModeBin: string | null = null
-  const gameScopeCommand: string[] = []
-  if (gameSettings.showMangohud && !isSteamDeckGameMode) {
-    const mangoHudBin = await searchForExecutableOnPath('mangohud')
-    if (!mangoHudBin) {
-      let reason =
-        'Mangohud is enabled, but `mangohud` executable could not be found on $PATH'
-      if (isFlatpak) {
-        reason = `${reason}. Make sure to install Mangohud's flatpak package with runtime ${flatpakRuntimeVersion} and restart GameLib.`
-      }
-      return {
-        success: false,
-        failureReason: reason
-      }
-    }
-
-    mangoHudCommand = [mangoHudBin, '--dlsym']
-  }
-
-  if (gameSettings.useGameMode) {
-    gameModeBin = await searchForExecutableOnPath('gamemoderun')
-    if (!gameModeBin) {
-      return {
-        success: false,
-        failureReason:
-          'GameMode is enabled, but `gamemoderun` executable could not be found on $PATH'
-      }
-    }
-  }
-
-  if (
-    (gameSettings.gamescope?.enableLimiter ||
-      gameSettings.gamescope?.enableUpscaling) &&
-    !isSteamDeckGameMode
-  ) {
-    const gameScopeBin = await searchForExecutableOnPath('gamescope')
-    if (!gameScopeBin) {
-      let warningMessage =
-        'Gamescope is enabled, but `gamescope` executable could not be found on $PATH'
-      if (isFlatpak) {
-        warningMessage = `${warningMessage}. Make sure to install Gamescope's flatpak package with runtime ${flatpakRuntimeVersion}`
-      }
-
-      logWarning(warningMessage)
-    } else {
-      // Gamescope does not provide a version option; the --help text decides
-      const stderr = await probeGamescopeHelp(deps.runner, gameScopeBin)
-
-      gameScopeCommand.push(
-        ...buildGameScopeCommand({
-          bin: gameScopeBin,
-          settings: gameSettings.gamescope,
-          helpStderr: stderr,
-          showMangohud: gameSettings.showMangohud
-        })
-      )
-    }
-  }
-
-  if (
-    (await isUmuSupported(deps, gameSettings, false)) &&
-    deps.onlineMonitor.isOnline() &&
-    !(await isRuntimeInstalled(deps, 'umu')) &&
-    (await getUmuPath(deps)) === deps.paths.defaultUmuPath
-  ) {
-    await downloadRuntime(deps, 'umu')
-  }
-
-  return {
-    success: true,
-    rpcClient,
-    mangoHudCommand,
-    gameModeBin: gameModeBin ?? undefined,
-    gameScopeCommand,
-    offlineMode
-  }
-}
 
 // Use Crossover's verbose output to extract the path of the game's configured bottle
 async function getCrossoverBottleFolder(
@@ -1685,13 +1318,6 @@ export async function verifyWinePrefix(
     })
 }
 
-function launchCleanup(_deps: LauncherDeps, rpcClient?: RpcClient) {
-  if (rpcClient) {
-    rpcClient.destroy()
-    logInfo('Stopped Discord Rich Presence', LogPrefix.Backend)
-  }
-}
-
 async function runBeforeLaunchScript(
   deps: Pick<LauncherDeps, 'commandRunner'>,
   gameInfo: GameInfo,
@@ -1738,11 +1364,8 @@ async function runAfterLaunchScript(
 /** Launcher members; pure helpers stay module-level because they need no deps. */
 export interface Launcher {
   prepareLaunch(
-    ...a: DropFirst<Parameters<typeof prepareLaunch>>
-  ): ReturnType<typeof prepareLaunch>
-  launchCleanup(
-    ...a: DropFirst<Parameters<typeof launchCleanup>>
-  ): ReturnType<typeof launchCleanup>
+    ...a: DropFirst<Parameters<typeof prepareLaunchAdapter>>
+  ): ReturnType<typeof prepareLaunchAdapter>
   prepareWineLaunch(
     ...a: DropFirst<Parameters<typeof prepareWineLaunch>>
   ): ReturnType<typeof prepareWineLaunch>
@@ -1789,8 +1412,7 @@ export function createLauncher(deps: LauncherDeps): Launcher {
     power: { displayId: null } as PowerState
   }) as LaunchCtx
   return {
-    prepareLaunch: (...a) => prepareLaunch(deps, ...a),
-    launchCleanup: (...a) => launchCleanup(deps, ...a),
+    prepareLaunch: (...a) => prepareLaunchAdapter(deps, ...a),
     prepareWineLaunch: (...a) => prepareWineLaunch(deps, ...a),
     setupEnvVars: async (gameSettings, installPath) =>
       settleEnvMap(

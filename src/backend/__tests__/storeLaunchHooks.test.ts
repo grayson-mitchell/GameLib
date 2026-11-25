@@ -5,7 +5,6 @@
 const gogSetupMock = jest.fn()
 const nileSetupMock = jest.fn()
 const legendarySetupMock = jest.fn()
-const resolveEpicOfflineModeMock = jest.fn()
 const getNodefaultMock = jest.fn()
 const setCurrentGameMock = jest.fn()
 const setPresenceMock = jest.fn()
@@ -23,9 +22,6 @@ jest.mock('backend/storeManagers/nile/setup', () => ({
 }))
 jest.mock('backend/storeManagers/legendary/setup', () => ({
   legendarySetup: (...a: unknown[]) => legendarySetupMock(...a)
-}))
-jest.mock('backend/storeManagers/legendary/epicOfflineMode', () => ({
-  resolveEpicOfflineMode: (...a: unknown[]) => resolveEpicOfflineModeMock(...a)
 }))
 jest.mock('backend/storeManagers/gog/presence', () => ({
   __esModule: true,
@@ -127,20 +123,18 @@ describe('storeLaunchHooks', () => {
     }
   })
 
-  test('legendary resolveOfflineMode forwards input plus storeExpired', () => {
+  test('legendary storeExpired reads the expired flag from the injected store', () => {
     getNodefaultMock.mockReturnValue(true)
-    resolveEpicOfflineModeMock.mockReturnValue(true)
-    const input = {
-      offlineMode: false,
-      runner: 'legendary' as const,
-      canRunOffline: true
-    }
-    expect(storeLaunchHooks.legendary.resolveOfflineMode!(input)).toBe(true)
+    expect(storeLaunchHooks.legendary.storeExpired!()).toBe(true)
     expect(getNodefaultMock).toHaveBeenCalledWith('expired')
-    expect(resolveEpicOfflineModeMock).toHaveBeenCalledWith({
-      ...input,
-      storeExpired: true
-    })
+    getNodefaultMock.mockReturnValue(undefined)
+    expect(storeLaunchHooks.legendary.storeExpired!()).toBe(false)
+  })
+
+  test('only legendary has a storeExpired fact', () => {
+    for (const r of ['gog', 'nile', 'steam', 'sideload'] as const) {
+      expect(storeLaunchHooks[r].storeExpired).toBeUndefined()
+    }
   })
 
   test('legendary isOverlayEnabled delegates to the eos overlay check', async () => {

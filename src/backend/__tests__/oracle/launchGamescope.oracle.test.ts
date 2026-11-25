@@ -275,8 +275,8 @@ function probeCases(): GamescopeCase[] {
 /** One named case per `gamescopeCommand.test.ts` title (D-14); the two source-text gates are not ported (D-15). */
 const SOURCE_TEXT_GATE_REASON = 'source-text gate, dropped per D-15'
 const GATE_TITLES = [
-  'launcher.ts gamescope wiring > calls buildGameScopeCommand and holds no flag mapping itself',
-  'launcher.ts gamescope wiring > probes through the runner with a 5 s timeout and spawns nothing itself'
+  "launcher.ts gamescope wiring > holds no flag mapping and does not call the builder: the prepare step is Rust's since 88.1-15",
+  'launcher.ts gamescope wiring > holds no probe and spawns nothing itself: the Rust prepare step probes through a Helper'
 ] as const
 
 function namedCases(): GamescopeCase[] {

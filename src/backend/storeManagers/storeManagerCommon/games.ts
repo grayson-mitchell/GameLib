@@ -97,7 +97,6 @@ export async function launchGame(
     const {
       success: launchPrepSuccess,
       failureReason: launchPrepFailReason,
-      rpcClient,
       mangoHudCommand,
       gameScopeCommand,
       gameModeBin
@@ -120,7 +119,6 @@ export async function launchGame(
 
     if (!launchPrepSuccess) {
       logWriter.logError(['Launch aborted:', launchPrepFailReason])
-      deps.launcher.launchCleanup()
       showDialogBoxModalAuto(deps, {
         title: i18next.t('box.error.launchAborted', 'Launch aborted'),
         message: launchPrepFailReason!,
@@ -189,7 +187,6 @@ export async function launchGame(
         }
       )
 
-      deps.launcher.launchCleanup(rpcClient)
       // TODO: check and revert to previous permissions
       if (isLinux || (isMac && !executable.endsWith('.app'))) {
         await chmod(executable, 0o775)
@@ -229,8 +226,6 @@ export async function launchGame(
         trackKey: appName
       }
     })
-
-    deps.launcher.launchCleanup(rpcClient)
 
     return true
   }
