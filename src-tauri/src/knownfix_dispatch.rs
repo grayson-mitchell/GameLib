@@ -658,7 +658,7 @@ mod tests {
         assert_eq!(got["launchArgs"], json!(["-windowed"]));
         assert_eq!(
             got["exeOverride"],
-            json!(install.join("bin/game.exe").to_string_lossy())
+            json!(install.join("bin").join("game.exe").to_string_lossy())
         );
     }
 
