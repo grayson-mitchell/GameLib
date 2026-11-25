@@ -6,10 +6,10 @@ current_phase: 87
 current_phase_name: Engine, Wine and tools
 status: executing
 stopped_at: Completed 88.1-05-PLAN.md
-last_updated: "2026-11-25T08:25:26.280Z"
+last_updated: "2026-11-25T08:28:56.904Z"
 last_activity: 2026-11-25
 last_activity_desc: Phase 87 execution started
-state_head: bbbc325abfdecc1a6d2837bb8fb22b23e7c8bdcf
+state_head: 33405c885c0c8f8403ecaeaf292665db2c6fc429
 progress:
   total_phases: 25
   completed_phases: 23
@@ -530,6 +530,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 88.1 P88.1-06 | 95min | 3 tasks | 17 files |
 | Phase 87 P75 | 25 min | 3 tasks | 8 files |
 | Phase 87 P76 | 45 min | 2 tasks | 9 files |
+| Phase 88.1 P07 | 3h | 2 tasks | 21 files |
 
 ## Accumulated Context
 
@@ -1190,6 +1191,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 88.1]: 88.1-06: Rust env notes log fixed text, so the TS library-folders line is a named deltas.json entry; known_fix_env returns the raw Value like the TS
 - [Phase 87]: 87-75: the shared default prefix is no removal target on either path (one storedPrefixRemovalTarget rule), so a bottle-backed game reaches its per-game bottle route; in-use and unsafe-name are notice reasons pinned to the op's reason literals
 - [Phase 87]: 87-76: offlineLaunchRefused is a read-time verdict on engine_state_get, computed by the launch step's own offline_gate_verdict; launch() skips the generic offline warning only on a true verdict and warns on every other answer or a failed read
+- [Phase 88.1]: 88.1-07: builder shims answer Promise<unknown> and createLauncher narrows through launchBuilderReply.ts, because checkShimShape allows no cast on the returned call
+- [Phase 88.1]: 88.1-07: the TS builder bodies in launcher.ts stay exported for the launch-builders oracle until 88.1-17 deletes both
 
 ### Pending Todos
 
