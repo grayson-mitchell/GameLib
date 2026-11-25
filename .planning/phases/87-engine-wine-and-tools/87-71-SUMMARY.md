@@ -16,10 +16,11 @@ affects: [87-72, 87-73, 87-74, 87-75, 87-76, 87-77, 87-78, 87-79, 87-verificatio
 actuals:
   tokens: 14000
   tasks: 3
-  commits: 3
+  commits: 4
 
 plan_head_before: df0a29cd9c8c9c3f501e191634367e640fc5037c
-commits: 3
+commits: 4
+plan_head_after: aa4b60947
 
 tech-stack:
   added: []
@@ -64,7 +65,7 @@ completed: 2026-11-25
 2. **Task 3: the todos** - content landed in `ade29b55f`, a concurrent Phase 88.1 session's commit (see Deviations)
 3. **Plan metadata:** the commit that carries this SUMMARY and STATE.md
 
-`commits: 3` is measured from the ledger base `df0a29cd9`. Main is shared with the live Phase 88.1 session, so `ade29b55f` is counted though it is that session's commit.
+`commits: 4` is measured from the ledger base `df0a29cd9` (`git rev-list --count df0a29cd9..HEAD` at `aa4b60947`). Main is shared with the live Phase 88.1 session: the count includes `ade29b55f` and one further commit of that session.
 
 ## Deviations from Plan
 
