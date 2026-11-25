@@ -46,6 +46,14 @@ export interface EngineState {
    * the backend; optional so older fixtures compile. Carries no path.
    */
   wineToolsEligible?: boolean
+  /**
+   * 87-76 (RF5): a read-time verdict from `getEngineState` only, never published in `engineStateChanged`. True when
+   * an offline launch of this title would be refused by the engine's launch step right now (CrossOver missing, no
+   * pinned engine installed, the engine on Automatic, on the game's bottle). `launch()` reads it to skip the generic
+   * offline warning in front of a refusal that is certain. A boolean, never a path. Optional so older fixtures
+   * compile.
+   */
+  offlineLaunchRefused?: boolean
   runner: string
   appName: string
   engine: EngineKind | null

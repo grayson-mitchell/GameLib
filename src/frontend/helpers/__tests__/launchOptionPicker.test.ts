@@ -9,6 +9,7 @@ jest.mock('../index', () => ({ getGameInfo: jest.fn() }))
 const launchApi = jest.fn()
 const getLaunchOptions = jest.fn()
 const requestGameSettings = jest.fn()
+const getEngineState = jest.fn()
 const options = [
   { type: 'basic', name: 'First' },
   { type: 'basic', name: 'Second' }
@@ -23,6 +24,8 @@ beforeAll(() => {
       api: {
         getLaunchOptions,
         requestGameSettings,
+        getEngineState,
+        logInfo: jest.fn(),
         setSetting: jest.fn(),
         launch: launchApi
       }
@@ -46,6 +49,7 @@ beforeEach(() => {
   launchApi.mockResolvedValue({ status: 'done' })
   getLaunchOptions.mockResolvedValue(options)
   requestGameSettings.mockResolvedValue({})
+  getEngineState.mockResolvedValue(null)
   state = { current: { showDialog: false }, queue: [] }
 })
 afterEach(() => jest.useRealTimers())
@@ -116,6 +120,8 @@ describe('launch-option picker', () => {
       notPlayableOffline: true,
       showDialogModal
     })
+    // 87-76: the warning opens once the engine state has been read (one microtask round), not synchronously.
+    await jest.advanceTimersByTimeAsync(0)
     showDialogModal({ title: 'Second' })
     expect(state.queue).toHaveLength(1)
     click(0)

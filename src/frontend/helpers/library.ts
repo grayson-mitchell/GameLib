@@ -196,6 +196,23 @@ function launchDialogLifecycle(
   }
 }
 
+/**
+ * 87-76 (RF5): whether the engine state says an offline launch of this game would be refused by the launch step
+ * (`offlineLaunchRefused`, a read-time verdict). Any other answer, a null state and a failed read are "no": the
+ * generic warning then shows as before, so a wrong "yes" is the only way the warning is hidden.
+ */
+async function engineRefusesOfflineLaunch(
+  appName: string,
+  runner: Runner
+): Promise<boolean> {
+  try {
+    const state = await window.api.getEngineState({ runner, appName })
+    return state?.offlineLaunchRefused === true
+  } catch {
+    return false
+  }
+}
+
 const launch = async ({
   appName,
   t,
@@ -292,6 +309,18 @@ const launch = async ({
       args,
       hasUpdate
     })
+  }
+
+  if (
+    notPlayableOffline &&
+    (await engineRefusesOfflineLaunch(appName, runner))
+  ) {
+    // 87-76 (RF5): the engine step will refuse this launch with its own dialog, so the generic warning would only
+    // precede a refusal that is certain. Launch, and let the engine say why it cannot.
+    window.api.logInfo(
+      'Offline warning skipped: the engine refuses this launch offline'
+    )
+    return proceedToLaunch()
   }
 
   if (notPlayableOffline) {
