@@ -1057,10 +1057,18 @@ async function prepareWineLaunch(
   )
 
   // Tier-2 overlays (quick 261027-n77): installed on demand, env merged last.
-  const tier1Env =
+  // A tier-1 file (the remote layer included) can carry a non-string value, and the overlay-env call
+  // takes a pure string map: one bad value would reject it and drop every tier-2 overlay. Normalise
+  // with String(), as the Steam bridge does (WR-06).
+  const rawTier1Env =
     opts.mergesTier1Env === false
       ? {}
       : getKnownFixesEnvVariables(deps, gameInfo.app_name, gameInfo.runner)
+  const tier1Env: Record<string, string> = Object.fromEntries(
+    typeof rawTier1Env === 'object' && rawTier1Env !== null
+      ? Object.entries(rawTier1Env).map(([key, value]) => [key, String(value)])
+      : []
+  )
   // The base values cross as data (D-03, T-88-33): only the overlay env keys, read from this process's env.
   const knownFixEnv = await settleKnownFixOverlayEnv(
     `${gameInfo.runner} ${gameInfo.app_name}`,
