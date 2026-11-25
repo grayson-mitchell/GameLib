@@ -90,6 +90,14 @@ async fn route(op: &str, args: &[Value], ctx: &KnownFixCtx) -> Result<Value, Str
             let args: LaunchOverridesArgs = decode(op, args)?;
             let runner =
                 types::Runner::parse(&args.runner).ok_or_else(|| format!("{op}:bad-args"))?;
+            if !bounded_name(&args.app_name)
+                || args
+                    .install_path
+                    .as_deref()
+                    .is_some_and(|p| p.encode_utf16().count() > MAX_PATH_UNITS)
+            {
+                return Err(format!("{op}:bad-args"));
+            }
             let overrides = launch::read_launch_overrides(
                 ctx,
                 &args.app_name,
@@ -242,6 +250,9 @@ async fn route(op: &str, args: &[Value], ctx: &KnownFixCtx) -> Result<Value, Str
 /// The most variables an env argument may carry.
 const MAX_ENV_ENTRIES: usize = 256;
 
+/// The longest install path an op accepts, in UTF-16 units (the Windows extended-length limit).
+const MAX_PATH_UNITS: usize = 32_768;
+
 /// An app name, app id or label: 1 to 256 UTF-16 units (the bound the other ops hold their names to).
 fn bounded_name(name: &str) -> bool {
     !name.is_empty() && name.encode_utf16().count() <= 256
@@ -325,6 +336,9 @@ fn decode_app_runner(op: &str, args: &[Value]) -> Result<(String, types::Runner)
     let [Value::String(app_name), Value::String(runner)] = args else {
         return Err(format!("{op}:bad-args"));
     };
+    if !bounded_name(app_name) {
+        return Err(format!("{op}:bad-args"));
+    }
     let runner = types::Runner::parse(runner).ok_or_else(|| format!("{op}:bad-args"))?;
     Ok((app_name.clone(), runner))
 }
@@ -498,6 +512,29 @@ mod tests {
                 .unwrap(),
             json!({"title": "Seeded", "winetricks": ["vcrun2019"]})
         );
+    }
+
+    #[tokio::test]
+    async fn the_reader_and_launch_ops_bound_their_names_like_the_others() {
+        let home = FakeHome::new("knownfix-lib-");
+        let ctx = ctx(&home);
+        for name in [String::new(), "x".repeat(257)] {
+            for op in ["knownfix_read", "knownfix_status"] {
+                let err = dispatch(op, &[json!(name), json!("gog")], &ctx)
+                    .await
+                    .unwrap_err();
+                assert_eq!(err, format!("{op}:bad-args"));
+            }
+            let op = "knownfix_launch_overrides";
+            let arg = json!({"appName": name, "runner": "gog", "installPath": null});
+            let err = dispatch(op, &[arg], &ctx).await.unwrap_err();
+            assert_eq!(err, format!("{op}:bad-args"));
+        }
+        let op = "knownfix_launch_overrides";
+        let arg =
+            json!({"appName": "a", "runner": "gog", "installPath": "p".repeat(MAX_PATH_UNITS + 1)});
+        let err = dispatch(op, &[arg], &ctx).await.unwrap_err();
+        assert_eq!(err, format!("{op}:bad-args"));
     }
 
     #[tokio::test]
