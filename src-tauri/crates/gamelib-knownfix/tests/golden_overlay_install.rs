@@ -19,6 +19,9 @@
 //! (`deltas.json`): the fetch seam has no `maxBytes` (the replay computes it from the pin), a failed fetch
 //! says what the seam says, an fs error says what the OS says. A count floor lives in this file, so
 //! editing the JSON alone cannot lower the bar, and an empty case list fails.
+//!
+//! Unix only: the tree snapshot records permission modes, so the replay does not run on other legs
+//! (a non-unix run prints the skip by name; WR-10).
 
 #![cfg_attr(not(unix), allow(dead_code, unused_imports))]
 
@@ -1251,4 +1254,13 @@ fn the_download_bound_is_120_seconds() {
         OverlayInstalls::new().timeout(),
         Duration::from_millis(DEFAULT_DEADLINE_MS)
     );
+}
+
+/// The replay above is unix only (the snapshot records permission modes, and the overlay tree is pinned
+/// as mode 0700 and 0644), so on any other leg these cases are not run. Name the skip so a green run is
+/// not read as covering them (WR-10).
+#[cfg(not(unix))]
+#[test]
+fn the_unix_only_replay_is_named_as_skipped() {
+    println!("skipped on this leg: golden_overlay_install (41 cases)");
 }

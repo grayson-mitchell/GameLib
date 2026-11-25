@@ -15,6 +15,9 @@
 //! a URL or a path (prohibition 1), and a transport or io failure says what the seam or the OS says. A
 //! count floor lives in this file, so editing the JSON alone cannot lower the bar, and an empty case
 //! list fails.
+//!
+//! Unix only: the tree snapshot records permission modes, so the replay does not run on other legs
+//! (a non-unix run prints the skip by name; WR-10).
 
 #![cfg_attr(not(unix), allow(dead_code, unused_imports))]
 
@@ -459,4 +462,13 @@ fn the_feed_bases_are_the_ts_literals() {
         HEROIC_KNOWN_FIXES_BASE,
         "https://raw.githubusercontent.com/Heroic-Games-Launcher/known-fixes/main"
     );
+}
+
+/// The replay above is unix only (the snapshot records permission modes, and the overlay tree is pinned
+/// as mode 0700 and 0644), so on any other leg these cases are not run. Name the skip so a green run is
+/// not read as covering them (WR-10).
+#[cfg(not(unix))]
+#[test]
+fn the_unix_only_replay_is_named_as_skipped() {
+    println!("skipped on this leg: golden_fetcher (38 cases)");
 }
