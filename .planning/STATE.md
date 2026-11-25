@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: "88.1"
 current_phase_name: Launch builders and prepare steps
 status: executing
-stopped_at: Completed 88.1-01-PLAN.md
-last_updated: "2026-11-25T06:34:56.132Z"
+stopped_at: Completed 88.1-02-PLAN.md
+last_updated: "2026-11-25T07:01:42.814Z"
 last_activity: 2026-11-25
 last_activity_desc: Phase 88.1 execution started
-state_head: "0bfab6bdf13a85094337d990ad01bfc243fe6878"
+state_head: 4ac8c07cf1565ab5d2a0079ad9d6c571924ad8cf
 progress:
   total_phases: 25
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-25)
 ## Current Position
 
 Phase: 88.1 (Launch builders and prepare steps) — EXECUTING
-Plan: 2 of 20
+Plan: 3 of 20
 Status: Ready to execute
 Last activity: 2026-11-25 — Phase 88.1 execution started
 Progress: [████████████████░░░░] 204/257 plans ([█████████░] 92%)
@@ -521,6 +521,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 94 P22 | 190min | 3 tasks | 57 files |
 | Phase 94 P24 | 95min | 2 tasks | 55 files |
 | Phase 88.1 P01 | 40 min | 3 tasks | 9 files |
+| Phase 88.1 P02 | 95min | 2 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -1169,6 +1170,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 94]: 94-24: the TS shortcuts tree and oracle were deleted behind describe('shortcutsPortComplete') (red then green); the macOS icon_geometry oracle survives cut down in src/backend/testUtils/shortcutsIconGeometry as a relocated schedule row (writeOrCompareIconGeometryGolden, callers none, deletedBy 99) so the four Mac goldens stay recordable; its todo carries the new command and a step to delete it with the recording commit
 - [Phase 94]: 94-24: getWikiGameInfo and its infoShimSchedule row are deleted (the Rust shortcuts crate reaches the wiki lookup in-process); the steamfiles TS validity replay (shortcutsReplay.test.ts) is retired with its subject and the upstream test_data copy in the crate is now the only copy; @shockpkg/icon-encoder, sanitize-filename, tmp and @types/tmp dropped, fastest-levenshtein kept
 - [Phase 88.1]: 88.1-01: oracle cases.json is generated from the case tables and compared; gamescope census lists the two source-text gates as not ported per D-15
+- [Phase 88.1]: 88.1-02: prepare_launch is pinned by two pairwise suites per (OS, runner) cell (identity on every OS, tools on Linux) because the full product cannot be enumerated; tool axes are not paired with anti-cheat, Epic status or the expired flag
+- [Phase 88.1]: 88.1-02: Epic status replays hand-authored exchanges through replayAxiosClient; only the literal status 'major' counts as offline (recorded, filed as a todo, not fixed)
 
 ### Pending Todos
 
@@ -1454,8 +1457,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-25T06:34:53.025Z
-Stopped at: Completed 88.1-01-PLAN.md
+Last session: 2026-11-25T07:01:39.816Z
+Stopped at: Completed 88.1-02-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
