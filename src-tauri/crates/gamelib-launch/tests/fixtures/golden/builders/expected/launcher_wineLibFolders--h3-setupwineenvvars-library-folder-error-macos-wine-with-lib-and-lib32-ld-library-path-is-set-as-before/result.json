@@ -1,0 +1,7 @@
+{
+  "WINEPREFIX": "/pins/prefix",
+  "WINEDLLOVERRIDES": "winemenubuilder.exe=d",
+  "WINE_FULLSCREEN_FSR": "0",
+  "ORIG_LD_LIBRARY_PATH": "",
+  "LD_LIBRARY_PATH": "/pins/lib:/pins/lib32"
+}

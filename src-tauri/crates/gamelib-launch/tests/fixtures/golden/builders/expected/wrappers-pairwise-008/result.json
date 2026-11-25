@@ -1,0 +1,6 @@
+[
+  "env",
+  "FOO=a b",
+  "BAR=1",
+  "/usr/bin/gamemoderun"
+]

@@ -1,0 +1,6 @@
+[
+  "/usr/bin/gamescope",
+  "-f",
+  "--",
+  "nice"
+]

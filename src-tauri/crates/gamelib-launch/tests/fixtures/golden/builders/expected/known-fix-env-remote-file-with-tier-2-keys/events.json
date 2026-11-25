@@ -1,0 +1,22 @@
+[
+  {
+    "level": "warning",
+    "text": "Known fixes for 'app1' (remote layer): 'registry' is a tier-2 key that belongs in 'app1-<store>.profile.json', ignoring it here."
+  },
+  {
+    "level": "warning",
+    "text": "Known fixes for 'app1' (remote layer): 'dllOverrides' is a tier-2 key that belongs in 'app1-<store>.profile.json', ignoring it here."
+  },
+  {
+    "level": "warning",
+    "text": "Known fixes for 'app1' (remote layer): 'overlays' is a tier-2 key that belongs in 'app1-<store>.profile.json', ignoring it here."
+  },
+  {
+    "level": "warning",
+    "text": "Known fixes for 'app1' (remote layer): 'shimFeatures' is a tier-2 key that belongs in 'app1-<store>.profile.json', ignoring it here."
+  },
+  {
+    "level": "warning",
+    "text": "Known fixes for 'app1' (remote layer): 'evidence' is a tier-2 key that belongs in 'app1-<store>.profile.json', ignoring it here."
+  }
+]

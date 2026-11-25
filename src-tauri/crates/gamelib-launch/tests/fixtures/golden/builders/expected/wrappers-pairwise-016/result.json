@@ -1,0 +1,8 @@
+[
+  "/usr/bin/gamescope",
+  "-f",
+  "--",
+  "env",
+  "FOO=a b",
+  "BAR=1"
+]

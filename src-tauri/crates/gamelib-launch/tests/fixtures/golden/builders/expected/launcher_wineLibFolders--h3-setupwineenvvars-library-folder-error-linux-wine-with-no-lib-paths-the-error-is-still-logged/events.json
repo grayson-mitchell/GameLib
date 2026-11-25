@@ -1,0 +1,6 @@
+[
+  {
+    "level": "error",
+    "text": "Couldn't find all library folders of Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)!\nMissing undefined and/or undefined!\nFalling back to system libraries!"
+  }
+]

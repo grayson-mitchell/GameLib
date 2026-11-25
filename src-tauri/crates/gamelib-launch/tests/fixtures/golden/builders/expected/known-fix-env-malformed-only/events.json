@@ -1,0 +1,6 @@
+[
+  {
+    "level": "warning",
+    "text": "Known fixes could not be applied (local layer), ignoring.\nSyntaxError: Expected property name or '}' in JSON at position 2 (line 1 column 3)"
+  }
+]

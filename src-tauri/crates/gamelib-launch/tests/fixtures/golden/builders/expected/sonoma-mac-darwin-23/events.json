@@ -1,0 +1,10 @@
+[
+  {
+    "level": "info",
+    "text": "Checking if macOS is Sonoma or higher"
+  },
+  {
+    "level": "info",
+    "text": "macOS is Sonoma or higher"
+  }
+]

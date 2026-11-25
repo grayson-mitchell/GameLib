@@ -1,0 +1,6 @@
+[
+  "nice",
+  "/usr/bin/mangohud",
+  "--dlsym",
+  "/usr/bin/gamemoderun"
+]

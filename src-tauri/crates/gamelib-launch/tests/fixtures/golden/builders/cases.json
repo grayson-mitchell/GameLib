@@ -38,5 +38,1337 @@
       "appName": "app-steam",
       "appRunner": "steam"
     }
+  },
+  {
+    "id": "wrappers-pairwise-001",
+    "axes": {
+      "gameScope": "absent",
+      "wrapperOptions": "none",
+      "mangoHud": "absent",
+      "gameMode": "absent"
+    },
+    "call": {
+      "op": "wrappers",
+      "gameScope": null,
+      "wrapperOptions": null,
+      "mangoHud": null,
+      "gameMode": null
+    }
+  },
+  {
+    "id": "wrappers-pairwise-002",
+    "axes": {
+      "gameScope": "absent",
+      "wrapperOptions": "plain",
+      "mangoHud": "present",
+      "gameMode": "present"
+    },
+    "call": {
+      "op": "wrappers",
+      "gameScope": null,
+      "wrapperOptions": [
+        {
+          "exe": "taskset",
+          "args": "-c 0"
+        }
+      ],
+      "mangoHud": [
+        "/usr/bin/mangohud",
+        "--dlsym"
+      ],
+      "gameMode": "/usr/bin/gamemoderun"
+    }
+  },
+  {
+    "id": "wrappers-pairwise-003",
+    "axes": {
+      "gameScope": "empty",
+      "wrapperOptions": "double-quotes",
+      "mangoHud": "absent",
+      "gameMode": "present"
+    },
+    "call": {
+      "op": "wrappers",
+      "gameScope": [],
+      "wrapperOptions": [
+        {
+          "exe": "env",
+          "args": "FOO=\"a b\" BAR=1"
+        }
+      ],
+      "mangoHud": null,
+      "gameMode": "/usr/bin/gamemoderun"
+    }
+  },
+  {
+    "id": "wrappers-pairwise-004",
+    "axes": {
+      "gameScope": "empty",
+      "wrapperOptions": "single-quotes",
+      "mangoHud": "present",
+      "gameMode": "absent"
+    },
+    "call": {
+      "op": "wrappers",
+      "gameScope": [],
+      "wrapperOptions": [
+        {
+          "exe": "env",
+          "args": "FOO='a b' BAR=1"
+        }
+      ],
+      "mangoHud": [
+        "/usr/bin/mangohud",
+        "--dlsym"
+      ],
+      "gameMode": null
+    }
+  },
+  {
+    "id": "wrappers-pairwise-005",
+    "axes": {
+      "gameScope": "three",
+      "wrapperOptions": "none",
+      "mangoHud": "present",
+      "gameMode": "present"
+    },
+    "call": {
+      "op": "wrappers",
+      "gameScope": [
+        "/usr/bin/gamescope",
+        "-f",
+        "--"
+      ],
+      "wrapperOptions": null,
+      "mangoHud": [
+        "/usr/bin/mangohud",
+        "--dlsym"
+      ],
+      "gameMode": "/usr/bin/gamemoderun"
+    }
+  },
+  {
+    "id": "wrappers-pairwise-006",
+    "axes": {
+      "gameScope": "three",
+      "wrapperOptions": "plain",
+      "mangoHud": "absent",
+      "gameMode": "absent"
+    },
+    "call": {
+      "op": "wrappers",
+      "gameScope": [
+        "/usr/bin/gamescope",
+        "-f",
+        "--"
+      ],
+      "wrapperOptions": [
+        {
+          "exe": "taskset",
+          "args": "-c 0"
+        }
+      ],
+      "mangoHud": null,
+      "gameMode": null
+    }
+  },
+  {
+    "id": "wrappers-pairwise-007",
+    "axes": {
+      "gameScope": "absent",
+      "wrapperOptions": "double-quotes",
+      "mangoHud": "present",
+      "gameMode": "absent"
+    },
+    "call": {
+      "op": "wrappers",
+      "gameScope": null,
+      "wrapperOptions": [
+        {
+          "exe": "env",
+          "args": "FOO=\"a b\" BAR=1"
+        }
+      ],
+      "mangoHud": [
+        "/usr/bin/mangohud",
+        "--dlsym"
+      ],
+      "gameMode": null
+    }
+  },
+  {
+    "id": "wrappers-pairwise-008",
+    "axes": {
+      "gameScope": "absent",
+      "wrapperOptions": "single-quotes",
+      "mangoHud": "absent",
+      "gameMode": "present"
+    },
+    "call": {
+      "op": "wrappers",
+      "gameScope": null,
+      "wrapperOptions": [
+        {
+          "exe": "env",
+          "args": "FOO='a b' BAR=1"
+        }
+      ],
+      "mangoHud": null,
+      "gameMode": "/usr/bin/gamemoderun"
+    }
+  },
+  {
+    "id": "wrappers-pairwise-009",
+    "axes": {
+      "gameScope": "absent",
+      "wrapperOptions": "empty-args",
+      "mangoHud": "absent",
+      "gameMode": "absent"
+    },
+    "call": {
+      "op": "wrappers",
+      "gameScope": null,
+      "wrapperOptions": [
+        {
+          "exe": "nice",
+          "args": ""
+        }
+      ],
+      "mangoHud": null,
+      "gameMode": null
+    }
+  },
+  {
+    "id": "wrappers-pairwise-010",
+    "axes": {
+      "gameScope": "absent",
+      "wrapperOptions": "unterminated",
+      "mangoHud": "absent",
+      "gameMode": "absent"
+    },
+    "call": {
+      "op": "wrappers",
+      "gameScope": null,
+      "wrapperOptions": [
+        {
+          "exe": "env",
+          "args": "FOO=\"a b"
+        }
+      ],
+      "mangoHud": null,
+      "gameMode": null
+    }
+  },
+  {
+    "id": "wrappers-pairwise-011",
+    "axes": {
+      "gameScope": "empty",
+      "wrapperOptions": "empty-args",
+      "mangoHud": "present",
+      "gameMode": "present"
+    },
+    "call": {
+      "op": "wrappers",
+      "gameScope": [],
+      "wrapperOptions": [
+        {
+          "exe": "nice",
+          "args": ""
+        }
+      ],
+      "mangoHud": [
+        "/usr/bin/mangohud",
+        "--dlsym"
+      ],
+      "gameMode": "/usr/bin/gamemoderun"
+    }
+  },
+  {
+    "id": "wrappers-pairwise-012",
+    "axes": {
+      "gameScope": "empty",
+      "wrapperOptions": "unterminated",
+      "mangoHud": "present",
+      "gameMode": "present"
+    },
+    "call": {
+      "op": "wrappers",
+      "gameScope": [],
+      "wrapperOptions": [
+        {
+          "exe": "env",
+          "args": "FOO=\"a b"
+        }
+      ],
+      "mangoHud": [
+        "/usr/bin/mangohud",
+        "--dlsym"
+      ],
+      "gameMode": "/usr/bin/gamemoderun"
+    }
+  },
+  {
+    "id": "wrappers-pairwise-013",
+    "axes": {
+      "gameScope": "empty",
+      "wrapperOptions": "none",
+      "mangoHud": "absent",
+      "gameMode": "absent"
+    },
+    "call": {
+      "op": "wrappers",
+      "gameScope": [],
+      "wrapperOptions": null,
+      "mangoHud": null,
+      "gameMode": null
+    }
+  },
+  {
+    "id": "wrappers-pairwise-014",
+    "axes": {
+      "gameScope": "empty",
+      "wrapperOptions": "plain",
+      "mangoHud": "absent",
+      "gameMode": "absent"
+    },
+    "call": {
+      "op": "wrappers",
+      "gameScope": [],
+      "wrapperOptions": [
+        {
+          "exe": "taskset",
+          "args": "-c 0"
+        }
+      ],
+      "mangoHud": null,
+      "gameMode": null
+    }
+  },
+  {
+    "id": "wrappers-pairwise-015",
+    "axes": {
+      "gameScope": "three",
+      "wrapperOptions": "double-quotes",
+      "mangoHud": "absent",
+      "gameMode": "absent"
+    },
+    "call": {
+      "op": "wrappers",
+      "gameScope": [
+        "/usr/bin/gamescope",
+        "-f",
+        "--"
+      ],
+      "wrapperOptions": [
+        {
+          "exe": "env",
+          "args": "FOO=\"a b\" BAR=1"
+        }
+      ],
+      "mangoHud": null,
+      "gameMode": null
+    }
+  },
+  {
+    "id": "wrappers-pairwise-016",
+    "axes": {
+      "gameScope": "three",
+      "wrapperOptions": "single-quotes",
+      "mangoHud": "absent",
+      "gameMode": "absent"
+    },
+    "call": {
+      "op": "wrappers",
+      "gameScope": [
+        "/usr/bin/gamescope",
+        "-f",
+        "--"
+      ],
+      "wrapperOptions": [
+        {
+          "exe": "env",
+          "args": "FOO='a b' BAR=1"
+        }
+      ],
+      "mangoHud": null,
+      "gameMode": null
+    }
+  },
+  {
+    "id": "wrappers-pairwise-017",
+    "axes": {
+      "gameScope": "three",
+      "wrapperOptions": "empty-args",
+      "mangoHud": "absent",
+      "gameMode": "absent"
+    },
+    "call": {
+      "op": "wrappers",
+      "gameScope": [
+        "/usr/bin/gamescope",
+        "-f",
+        "--"
+      ],
+      "wrapperOptions": [
+        {
+          "exe": "nice",
+          "args": ""
+        }
+      ],
+      "mangoHud": null,
+      "gameMode": null
+    }
+  },
+  {
+    "id": "wrappers-pairwise-018",
+    "axes": {
+      "gameScope": "three",
+      "wrapperOptions": "unterminated",
+      "mangoHud": "absent",
+      "gameMode": "absent"
+    },
+    "call": {
+      "op": "wrappers",
+      "gameScope": [
+        "/usr/bin/gamescope",
+        "-f",
+        "--"
+      ],
+      "wrapperOptions": [
+        {
+          "exe": "env",
+          "args": "FOO=\"a b"
+        }
+      ],
+      "mangoHud": null,
+      "gameMode": null
+    }
+  },
+  {
+    "id": "wrappers-nothing",
+    "call": {
+      "op": "wrappers",
+      "gameScope": null,
+      "wrapperOptions": null,
+      "mangoHud": null,
+      "gameMode": null
+    }
+  },
+  {
+    "id": "wrappers-two-entries-keep-order",
+    "call": {
+      "op": "wrappers",
+      "gameScope": null,
+      "wrapperOptions": [
+        {
+          "exe": "first",
+          "args": "a b"
+        },
+        {
+          "exe": "second",
+          "args": "\"c d\" e"
+        }
+      ],
+      "mangoHud": null,
+      "gameMode": null
+    }
+  },
+  {
+    "id": "wrappers-entry-without-args-field",
+    "call": {
+      "op": "wrappers",
+      "gameScope": null,
+      "wrapperOptions": [
+        {
+          "exe": "bare"
+        }
+      ],
+      "mangoHud": null,
+      "gameMode": null
+    }
+  },
+  {
+    "id": "wrappers-empty-exe-is-filtered",
+    "call": {
+      "op": "wrappers",
+      "gameScope": null,
+      "wrapperOptions": [
+        {
+          "exe": "",
+          "args": "kept"
+        }
+      ],
+      "mangoHud": null,
+      "gameMode": "/usr/bin/gamemoderun"
+    }
+  },
+  {
+    "id": "wrappers-empty-gamescope-and-empty-mangohud-add-nothing",
+    "call": {
+      "op": "wrappers",
+      "gameScope": [],
+      "wrapperOptions": null,
+      "mangoHud": [],
+      "gameMode": null
+    }
+  },
+  {
+    "id": "wrappers-mangohud-only-follows-an-empty-gamescope",
+    "call": {
+      "op": "wrappers",
+      "gameScope": [
+        "gs",
+        "--"
+      ],
+      "wrapperOptions": null,
+      "mangoHud": [
+        "/usr/bin/mangohud",
+        "--dlsym"
+      ],
+      "gameMode": null
+    }
+  },
+  {
+    "id": "shlex-split-plain-words",
+    "call": {
+      "op": "shlexSplit",
+      "input": "a b c"
+    }
+  },
+  {
+    "id": "shlex-split-single-quotes",
+    "call": {
+      "op": "shlexSplit",
+      "input": "a 'b c' d"
+    }
+  },
+  {
+    "id": "shlex-split-double-quotes",
+    "call": {
+      "op": "shlexSplit",
+      "input": "a \"b c\" d"
+    }
+  },
+  {
+    "id": "shlex-split-backslash-escaped-space",
+    "call": {
+      "op": "shlexSplit",
+      "input": "a\\ b c"
+    }
+  },
+  {
+    "id": "shlex-split-backslash-before-double-quote",
+    "call": {
+      "op": "shlexSplit",
+      "input": "\"a\\\"b\" c"
+    }
+  },
+  {
+    "id": "shlex-split-backslash-inside-single-quotes",
+    "call": {
+      "op": "shlexSplit",
+      "input": "'a\\b' c"
+    }
+  },
+  {
+    "id": "shlex-split-unterminated-single-quote",
+    "call": {
+      "op": "shlexSplit",
+      "input": "a 'b c"
+    }
+  },
+  {
+    "id": "shlex-split-unterminated-double-quote",
+    "call": {
+      "op": "shlexSplit",
+      "input": "a \"b c"
+    }
+  },
+  {
+    "id": "shlex-split-empty-string",
+    "call": {
+      "op": "shlexSplit",
+      "input": ""
+    }
+  },
+  {
+    "id": "shlex-split-empty-quoted-strings",
+    "call": {
+      "op": "shlexSplit",
+      "input": "a '' b \"\" c"
+    }
+  },
+  {
+    "id": "shlex-split-whitespace-runs-tabs-newlines",
+    "call": {
+      "op": "shlexSplit",
+      "input": "a  \t b\n\n c\t"
+    }
+  },
+  {
+    "id": "shlex-split-non-ascii",
+    "call": {
+      "op": "shlexSplit",
+      "input": "héllo \"wörld ✓\" 日本語"
+    }
+  },
+  {
+    "id": "shlex-split-dollar-variable",
+    "call": {
+      "op": "shlexSplit",
+      "input": "echo $HOME \"${USER}\" '$LITERAL'"
+    }
+  },
+  {
+    "id": "shlex-split-backticks",
+    "call": {
+      "op": "shlexSplit",
+      "input": "echo `id` \"`id`\""
+    }
+  },
+  {
+    "id": "shlex-split-trailing-backslash",
+    "call": {
+      "op": "shlexSplit",
+      "input": "a b\\"
+    }
+  },
+  {
+    "id": "shlex-split-adjacent-quoted-parts",
+    "call": {
+      "op": "shlexSplit",
+      "input": "a'b'\"c\"d"
+    }
+  },
+  {
+    "id": "shlex-split-hash-is-not-a-comment-here",
+    "call": {
+      "op": "shlexSplit",
+      "input": "a #b c"
+    }
+  },
+  {
+    "id": "shlex-split-only-whitespace",
+    "call": {
+      "op": "shlexSplit",
+      "input": "   \t  "
+    }
+  },
+  {
+    "id": "shlex-join-plain-words",
+    "call": {
+      "op": "shlexJoin",
+      "words": [
+        "a",
+        "b",
+        "c"
+      ]
+    }
+  },
+  {
+    "id": "shlex-join-word-with-space",
+    "call": {
+      "op": "shlexJoin",
+      "words": [
+        "a",
+        "b c"
+      ]
+    }
+  },
+  {
+    "id": "shlex-join-embedded-quotes",
+    "call": {
+      "op": "shlexJoin",
+      "words": [
+        "a'b",
+        "c\"d",
+        "e'f\"g"
+      ]
+    }
+  },
+  {
+    "id": "shlex-join-backslash",
+    "call": {
+      "op": "shlexJoin",
+      "words": [
+        "a\\b",
+        "c\\"
+      ]
+    }
+  },
+  {
+    "id": "shlex-join-empty-string-element",
+    "call": {
+      "op": "shlexJoin",
+      "words": [
+        "a",
+        "",
+        "b"
+      ]
+    }
+  },
+  {
+    "id": "shlex-join-empty-list",
+    "call": {
+      "op": "shlexJoin",
+      "words": []
+    }
+  },
+  {
+    "id": "shlex-join-non-ascii",
+    "call": {
+      "op": "shlexJoin",
+      "words": [
+        "héllo",
+        "wörld ✓"
+      ]
+    }
+  },
+  {
+    "id": "shlex-join-dollar-variable",
+    "call": {
+      "op": "shlexJoin",
+      "words": [
+        "$HOME",
+        "${USER}"
+      ]
+    }
+  },
+  {
+    "id": "shlex-join-backtick",
+    "call": {
+      "op": "shlexJoin",
+      "words": [
+        "`id`"
+      ]
+    }
+  },
+  {
+    "id": "shlex-join-whitespace-tab-newline",
+    "call": {
+      "op": "shlexJoin",
+      "words": [
+        "a\tb",
+        "c\nd"
+      ]
+    }
+  },
+  {
+    "id": "shlex-join-shell-metacharacters",
+    "call": {
+      "op": "shlexJoin",
+      "words": [
+        "a;b",
+        "a&b",
+        "a|b",
+        "*",
+        "?",
+        "~",
+        "#x",
+        "(y)"
+      ]
+    }
+  },
+  {
+    "id": "known-fix-env-absent",
+    "call": {
+      "op": "knownFixEnv",
+      "appName": "app1",
+      "runner": "gog",
+      "seed": []
+    }
+  },
+  {
+    "id": "known-fix-env-string-values",
+    "call": {
+      "op": "knownFixEnv",
+      "appName": "app1",
+      "runner": "gog",
+      "seed": [
+        {
+          "path": "<APPFOLDER>/fixes/local/app1-gog.json",
+          "text": "{\"title\":\"fix\",\"envVariables\":{\"A\":\"1\",\"B\":\"two words\",\"C\":\"\"}}"
+        }
+      ]
+    }
+  },
+  {
+    "id": "known-fix-env-number-value",
+    "call": {
+      "op": "knownFixEnv",
+      "appName": "app1",
+      "runner": "gog",
+      "seed": [
+        {
+          "path": "<APPFOLDER>/fixes/local/app1-gog.json",
+          "text": "{\"title\":\"fix\",\"envVariables\":{\"N\":5,\"ZERO\":0}}"
+        }
+      ]
+    }
+  },
+  {
+    "id": "known-fix-env-boolean-value",
+    "call": {
+      "op": "knownFixEnv",
+      "appName": "app1",
+      "runner": "gog",
+      "seed": [
+        {
+          "path": "<APPFOLDER>/fixes/local/app1-gog.json",
+          "text": "{\"title\":\"fix\",\"envVariables\":{\"T\":true,\"F\":false}}"
+        }
+      ]
+    }
+  },
+  {
+    "id": "known-fix-env-object-value",
+    "call": {
+      "op": "knownFixEnv",
+      "appName": "app1",
+      "runner": "gog",
+      "seed": [
+        {
+          "path": "<APPFOLDER>/fixes/local/app1-gog.json",
+          "text": "{\"title\":\"fix\",\"envVariables\":{\"O\":{\"nested\":1}}}"
+        }
+      ]
+    }
+  },
+  {
+    "id": "known-fix-env-null-and-array-values",
+    "call": {
+      "op": "knownFixEnv",
+      "appName": "app1",
+      "runner": "gog",
+      "seed": [
+        {
+          "path": "<APPFOLDER>/fixes/local/app1-gog.json",
+          "text": "{\"title\":\"fix\",\"envVariables\":{\"NULLED\":null,\"LIST\":[1,\"two\"]}}"
+        }
+      ]
+    }
+  },
+  {
+    "id": "known-fix-env-empty-env-variables",
+    "call": {
+      "op": "knownFixEnv",
+      "appName": "app1",
+      "runner": "gog",
+      "seed": [
+        {
+          "path": "<APPFOLDER>/fixes/local/app1-gog.json",
+          "text": "{\"title\":\"fix\",\"envVariables\":{}}"
+        }
+      ]
+    }
+  },
+  {
+    "id": "known-fix-env-env-variables-is-a-string",
+    "call": {
+      "op": "knownFixEnv",
+      "appName": "app1",
+      "runner": "gog",
+      "seed": [
+        {
+          "path": "<APPFOLDER>/fixes/local/app1-gog.json",
+          "text": "{\"title\":\"fix\",\"envVariables\":\"A=1\"}"
+        }
+      ]
+    }
+  },
+  {
+    "id": "known-fix-env-env-variables-is-a-list",
+    "call": {
+      "op": "knownFixEnv",
+      "appName": "app1",
+      "runner": "gog",
+      "seed": [
+        {
+          "path": "<APPFOLDER>/fixes/local/app1-gog.json",
+          "text": "{\"title\":\"fix\",\"envVariables\":[\"A=1\"]}"
+        }
+      ]
+    }
+  },
+  {
+    "id": "known-fix-env-fix-without-env-variables",
+    "call": {
+      "op": "knownFixEnv",
+      "appName": "app1",
+      "runner": "gog",
+      "seed": [
+        {
+          "path": "<APPFOLDER>/fixes/local/app1-gog.json",
+          "text": "{\"title\":\"fix\",\"winetricks\":[\"vcrun\"]}"
+        }
+      ]
+    }
+  },
+  {
+    "id": "known-fix-env-local-over-bundled",
+    "call": {
+      "op": "knownFixEnv",
+      "appName": "app1",
+      "runner": "gog",
+      "seed": [
+        {
+          "path": "<APPFOLDER>/fixes/local/app1-gog.json",
+          "text": "{\"title\":\"fix\",\"envVariables\":{\"WHO\":\"local\",\"ONLY_LOCAL\":\"1\"}}"
+        },
+        {
+          "path": "<HOME>/public/fixes/app1-gog.json",
+          "text": "{\"title\":\"fix\",\"envVariables\":{\"WHO\":\"bundled\",\"ONLY_BUNDLED\":\"1\"}}"
+        }
+      ]
+    }
+  },
+  {
+    "id": "known-fix-env-bundled-over-remote",
+    "call": {
+      "op": "knownFixEnv",
+      "appName": "app1",
+      "runner": "gog",
+      "seed": [
+        {
+          "path": "<HOME>/public/fixes/app1-gog.json",
+          "text": "{\"title\":\"fix\",\"envVariables\":{\"WHO\":\"bundled\"}}"
+        },
+        {
+          "path": "<APPFOLDER>/fixes/app1-gog.json",
+          "text": "{\"title\":\"fix\",\"envVariables\":{\"WHO\":\"remote\",\"ONLY_REMOTE\":\"1\"}}"
+        }
+      ]
+    }
+  },
+  {
+    "id": "known-fix-env-bundled-only",
+    "call": {
+      "op": "knownFixEnv",
+      "appName": "app1",
+      "runner": "gog",
+      "seed": [
+        {
+          "path": "<HOME>/public/fixes/app1-gog.json",
+          "text": "{\"title\":\"fix\",\"envVariables\":{\"WHO\":\"bundled\"}}"
+        }
+      ]
+    }
+  },
+  {
+    "id": "known-fix-env-remote-only",
+    "call": {
+      "op": "knownFixEnv",
+      "appName": "app1",
+      "runner": "gog",
+      "seed": [
+        {
+          "path": "<APPFOLDER>/fixes/app1-gog.json",
+          "text": "{\"title\":\"fix\",\"envVariables\":{\"WHO\":\"remote\"}}"
+        }
+      ]
+    }
+  },
+  {
+    "id": "known-fix-env-local-malformed-bundled-valid",
+    "call": {
+      "op": "knownFixEnv",
+      "appName": "app1",
+      "runner": "gog",
+      "seed": [
+        {
+          "path": "<APPFOLDER>/fixes/local/app1-gog.json",
+          "text": "{ not json"
+        },
+        {
+          "path": "<HOME>/public/fixes/app1-gog.json",
+          "text": "{\"title\":\"fix\",\"envVariables\":{\"WHO\":\"bundled\"}}"
+        }
+      ]
+    }
+  },
+  {
+    "id": "known-fix-env-malformed-only",
+    "call": {
+      "op": "knownFixEnv",
+      "appName": "app1",
+      "runner": "gog",
+      "seed": [
+        {
+          "path": "<APPFOLDER>/fixes/local/app1-gog.json",
+          "text": "{ not json"
+        }
+      ]
+    }
+  },
+  {
+    "id": "known-fix-env-remote-file-with-tier-2-keys",
+    "call": {
+      "op": "knownFixEnv",
+      "appName": "app1",
+      "runner": "gog",
+      "seed": [
+        {
+          "path": "<APPFOLDER>/fixes/app1-gog.json",
+          "text": "{\"title\":\"remote\",\"envVariables\":{\"FROM_REMOTE\":\"1\"},\"registry\":[{\"key\":\"HKLM\\\\Software\\\\X\",\"name\":\"N\",\"type\":\"REG_DWORD\",\"value\":1}],\"dllOverrides\":[{\"exe\":\"Game.exe\",\"dlls\":{\"d3d9\":\"native\"}}],\"overlays\":[{\"id\":\"o1\"}],\"shimFeatures\":[\"f1\"],\"evidence\":\"todo.md\"}"
+        },
+        {
+          "path": "<APPFOLDER>/fixes/app1-gog.profile.json",
+          "text": "{\"title\":\"remote profile\",\"registry\":[{\"key\":\"HKLM\\\\Software\\\\X\",\"name\":\"N\",\"type\":\"REG_DWORD\",\"value\":1}],\"dllOverrides\":[{\"exe\":\"Game.exe\",\"dlls\":{\"d3d9\":\"native\"}}]}"
+        }
+      ]
+    }
+  },
+  {
+    "id": "known-fix-env-runner-legendary",
+    "call": {
+      "op": "knownFixEnv",
+      "appName": "app1",
+      "runner": "legendary",
+      "seed": [
+        {
+          "path": "<APPFOLDER>/fixes/local/app1-epic.json",
+          "text": "{\"title\":\"fix\",\"envVariables\":{\"RUNNER\":\"legendary\"}}"
+        }
+      ]
+    }
+  },
+  {
+    "id": "known-fix-env-runner-nile",
+    "call": {
+      "op": "knownFixEnv",
+      "appName": "app1",
+      "runner": "nile",
+      "seed": [
+        {
+          "path": "<APPFOLDER>/fixes/local/app1-amazon.json",
+          "text": "{\"title\":\"fix\",\"envVariables\":{\"RUNNER\":\"nile\"}}"
+        }
+      ]
+    }
+  },
+  {
+    "id": "known-fix-env-runner-sideload",
+    "call": {
+      "op": "knownFixEnv",
+      "appName": "app1",
+      "runner": "sideload",
+      "seed": [
+        {
+          "path": "<APPFOLDER>/fixes/local/app1-undefined.json",
+          "text": "{\"title\":\"fix\",\"envVariables\":{\"RUNNER\":\"sideload\"}}"
+        }
+      ]
+    }
+  },
+  {
+    "id": "known-fix-env-runner-steam",
+    "call": {
+      "op": "knownFixEnv",
+      "appName": "app1",
+      "runner": "steam",
+      "seed": [
+        {
+          "path": "<APPFOLDER>/fixes/local/app1-steam.json",
+          "text": "{\"title\":\"fix\",\"envVariables\":{\"RUNNER\":\"steam\"}}"
+        }
+      ]
+    }
+  },
+  {
+    "id": "remove-quote-no-quotes",
+    "call": {
+      "op": "removeQuote",
+      "value": "path/without/quotes"
+    }
+  },
+  {
+    "id": "remove-quote-wrapped-in-quotes",
+    "call": {
+      "op": "removeQuote",
+      "value": "\"path/with/quotes\""
+    }
+  },
+  {
+    "id": "remove-quote-single-pair",
+    "call": {
+      "op": "removeQuote",
+      "value": "\"a\""
+    }
+  },
+  {
+    "id": "remove-quote-doubled-pair",
+    "call": {
+      "op": "removeQuote",
+      "value": "\"\"a\"\""
+    }
+  },
+  {
+    "id": "remove-quote-leading-only",
+    "call": {
+      "op": "removeQuote",
+      "value": "\"a"
+    }
+  },
+  {
+    "id": "remove-quote-trailing-only",
+    "call": {
+      "op": "removeQuote",
+      "value": "a\""
+    }
+  },
+  {
+    "id": "remove-quote-empty",
+    "call": {
+      "op": "removeQuote",
+      "value": ""
+    }
+  },
+  {
+    "id": "remove-quote-one-quote",
+    "call": {
+      "op": "removeQuote",
+      "value": "\""
+    }
+  },
+  {
+    "id": "remove-quote-three-quotes",
+    "call": {
+      "op": "removeQuote",
+      "value": "\"\"\""
+    }
+  },
+  {
+    "id": "remove-quote-space-without-quotes",
+    "call": {
+      "op": "removeQuote",
+      "value": "a b"
+    }
+  },
+  {
+    "id": "remove-quote-quoted-space",
+    "call": {
+      "op": "removeQuote",
+      "value": "\"a b\""
+    }
+  },
+  {
+    "id": "remove-quote-inner-quote",
+    "call": {
+      "op": "removeQuote",
+      "value": "\"a\"b\""
+    }
+  },
+  {
+    "id": "remove-quote-single-quotes-are-kept",
+    "call": {
+      "op": "removeQuote",
+      "value": "'a'"
+    }
+  },
+  {
+    "id": "sonoma-mac-darwin-23",
+    "platform": "mac",
+    "call": {
+      "op": "sonoma",
+      "release": "23.1.0"
+    }
+  },
+  {
+    "id": "sonoma-mac-darwin-22",
+    "platform": "mac",
+    "call": {
+      "op": "sonoma",
+      "release": "22.6.0"
+    }
+  },
+  {
+    "id": "sonoma-mac-bare-14",
+    "platform": "mac",
+    "call": {
+      "op": "sonoma",
+      "release": "14"
+    }
+  },
+  {
+    "id": "sonoma-mac-darwin-13",
+    "platform": "mac",
+    "call": {
+      "op": "sonoma",
+      "release": "13.9"
+    }
+  },
+  {
+    "id": "sonoma-mac-empty",
+    "platform": "mac",
+    "call": {
+      "op": "sonoma",
+      "release": ""
+    }
+  },
+  {
+    "id": "sonoma-mac-not-a-number",
+    "platform": "mac",
+    "call": {
+      "op": "sonoma",
+      "release": "abc"
+    }
+  },
+  {
+    "id": "sonoma-linux-darwin-23",
+    "platform": "linux",
+    "call": {
+      "op": "sonoma",
+      "release": "23.1.0"
+    }
+  },
+  {
+    "id": "sonoma-linux-darwin-22",
+    "platform": "linux",
+    "call": {
+      "op": "sonoma",
+      "release": "22.6.0"
+    }
+  },
+  {
+    "id": "sonoma-linux-bare-14",
+    "platform": "linux",
+    "call": {
+      "op": "sonoma",
+      "release": "14"
+    }
+  },
+  {
+    "id": "sonoma-linux-darwin-13",
+    "platform": "linux",
+    "call": {
+      "op": "sonoma",
+      "release": "13.9"
+    }
+  },
+  {
+    "id": "sonoma-linux-empty",
+    "platform": "linux",
+    "call": {
+      "op": "sonoma",
+      "release": ""
+    }
+  },
+  {
+    "id": "sonoma-linux-not-a-number",
+    "platform": "linux",
+    "call": {
+      "op": "sonoma",
+      "release": "abc"
+    }
+  },
+  {
+    "id": "sonoma-windows-darwin-23",
+    "platform": "windows",
+    "call": {
+      "op": "sonoma",
+      "release": "23.1.0"
+    }
+  },
+  {
+    "id": "sonoma-windows-darwin-22",
+    "platform": "windows",
+    "call": {
+      "op": "sonoma",
+      "release": "22.6.0"
+    }
+  },
+  {
+    "id": "sonoma-windows-bare-14",
+    "platform": "windows",
+    "call": {
+      "op": "sonoma",
+      "release": "14"
+    }
+  },
+  {
+    "id": "sonoma-windows-darwin-13",
+    "platform": "windows",
+    "call": {
+      "op": "sonoma",
+      "release": "13.9"
+    }
+  },
+  {
+    "id": "sonoma-windows-empty",
+    "platform": "windows",
+    "call": {
+      "op": "sonoma",
+      "release": ""
+    }
+  },
+  {
+    "id": "sonoma-windows-not-a-number",
+    "platform": "windows",
+    "call": {
+      "op": "sonoma",
+      "release": "abc"
+    }
+  },
+  {
+    "id": "launcher_wineLibFolders--h3-setupwineenvvars-library-folder-error-macos-wine-with-no-lib-paths-no-error-env-has-no-ld-library-path-or-winedllpath",
+    "title": "H3: setupWineEnvVars library-folder error > macOS, wine with no lib paths: no error, env has no LD_LIBRARY_PATH or WINEDLLPATH",
+    "platform": "mac",
+    "call": {
+      "op": "wineEnv",
+      "settings": {
+        "wineVersion": {
+          "type": "wine",
+          "bin": "/pins/bin/wine",
+          "name": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "wineserver": "/pins/bin/wineserver"
+        },
+        "winePrefix": "/pins/prefix",
+        "wineCrossoverBottle": "GameLibSteamBridge-1",
+        "enviromentOptions": [],
+        "preferSystemLibs": false
+      }
+    }
+  },
+  {
+    "id": "launcher_wineLibFolders--h3-setupwineenvvars-library-folder-error-macos-wine-with-lib-and-lib32-ld-library-path-is-set-as-before",
+    "title": "H3: setupWineEnvVars library-folder error > macOS, wine with lib and lib32: LD_LIBRARY_PATH is set as before",
+    "platform": "mac",
+    "call": {
+      "op": "wineEnv",
+      "settings": {
+        "wineVersion": {
+          "type": "wine",
+          "bin": "/pins/bin/wine",
+          "name": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "wineserver": "/pins/bin/wineserver",
+          "lib": "/pins/lib",
+          "lib32": "/pins/lib32"
+        },
+        "winePrefix": "/pins/prefix",
+        "wineCrossoverBottle": "GameLibSteamBridge-1",
+        "enviromentOptions": [],
+        "preferSystemLibs": false
+      }
+    }
+  },
+  {
+    "id": "launcher_wineLibFolders--h3-setupwineenvvars-library-folder-error-linux-wine-with-no-lib-paths-the-error-is-still-logged",
+    "title": "H3: setupWineEnvVars library-folder error > Linux, wine with no lib paths: the error is still logged",
+    "platform": "linux",
+    "call": {
+      "op": "wineEnv",
+      "settings": {
+        "wineVersion": {
+          "type": "wine",
+          "bin": "/pins/bin/wine",
+          "name": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "wineserver": "/pins/bin/wineserver"
+        },
+        "winePrefix": "/pins/prefix",
+        "wineCrossoverBottle": "GameLibSteamBridge-1",
+        "enviromentOptions": [],
+        "preferSystemLibs": false
+      }
+    }
   }
 ]

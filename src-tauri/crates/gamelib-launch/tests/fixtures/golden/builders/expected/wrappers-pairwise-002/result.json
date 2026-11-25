@@ -1,0 +1,6 @@
+[
+  "taskset",
+  "-c",
+  "0",
+  "/usr/bin/gamemoderun"
+]
