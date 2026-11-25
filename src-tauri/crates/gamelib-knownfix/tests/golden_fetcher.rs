@@ -299,6 +299,16 @@ fn want_line(golden: &str) -> Want {
     Want::Exact(text)
 }
 
+/// The Rust log level in the golden's words: the oracle's `warning` is the context's `warn`; `info` and
+/// `error` are the same on both sides, so an info line that came out as an error (or the reverse) differs.
+fn golden_level(level: &str) -> &str {
+    if level == "warn" {
+        "warning"
+    } else {
+        level
+    }
+}
+
 fn runner_of(name: &str) -> Runner {
     Runner::parse(name).unwrap_or_else(|| panic!("an unknown runner in a case: {name}"))
 }
@@ -402,8 +412,7 @@ async fn every_fetcher_golden_replays() {
         let matches = want_events.len() == events.len()
             && want_events.iter().zip(&events).all(|(want, got)| {
                 want["step"].as_u64() == Some(got.0)
-                    && (want["level"] == "warning") == (got.1 == "warn")
-                    && want["level"].as_str() != Some("error")
+                    && want["level"].as_str() == Some(golden_level(&got.1))
                     && want_line(want["text"].as_str().unwrap()).accepts(&got.2)
             });
         if !matches {
