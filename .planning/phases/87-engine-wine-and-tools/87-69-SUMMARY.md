@@ -16,11 +16,11 @@ affects: [87-verification, 87-gap-cycle-2]
 actuals:
   tokens: 12000
   tasks: 3
-  commits: 3
+  commits: 4
 
 plan_head_before: 2646f28c37ea0bc1411f8f84b5c6a3a31745e82e
 plan_head_after: f13eaf114
-commits: 3
+commits: 4
 
 tech-stack:
   added: []
@@ -90,9 +90,9 @@ REQUIREMENTS-v0.11.md already marks SVC-02 Complete (line 26 and traceability li
 2. **Task 2: operator run** - checkpoint, no commit. The run record is in the session `notes.log`, which is never committed.
 3. **Task 3: score, findings, pointer** - `f13eaf114` (docs)
 
-**Plan metadata:** the final docs commit (SUMMARY, ROADMAP, STATE).
+**Plan metadata:** `76e7c4227` (ROADMAP, STATE). This SUMMARY was swept into the concurrent session's commit `3d4b1e926` (`fix(88): WR-09 ...`) before the metadata commit staged it; its content there is byte-identical, and main was not rewritten because another session was committing on it. A fourth commit corrects this paragraph.
 
-`commits: 3` counts this plan's commits only: `git log --grep 87-69` over the ledger range, 2 task commits plus the metadata commit. Main is shared with the concurrent Phase 88 session, so the raw `git rev-list --count 2646f28c3..HEAD` gave 112 before the metadata commit, and almost all of those are Phase 88 commits.
+`commits: 4` counts this plan's commits only: `git log --grep 87-69` over the ledger range, 2 task commits, the metadata commit and this correction (the SUMMARY's first version sits in `3d4b1e926`, not counted). Main is shared with the concurrent Phase 88 session, so the raw `git rev-list --count 2646f28c3..HEAD` gave 112 before the metadata commit, and almost all of those are Phase 88 commits.
 
 ## Decisions Made
 
