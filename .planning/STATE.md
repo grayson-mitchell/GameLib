@@ -6,10 +6,10 @@ current_phase: 87
 current_phase_name: Engine, Wine and tools
 status: executing
 stopped_at: Completed 88.1-05-PLAN.md
-last_updated: "2026-11-25T13:03:03.781Z"
+last_updated: "2026-11-25T17:25:53.317Z"
 last_activity: 2026-11-25
 last_activity_desc: Phase 87 execution started
-state_head: 62449fd2f08b49e81f99beafcf64fdd4d0759d35
+state_head: 5b80dd4831a1ff1c8bcbc895148b79c4a6a9c5fb
 progress:
   total_phases: 25
   completed_phases: 23
@@ -538,6 +538,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 88.1 P12 | 21min | 2 tasks | 15 files |
 | Phase 88.1 P13 | 35min | 2 tasks | 16 files |
 | Phase 88.1 P14 | 75min | 2 tasks | 16 files |
+| Phase 88.1 P15 | ~3h (contended machine) | 2 tasks | 31 files |
 
 ## Accumulated Context
 
@@ -1211,6 +1212,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 88.1]: 88.1-14: check_wine reply carries the settings writes as data (wineVersion, persistGameWine, globalWineVersion); Rust writes no config
 - [Phase 88.1]: 88.1-14: A second context seam WineManagerFacts carries the shell's discovery host, install settings and abort registry; read lazily
 - [Phase 88.1]: 88.1-14: A dismissal, a failed dialog and a context with no dialog source are all No (T-88.1-34)
+- [Phase 88.1]: 88.1-15: the interim prepare adapters (launchAdapters.ts) hold no builder logic; the TS store-setup hook runs between the begin and finish ops only when prefixUpdated; aborts stays in LauncherDeps until 88.1-16 ports checkWineBeforeLaunch
+- [Phase 88.1]: 88.1-15: the launchPrepare and launchPrepareWine oracle tests were deleted with the TS prepare bodies (88.1-17's git rm of them is a no-op); goldens and recordings stay
 
 ### Pending Todos
 
