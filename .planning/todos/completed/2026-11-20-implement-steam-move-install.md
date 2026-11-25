@@ -102,7 +102,24 @@ for completion, because a Steam operation does not always move the ACF.
   - cross-volume and external-drive moves
   - a library on an unmounted volume (it still fails the folder lookup)
   - Steam signed out
-  - the live gate
 - Decided (2026-11-25): no pre-move note in the Move dialog that the picked folder becomes the
   library root. The user judged the Location row, which shows the real
   `<picked>/steamapps/common/<installdir>` path after the move, to be enough.
+
+## Resolution (2026-11-25): live gate passed
+
+The operator ran both checks through GameLib's Move picker, using World of Goo (22000), with the
+n4q build and Steam not restarted since spike 094.
+
+1. **To a new folder, `~/Games/testmove` (17:32).**
+   - Steam mounted it as library 4, reusing a gap that spike 094 left in its in-memory list, so
+     the n4q gap fix held against real Steam.
+   - The game moved in about 1 s (263,458,295 bytes, 2,920 files).
+   - Steam started its own verify 4 s after the move, before the nudge's 5 s threshold. The verify
+     found no changes, and the game ended at StateFlags 4.
+   - GameLib's cached `install_path` followed the move, and the game launched from the new folder.
+2. **Back to the default library, `~/Library/Application Support/Steam` (17:44).**
+   - The game moved in about 1 s, and no library was added.
+   - It ended at StateFlags 4, GameLib's cached `install_path` followed it, and it launched.
+
+The items still open above are follow-ups outside this todo's scope.
