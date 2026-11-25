@@ -1175,6 +1175,33 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     // legendary's launch leaves in 91, gog's and nile's in 92
     deletedBy: 92
   },
+  {
+    name: 'setupEnvVars',
+    file: 'src/backend/launchrust/builders.ts',
+    shape: 'shim',
+    channel: 'RUST_LAUNCH_SETUP_ENV_VARS',
+    callers: LAUNCH_BUILDER_SHIM_IMPORTERS,
+    // legendary's launch leaves in 91, gog's and nile's in 92
+    deletedBy: 92
+  },
+  {
+    name: 'setupWrappers',
+    file: 'src/backend/launchrust/builders.ts',
+    shape: 'shim',
+    channel: 'RUST_LAUNCH_SETUP_WRAPPERS',
+    callers: LAUNCH_BUILDER_SHIM_IMPORTERS,
+    // legendary's launch leaves in 91, gog's and nile's in 92
+    deletedBy: 92
+  },
+  {
+    name: 'getKnownFixesEnvVariables',
+    file: 'src/backend/launchrust/builders.ts',
+    shape: 'shim',
+    channel: 'RUST_LAUNCH_KNOWN_FIX_ENV',
+    callers: LAUNCH_BUILDER_SHIM_IMPORTERS,
+    // legendary's launch leaves in 91, gog's and nile's in 92
+    deletedBy: 92
+  },
   // 88-13 (87 D-24): the synchronous known-fix twins, for callers 88 cannot make async. `installFixes` and
   // `getKnownFixesEnvVariables` read the tier-1 fix inline in the launcher until 88.1/97 move them; the env log line goes
   // with them. `withKnownFixEnv` builds the settings storeManagerCommon launches with, which the sideload and

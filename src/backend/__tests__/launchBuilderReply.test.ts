@@ -1,4 +1,8 @@
-import { settleEnvMap } from '../launchBuilderReply'
+import {
+  settleEnvMap,
+  settleKnownFixEnv,
+  settleWordList
+} from '../launchBuilderReply'
 
 describe('settleEnvMap', () => {
   it('answers a copy of a string map', () => {
@@ -22,5 +26,33 @@ describe('settleEnvMap', () => {
         'setupWrapperEnvVars: the reply was not a string map'
       )
     }
+  })
+})
+
+describe('settleWordList', () => {
+  it('answers a copy of a list of strings', () => {
+    const reply = ['gamescope', '--', 'a']
+    const got = settleWordList(reply, 'setupWrappers')
+    expect(got).toEqual(reply)
+    expect(got).not.toBe(reply)
+    expect(settleWordList([], 'setupWrappers')).toEqual([])
+  })
+
+  it('refuses anything that is not a list of strings', () => {
+    for (const reply of [null, 'a', { 0: 'a' }, [1], ['a', null]]) {
+      expect(() => settleWordList(reply, 'setupWrappers')).toThrow(
+        'setupWrappers: the reply was not a list of words'
+      )
+    }
+  })
+})
+
+describe('settleKnownFixEnv', () => {
+  it('answers no fix as an empty map and any other reply as it came', () => {
+    expect(settleKnownFixEnv(null)).toEqual({})
+    expect(settleKnownFixEnv(undefined)).toEqual({})
+    const reply = { MY_VAR: '1' }
+    expect(settleKnownFixEnv(reply)).toBe(reply)
+    expect(settleKnownFixEnv({})).toEqual({})
   })
 })

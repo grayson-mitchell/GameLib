@@ -22,3 +22,22 @@ export function settleEnvMap(
   }
   throw new Error(`${builder}: the reply was not a string map`)
 }
+
+/** The wrapper words: an array of strings. */
+export function settleWordList(reply: unknown, builder: string): string[] {
+  if (Array.isArray(reply) && reply.every((word) => typeof word === 'string')) {
+    return [...reply]
+  }
+  throw new Error(`${builder}: the reply was not a list of words`)
+}
+
+/**
+ * The tier-1 known-fix env. The TypeScript it replaced returned the fix's `envVariables` as the file held them
+ * (`knownFixes?.envVariables || {}`), a value it did not check either, so this keeps that: no fix is `{}` and
+ * anything else is handed on as it came, which keeps a game's environment what the goldens record.
+ */
+export function settleKnownFixEnv(reply: unknown): Record<string, string> {
+  return reply === null || reply === undefined
+    ? {}
+    : (reply as Record<string, string>)
+}

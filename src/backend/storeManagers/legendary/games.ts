@@ -1005,11 +1005,14 @@ export default class LegendaryGame implements Game {
         appName: this.appName,
         appRunner: 'legendary'
       })),
-      ...this.deps.launcher.setupEnvVars(
+      ...(await this.deps.launcher.setupEnvVars(
         gameSettings,
         gameInfo.install.install_path
-      ),
-      ...this.deps.launcher.getKnownFixesEnvVariables(this.appName, 'legendary')
+      )),
+      ...(await this.deps.launcher.getKnownFixesEnvVariables(
+        this.appName,
+        'legendary'
+      ))
     }
 
     // Use the wrapper EXE to launch games.
@@ -1036,7 +1039,7 @@ export default class LegendaryGame implements Game {
       }
     }
 
-    const wrappers = this.deps.launcher.setupWrappers(
+    const wrappers = await this.deps.launcher.setupWrappers(
       gameSettings,
       mangoHudCommand,
       gameModeBin,

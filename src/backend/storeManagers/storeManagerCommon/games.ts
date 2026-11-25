@@ -111,7 +111,7 @@ export async function launchGame(
         })
       : undefined
 
-    const wrappers = deps.launcher.setupWrappers(
+    const wrappers = await deps.launcher.setupWrappers(
       gameSettings,
       mangoHudCommand,
       gameModeBin,
@@ -160,11 +160,11 @@ export async function launchGame(
           appName,
           appRunner: runner
         })),
-        ...deps.launcher.setupEnvVars(
+        ...(await deps.launcher.setupEnvVars(
           gameSettings,
           gameInfo.install.install_path
-        ),
-        ...deps.launcher.getKnownFixesEnvVariables(appName, runner)
+        )),
+        ...(await deps.launcher.getKnownFixesEnvVariables(appName, runner))
       }
 
       if (wrappers.length > 0) {

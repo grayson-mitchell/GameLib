@@ -415,14 +415,14 @@ export default class NileGameManager implements Game {
       })),
       ...(isWindows
         ? {}
-        : this.deps.launcher.setupEnvVars(
+        : await this.deps.launcher.setupEnvVars(
             gameSettings,
             gameInfo.install.install_path
           )),
-      ...this.deps.launcher.getKnownFixesEnvVariables(this.id, 'nile')
+      ...(await this.deps.launcher.getKnownFixesEnvVariables(this.id, 'nile'))
     }
 
-    const wrappers = this.deps.launcher.setupWrappers(
+    const wrappers = await this.deps.launcher.setupWrappers(
       gameSettings,
       mangoHudCommand,
       gameModeBin,

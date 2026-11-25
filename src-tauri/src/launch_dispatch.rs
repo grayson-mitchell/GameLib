@@ -79,6 +79,133 @@ pub(crate) fn rpc_launch_setup_wrapper_env_vars(args: &[Value]) -> Result<Value,
     setup_wrapper_env_vars_over(launch_ctx(), args)
 }
 
+/// A decoded optional text: the string, or `null`. A trailing argument the sidecar left out decodes the same
+/// as an explicit `null`, so the crate always sees every position.
+fn text_or_null(text: Option<String>) -> Value {
+    text.map_or(Value::Null, Value::String)
+}
+
+/// The settings object of a decoded call: the generated decode takes any JSON value (`x-rust-value`), so the
+/// object check is here, before the context is looked at, and answers the same fixed `<op>:bad-args`.
+fn settings_object(settings: Value, op: &str) -> Result<Value, String> {
+    match settings {
+        Value::Object(_) => Ok(settings),
+        _ => Err(format!("{op}:bad-args")),
+    }
+}
+
+/// The body of the `launch_setup_env_vars` arm over a given context and host: the generated decode
+/// (`[gameSettings, installPath | null]`), an object check and an arity check first, so a bad call is rejected
+/// the same fixed `<op>:bad-args` literal before and after the install and never echoes the sidecar's value,
+/// then the crate over `[settings, installPath, host]`. `host` is the shell's own facts (T-88.1-14), taken only
+/// once the context is there.
+fn setup_env_vars_over(
+    ctx: Option<&Arc<LaunchCtx>>,
+    args: &[Value],
+    host: impl FnOnce() -> Value,
+) -> Result<Value, String> {
+    let decoded = LaunchSetupEnvVarsArgs::from_args(args)?;
+    if args.len() > 2 {
+        return Err("launch_setup_env_vars:bad-args".to_string());
+    }
+    let settings = settings_object(decoded.game_settings, "launch_setup_env_vars")?;
+    let ctx = ctx.ok_or_else(|| "launch_setup_env_vars:not-ready".to_string())?;
+    rpc_launch_op(
+        Some(ctx),
+        "launch_setup_env_vars",
+        &[settings, text_or_null(decoded.install_path), host()],
+    )
+}
+
+/// The `launch_setup_env_vars` `rustInvoke` arm (the managers' `setupEnvVars` shim, 88.1-07): the game's GPU
+/// offload, HUD, install path and own variables as a string map. The shell appends [`wine_dispatch::wine_run_host`].
+/// A pure computation, so the sidecar keeps it inside the 60 s `RUST_INVOKE_TIMEOUT_MS`.
+pub(crate) fn rpc_launch_setup_env_vars(args: &[Value]) -> Result<Value, String> {
+    setup_env_vars_over(launch_ctx(), args, wine_dispatch::wine_run_host)
+}
+
+/// The body of the `launch_setup_wine_env_vars` arm over a given context and host: the same decode, object and
+/// arity checks as [`setup_env_vars_over`] over `[gameSettings, gameId | null]`, then the crate over
+/// `[settings, gameId, host]`.
+fn setup_wine_env_vars_over(
+    ctx: Option<&Arc<LaunchCtx>>,
+    args: &[Value],
+    host: impl FnOnce() -> Value,
+) -> Result<Value, String> {
+    let decoded = LaunchSetupWineEnvVarsArgs::from_args(args)?;
+    if args.len() > 2 {
+        return Err("launch_setup_wine_env_vars:bad-args".to_string());
+    }
+    let settings = settings_object(decoded.game_settings, "launch_setup_wine_env_vars")?;
+    let ctx = ctx.ok_or_else(|| "launch_setup_wine_env_vars:not-ready".to_string())?;
+    rpc_launch_op(
+        Some(ctx),
+        "launch_setup_wine_env_vars",
+        &[settings, text_or_null(decoded.game_id), host()],
+    )
+}
+
+/// The `launch_setup_wine_env_vars` `rustInvoke` arm (the wine env shim, wired with its callers in 88.1-08): the
+/// wine environment of a game as a string map, the library folders read from disk. The shell appends
+/// [`wine_dispatch::wine_run_host`]; the sidecar keeps it inside the 60 s `RUST_INVOKE_TIMEOUT_MS`.
+pub(crate) fn rpc_launch_setup_wine_env_vars(args: &[Value]) -> Result<Value, String> {
+    setup_wine_env_vars_over(launch_ctx(), args, wine_dispatch::wine_run_host)
+}
+
+/// The words of a decoded optional list: the array of strings, or `null`.
+fn words_or_null(words: Option<Vec<String>>) -> Value {
+    words.map_or(Value::Null, |words| {
+        Value::Array(words.into_iter().map(Value::String).collect())
+    })
+}
+
+/// The body of the `launch_setup_wrappers` arm over a given context: the generated decode
+/// (`[gameSettings, mangoHudCommand | null, gameModeBin | null, gameScopeCommand | null]`), an object check and an
+/// arity check first, then the crate over all four positions (an absent trailing one is `null`; an empty list
+/// stays an empty list, which the gamescope rule tells from `null`). An unterminated quote in a wrapper option is
+/// the crate's `<op>:<message>`, a fixed literal.
+fn setup_wrappers_over(ctx: Option<&Arc<LaunchCtx>>, args: &[Value]) -> Result<Value, String> {
+    let decoded = LaunchSetupWrappersArgs::from_args(args)?;
+    if args.len() > 4 {
+        return Err("launch_setup_wrappers:bad-args".to_string());
+    }
+    let settings = settings_object(decoded.game_settings, "launch_setup_wrappers")?;
+    rpc_launch_op(
+        ctx,
+        "launch_setup_wrappers",
+        &[
+            settings,
+            words_or_null(decoded.mango_hud_command),
+            text_or_null(decoded.game_mode_bin),
+            words_or_null(decoded.game_scope_command),
+        ],
+    )
+}
+
+/// The `launch_setup_wrappers` `rustInvoke` arm (the managers' `setupWrappers` shim, 88.1-07): the wrapper words
+/// in order, gamescope first. A pure computation, so the sidecar keeps it inside the 60 s `RUST_INVOKE_TIMEOUT_MS`.
+pub(crate) fn rpc_launch_setup_wrappers(args: &[Value]) -> Result<Value, String> {
+    setup_wrappers_over(launch_ctx(), args)
+}
+
+/// The body of the `launch_known_fix_env` arm over a given context: the generated decode (`[appName, runner]`, the
+/// runner one of the five names) and an arity check first, then the crate, which bounds the app name (1 to 256
+/// UTF-16 units) and decodes the runner again.
+fn known_fix_env_over(ctx: Option<&Arc<LaunchCtx>>, args: &[Value]) -> Result<Value, String> {
+    LaunchKnownFixEnvArgs::from_args(args)?;
+    if args.len() != 2 {
+        return Err("launch_known_fix_env:bad-args".to_string());
+    }
+    rpc_launch_op(ctx, "launch_known_fix_env", args)
+}
+
+/// The `launch_known_fix_env` `rustInvoke` arm (the managers' `getKnownFixesEnvVariables` shim, 88.1-07): the
+/// game's tier-1 `envVariables` as the file holds them, `{}` when there is none. A disk read, so the sidecar keeps
+/// it inside the 60 s `RUST_INVOKE_TIMEOUT_MS`.
+pub(crate) fn rpc_launch_known_fix_env(args: &[Value]) -> Result<Value, String> {
+    known_fix_env_over(launch_ctx(), args)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -167,5 +294,166 @@ mod tests {
         .unwrap_err();
         assert_eq!(err, "launch_setup_wrapper_env_vars:bad-args");
         assert!(!err.contains(secret));
+    }
+
+    /// The settings fields the env builders need: the game's wine installation is the one required field
+    /// (the sidecar always sends the merged `GameSettings`, which holds it), `extra` adds the rest.
+    fn settings(extra: Value) -> Value {
+        let mut base = json!({
+            "wineVersion": {"type": "wine", "bin": "/w/wine", "name": "Wine-9", "wineserver": "/w/wineserver"},
+            "winePrefix": "/p"
+        });
+        if let (Some(base), Value::Object(extra)) = (base.as_object_mut(), extra) {
+            base.extend(extra);
+        }
+        base
+    }
+
+    /// The shell's host facts, fixed: no variable set, so `LD_PRELOAD` is the empty default.
+    fn host() -> Value {
+        json!({"env": {}})
+    }
+
+    #[test]
+    fn the_game_env_arm_builds_the_map_over_the_shells_host_and_is_not_ready_before_the_install() {
+        let home = FakeHome::new("launch-shell-");
+        let ctx = ctx_over(&home);
+        let args = vec![settings(json!({"nvidiaPrime": true})), json!("/games/g1")];
+        assert_eq!(
+            setup_env_vars_over(None, &args, host),
+            Err("launch_setup_env_vars:not-ready".to_string())
+        );
+        let got = setup_env_vars_over(Some(&ctx), &args, host).unwrap();
+        assert_eq!(got["DRI_PRIME"], json!("1"));
+        assert_eq!(got["STEAM_COMPAT_INSTALL_PATH"], json!("/games/g1"));
+        assert_eq!(got["LD_PRELOAD"], json!(""));
+        // A trailing install path left out is the same as null.
+        let bare = setup_env_vars_over(Some(&ctx), &[settings(json!({}))], host).unwrap();
+        assert!(bare.get("STEAM_COMPAT_INSTALL_PATH").is_none());
+        // The host is the shell's: a process that already preloads something is left alone.
+        let preloaded = setup_env_vars_over(
+            Some(&ctx),
+            &[settings(json!({})), Value::Null],
+            || json!({"env": {"LD_PRELOAD": "x.so"}}),
+        )
+        .unwrap();
+        assert!(preloaded.get("LD_PRELOAD").is_none());
+    }
+
+    #[test]
+    fn the_wine_env_arm_builds_the_map_and_is_not_ready_before_the_install() {
+        let home = FakeHome::new("launch-shell-");
+        let ctx = ctx_over(&home);
+        let settings = json!({
+            "wineVersion": {"type": "wine", "bin": "/w/wine", "name": "Wine-9", "wineserver": "/w/wineserver"},
+            "winePrefix": "/p"
+        });
+        assert_eq!(
+            setup_wine_env_vars_over(None, &[settings.clone(), Value::Null], host),
+            Err("launch_setup_wine_env_vars:not-ready".to_string())
+        );
+        let got = setup_wine_env_vars_over(Some(&ctx), &[settings, json!("g1")], host).unwrap();
+        assert!(got.is_object());
+        assert_eq!(got["WINEPREFIX"], json!("/p"));
+    }
+
+    #[test]
+    fn the_wrappers_arm_joins_the_words_in_order_and_tells_an_empty_gamescope_from_none() {
+        let home = FakeHome::new("launch-shell-");
+        let ctx = ctx_over(&home);
+        assert_eq!(
+            setup_wrappers_over(None, &[json!({}), Value::Null, Value::Null, Value::Null]),
+            Err("launch_setup_wrappers:not-ready".to_string())
+        );
+        let settings = json!({"wrapperOptions": [{"exe": "a", "args": "b 'c d'"}]});
+        let got = setup_wrappers_over(
+            Some(&ctx),
+            &[
+                settings.clone(),
+                json!(["mangohud"]),
+                json!("gamemoderun"),
+                json!(["gamescope", "--"]),
+            ],
+        )
+        .unwrap();
+        assert_eq!(
+            got,
+            json!(["gamescope", "--", "a", "b", "c d", "gamemoderun"])
+        );
+        // mangohud joins only behind an empty gamescope list, never when there is none.
+        let with_empty = setup_wrappers_over(
+            Some(&ctx),
+            &[json!({}), json!(["mangohud"]), Value::Null, json!([])],
+        )
+        .unwrap();
+        assert_eq!(with_empty, json!(["mangohud"]));
+        let with_none = setup_wrappers_over(Some(&ctx), &[json!({}), json!(["mangohud"])]).unwrap();
+        assert_eq!(with_none, json!([]));
+        // An unterminated quote is the crate's fixed `<op>:<message>`, never the option's text.
+        let err = setup_wrappers_over(
+            Some(&ctx),
+            &[json!({"wrapperOptions": [{"exe": "a", "args": "'secret"}]})],
+        )
+        .unwrap_err();
+        assert!(err.starts_with("launch_setup_wrappers:"), "{err}");
+        assert!(!err.contains("secret"));
+    }
+
+    #[test]
+    fn the_known_fix_env_arm_answers_an_empty_map_for_a_game_with_no_fix() {
+        let home = FakeHome::new("launch-shell-");
+        let ctx = ctx_over(&home);
+        let args = vec![json!("1234"), json!("gog")];
+        assert_eq!(
+            known_fix_env_over(None, &args),
+            Err("launch_known_fix_env:not-ready".to_string())
+        );
+        assert_eq!(known_fix_env_over(Some(&ctx), &args), Ok(json!({})));
+    }
+
+    #[test]
+    fn every_new_arm_rejects_a_wrong_call_with_its_fixed_bad_args_before_and_after_the_install() {
+        let home = FakeHome::new("launch-shell-");
+        let ctx = ctx_over(&home);
+        let secret = "/Users/someone/secret-profile-path";
+        type Arm = fn(Option<&Arc<LaunchCtx>>, &[Value]) -> Result<Value, String>;
+        let arms: [(&str, Arm); 4] = [
+            ("launch_setup_env_vars", |c, a| {
+                setup_env_vars_over(c, a, host)
+            }),
+            ("launch_setup_wine_env_vars", |c, a| {
+                setup_wine_env_vars_over(c, a, host)
+            }),
+            ("launch_setup_wrappers", setup_wrappers_over),
+            ("launch_known_fix_env", known_fix_env_over),
+        ];
+        let wrong: Vec<Vec<Value>> = vec![
+            vec![],
+            vec![json!(secret)],
+            vec![json!(secret), json!(secret)],
+            vec![
+                json!(secret),
+                json!(secret),
+                json!(secret),
+                json!(secret),
+                json!(secret),
+            ],
+            vec![json!({}), json!(1), json!(1), json!(1)],
+            vec![json!({}), json!({"x": secret})],
+        ];
+        for (op, arm) in arms {
+            for args in &wrong {
+                for ctx in [None, Some(&ctx)] {
+                    let err = arm(ctx, args).unwrap_err();
+                    assert_eq!(err, format!("{op}:bad-args"), "{op} {args:?}");
+                    assert!(!err.contains(secret));
+                }
+            }
+        }
+        // A runner outside the five is refused by the generated decode.
+        assert_eq!(
+            known_fix_env_over(Some(&ctx), &[json!("1"), json!("epic")]),
+            Err("launch_known_fix_env:bad-args".to_string())
+        );
     }
 }

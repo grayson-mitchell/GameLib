@@ -514,8 +514,9 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     // Phase 94 plan 11: 189 -> 190, shortcuts_exist.
     // Phase 94 plan 22: 190 -> 195, shortcuts_add, shortcuts_remove and the three shortcuts_steam_* ops.
     // Debug humble-library-cloudflare-403: 202 -> 205, humble_action_open, _post and _close.
-    // Phase 88.1 plan 07: 205 -> 206, launch_setup_wrapper_env_vars.
-    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(206)
+    // Phase 88.1 plan 07: 205 -> 210, launch_setup_wrapper_env_vars, launch_setup_env_vars, launch_setup_wine_env_vars,
+    // launch_setup_wrappers and launch_known_fix_env.
+    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(210)
     expect(router).not.toContain('_ =>')
   })
 
@@ -1078,6 +1079,12 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       // Phase 88.1 plan 07: the managers' wrapper env (`launchrust/builders.ts` shim). PROVEN: `launch_dispatch::tests` drives the
       // arm's decode, not-ready and the crate's strict decode.
       'launch_setup_wrapper_env_vars',
+      // Phase 88.1 plan 07: the managers' game env, wrapper list and tier-1 known-fix env, and the wine env wired with its callers
+      // in 88.1-08. PROVEN: `launch_dispatch::tests` drives each arm's decode, not-ready and a real answer on a FakeHome.
+      'launch_setup_env_vars',
+      'launch_setup_wine_env_vars',
+      'launch_setup_wrappers',
+      'launch_known_fix_env',
       // Phase 94 plan 11: the shortcut exists check (`shortcutsResolvers.ts` resolver). PROVEN: `shortcuts_dispatch::tests`
       // drives the arm's decode, not-ready and a real exists answer on a FakeHome; `golden_paths.rs` replays the TS goldens.
       'shortcuts_exist',

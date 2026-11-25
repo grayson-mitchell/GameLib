@@ -1543,6 +1543,37 @@ export const RUST_KNOWNFIX_REPORT_DETECTED = 'knownfix_report_detected' as const
  */
 export const RUST_LAUNCH_SETUP_WRAPPER_ENV_VARS =
   'launch_setup_wrapper_env_vars' as const
+/**
+ * Phase 88.1 (SVC-03, 88.1-07, D-01, D-19): the game environment of a launch, reached through `setupEnvVars` in
+ * `launchrust/builders.ts`. `launch_setup_env_vars` takes `[gameSettings, installPath]` (`installPath` is `null` when
+ * the game has none) and answers the GPU offload, HUD, `STEAM_COMPAT_INSTALL_PATH`, the user's own variables and an
+ * empty `LD_PRELOAD` as a string map. The shell appends the process environment itself (T-88.1-14), so the sidecar
+ * sends none. A pure computation, so it stays inside the 60 s `RUST_INVOKE_TIMEOUT_MS`.
+ */
+export const RUST_LAUNCH_SETUP_ENV_VARS = 'launch_setup_env_vars' as const
+/**
+ * Phase 88.1 (SVC-03, 88.1-07, D-01, D-19): the wine environment of a launch. `launch_setup_wine_env_vars` takes
+ * `[gameSettings, gameId]` (`gameId` is `null` when unset) and answers the wine environment as a string map; the
+ * shell appends the process environment and the Darwin release itself (T-88.1-14). The shim and its callers arrive
+ * in 88.1-08. A disk read (the wine's library folders), so it stays inside the 60 s `RUST_INVOKE_TIMEOUT_MS`.
+ */
+export const RUST_LAUNCH_SETUP_WINE_ENV_VARS =
+  'launch_setup_wine_env_vars' as const
+/**
+ * Phase 88.1 (SVC-03, 88.1-07, D-01, D-19): the wrapper list of a launch, reached through `setupWrappers` in
+ * `launchrust/builders.ts`. `launch_setup_wrappers` takes `[gameSettings, mangoHudCommand, gameModeBin,
+ * gameScopeCommand]` (each `null` when absent; the settings are read for their `wrapperOptions` only) and answers the
+ * words in order. An unterminated quote in a wrapper option rejects with `launch_setup_wrappers:<message>`. A pure
+ * computation, so it stays inside the 60 s `RUST_INVOKE_TIMEOUT_MS`.
+ */
+export const RUST_LAUNCH_SETUP_WRAPPERS = 'launch_setup_wrappers' as const
+/**
+ * Phase 88.1 (SVC-03, 88.1-07, D-01, D-19): the tier-1 known-fix env of a game, reached through
+ * `getKnownFixesEnvVariables` in `launchrust/builders.ts`. `launch_known_fix_env` takes `[appName, runner]` and
+ * answers the fix's `envVariables` as the file holds them (`{}` when there is none). A disk read, so it stays inside
+ * the 60 s `RUST_INVOKE_TIMEOUT_MS`.
+ */
+export const RUST_LAUNCH_KNOWN_FIX_ENV = 'launch_known_fix_env' as const
 export const RUST_ENGINE_STATE_RECORD_DECISION =
   'engine_state_record_decision' as const
 export const RUST_ENGINE_STATE_PUBLISH_OVERLAY_NOTICE =
@@ -1988,6 +2019,10 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_KNOWNFIX_RESOLVE_OVERLAY_ENV,
   RUST_KNOWNFIX_REPORT_DETECTED,
   RUST_LAUNCH_SETUP_WRAPPER_ENV_VARS,
+  RUST_LAUNCH_SETUP_ENV_VARS,
+  RUST_LAUNCH_SETUP_WINE_ENV_VARS,
+  RUST_LAUNCH_SETUP_WRAPPERS,
+  RUST_LAUNCH_KNOWN_FIX_ENV,
   RUST_SHORTCUTS_EXIST,
   RUST_SHORTCUTS_ADD,
   RUST_SHORTCUTS_REMOVE,

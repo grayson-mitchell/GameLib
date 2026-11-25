@@ -340,10 +340,10 @@ describe('GOGGame.launch: comet on the process runner', () => {
       launcher: {
         prepareLaunch: jest.fn(async () => ({ success: true })),
         launchCleanup: jest.fn(),
-        setupWrapperEnvVars: jest.fn(() => ({})),
-        setupEnvVars: jest.fn(() => ({})),
-        getKnownFixesEnvVariables: jest.fn(() => ({})),
-        setupWrappers: jest.fn(() => [])
+        setupWrapperEnvVars: jest.fn(async () => ({})),
+        setupEnvVars: jest.fn(async () => ({})),
+        getKnownFixesEnvVariables: jest.fn(async () => ({})),
+        setupWrappers: jest.fn(async () => [])
       } as unknown as GOGManagerDeps['launcher']
     } as GOGManagerDeps
     ;(deps.stores.gog.configStore.get_nodefault as jest.Mock).mockReturnValue(

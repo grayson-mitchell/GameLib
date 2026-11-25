@@ -83,8 +83,17 @@ import {
   settleKnownFixRegistry
 } from './knownFixLaunchReply'
 import { overlayBaseEnv } from 'common/knownFixOverlayCatalogue'
-import { setupWrapperEnvVars as setupWrapperEnvVarsShim } from './launchrust/builders'
-import { settleEnvMap } from './launchBuilderReply'
+import {
+  getKnownFixesEnvVariables as getKnownFixesEnvVariablesShim,
+  setupEnvVars as setupEnvVarsShim,
+  setupWrapperEnvVars as setupWrapperEnvVarsShim,
+  setupWrappers as setupWrappersShim
+} from './launchrust/builders'
+import {
+  settleEnvMap,
+  settleKnownFixEnv,
+  settleWordList
+} from './launchBuilderReply'
 import {
   isCLINoGui,
   isLinux,
@@ -1286,7 +1295,8 @@ async function installFixes(
   }
 }
 
-function getKnownFixesEnvVariables(
+// The TypeScript original, kept for the launch-builders oracle until 88.1-17 (see `setupWrapperEnvVars`).
+export function getKnownFixesEnvVariables(
   deps: Pick<LauncherDeps, 'paths'>,
   appName: string,
   runner: Runner
@@ -1588,7 +1598,8 @@ export function setupWineEnvVars(
   return ret
 }
 
-function setupWrappers(
+// The TypeScript original, kept for the launch-builders oracle until 88.1-17 (see `setupWrapperEnvVars`).
+export function setupWrappers(
   gameSettings: GameSettings,
   mangoHudCommand?: string[],
   gameModeBin?: string,
@@ -1732,16 +1743,25 @@ export interface Launcher {
   prepareWineLaunch(
     ...a: DropFirst<Parameters<typeof prepareWineLaunch>>
   ): ReturnType<typeof prepareWineLaunch>
-  setupEnvVars: typeof setupEnvVars
+  setupEnvVars(
+    gameSettings: GameSettings,
+    installPath?: string
+  ): Promise<Record<string, string>>
   setupWrapperEnvVars(wrapperEnv: WrapperEnv): Promise<Record<string, string>>
   setupWineEnvVars(
     ...a: DropFirst<Parameters<typeof setupWineEnvVars>>
   ): ReturnType<typeof setupWineEnvVars>
-  setupWrappers: typeof setupWrappers
+  setupWrappers(
+    gameSettings: GameSettings,
+    mangoHudCommand?: string[],
+    gameModeBin?: string,
+    gameScopeCommand?: string[]
+  ): Promise<string[]>
   launchEventCallback(params: LaunchParams): StatusPromise
   getKnownFixesEnvVariables(
-    ...a: DropFirst<Parameters<typeof getKnownFixesEnvVariables>>
-  ): ReturnType<typeof getKnownFixesEnvVariables>
+    appName: string,
+    runner: Runner
+  ): Promise<Record<string, string>>
   validWine(
     ...a: DropFirst<Parameters<typeof validWine>>
   ): ReturnType<typeof validWine>
@@ -1770,16 +1790,38 @@ export function createLauncher(deps: LauncherDeps): Launcher {
     prepareLaunch: (...a) => prepareLaunch(deps, ...a),
     launchCleanup: (...a) => launchCleanup(deps, ...a),
     prepareWineLaunch: (...a) => prepareWineLaunch(deps, ...a),
-    setupEnvVars,
+    setupEnvVars: async (gameSettings, installPath) =>
+      settleEnvMap(
+        await setupEnvVarsShim(deps, gameSettings, installPath),
+        'setupEnvVars'
+      ),
     setupWrapperEnvVars: async (wrapperEnv) =>
       settleEnvMap(
         await setupWrapperEnvVarsShim(deps, wrapperEnv),
         'setupWrapperEnvVars'
       ),
     setupWineEnvVars: (...a) => setupWineEnvVars(deps, ...a),
-    setupWrappers,
+    setupWrappers: async (
+      gameSettings,
+      mangoHudCommand,
+      gameModeBin,
+      gameScopeCommand
+    ) =>
+      settleWordList(
+        await setupWrappersShim(
+          deps,
+          gameSettings,
+          mangoHudCommand,
+          gameModeBin,
+          gameScopeCommand
+        ),
+        'setupWrappers'
+      ),
     launchEventCallback: (params) => launchEventCallback(ctx, params),
-    getKnownFixesEnvVariables: (...a) => getKnownFixesEnvVariables(deps, ...a),
+    getKnownFixesEnvVariables: async (appName, runner) =>
+      settleKnownFixEnv(
+        await getKnownFixesEnvVariablesShim(deps, appName, runner)
+      ),
     validWine: (...a) => validWine(deps, ...a),
     verifyWinePrefix: (...a) => verifyWinePrefix(deps, ...a),
     // A getter, so a getter-backed deps object stays call-time like the members above.

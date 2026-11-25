@@ -223,6 +223,10 @@ pub(crate) enum RustInvokeChannel {
     KnownfixResolveOverlayEnv,
     KnownfixReportDetected,
     LaunchSetupWrapperEnvVars,
+    LaunchSetupEnvVars,
+    LaunchSetupWineEnvVars,
+    LaunchSetupWrappers,
+    LaunchKnownFixEnv,
     ShortcutsExist,
     ShortcutsAdd,
     ShortcutsRemove,
@@ -433,6 +437,10 @@ impl RustInvokeChannel {
         RustInvokeChannel::KnownfixResolveOverlayEnv,
         RustInvokeChannel::KnownfixReportDetected,
         RustInvokeChannel::LaunchSetupWrapperEnvVars,
+        RustInvokeChannel::LaunchSetupEnvVars,
+        RustInvokeChannel::LaunchSetupWineEnvVars,
+        RustInvokeChannel::LaunchSetupWrappers,
+        RustInvokeChannel::LaunchKnownFixEnv,
         RustInvokeChannel::ShortcutsExist,
         RustInvokeChannel::ShortcutsAdd,
         RustInvokeChannel::ShortcutsRemove,
@@ -643,6 +651,10 @@ impl RustInvokeChannel {
             "knownfix_resolve_overlay_env" => Some(RustInvokeChannel::KnownfixResolveOverlayEnv),
             "knownfix_report_detected" => Some(RustInvokeChannel::KnownfixReportDetected),
             "launch_setup_wrapper_env_vars" => Some(RustInvokeChannel::LaunchSetupWrapperEnvVars),
+            "launch_setup_env_vars" => Some(RustInvokeChannel::LaunchSetupEnvVars),
+            "launch_setup_wine_env_vars" => Some(RustInvokeChannel::LaunchSetupWineEnvVars),
+            "launch_setup_wrappers" => Some(RustInvokeChannel::LaunchSetupWrappers),
+            "launch_known_fix_env" => Some(RustInvokeChannel::LaunchKnownFixEnv),
             "shortcuts_exist" => Some(RustInvokeChannel::ShortcutsExist),
             "shortcuts_add" => Some(RustInvokeChannel::ShortcutsAdd),
             "shortcuts_remove" => Some(RustInvokeChannel::ShortcutsRemove),
@@ -855,6 +867,10 @@ impl RustInvokeChannel {
             RustInvokeChannel::KnownfixResolveOverlayEnv => "knownfix_resolve_overlay_env",
             RustInvokeChannel::KnownfixReportDetected => "knownfix_report_detected",
             RustInvokeChannel::LaunchSetupWrapperEnvVars => "launch_setup_wrapper_env_vars",
+            RustInvokeChannel::LaunchSetupEnvVars => "launch_setup_env_vars",
+            RustInvokeChannel::LaunchSetupWineEnvVars => "launch_setup_wine_env_vars",
+            RustInvokeChannel::LaunchSetupWrappers => "launch_setup_wrappers",
+            RustInvokeChannel::LaunchKnownFixEnv => "launch_known_fix_env",
             RustInvokeChannel::ShortcutsExist => "shortcuts_exist",
             RustInvokeChannel::ShortcutsAdd => "shortcuts_add",
             RustInvokeChannel::ShortcutsRemove => "shortcuts_remove",
@@ -4335,6 +4351,80 @@ impl LaunchSetupWrapperEnvVarsArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let first = args.first().ok_or_else(|| "launch_setup_wrapper_env_vars:bad-args".to_string())?;
         serde_json::from_value(first.clone()).map_err(|_| "launch_setup_wrapper_env_vars:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct LaunchSetupEnvVarsArgs {
+    pub(crate) game_settings: Value,
+    pub(crate) install_path: Option<String>,
+}
+
+impl LaunchSetupEnvVarsArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let game_settings = serde_json::from_value(args.first().ok_or_else(|| "launch_setup_env_vars:bad-args".to_string())?.clone()).map_err(|_| "launch_setup_env_vars:bad-args".to_string())?;
+        let install_path = args.get(1).filter(|v| !v.is_null()).map(|v| serde_json::from_value(v.clone())).transpose().map_err(|_| "launch_setup_env_vars:bad-args".to_string())?;
+        Ok(Self { game_settings, install_path })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct LaunchSetupWineEnvVarsArgs {
+    pub(crate) game_settings: Value,
+    pub(crate) game_id: Option<String>,
+}
+
+impl LaunchSetupWineEnvVarsArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let game_settings = serde_json::from_value(args.first().ok_or_else(|| "launch_setup_wine_env_vars:bad-args".to_string())?.clone()).map_err(|_| "launch_setup_wine_env_vars:bad-args".to_string())?;
+        let game_id = args.get(1).filter(|v| !v.is_null()).map(|v| serde_json::from_value(v.clone())).transpose().map_err(|_| "launch_setup_wine_env_vars:bad-args".to_string())?;
+        Ok(Self { game_settings, game_id })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct LaunchSetupWrappersArgs {
+    pub(crate) game_settings: Value,
+    pub(crate) mango_hud_command: Option<Vec<String>>,
+    pub(crate) game_mode_bin: Option<String>,
+    pub(crate) game_scope_command: Option<Vec<String>>,
+}
+
+impl LaunchSetupWrappersArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let game_settings = serde_json::from_value(args.first().ok_or_else(|| "launch_setup_wrappers:bad-args".to_string())?.clone()).map_err(|_| "launch_setup_wrappers:bad-args".to_string())?;
+        let mango_hud_command = args.get(1).filter(|v| !v.is_null()).map(|v| serde_json::from_value(v.clone())).transpose().map_err(|_| "launch_setup_wrappers:bad-args".to_string())?;
+        let game_mode_bin = args.get(2).filter(|v| !v.is_null()).map(|v| serde_json::from_value(v.clone())).transpose().map_err(|_| "launch_setup_wrappers:bad-args".to_string())?;
+        let game_scope_command = args.get(3).filter(|v| !v.is_null()).map(|v| serde_json::from_value(v.clone())).transpose().map_err(|_| "launch_setup_wrappers:bad-args".to_string())?;
+        Ok(Self { game_settings, mango_hud_command, game_mode_bin, game_scope_command })
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+pub(crate) enum LaunchKnownFixEnvArgsRunner {
+    #[serde(rename = "gog")]
+    Gog,
+    #[serde(rename = "legendary")]
+    Legendary,
+    #[serde(rename = "nile")]
+    Nile,
+    #[serde(rename = "sideload")]
+    Sideload,
+    #[serde(rename = "steam")]
+    Steam,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct LaunchKnownFixEnvArgs {
+    pub(crate) app_name: String,
+    pub(crate) runner: LaunchKnownFixEnvArgsRunner,
+}
+
+impl LaunchKnownFixEnvArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let app_name = serde_json::from_value(args.first().ok_or_else(|| "launch_known_fix_env:bad-args".to_string())?.clone()).map_err(|_| "launch_known_fix_env:bad-args".to_string())?;
+        let runner = serde_json::from_value(args.get(1).ok_or_else(|| "launch_known_fix_env:bad-args".to_string())?.clone()).map_err(|_| "launch_known_fix_env:bad-args".to_string())?;
+        Ok(Self { app_name, runner })
     }
 }
 

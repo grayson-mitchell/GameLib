@@ -1,5 +1,10 @@
-import type { WrapperEnv } from 'common/types'
-import { RUST_LAUNCH_SETUP_WRAPPER_ENV_VARS } from 'common/types/sidecarTransport'
+import type { GameSettings, Runner, WrapperEnv } from 'common/types'
+import {
+  RUST_LAUNCH_KNOWN_FIX_ENV,
+  RUST_LAUNCH_SETUP_ENV_VARS,
+  RUST_LAUNCH_SETUP_WRAPPER_ENV_VARS,
+  RUST_LAUNCH_SETUP_WRAPPERS
+} from 'common/types/sidecarTransport'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 
 /**
@@ -24,4 +29,52 @@ export async function setupWrapperEnvVars(
   return deps.requestRustInvoke(RUST_LAUNCH_SETUP_WRAPPER_ENV_VARS, [
     wrapperEnv
   ])
+}
+
+/**
+ * The game's environment from its settings: GPU offload, the HUD, `STEAM_COMPAT_INSTALL_PATH`, the user's own
+ * variables and an empty `LD_PRELOAD` when none is set anywhere, as a string map. `installPath` is absent for a game
+ * with none. The shell appends the process environment itself (T-88.1-14), so none crosses from here.
+ */
+export async function setupEnvVars(
+  deps: RustInvokeDeps,
+  gameSettings: GameSettings,
+  installPath?: string
+): Promise<unknown> {
+  return deps.requestRustInvoke(RUST_LAUNCH_SETUP_ENV_VARS, [
+    gameSettings,
+    installPath
+  ])
+}
+
+/**
+ * The wrapper words of a launch in order, gamescope first: the gamescope command, the user's wrapper options (each
+ * `args` split like a shell would), mangohud behind an empty gamescope command and gamemode. Each of the three
+ * commands is absent when the caller has none. Rejects when a wrapper option has an unterminated quote.
+ */
+export async function setupWrappers(
+  deps: RustInvokeDeps,
+  gameSettings: GameSettings,
+  mangoHudCommand?: string[],
+  gameModeBin?: string,
+  gameScopeCommand?: string[]
+): Promise<unknown> {
+  return deps.requestRustInvoke(RUST_LAUNCH_SETUP_WRAPPERS, [
+    gameSettings,
+    mangoHudCommand,
+    gameModeBin,
+    gameScopeCommand
+  ])
+}
+
+/**
+ * The tier-1 known-fix `envVariables` of a game as its file holds them (`{}` when there is none), local over bundled
+ * over remote. The wine env shim arrives in 88.1-08 with its callers.
+ */
+export async function getKnownFixesEnvVariables(
+  deps: RustInvokeDeps,
+  appName: string,
+  runner: Runner
+): Promise<unknown> {
+  return deps.requestRustInvoke(RUST_LAUNCH_KNOWN_FIX_ENV, [appName, runner])
 }

@@ -13,10 +13,10 @@
  *
  * The ops a case can name:
  *   wrapperEnvVars   `setupWrapperEnvVars({ appName, appRunner })` of launcher.ts, every runner
- *   wrappers         `launcher.setupWrappers(settings, mangoHud, gameMode, gameScope)`
+ *   wrappers         `setupWrappers(settings, mangoHud, gameMode, gameScope)` of launcher.ts
  *   shlexSplit       npm `shlex.split(input)` (the managers split wrapper args with it)
  *   shlexJoin        npm `shlex.join(words)` (the managers pass `join(wrappers)` to `--wrapper`)
- *   knownFixEnv      `launcher.getKnownFixesEnvVariables(appName, runner)` over tier-1 layers
+ *   knownFixEnv      `getKnownFixesEnvVariables(deps, appName, runner)` of launcher.ts over tier-1 layers
  *   removeQuote      `removeQuoteIfNecessary(value)`
  *   sonoma           `isMacSonomaOrHigher()` over a platform and an `os.release()`
  *   wineEnv          `launcher.setupWineEnvVars(settings, gameId)` (the wineLibFolders incident cases)
@@ -67,7 +67,13 @@ import {
   withInjected
 } from 'backend/testUtils/launchOracle/probes'
 import * as logger from 'backend/logger'
-import { createLauncher, setupWrapperEnvVars } from 'backend/launcher'
+import {
+  createLauncher,
+  getKnownFixesEnvVariables,
+  setupWrapperEnvVars,
+  setupWrappers
+} from 'backend/launcher'
+import type { LauncherDeps } from 'backend/launcher'
 import { isMacSonomaOrHigher, removeQuoteIfNecessary } from 'backend/utils'
 import type { GameSettings, Runner, WrapperVariable } from 'common/types'
 import { fix } from './knownFixReader.cases'
@@ -503,7 +509,8 @@ const osModule = (): typeof import('os') => require('os')
 /** Runs the case's call and returns what it answered. */
 function runCall(
   call: Op,
-  launcher: ReturnType<typeof createLauncher>
+  launcher: ReturnType<typeof createLauncher>,
+  deps: LauncherDeps
 ): unknown {
   switch (call.op) {
     case 'wrapperEnvVars':
@@ -514,7 +521,8 @@ function runCall(
         appRunner: call.appRunner
       })
     case 'wrappers':
-      return launcher.setupWrappers(
+      // The TypeScript original, like `wrapperEnvVars`: the launcher's member is the Rust shim.
+      return setupWrappers(
         { wrapperOptions: call.wrapperOptions ?? undefined } as GameSettings,
         call.mangoHud ?? undefined,
         call.gameMode ?? undefined,
@@ -525,7 +533,7 @@ function runCall(
     case 'shlexJoin':
       return shlexJoin(call.words)
     case 'knownFixEnv':
-      return launcher.getKnownFixesEnvVariables(call.appName, call.runner)
+      return getKnownFixesEnvVariables(deps, call.appName, call.runner)
     case 'removeQuote':
       return removeQuoteIfNecessary(call.value)
     case 'sonoma':
@@ -569,7 +577,7 @@ async function recordCase(
       const result = await withInjected(restores, () =>
         withPinnedBaseEnv(profile.fake, () => {
           try {
-            return { value: runCall(c.call, launcher) }
+            return { value: runCall(c.call, launcher, fake.deps) }
           } catch (error) {
             return { error: (error as Error).message }
           }

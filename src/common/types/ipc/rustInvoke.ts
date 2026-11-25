@@ -162,7 +162,11 @@ import {
   RUST_KNOWNFIX_PROFILE_OVERLAY_ENV,
   RUST_KNOWNFIX_REPORT_DETECTED,
   RUST_KNOWNFIX_RESOLVE_OVERLAY_ENV,
+  RUST_LAUNCH_KNOWN_FIX_ENV,
+  RUST_LAUNCH_SETUP_ENV_VARS,
+  RUST_LAUNCH_SETUP_WINE_ENV_VARS,
   RUST_LAUNCH_SETUP_WRAPPER_ENV_VARS,
+  RUST_LAUNCH_SETUP_WRAPPERS,
   RUST_WINE_MANAGER_LIST,
   RUST_WINE_MANAGER_REFRESH,
   RUST_WINE_RELEASES_INFO_READY,
@@ -1234,6 +1238,43 @@ export const rustInvokeArgs = {
         appRunner: z.enum(['gog', 'legendary', 'nile', 'sideload', 'steam'])
       })
       .strict()
+  ]),
+  // Phase 88.1 (SVC-03, 88.1-07, D-19): the game environment. `[gameSettings, installPath]`, the settings opaque to the
+  // generated decode (`x-rust-value`, checked as a JSON object; the crate reads the fields it knows and ignores the
+  // rest) and `installPath` null when the game has none. The shell appends the process environment itself (T-88.1-14).
+  [RUST_LAUNCH_SETUP_ENV_VARS]: z.tuple([
+    knownFixGameSettings,
+    z.string().nullable().optional().meta({ title: 'installPath' })
+  ]),
+  // Phase 88.1 (SVC-03, 88.1-07, D-19): the wine environment. `[gameSettings, gameId]`, `gameId` null when unset; the
+  // shell appends the process environment and the Darwin release itself (T-88.1-14).
+  [RUST_LAUNCH_SETUP_WINE_ENV_VARS]: z.tuple([
+    knownFixGameSettings,
+    z.string().nullable().optional().meta({ title: 'gameId' })
+  ]),
+  // Phase 88.1 (SVC-03, 88.1-07, D-19): the wrapper list. `[gameSettings, mangoHudCommand, gameModeBin,
+  // gameScopeCommand]`, each of the three null when absent; the settings are read for their `wrapperOptions` only.
+  [RUST_LAUNCH_SETUP_WRAPPERS]: z.tuple([
+    knownFixGameSettings,
+    z
+      .array(z.string().meta({ title: 'word' }))
+      .nullable()
+      .optional()
+      .meta({ title: 'mangoHudCommand' }),
+    z.string().nullable().optional().meta({ title: 'gameModeBin' }),
+    z
+      .array(z.string().meta({ title: 'word' }))
+      .nullable()
+      .optional()
+      .meta({ title: 'gameScopeCommand' })
+  ]),
+  // Phase 88.1 (SVC-03, 88.1-07, D-19): the tier-1 known-fix env of a game. `[appName, runner]`; the crate bounds the app
+  // name (1 to 256 UTF-16 units) and decodes the runner against the closed set of five.
+  [RUST_LAUNCH_KNOWN_FIX_ENV]: z.tuple([
+    z.string().meta({ title: 'appName' }),
+    z
+      .enum(['gog', 'legendary', 'nile', 'sideload', 'steam'])
+      .meta({ title: 'runner' })
   ])
 } satisfies Record<RustInvokeChannel, z.ZodTuple>
 

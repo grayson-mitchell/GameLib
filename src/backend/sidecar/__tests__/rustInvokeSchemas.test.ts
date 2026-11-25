@@ -69,8 +69,9 @@ describe('rustInvokeArgs', () => {
     // Phase 94 plan 11: 189 -> 190, shortcuts_exist.
     // Phase 94 plan 22: 190 -> 195, shortcuts_add, shortcuts_remove and the three shortcuts_steam_* ops.
     // Debug humble-library-cloudflare-403: 202 -> 205, humble_action_open, _post and _close.
-    // Phase 88.1 plan 07: 205 -> 206, launch_setup_wrapper_env_vars.
-    expect(RUST_INVOKE_CHANNELS).toHaveLength(206)
+    // Phase 88.1 plan 07: 205 -> 210, launch_setup_wrapper_env_vars, launch_setup_env_vars, launch_setup_wine_env_vars,
+    // launch_setup_wrappers and launch_known_fix_env.
+    expect(RUST_INVOKE_CHANNELS).toHaveLength(210)
   })
 
   it('parses the store-embed wire fixtures', () => {
