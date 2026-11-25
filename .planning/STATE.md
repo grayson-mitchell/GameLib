@@ -6,10 +6,10 @@ current_phase: 87
 current_phase_name: Engine, Wine and tools
 status: executing
 stopped_at: Completed 88.1-05-PLAN.md
-last_updated: "2026-11-25T18:10:33.282Z"
+last_updated: "2026-11-25T18:31:53.076Z"
 last_activity: 2026-11-25
 last_activity_desc: Phase 87 execution started
-state_head: 076bf44c0076bb560cf89afcab6fa6886b739b7b
+state_head: 0c486e78f056f845f4261dad90756d4ce19e7270
 progress:
   total_phases: 25
   completed_phases: 23
@@ -542,6 +542,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 88.1 P16 | 75min | 2 tasks | 21 files |
 | Phase 88.1 P17 | 45min | 1 tasks | 27 files |
 | Phase 88.1 P18 | 50min | 1 tasks | 52 files |
+| Phase 88.1 P19 | ~1h | 2 tasks | 22 files |
 
 ## Accumulated Context
 
@@ -1221,6 +1222,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 88.1]: 88.1-17: the wine core oracle drives the createCommandRunner twin through a test-only copy of the two env builders (envBuildersFixture.ts) and a verifyWinePrefix stand-in kept in the oracle, because two prefix-verify goldens record its wineboot spawns; both go with the twin in 88.2
 - [Phase 88.1]: 88.1-18: InfoCaches is the empty record Record<string, never> and the info-caches step builds {}; HowLongToBeat was already Rust's, so the member stays only as a seam
 - [Phase 88.1]: 88.1-18: clearCache no longer empties the pci.ids name caches (Rust owns them, no clear verb); the fromVersionChange parameter is removed
+- [Phase 88.1]: 88.1-19: wine_manager_refresh deleted as a ninth channel with its updateWineVersionInfos shim; interim glue (launchAdapters.ts, knownFixLaunchReply.ts) is a named table in buildersSurvivors, not SCHEDULE rows
 
 ### Pending Todos
 
