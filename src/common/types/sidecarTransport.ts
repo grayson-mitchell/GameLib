@@ -1048,19 +1048,13 @@ export const RUST_INFO_WIKI_GET = 'info_wiki_get' as const
 export const RUST_INFO_WIKI_CACHE_CLEAR = 'info_wiki_cache_clear' as const
 
 /**
- * Phase 87 (SVC-02, 87-20): the Rust wine-manager ops, pass-throughs to `gamelib-wine`. The sidecar's
- * callers (the default-wine download in `utils.ts` and the `releasesInfoReady` listener) reach them only
- * through the `backend/enginewine/wineManager.ts` shims;
- * the renderer's `refreshWineVersionInfo`, `installWineVersion` and `removeWineVersion` are native
+ * Phase 87 (SVC-02, 87-20): the Rust wine-manager ops, pass-throughs to `gamelib-wine`. The sidecar's one
+ * remaining caller, the `releasesInfoReady` listener, reaches them through the `backend/enginewine/wineManager.ts`
+ * shim; the renderer's `refreshWineVersionInfo`, `installWineVersion` and `removeWineVersion` are native
  * channels over the same ops, so the wine-downloader-info store and `<tools>/wine` have one writer.
- *
- * `wine_manager_refresh`: refreshes the store from the seven release feeds. Args: one boolean, `fetch`
- * (`true` forces the network; `false` merges what is stored). Resolves `null`, and also when a feed
- * fails (the failure is logged in Rust), as the TS refresh swallowed it. Long-running: listed in the
- * sidecar's `UNBOUNDED_RUST_CHANNELS` (up to seven feeds in turn).
+ * (88.1-19 deleted the `wine_manager_refresh`, `wine_manager_install` and `wine_manager_list` channels: the
+ * default-wine download and the launch's refresh run in Rust, in process, and no TS calls them.)
  */
-export const RUST_WINE_MANAGER_REFRESH = 'wine_manager_refresh' as const
-
 /**
  * Phase 87 (SVC-02, 87-20): `wine_releases_info_ready` is the `releasesInfoReady` listener's body: the
  * wine lists are refreshed when a feed's latest release is newer than the stored one (Linux and macOS
@@ -1103,7 +1097,7 @@ export const RUST_WINE_RUN_COMMAND = 'wine_run_command' as const
  * its `PATH`, `customWinePaths` and `showValveProton` from the global config, the `libraryfolders.vdf` read),
  * so no path the sidecar sent reaches the crate (T-87-71). With no wine release list stored it refreshes it
  * first, which pushes `wineVersionsUpdated` and can take up to seven feeds in turn: listed in the sidecar's
- * `UNBOUNDED_RUST_CHANNELS` like `wine_manager_refresh`. Resolves the `WineInstallation[]`. The sidecar's
+ * `UNBOUNDED_RUST_CHANNELS` like `wine_releases_info_ready`. Resolves the `WineInstallation[]`. The sidecar's
  * `discoverAlternativeWine` shim in `enginewine/wineDiscovery.ts` (config.ts's `getAlternativeWine`, which
  * `utils.ts` and the Steam install form call) is its one caller; the renderer's `getAlternativeWine` is a
  * native channel over the same op.
@@ -1950,7 +1944,6 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_INFO_UMU_GET,
   RUST_INFO_WIKI_GET,
   RUST_INFO_WIKI_CACHE_CLEAR,
-  RUST_WINE_MANAGER_REFRESH,
   RUST_WINE_RELEASES_INFO_READY,
   RUST_WINE_VALID,
   RUST_WINE_RUN_COMMAND,

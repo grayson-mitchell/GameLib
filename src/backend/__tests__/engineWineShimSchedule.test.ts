@@ -307,15 +307,7 @@ export const SCHEDULE: readonly ScheduleRow[] = [
   // lists every importer of the file (the check is per file), so each row names the same set (87-26: config.ts no longer
   // imports it, the empty-list refresh inside `getAlternativeWine` is Rust's own). 88.1-17 deleted `installWineVersion`
   // and `listWineReleases` with `downloadDefaultWine` (the wine self-heal is Rust's since 88.1-16), which also took
-  // `utils.ts` off the importer list; `updateWineVersionInfos` has no TS caller left and stays until the 98 sweep.
-  {
-    name: 'updateWineVersionInfos',
-    file: 'src/backend/enginewine/wineManager.ts',
-    shape: 'shim',
-    channel: 'RUST_WINE_MANAGER_REFRESH',
-    callers: ['src/backend/sidecar/engineWineResolvers.ts'],
-    deletedBy: 98
-  },
+  // `utils.ts` off the importer list; 88.1-19 deleted `updateWineVersionInfos` (no TS caller left) with its channel.
   {
     name: 'wineReleasesInfoReady',
     file: 'src/backend/enginewine/wineManager.ts',

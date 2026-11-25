@@ -481,7 +481,7 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     expect(matches.length).toBe(1)
   })
 
-  test('71-07 rust_dispatch.rs is a flat router: 208 one-line arms and no catch-all arm', () => {
+  test('71-07 rust_dispatch.rs is a flat router: 207 one-line arms and no catch-all arm', () => {
     const router = readTauriShellProductionFile('rust_dispatch.rs')
     // Phase 85 plan 16: 122 -> 123, store_read_only_notice.
     // Phase 86 plan 08: 123 -> 125, info_recent_add and info_recent_remove.
@@ -521,10 +521,10 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     // Phase 88.1 plan 12: 213 -> 214, launch_prepare_wine_begin.
     // Phase 88.1 plan 13: 214 -> 215, launch_prepare_wine_finish.
     // Phase 88.1 plan 14: 215 -> 216, launch_check_wine_before_launch.
-    // Phase 88.1 plan 19: 216 -> 208, the eight channels no TS caller reaches any more (wine_runtime_is_installed,
+    // Phase 88.1 plan 19: 216 -> 207, the nine channels no TS caller reaches any more (wine_runtime_is_installed,
     // wine_runtime_download, wine_manager_install, wine_manager_list, wine_winetricks_list_installed,
-    // engine_launch_arm_deadline, knownfix_apply_profile_registry and knownfix_profile_overlay_env).
-    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(208)
+    // engine_launch_arm_deadline, knownfix_apply_profile_registry, knownfix_profile_overlay_env and wine_manager_refresh).
+    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(207)
     expect(router).not.toContain('_ =>')
   })
 
@@ -953,8 +953,7 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       // `golden_wine_manager.rs` replays every 87-07 TS golden (refresh, install, remove) against the
       // crate's ops, and `wine_dispatch::tests` drives the arms' validation and the not-ready answer.
       // The callers are the shims in enginewine/wineManager.ts (config.ts and the releasesInfoReady
-      // listener); `wine_manager_install` and `wine_manager_list` went in 88.1-19 (the default-wine install runs in Rust).
-      'wine_manager_refresh',
+      // listener); `wine_manager_refresh`, `wine_manager_install` and `wine_manager_list` went in 88.1-19 (Rust runs them in process).
       'wine_releases_info_ready',
 
       // Phase 87 plan 24 -- the two wine-core ops, pass-through arms into `gamelib-wine`. PROVEN:

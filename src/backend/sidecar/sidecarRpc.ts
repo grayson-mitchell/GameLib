@@ -59,7 +59,6 @@ import {
   RUST_STEAMCM_WRAP_RESTORE_IF_OWED,
   RUST_SAFETY_REMOVE_TREE,
   RUST_WINE_DISCOVER_ALTERNATIVES,
-  RUST_WINE_MANAGER_REFRESH,
   RUST_WINE_RELEASES_INFO_READY,
   RUST_WINE_RUN_COMMAND,
   RUST_WINE_DXVK_INSTALL_REMOVE,
@@ -166,19 +165,19 @@ const RUST_INVOKE_TIMEOUT_MS = 60_000
  * shell owns the worker thread, so an unanswered entry cannot outlive the sidecar. The entry holds
  * no timer, so the exit contract is unaffected.
  *
- * Fifth and Sixth (Phase 87, 87-18 and 87-20): `wine_runtime_download` and `wine_manager_install` lost their
- * sidecar callers in 88.1-19 (the launch's runtime and default-wine installs run in Rust, in process), so
- * neither is a channel any more. `wine_manager_refresh` and `wine_releases_info_ready` stay: they walk up to
- * seven release feeds in turn, each with its own 60 s request limit in Rust, and the TS refresh they replace
- * swallowed a slow feed rather than failing the caller, so a 60 s cut-off here would turn a slow network into
- * a rejected `getAlternativeWine`.
+ * Fifth and Sixth (Phase 87, 87-18 and 87-20): `wine_runtime_download`, `wine_manager_install` and
+ * `wine_manager_refresh` lost their sidecar callers in 88.1-19 (the launch's runtime and default-wine installs and
+ * the release refresh run in Rust, in process), so none is a channel any more. `wine_releases_info_ready` stays:
+ * it walks up to seven release feeds in turn, each with its own 60 s request limit in Rust, and the TS refresh it
+ * replaces swallowed a slow feed rather than failing the caller, so a 60 s cut-off here would turn a slow network
+ * into a rejected `getAlternativeWine`.
  *
  * Seventh (Phase 87, 87-24): `wine_run_command` runs a wine command with no time limit of its own (a
  * winetricks component or an installer runs for minutes) and ends on its own exit, a cancel or the app
  * shutdown. The existence check `wine_valid` stays bounded.
  *
  * Eighth (Phase 87, 87-26): `wine_discover_alternatives` refreshes an empty wine release list first (up to
- * seven feeds in turn, as `wine_manager_refresh` does) before it looks at the disk, so it joins them.
+ * seven feeds in turn, as `wine_releases_info_ready` does) before it looks at the disk, so it joins them.
  * `wine_discover_crossover` is one `mdfind` with its own 10 s limit and stays bounded.
  *
  * Ninth (Phase 87, 87-34): `wine_dxvk_install_remove` downloads a DXVK-family release when it is not cached and
@@ -271,7 +270,6 @@ const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_STEAMCM_SIGNIN_GUARD_SUBMIT,
   RUST_STEAMCM_WRAP_RESTORE_IF_OWED,
   RUST_SAFETY_REMOVE_TREE,
-  RUST_WINE_MANAGER_REFRESH,
   RUST_WINE_RELEASES_INFO_READY,
   RUST_WINE_RUN_COMMAND,
   RUST_WINE_DISCOVER_ALTERNATIVES,

@@ -201,7 +201,6 @@ pub(crate) fn dispatch_rust_channel(
         RustInvokeChannel::StoreEmbedForward => rpc_store_embed_forward(args, app),
         RustInvokeChannel::StoreEmbedReload => rpc_store_embed_reload(args, app),
         RustInvokeChannel::StoreEmbedNavigate => rpc_store_embed_navigate(args, app),
-        RustInvokeChannel::WineManagerRefresh => wine_dispatch::rpc_wine_manager_refresh(args),
         RustInvokeChannel::WineReleasesInfoReady => {
             wine_dispatch::rpc_wine_releases_info_ready(args)
         }

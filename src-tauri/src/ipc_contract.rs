@@ -163,7 +163,6 @@ pub(crate) enum RustInvokeChannel {
     InfoUmuGet,
     InfoWikiGet,
     InfoWikiCacheClear,
-    WineManagerRefresh,
     WineReleasesInfoReady,
     WineValid,
     WineRunCommand,
@@ -375,7 +374,6 @@ impl RustInvokeChannel {
         RustInvokeChannel::InfoUmuGet,
         RustInvokeChannel::InfoWikiGet,
         RustInvokeChannel::InfoWikiCacheClear,
-        RustInvokeChannel::WineManagerRefresh,
         RustInvokeChannel::WineReleasesInfoReady,
         RustInvokeChannel::WineValid,
         RustInvokeChannel::WineRunCommand,
@@ -587,7 +585,6 @@ impl RustInvokeChannel {
             "info_umu_get" => Some(RustInvokeChannel::InfoUmuGet),
             "info_wiki_get" => Some(RustInvokeChannel::InfoWikiGet),
             "info_wiki_cache_clear" => Some(RustInvokeChannel::InfoWikiCacheClear),
-            "wine_manager_refresh" => Some(RustInvokeChannel::WineManagerRefresh),
             "wine_releases_info_ready" => Some(RustInvokeChannel::WineReleasesInfoReady),
             "wine_valid" => Some(RustInvokeChannel::WineValid),
             "wine_run_command" => Some(RustInvokeChannel::WineRunCommand),
@@ -801,7 +798,6 @@ impl RustInvokeChannel {
             RustInvokeChannel::InfoUmuGet => "info_umu_get",
             RustInvokeChannel::InfoWikiGet => "info_wiki_get",
             RustInvokeChannel::InfoWikiCacheClear => "info_wiki_cache_clear",
-            RustInvokeChannel::WineManagerRefresh => "wine_manager_refresh",
             RustInvokeChannel::WineReleasesInfoReady => "wine_releases_info_ready",
             RustInvokeChannel::WineValid => "wine_valid",
             RustInvokeChannel::WineRunCommand => "wine_run_command",
@@ -3474,18 +3470,6 @@ impl InfoWikiCacheClearArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let first = args.first().ok_or_else(|| "info_wiki_cache_clear:bad-args".to_string())?;
         serde_json::from_value(first.clone()).map_err(|_| "info_wiki_cache_clear:bad-args".to_string())
-    }
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct WineManagerRefreshArgs {
-    pub(crate) fetch: bool,
-}
-
-impl WineManagerRefreshArgs {
-    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
-        let fetch = serde_json::from_value(args.first().ok_or_else(|| "wine_manager_refresh:bad-args".to_string())?.clone()).map_err(|_| "wine_manager_refresh:bad-args".to_string())?;
-        Ok(Self { fetch })
     }
 }
 

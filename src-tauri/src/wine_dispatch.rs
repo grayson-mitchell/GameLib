@@ -836,17 +836,6 @@ fn rpc_wine_op(
     gamelib_wine::dispatch_sync(op, args, wine)
 }
 
-/// The `wine_manager_refresh` `rustInvoke` arm (the `updateWineVersionInfos` shim, 87-20): the generated
-/// decode (one boolean) first, then the crate, which swallows a failed feed as the TS did. The
-/// sidecar leaves this channel unbounded (`UNBOUNDED_RUST_CHANNELS`).
-pub(crate) fn rpc_wine_manager_refresh(args: &[Value]) -> Result<Value, String> {
-    WineManagerRefreshArgs::from_args(args)?;
-    if args.len() != 1 {
-        return Err("wine_manager_refresh:bad-args".to_string());
-    }
-    rpc_wine_op(wine_ctx(), "wine_manager_refresh", args)
-}
-
 /// Whether this run's DXMT boot task has been started. The first `releasesInfoReady` of a run is the boot
 /// fetch (the TS listener ran on it at boot, off the first feed read); every later one is a refresh.
 static DXMT_BOOT_STARTED: AtomicBool = AtomicBool::new(false);
@@ -2185,20 +2174,11 @@ mod tests {
     fn the_manager_rpc_arms_validate_first_and_answer_not_ready_before_install() {
         assert!(wine_ctx().is_none());
         assert_eq!(
-            rpc_wine_manager_refresh(&[json!(true)]),
-            Err("wine_manager_refresh:not-ready".to_string())
-        );
-        assert_eq!(
             rpc_wine_releases_info_ready(&[json!({})]),
             Err("wine_releases_info_ready:not-ready".to_string())
         );
         // Bad arguments are the fixed `<op>:bad-args` before the context is looked at.
         for (answer, op) in [
-            (rpc_wine_manager_refresh(&[]), "wine_manager_refresh"),
-            (
-                rpc_wine_manager_refresh(&[json!("yes")]),
-                "wine_manager_refresh",
-            ),
             (
                 rpc_wine_releases_info_ready(&[]),
                 "wine_releases_info_ready",

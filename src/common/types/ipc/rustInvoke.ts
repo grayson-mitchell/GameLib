@@ -168,7 +168,6 @@ import {
   RUST_LAUNCH_SETUP_WRAPPER_ENV_VARS,
   RUST_LAUNCH_SETUP_WRAPPERS,
   RUST_LAUNCH_VERIFY_WINE_PREFIX,
-  RUST_WINE_MANAGER_REFRESH,
   RUST_WINE_RELEASES_INFO_READY,
   RUST_WINE_RUN_COMMAND,
   RUST_WINE_VALID,
@@ -998,10 +997,8 @@ export const rustInvokeArgs = {
   [RUST_SHORTCUTS_STEAM_REMOVE]: z.tuple([shortcutSteamArgs]),
   [RUST_SHORTCUTS_STEAM_IS_ADDED]: z.tuple([shortcutSteamArgs]),
   [RUST_STEAM_API_PIN_RESOLVE]: empty,
-  // Phase 87 (SVC-02, 87-20): the wine-manager ops. The refresh takes one boolean (`fetch`); the
-  // releases-info check takes the ReleasesInfo object, of which the crate reads the five feed stamps
-  // (an unknown key is ignored there, as in the TS).
-  [RUST_WINE_MANAGER_REFRESH]: z.tuple([z.boolean().meta({ title: 'fetch' })]),
+  // Phase 87 (SVC-02, 87-20): the wine-manager op. The releases-info check takes the ReleasesInfo object, of
+  // which the crate reads the five feed stamps (an unknown key is ignored there, as in the TS).
   [RUST_WINE_RELEASES_INFO_READY]: z.tuple([
     z.unknown().meta({ title: 'releasesInfo', 'x-rust-value': true })
   ]),
