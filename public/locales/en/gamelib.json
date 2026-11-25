@@ -390,6 +390,7 @@
             },
             "title": "Native port available"
         },
+        "notFound": "GameLib couldn't find this game.",
         "playTime": {
             "firstPlayedTitle": "First played {{date}}",
             "hoursMinutes": "{{hours}} h {{minutes}} m",
