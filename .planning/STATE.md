@@ -6,10 +6,10 @@ current_phase: 88
 current_phase_name: Launch scaffolding and known fixes
 status: verifying
 stopped_at: Completed 88-17-PLAN.md
-last_updated: "2026-11-25T02:48:53.746Z"
+last_updated: "2026-11-25T04:06:43.998Z"
 last_activity: 2026-11-25
 last_activity_desc: Phase 88 execution started
-state_head: 1063508ecf687baf955e2096d2800f5b0e9b575a
+state_head: c8a670b4ae67766fe464140471b27dfd699d224e
 progress:
   total_phases: 25
   completed_phases: 23
@@ -498,6 +498,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 88 P15 | 35min | 2 tasks | 27 files |
 | Phase 88 P16 | 50 min | 2 tasks | 43 files |
 | Phase 88 P17 | 3h30m | 3 tasks | 9 files |
+| Phase 87 P69 | 9h40m | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -1099,6 +1100,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 88]: 88-15: the Steam detected-fix report channel (knownfix_report_detected) stays bounded (one 8 s POST); enabled is the caller's shareDetectedFixes === true boolean and the rejection log names the app id only
 - [Phase 88]: 88-16: the known-fix TS (eight modules, 18 unit tests, five oracle tests, the fetch oracle's cases file) is deleted behind knownFixPortComplete (RED first) and knownFixSurvivors; goldens and recordings kept for the Rust replays — The overlay archive build scripts and the steamclient layer notice test read archives through launchrust/knownFixTwins (listed in KNOWN_FIX_TWIN_IMPORTERS); golden_report.rs no longer reads the deleted TS report client; knownFixLaunchReply.ts stays
 - [Phase 88]: 88-17: sub-phase 88 closes on goldens plus three-OS CI (rust-test.yml green on windows, macos, ubuntu at c5ae345ae, run 45533129411); the operator chose push with CI-only follow-up fixes allowed; release-tauri.yml has the same Windows long-path checkout exposure and was left alone
+- [Phase 87]: 87-69: re-run gate on signed 0.13.1 scored 3 pass (2, 4, 6), 2 issue (1, 7), 2 blocked (3, 5); SVC-02's live half is NOT fully proven on macOS; F1 does not reproduce (verdict=blocked:crossover-missing, dialog reads '(offline)')
+- [Phase 87]: 87-69: new findings for a further gap cycle: RF1 CrossOver launches from GameLib exit in 1-2 s (blocks Stop), RF2 launch state not ended after the offline refusal, RF3 uninstall-dialog Cancel removed the Steam shortcut, RF4 is-protected-root pre-flight on the stored shared prefix runs before the 87-70 bottle route (uninstaller.ts:385-409), RF5 redundant offline warning, RF6 in-use/unsafe-name render as bad-reply
 
 ### Pending Todos
 

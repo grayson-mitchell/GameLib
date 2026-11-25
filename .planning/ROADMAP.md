@@ -665,7 +665,7 @@ Plans:
   3. Wine, CrossOver and Staging downloads, Winetricks and DXVK/DXMT/vkd3d tools install and report progress as before
   4. `wine/`, `tools/` and engine TypeScript and their sidecar registrations are deleted in this phase, except scheduled resolvers listed in the schedule test (D-23)
 
-**Plans:** 72/73 plans executed in 41 waves; planned 2026-11-23, revised the same day so every plan fits the 100k smart-zone budget (executes after Phase 86 closes); 87-56a/b/c added 2026-11-24 for the 87-56 remainder; 87-60..87-70 added 2026-11-24 as gap closure for the 87-59 live gate (F1-F5 and the engine-log gap) in 8 gap waves
+**Plans:** 73/73 plans executed in 41 waves; planned 2026-11-23, revised the same day so every plan fits the 100k smart-zone budget (executes after Phase 86 closes); 87-56a/b/c added 2026-11-24 for the 87-56 remainder; 87-60..87-70 added 2026-11-24 as gap closure for the 87-59 live gate (F1-F5 and the engine-log gap) in 8 gap waves
 
 Plans:
 **Wave 1**
@@ -844,7 +844,7 @@ Plans:
 - [x] 87-68-PLAN.md — Clean-worktree proof, push checkpoint, three-OS CI and the signed 0.13.1 gap build (D-12, D-13)
 
 **Gap wave 8** *(blocked on 87-60, 87-68)*
-- [ ] 87-69-PLAN.md — Run the live macOS re-run gate on the signed gap build (not its author, D-E)
+- [x] 87-69-PLAN.md — Run the live macOS re-run gate on the signed gap build (not its author, D-E)
 
 **Cross-cutting constraints:** <!-- gsd:generated -->
 - Memory-note shape: any offline step turns the network off only for the action (off, act, on, report)
