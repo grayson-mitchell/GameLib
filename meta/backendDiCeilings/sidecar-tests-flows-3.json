@@ -3,7 +3,7 @@
     "src/backend/sidecar/__tests__/humbleLoginFlows.test.ts": 4,
     "src/backend/sidecar/__tests__/installFlows.test.ts": 12,
     "src/backend/sidecar/__tests__/runnerAuthFlows.test.ts": 8,
-    "src/backend/sidecar/__tests__/settingsFlows.test.ts": 7,
+    "src/backend/sidecar/__tests__/settingsFlows.test.ts": 6,
     "src/backend/sidecar/__tests__/steamAuthFlows.test.ts": 12,
     "src/backend/sidecar/__tests__/steamFlows.test.ts": 6
   }

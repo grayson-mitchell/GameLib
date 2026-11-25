@@ -729,9 +729,9 @@
         "reason": {
             "deleteFailed": "Some files could not be removed.",
             "folderLooksShared": "The game's folder also holds other programs, so it may be shared with other software.",
-            "inUse": "The bottle is in use. Quit the game and anything else running in it, then try again.",
             "insideKnownInstall": "This folder is inside the install of {{other}}.",
             "insideKnownInstallUnnamed": "This folder is inside the install of another game.",
+            "inUse": "The bottle is in use. Quit the game and anything else running in it, then try again.",
             "nestedKnownInstall": "{{other}} is installed inside this folder.",
             "nestedKnownInstallUnnamed": "Another game is installed inside this folder.",
             "notAPrefix": "The folder doesn't look like a Wine prefix.",
