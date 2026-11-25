@@ -6,10 +6,10 @@ current_phase: 87
 current_phase_name: Engine, Wine and tools
 status: executing
 stopped_at: Completed 88.1-05-PLAN.md
-last_updated: "2026-11-25T11:06:27.337Z"
+last_updated: "2026-11-25T13:03:03.781Z"
 last_activity: 2026-11-25
 last_activity_desc: Phase 87 execution started
-state_head: dab75bcae6e1dd795c0ae1b1f31e401a8018dfc4
+state_head: 62449fd2f08b49e81f99beafcf64fdd4d0759d35
 progress:
   total_phases: 25
   completed_phases: 23
@@ -537,6 +537,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 88.1 P11 | 110min | 3 tasks | 24 files |
 | Phase 88.1 P12 | 21min | 2 tasks | 15 files |
 | Phase 88.1 P13 | 35min | 2 tasks | 16 files |
+| Phase 88.1 P14 | 75min | 2 tasks | 16 files |
 
 ## Accumulated Context
 
@@ -1207,6 +1208,9 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 88.1]: launch_prepare takes [args, host]; the shell builds the host (wine host, Deck, Flatpak facts) itself and the channel joins UNBOUNDED_RUST_CHANNELS with its shim in 88.1-15
 - [Phase 88.1]: 88.1-12: the wine begin step's missing-CrossOver-bottle dialog is raise_main_window plus show_dialog(ERROR, no ack id), not show_engine_dialog (which notifies and shows MESSAGE); the path-bearing 'Created/Updated Wineprefix' line stays the adapter's, written when prefixUpdated is true
 - [Phase 88.1]: 88.1-13: the finish step takes the shell's tool facts (wine host, public dir, online) and the game's stored settings beside the launch settings; a DXVK-family install failure fails the step, a settled registry, overlay, deadline or GOG-dummy failure is one fixed-text line
+- [Phase 88.1]: 88.1-14: check_wine reply carries the settings writes as data (wineVersion, persistGameWine, globalWineVersion); Rust writes no config
+- [Phase 88.1]: 88.1-14: A second context seam WineManagerFacts carries the shell's discovery host, install settings and abort registry; read lazily
+- [Phase 88.1]: 88.1-14: A dismissal, a failed dialog and a context with no dialog source are all No (T-88.1-34)
 
 ### Pending Todos
 
