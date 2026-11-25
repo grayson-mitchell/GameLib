@@ -5,15 +5,15 @@ milestone_name: Node Sidecar Retirement
 current_phase: "88.1"
 current_phase_name: Launch builders and prepare steps
 status: executing
-stopped_at: Completed 88.1-02-PLAN.md
-last_updated: "2026-11-25T07:01:42.814Z"
+stopped_at: Completed 88.1-03-PLAN.md
+last_updated: "2026-11-25T07:17:46.392Z"
 last_activity: 2026-11-25
 last_activity_desc: Phase 88.1 execution started
-state_head: 4ac8c07cf1565ab5d2a0079ad9d6c571924ad8cf
+state_head: a7366b230f6c11898032bba3da7dd8190f3b9cfa
 progress:
   total_phases: 25
   completed_phases: 23
-  total_plans: 257
+  total_plans: 259
   completed_plans: 531
   percent: 92
 ---
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-25)
 ## Current Position
 
 Phase: 88.1 (Launch builders and prepare steps) — EXECUTING
-Plan: 3 of 20
+Plan: 4 of 20
 Status: Ready to execute
 Last activity: 2026-11-25 — Phase 88.1 execution started
 Progress: [████████████████░░░░] 204/257 plans ([█████████░] 92%)
@@ -522,6 +522,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 94 P24 | 95min | 2 tasks | 55 files |
 | Phase 88.1 P01 | 40 min | 3 tasks | 9 files |
 | Phase 88.1 P02 | 95min | 2 tasks | 14 files |
+| Phase 88.1 P03 | 55min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -1172,6 +1173,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 88.1]: 88.1-01: oracle cases.json is generated from the case tables and compared; gamescope census lists the two source-text gates as not ported per D-15
 - [Phase 88.1]: 88.1-02: prepare_launch is pinned by two pairwise suites per (OS, runner) cell (identity on every OS, tools on Linux) because the full product cannot be enumerated; tool axes are not paired with anti-cheat, Epic status or the expired flag
 - [Phase 88.1]: 88.1-02: Epic status replays hand-authored exchanges through replayAxiosClient; only the literal status 'major' counts as offline (recorded, filed as a todo, not fixed)
+- [Phase 88.1]: 88.1-03: prepare_wine goldens hold five files per case (input, result, begin, finish, tree); the seq-stamped ordered trace is cut at the store-setup hook; pairwise rows are generated in three suites per cell
 
 ### Pending Todos
 
@@ -1457,8 +1459,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-25T07:01:39.816Z
-Stopped at: Completed 88.1-02-PLAN.md
+Last session: 2026-11-25T07:17:43.386Z
+Stopped at: Completed 88.1-03-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
