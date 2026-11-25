@@ -1,0 +1,1496 @@
+[
+  {
+    "id": "cmd-pairwise-001",
+    "axes": {
+      "enableUpscaling": true,
+      "enableLimiter": true,
+      "upscaleMethod": "fsr",
+      "windowType": "fullscreen",
+      "help": "new",
+      "showMangohud": true,
+      "enableForceGrabCursor": true,
+      "additionalOptions": "unset",
+      "resolutions": "none"
+    },
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "usage ... -F, --filter ...",
+          "showMangohud": true,
+          "settings": {
+            "enableUpscaling": true,
+            "enableLimiter": true,
+            "enableForceGrabCursor": true,
+            "upscaleMethod": "fsr",
+            "windowType": "fullscreen",
+            "additionalOptions": "",
+            "fpsLimiter": "60",
+            "fpsLimiterNoFocus": "15"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "cmd-pairwise-002",
+    "axes": {
+      "enableUpscaling": true,
+      "enableLimiter": false,
+      "upscaleMethod": "nis",
+      "windowType": "borderless",
+      "help": "old",
+      "showMangohud": false,
+      "enableForceGrabCursor": false,
+      "additionalOptions": "plain",
+      "resolutions": "game-only"
+    },
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "usage ... -U, --fsr-upscaling",
+          "showMangohud": false,
+          "settings": {
+            "enableUpscaling": true,
+            "enableLimiter": false,
+            "enableForceGrabCursor": false,
+            "upscaleMethod": "nis",
+            "windowType": "borderless",
+            "additionalOptions": "--foo bar",
+            "fpsLimiter": "60",
+            "fpsLimiterNoFocus": "15",
+            "gameWidth": "1280",
+            "gameHeight": "720"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "cmd-pairwise-003",
+    "axes": {
+      "enableUpscaling": false,
+      "enableLimiter": true,
+      "upscaleMethod": "integer",
+      "windowType": "windowed",
+      "help": "empty",
+      "showMangohud": true,
+      "enableForceGrabCursor": false,
+      "additionalOptions": "quoted",
+      "resolutions": "all"
+    },
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "",
+          "showMangohud": true,
+          "settings": {
+            "enableUpscaling": false,
+            "enableLimiter": true,
+            "enableForceGrabCursor": false,
+            "upscaleMethod": "integer",
+            "windowType": "windowed",
+            "additionalOptions": "--foo \"bar baz\" --qux",
+            "fpsLimiter": "60",
+            "fpsLimiterNoFocus": "15",
+            "gameWidth": "1280",
+            "gameHeight": "720",
+            "upscaleWidth": "1920",
+            "upscaleHeight": "1080"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "cmd-pairwise-004",
+    "axes": {
+      "enableUpscaling": false,
+      "enableLimiter": false,
+      "upscaleMethod": "stretch",
+      "windowType": "fullscreen",
+      "help": "new",
+      "showMangohud": false,
+      "enableForceGrabCursor": true,
+      "additionalOptions": "unterminated",
+      "resolutions": "all"
+    },
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "usage ... -F, --filter ...",
+          "showMangohud": false,
+          "settings": {
+            "enableUpscaling": false,
+            "enableLimiter": false,
+            "enableForceGrabCursor": true,
+            "upscaleMethod": "stretch",
+            "windowType": "fullscreen",
+            "additionalOptions": "--foo \"bar",
+            "fpsLimiter": "60",
+            "fpsLimiterNoFocus": "15",
+            "gameWidth": "1280",
+            "gameHeight": "720",
+            "upscaleWidth": "1920",
+            "upscaleHeight": "1080"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "cmd-pairwise-005",
+    "axes": {
+      "enableUpscaling": true,
+      "enableLimiter": false,
+      "upscaleMethod": "unset",
+      "windowType": "windowed",
+      "help": "empty",
+      "showMangohud": false,
+      "enableForceGrabCursor": true,
+      "additionalOptions": "quoted",
+      "resolutions": "none"
+    },
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "",
+          "showMangohud": false,
+          "settings": {
+            "enableUpscaling": true,
+            "enableLimiter": false,
+            "enableForceGrabCursor": true,
+            "upscaleMethod": "",
+            "windowType": "windowed",
+            "additionalOptions": "--foo \"bar baz\" --qux",
+            "fpsLimiter": "60",
+            "fpsLimiterNoFocus": "15"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "cmd-pairwise-006",
+    "axes": {
+      "enableUpscaling": false,
+      "enableLimiter": true,
+      "upscaleMethod": "unset",
+      "windowType": "borderless",
+      "help": "old",
+      "showMangohud": true,
+      "enableForceGrabCursor": true,
+      "additionalOptions": "unterminated",
+      "resolutions": "game-only"
+    },
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "usage ... -U, --fsr-upscaling",
+          "showMangohud": true,
+          "settings": {
+            "enableUpscaling": false,
+            "enableLimiter": true,
+            "enableForceGrabCursor": true,
+            "upscaleMethod": "",
+            "windowType": "borderless",
+            "additionalOptions": "--foo \"bar",
+            "fpsLimiter": "60",
+            "fpsLimiterNoFocus": "15",
+            "gameWidth": "1280",
+            "gameHeight": "720"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "cmd-pairwise-007",
+    "axes": {
+      "enableUpscaling": false,
+      "enableLimiter": true,
+      "upscaleMethod": "nis",
+      "windowType": "fullscreen",
+      "help": "new",
+      "showMangohud": true,
+      "enableForceGrabCursor": false,
+      "additionalOptions": "plain",
+      "resolutions": "none"
+    },
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "usage ... -F, --filter ...",
+          "showMangohud": true,
+          "settings": {
+            "enableUpscaling": false,
+            "enableLimiter": true,
+            "enableForceGrabCursor": false,
+            "upscaleMethod": "nis",
+            "windowType": "fullscreen",
+            "additionalOptions": "--foo bar",
+            "fpsLimiter": "60",
+            "fpsLimiterNoFocus": "15"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "cmd-pairwise-008",
+    "axes": {
+      "enableUpscaling": false,
+      "enableLimiter": false,
+      "upscaleMethod": "fsr",
+      "windowType": "borderless",
+      "help": "old",
+      "showMangohud": false,
+      "enableForceGrabCursor": false,
+      "additionalOptions": "unset",
+      "resolutions": "all"
+    },
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "usage ... -U, --fsr-upscaling",
+          "showMangohud": false,
+          "settings": {
+            "enableUpscaling": false,
+            "enableLimiter": false,
+            "enableForceGrabCursor": false,
+            "upscaleMethod": "fsr",
+            "windowType": "borderless",
+            "additionalOptions": "",
+            "fpsLimiter": "60",
+            "fpsLimiterNoFocus": "15",
+            "gameWidth": "1280",
+            "gameHeight": "720",
+            "upscaleWidth": "1920",
+            "upscaleHeight": "1080"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "cmd-pairwise-009",
+    "axes": {
+      "enableUpscaling": true,
+      "enableLimiter": true,
+      "upscaleMethod": "stretch",
+      "windowType": "borderless",
+      "help": "empty",
+      "showMangohud": true,
+      "enableForceGrabCursor": false,
+      "additionalOptions": "unterminated",
+      "resolutions": "none"
+    },
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "",
+          "showMangohud": true,
+          "settings": {
+            "enableUpscaling": true,
+            "enableLimiter": true,
+            "enableForceGrabCursor": false,
+            "upscaleMethod": "stretch",
+            "windowType": "borderless",
+            "additionalOptions": "--foo \"bar",
+            "fpsLimiter": "60",
+            "fpsLimiterNoFocus": "15"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "cmd-pairwise-010",
+    "axes": {
+      "enableUpscaling": true,
+      "enableLimiter": true,
+      "upscaleMethod": "integer",
+      "windowType": "fullscreen",
+      "help": "new",
+      "showMangohud": false,
+      "enableForceGrabCursor": true,
+      "additionalOptions": "quoted",
+      "resolutions": "game-only"
+    },
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "usage ... -F, --filter ...",
+          "showMangohud": false,
+          "settings": {
+            "enableUpscaling": true,
+            "enableLimiter": true,
+            "enableForceGrabCursor": true,
+            "upscaleMethod": "integer",
+            "windowType": "fullscreen",
+            "additionalOptions": "--foo \"bar baz\" --qux",
+            "fpsLimiter": "60",
+            "fpsLimiterNoFocus": "15",
+            "gameWidth": "1280",
+            "gameHeight": "720"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "cmd-pairwise-011",
+    "axes": {
+      "enableUpscaling": true,
+      "enableLimiter": false,
+      "upscaleMethod": "fsr",
+      "windowType": "windowed",
+      "help": "empty",
+      "showMangohud": true,
+      "enableForceGrabCursor": true,
+      "additionalOptions": "plain",
+      "resolutions": "game-only"
+    },
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "",
+          "showMangohud": true,
+          "settings": {
+            "enableUpscaling": true,
+            "enableLimiter": false,
+            "enableForceGrabCursor": true,
+            "upscaleMethod": "fsr",
+            "windowType": "windowed",
+            "additionalOptions": "--foo bar",
+            "fpsLimiter": "60",
+            "fpsLimiterNoFocus": "15",
+            "gameWidth": "1280",
+            "gameHeight": "720"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "cmd-pairwise-012",
+    "axes": {
+      "enableUpscaling": true,
+      "enableLimiter": true,
+      "upscaleMethod": "nis",
+      "windowType": "windowed",
+      "help": "empty",
+      "showMangohud": true,
+      "enableForceGrabCursor": true,
+      "additionalOptions": "unset",
+      "resolutions": "all"
+    },
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "",
+          "showMangohud": true,
+          "settings": {
+            "enableUpscaling": true,
+            "enableLimiter": true,
+            "enableForceGrabCursor": true,
+            "upscaleMethod": "nis",
+            "windowType": "windowed",
+            "additionalOptions": "",
+            "fpsLimiter": "60",
+            "fpsLimiterNoFocus": "15",
+            "gameWidth": "1280",
+            "gameHeight": "720",
+            "upscaleWidth": "1920",
+            "upscaleHeight": "1080"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "cmd-pairwise-013",
+    "axes": {
+      "enableUpscaling": true,
+      "enableLimiter": false,
+      "upscaleMethod": "integer",
+      "windowType": "borderless",
+      "help": "old",
+      "showMangohud": true,
+      "enableForceGrabCursor": true,
+      "additionalOptions": "quoted",
+      "resolutions": "none"
+    },
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "usage ... -U, --fsr-upscaling",
+          "showMangohud": true,
+          "settings": {
+            "enableUpscaling": true,
+            "enableLimiter": false,
+            "enableForceGrabCursor": true,
+            "upscaleMethod": "integer",
+            "windowType": "borderless",
+            "additionalOptions": "--foo \"bar baz\" --qux",
+            "fpsLimiter": "60",
+            "fpsLimiterNoFocus": "15"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "cmd-pairwise-014",
+    "axes": {
+      "enableUpscaling": true,
+      "enableLimiter": true,
+      "upscaleMethod": "stretch",
+      "windowType": "windowed",
+      "help": "old",
+      "showMangohud": true,
+      "enableForceGrabCursor": true,
+      "additionalOptions": "unset",
+      "resolutions": "game-only"
+    },
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "usage ... -U, --fsr-upscaling",
+          "showMangohud": true,
+          "settings": {
+            "enableUpscaling": true,
+            "enableLimiter": true,
+            "enableForceGrabCursor": true,
+            "upscaleMethod": "stretch",
+            "windowType": "windowed",
+            "additionalOptions": "",
+            "fpsLimiter": "60",
+            "fpsLimiterNoFocus": "15",
+            "gameWidth": "1280",
+            "gameHeight": "720"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "cmd-pairwise-015",
+    "axes": {
+      "enableUpscaling": true,
+      "enableLimiter": true,
+      "upscaleMethod": "unset",
+      "windowType": "fullscreen",
+      "help": "new",
+      "showMangohud": true,
+      "enableForceGrabCursor": false,
+      "additionalOptions": "plain",
+      "resolutions": "all"
+    },
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "usage ... -F, --filter ...",
+          "showMangohud": true,
+          "settings": {
+            "enableUpscaling": true,
+            "enableLimiter": true,
+            "enableForceGrabCursor": false,
+            "upscaleMethod": "",
+            "windowType": "fullscreen",
+            "additionalOptions": "--foo bar",
+            "fpsLimiter": "60",
+            "fpsLimiterNoFocus": "15",
+            "gameWidth": "1280",
+            "gameHeight": "720",
+            "upscaleWidth": "1920",
+            "upscaleHeight": "1080"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "cmd-pairwise-016",
+    "axes": {
+      "enableUpscaling": true,
+      "enableLimiter": true,
+      "upscaleMethod": "fsr",
+      "windowType": "windowed",
+      "help": "new",
+      "showMangohud": true,
+      "enableForceGrabCursor": true,
+      "additionalOptions": "unterminated",
+      "resolutions": "none"
+    },
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "usage ... -F, --filter ...",
+          "showMangohud": true,
+          "settings": {
+            "enableUpscaling": true,
+            "enableLimiter": true,
+            "enableForceGrabCursor": true,
+            "upscaleMethod": "fsr",
+            "windowType": "windowed",
+            "additionalOptions": "--foo \"bar",
+            "fpsLimiter": "60",
+            "fpsLimiterNoFocus": "15"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "cmd-pairwise-017",
+    "axes": {
+      "enableUpscaling": true,
+      "enableLimiter": true,
+      "upscaleMethod": "fsr",
+      "windowType": "fullscreen",
+      "help": "old",
+      "showMangohud": true,
+      "enableForceGrabCursor": true,
+      "additionalOptions": "quoted",
+      "resolutions": "none"
+    },
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "usage ... -U, --fsr-upscaling",
+          "showMangohud": true,
+          "settings": {
+            "enableUpscaling": true,
+            "enableLimiter": true,
+            "enableForceGrabCursor": true,
+            "upscaleMethod": "fsr",
+            "windowType": "fullscreen",
+            "additionalOptions": "--foo \"bar baz\" --qux",
+            "fpsLimiter": "60",
+            "fpsLimiterNoFocus": "15"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "cmd-pairwise-018",
+    "axes": {
+      "enableUpscaling": true,
+      "enableLimiter": true,
+      "upscaleMethod": "nis",
+      "windowType": "fullscreen",
+      "help": "empty",
+      "showMangohud": true,
+      "enableForceGrabCursor": true,
+      "additionalOptions": "quoted",
+      "resolutions": "none"
+    },
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "",
+          "showMangohud": true,
+          "settings": {
+            "enableUpscaling": true,
+            "enableLimiter": true,
+            "enableForceGrabCursor": true,
+            "upscaleMethod": "nis",
+            "windowType": "fullscreen",
+            "additionalOptions": "--foo \"bar baz\" --qux",
+            "fpsLimiter": "60",
+            "fpsLimiterNoFocus": "15"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "cmd-pairwise-019",
+    "axes": {
+      "enableUpscaling": true,
+      "enableLimiter": true,
+      "upscaleMethod": "nis",
+      "windowType": "borderless",
+      "help": "new",
+      "showMangohud": true,
+      "enableForceGrabCursor": true,
+      "additionalOptions": "unterminated",
+      "resolutions": "none"
+    },
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "usage ... -F, --filter ...",
+          "showMangohud": true,
+          "settings": {
+            "enableUpscaling": true,
+            "enableLimiter": true,
+            "enableForceGrabCursor": true,
+            "upscaleMethod": "nis",
+            "windowType": "borderless",
+            "additionalOptions": "--foo \"bar",
+            "fpsLimiter": "60",
+            "fpsLimiterNoFocus": "15"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "cmd-pairwise-020",
+    "axes": {
+      "enableUpscaling": true,
+      "enableLimiter": true,
+      "upscaleMethod": "integer",
+      "windowType": "fullscreen",
+      "help": "new",
+      "showMangohud": true,
+      "enableForceGrabCursor": true,
+      "additionalOptions": "unset",
+      "resolutions": "none"
+    },
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "usage ... -F, --filter ...",
+          "showMangohud": true,
+          "settings": {
+            "enableUpscaling": true,
+            "enableLimiter": true,
+            "enableForceGrabCursor": true,
+            "upscaleMethod": "integer",
+            "windowType": "fullscreen",
+            "additionalOptions": "",
+            "fpsLimiter": "60",
+            "fpsLimiterNoFocus": "15"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "cmd-pairwise-021",
+    "axes": {
+      "enableUpscaling": true,
+      "enableLimiter": true,
+      "upscaleMethod": "integer",
+      "windowType": "fullscreen",
+      "help": "new",
+      "showMangohud": true,
+      "enableForceGrabCursor": true,
+      "additionalOptions": "plain",
+      "resolutions": "none"
+    },
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "usage ... -F, --filter ...",
+          "showMangohud": true,
+          "settings": {
+            "enableUpscaling": true,
+            "enableLimiter": true,
+            "enableForceGrabCursor": true,
+            "upscaleMethod": "integer",
+            "windowType": "fullscreen",
+            "additionalOptions": "--foo bar",
+            "fpsLimiter": "60",
+            "fpsLimiterNoFocus": "15"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "cmd-pairwise-022",
+    "axes": {
+      "enableUpscaling": true,
+      "enableLimiter": true,
+      "upscaleMethod": "integer",
+      "windowType": "fullscreen",
+      "help": "new",
+      "showMangohud": true,
+      "enableForceGrabCursor": true,
+      "additionalOptions": "unterminated",
+      "resolutions": "none"
+    },
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "usage ... -F, --filter ...",
+          "showMangohud": true,
+          "settings": {
+            "enableUpscaling": true,
+            "enableLimiter": true,
+            "enableForceGrabCursor": true,
+            "upscaleMethod": "integer",
+            "windowType": "fullscreen",
+            "additionalOptions": "--foo \"bar",
+            "fpsLimiter": "60",
+            "fpsLimiterNoFocus": "15"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "cmd-pairwise-023",
+    "axes": {
+      "enableUpscaling": true,
+      "enableLimiter": true,
+      "upscaleMethod": "stretch",
+      "windowType": "fullscreen",
+      "help": "new",
+      "showMangohud": true,
+      "enableForceGrabCursor": true,
+      "additionalOptions": "plain",
+      "resolutions": "none"
+    },
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "usage ... -F, --filter ...",
+          "showMangohud": true,
+          "settings": {
+            "enableUpscaling": true,
+            "enableLimiter": true,
+            "enableForceGrabCursor": true,
+            "upscaleMethod": "stretch",
+            "windowType": "fullscreen",
+            "additionalOptions": "--foo bar",
+            "fpsLimiter": "60",
+            "fpsLimiterNoFocus": "15"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "cmd-pairwise-024",
+    "axes": {
+      "enableUpscaling": true,
+      "enableLimiter": true,
+      "upscaleMethod": "stretch",
+      "windowType": "fullscreen",
+      "help": "new",
+      "showMangohud": true,
+      "enableForceGrabCursor": true,
+      "additionalOptions": "quoted",
+      "resolutions": "none"
+    },
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "usage ... -F, --filter ...",
+          "showMangohud": true,
+          "settings": {
+            "enableUpscaling": true,
+            "enableLimiter": true,
+            "enableForceGrabCursor": true,
+            "upscaleMethod": "stretch",
+            "windowType": "fullscreen",
+            "additionalOptions": "--foo \"bar baz\" --qux",
+            "fpsLimiter": "60",
+            "fpsLimiterNoFocus": "15"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "cmd-pairwise-025",
+    "axes": {
+      "enableUpscaling": true,
+      "enableLimiter": true,
+      "upscaleMethod": "unset",
+      "windowType": "fullscreen",
+      "help": "new",
+      "showMangohud": true,
+      "enableForceGrabCursor": true,
+      "additionalOptions": "unset",
+      "resolutions": "none"
+    },
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "usage ... -F, --filter ...",
+          "showMangohud": true,
+          "settings": {
+            "enableUpscaling": true,
+            "enableLimiter": true,
+            "enableForceGrabCursor": true,
+            "upscaleMethod": "",
+            "windowType": "fullscreen",
+            "additionalOptions": "",
+            "fpsLimiter": "60",
+            "fpsLimiterNoFocus": "15"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "cmd-method-fsr-new-help",
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "usage ... -F, --filter ...",
+          "settings": {
+            "enableUpscaling": true,
+            "upscaleMethod": "fsr"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "cmd-method-fsr-old-help",
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "usage ... -U, --fsr-upscaling",
+          "settings": {
+            "enableUpscaling": true,
+            "upscaleMethod": "fsr"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "cmd-method-fsr-empty-help",
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "",
+          "settings": {
+            "enableUpscaling": true,
+            "upscaleMethod": "fsr"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "cmd-method-nis-new-help",
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "usage ... -F, --filter ...",
+          "settings": {
+            "enableUpscaling": true,
+            "upscaleMethod": "nis"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "cmd-method-nis-old-help",
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "usage ... -U, --fsr-upscaling",
+          "settings": {
+            "enableUpscaling": true,
+            "upscaleMethod": "nis"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "cmd-method-nis-empty-help",
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "",
+          "settings": {
+            "enableUpscaling": true,
+            "upscaleMethod": "nis"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "cmd-method-integer-new-help",
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "usage ... -F, --filter ...",
+          "settings": {
+            "enableUpscaling": true,
+            "upscaleMethod": "integer"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "cmd-method-integer-old-help",
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "usage ... -U, --fsr-upscaling",
+          "settings": {
+            "enableUpscaling": true,
+            "upscaleMethod": "integer"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "cmd-method-integer-empty-help",
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "",
+          "settings": {
+            "enableUpscaling": true,
+            "upscaleMethod": "integer"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "cmd-method-stretch-new-help",
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "usage ... -F, --filter ...",
+          "settings": {
+            "enableUpscaling": true,
+            "upscaleMethod": "stretch"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "cmd-method-stretch-old-help",
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "usage ... -U, --fsr-upscaling",
+          "settings": {
+            "enableUpscaling": true,
+            "upscaleMethod": "stretch"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "cmd-method-stretch-empty-help",
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "",
+          "settings": {
+            "enableUpscaling": true,
+            "upscaleMethod": "stretch"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "cmd-method-unset-new-help",
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "usage ... -F, --filter ...",
+          "settings": {
+            "enableUpscaling": true,
+            "upscaleMethod": ""
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "cmd-method-unset-old-help",
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "usage ... -U, --fsr-upscaling",
+          "settings": {
+            "enableUpscaling": true,
+            "upscaleMethod": ""
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "cmd-method-unset-empty-help",
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "",
+          "settings": {
+            "enableUpscaling": true,
+            "upscaleMethod": ""
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "cmd-window-fullscreen",
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "usage ... -F, --filter ...",
+          "settings": {
+            "enableUpscaling": true,
+            "windowType": "fullscreen"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "cmd-window-borderless",
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "usage ... -F, --filter ...",
+          "settings": {
+            "enableUpscaling": true,
+            "windowType": "borderless"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "cmd-window-windowed",
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "usage ... -F, --filter ...",
+          "settings": {
+            "enableUpscaling": true,
+            "windowType": "windowed"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "cmd-window-type-ignored-without-upscaling",
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "usage ... -F, --filter ...",
+          "settings": {
+            "enableUpscaling": false,
+            "windowType": "fullscreen"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "cmd-limiter-both",
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "usage ... -F, --filter ...",
+          "settings": {
+            "enableLimiter": true,
+            "fpsLimiter": "60",
+            "fpsLimiterNoFocus": "15"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "cmd-limiter-focused-only",
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "usage ... -F, --filter ...",
+          "settings": {
+            "enableLimiter": true,
+            "fpsLimiter": "60"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "cmd-limiter-unfocused-only",
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "usage ... -F, --filter ...",
+          "settings": {
+            "enableLimiter": true,
+            "fpsLimiterNoFocus": "15"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "cmd-limiter-values-ignored-when-off",
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "usage ... -F, --filter ...",
+          "settings": {
+            "enableLimiter": false,
+            "fpsLimiter": "60"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "cmd-nothing-enabled",
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "usage ... -F, --filter ...",
+          "settings": {}
+        }
+      ]
+    }
+  },
+  {
+    "id": "cmd-help-text-containing-the-flag-in-the-middle",
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "x\n  -F, --filter=TYPE   upscaler\n y",
+          "settings": {
+            "enableUpscaling": true,
+            "upscaleMethod": "fsr"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "cmd-additional-options-whitespace-only",
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "usage ... -F, --filter ...",
+          "settings": {
+            "additionalOptions": "   \t "
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "cmd-additional-options-unset",
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "usage ... -F, --filter ...",
+          "settings": {}
+        }
+      ]
+    }
+  },
+  {
+    "id": "probe-stderr",
+    "call": {
+      "op": "probe",
+      "scripted": {
+        "code": 0,
+        "stderr": "usage ... -F, --filter ..."
+      }
+    }
+  },
+  {
+    "id": "probe-old-cli-stderr",
+    "call": {
+      "op": "probe",
+      "scripted": {
+        "code": 0,
+        "stderr": "usage ... -U, --fsr-upscaling"
+      }
+    }
+  },
+  {
+    "id": "probe-timeout",
+    "call": {
+      "op": "probe",
+      "scripted": {
+        "code": null,
+        "stderr": "usage ... -F, --filter ...",
+        "timedOut": true
+      }
+    }
+  },
+  {
+    "id": "probe-spawn-error",
+    "call": {
+      "op": "probe",
+      "scripted": {
+        "throws": "spawn ENOENT"
+      }
+    }
+  },
+  {
+    "id": "gamescopeCommand--buildgamescopecommand-upscale-method-s-with-help-j",
+    "title": "buildGameScopeCommand > upscale method %s with help %j",
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "usage ... -U, --fsr-upscaling",
+          "settings": {
+            "enableUpscaling": true,
+            "upscaleMethod": "fsr"
+          }
+        },
+        {
+          "help": "usage ... -F, --filter ...",
+          "settings": {
+            "enableUpscaling": true,
+            "upscaleMethod": "fsr"
+          }
+        },
+        {
+          "help": "usage ... -U, --fsr-upscaling",
+          "settings": {
+            "enableUpscaling": true,
+            "upscaleMethod": "nis"
+          }
+        },
+        {
+          "help": "usage ... -F, --filter ...",
+          "settings": {
+            "enableUpscaling": true,
+            "upscaleMethod": "nis"
+          }
+        },
+        {
+          "help": "usage ... -U, --fsr-upscaling",
+          "settings": {
+            "enableUpscaling": true,
+            "upscaleMethod": "integer"
+          }
+        },
+        {
+          "help": "usage ... -F, --filter ...",
+          "settings": {
+            "enableUpscaling": true,
+            "upscaleMethod": "integer"
+          }
+        },
+        {
+          "help": "usage ... -U, --fsr-upscaling",
+          "settings": {
+            "enableUpscaling": true,
+            "upscaleMethod": "stretch"
+          }
+        },
+        {
+          "help": "usage ... -F, --filter ...",
+          "settings": {
+            "enableUpscaling": true,
+            "upscaleMethod": "stretch"
+          }
+        },
+        {
+          "help": "",
+          "settings": {
+            "enableUpscaling": true,
+            "upscaleMethod": "fsr"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "gamescopeCommand--buildgamescopecommand-upscaling-emits-resolutions-and-window-type-in-order",
+    "title": "buildGameScopeCommand > upscaling emits resolutions and window type in order",
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "usage ... -F, --filter ...",
+          "settings": {
+            "enableUpscaling": true,
+            "gameWidth": "1280",
+            "gameHeight": "720",
+            "upscaleWidth": "1920",
+            "upscaleHeight": "1080",
+            "windowType": "fullscreen"
+          }
+        },
+        {
+          "help": "usage ... -U, --fsr-upscaling",
+          "settings": {
+            "enableUpscaling": true,
+            "windowType": "borderless"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "gamescopeCommand--buildgamescopecommand-limiter-only-emits-limiter-flags-ignoring-upscaling-fields",
+    "title": "buildGameScopeCommand > limiter only emits limiter flags, ignoring upscaling fields",
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "usage ... -F, --filter ...",
+          "settings": {
+            "enableLimiter": true,
+            "fpsLimiter": "60",
+            "fpsLimiterNoFocus": "15",
+            "gameWidth": "1280",
+            "windowType": "fullscreen"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "gamescopeCommand--buildgamescopecommand-cursor-grab-mangoapp-and-additionaloptions-keep-today-position",
+    "title": "buildGameScopeCommand > cursor grab, mangoapp and additionalOptions keep today position",
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "usage ... -U, --fsr-upscaling",
+          "showMangohud": true,
+          "settings": {
+            "enableLimiter": true,
+            "fpsLimiter": "30",
+            "enableForceGrabCursor": true,
+            "additionalOptions": "--foo \"bar baz\""
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "gamescopeCommand--buildgamescopecommand-returned-array-starts-with-bin-and-ends-with-the-separator",
+    "title": "buildGameScopeCommand > returned array starts with bin and ends with the separator",
+    "call": {
+      "op": "build",
+      "builds": [
+        {
+          "help": "",
+          "settings": {
+            "enableLimiter": true
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "gamescopeCommand--probegamescopehelp-scripted-runner-runs-help-with-a-5-s-timeout-and-returns-its-stderr",
+    "title": "probeGamescopeHelp (scripted runner) > runs `--help` with a 5 s timeout and returns its stderr",
+    "call": {
+      "op": "probe",
+      "scripted": {
+        "code": 0,
+        "stderr": "usage ... -F, --filter ..."
+      }
+    }
+  },
+  {
+    "id": "gamescopeCommand--probegamescopehelp-scripted-runner-the-new-cli-help-text-builds-the-new-cli-command",
+    "title": "probeGamescopeHelp (scripted runner) > the new-CLI help text builds the new-CLI command",
+    "call": {
+      "op": "probeThenBuild",
+      "scripted": {
+        "code": 0,
+        "stderr": "usage ... -F, --filter ..."
+      },
+      "settings": {
+        "enableUpscaling": true,
+        "upscaleMethod": "fsr"
+      }
+    }
+  },
+  {
+    "id": "gamescopeCommand--probegamescopehelp-scripted-runner-a-timeout-degrades-to-the-old-cli-help-empty-stderr",
+    "title": "probeGamescopeHelp (scripted runner) > a timeout degrades to the old-CLI help (empty stderr)",
+    "call": {
+      "op": "probe",
+      "scripted": {
+        "code": null,
+        "stderr": "usage ... -F, --filter ...",
+        "timedOut": true
+      }
+    }
+  },
+  {
+    "id": "gamescopeCommand--probegamescopehelp-scripted-runner-a-spawn-error-degrades-to-the-old-cli-help-instead-of-throwing",
+    "title": "probeGamescopeHelp (scripted runner) > a spawn error degrades to the old-CLI help instead of throwing",
+    "call": {
+      "op": "probe",
+      "scripted": {
+        "throws": "spawn ENOENT"
+      }
+    }
+  }
+]

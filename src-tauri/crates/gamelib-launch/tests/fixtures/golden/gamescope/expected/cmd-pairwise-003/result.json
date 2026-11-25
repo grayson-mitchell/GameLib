@@ -1,0 +1,14 @@
+[
+  [
+    "/usr/bin/gamescope",
+    "-r",
+    "60",
+    "-o",
+    "15",
+    "--mangoapp",
+    "--foo",
+    "bar baz",
+    "--qux",
+    "--"
+  ]
+]

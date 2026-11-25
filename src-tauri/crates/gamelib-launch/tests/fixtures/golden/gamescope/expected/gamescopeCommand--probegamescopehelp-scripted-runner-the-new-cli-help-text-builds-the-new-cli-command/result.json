@@ -1,0 +1,9 @@
+{
+  "help": "usage ... -F, --filter ...",
+  "argv": [
+    "/usr/bin/gamescope",
+    "-F",
+    "fsr",
+    "--"
+  ]
+}

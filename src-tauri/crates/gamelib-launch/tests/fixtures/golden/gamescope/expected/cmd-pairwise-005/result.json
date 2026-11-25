@@ -1,0 +1,10 @@
+[
+  [
+    "/usr/bin/gamescope",
+    "--force-grab-cursor",
+    "--foo",
+    "bar baz",
+    "--qux",
+    "--"
+  ]
+]

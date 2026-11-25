@@ -1,0 +1,17 @@
+[
+  [
+    "/usr/bin/gamescope",
+    "-Y",
+    "-f",
+    "-r",
+    "60",
+    "-o",
+    "15",
+    "--force-grab-cursor",
+    "--mangoapp",
+    "--foo",
+    "bar baz",
+    "--qux",
+    "--"
+  ]
+]
