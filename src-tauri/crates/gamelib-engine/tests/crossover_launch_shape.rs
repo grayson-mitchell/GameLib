@@ -16,6 +16,11 @@
 //! engine switch's own golden, 87-38); what is asserted of it is the settings it is handed, because only a
 //! switch to CrossOver reads them and they must be the launch's.
 //!
+//! The cause 87-72 named is state, not settings: the plain branch's own `--demo-status` probe boots the bottle's
+//! wineserver and nothing stops it, so the launch meets a warm server (the restore branch's switch kills it
+//! first). The last cases pin the 87-77 fix: the plain branch stops that server before it hands the launch
+//! over, unless a game is running in the bottle.
+//!
 //! POSIX only, like the other engine goldens: the fake profile lays CrossOver and the bottles out as real
 //! files.
 #![cfg(unix)]

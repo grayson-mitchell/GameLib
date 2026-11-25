@@ -27,6 +27,7 @@ use std::time::Duration;
 
 use serde_json::{json, Map, Value};
 
+use crate::bottles::lifecycle::{dirname, kill_bottle_wineserver, KILL_TIMEOUT_MS};
 use crate::bottles::marker::{read_marker_summary, restore_needs_absent_pin};
 use crate::bottles::per_game::{
     ensure_per_game_bottle, CreationDecision as BottleCreation, CtxPerGameDeps, EnsureArgs,
@@ -52,6 +53,7 @@ use crate::fallback::ensure::{
 use crate::fallback::progress::STATUS_CHANNEL;
 use crate::game_prefix::{resolve_game_prefix, GamePrefix};
 use crate::ids::{pin_by_id, AUTOMATIC, CROSSOVER};
+use crate::jsutil::path_join;
 use crate::key::{engine_key_if_eligible, GameIdentity};
 use crate::launch::deadline::{self, ArmError, DeadlineKind, NoticeTarget};
 use crate::launch::dialogs::{notify_engine_fallback, show_engine_dialog, Notice};
@@ -474,6 +476,23 @@ pub(crate) async fn offline_gate_verdict(
     Some((input, verdict))
 }
 
+/// RF1 (87-72 `## Root cause`, confirmed by the 2026-11-25 isolating run): whether the bottle's wineserver
+/// may be a server the pre-flight's own `--demo-status` probe started. That is so on a CrossOver launch whose
+/// probe came back healthy and whose bottle was not switched. A switch stops the previous engine's server
+/// itself (`bottles::switch`, `kill_previous`), so after one the launch already starts cold. The probe boots
+/// the bottle without the launch's sync environment (`WINEESYNC` and `WINEMSYNC`), and legendary's or nile's
+/// wine child then never starts against that warm server.
+fn prepare_left_server_warm(
+    selection: &EngineSelection,
+    prepared: &PrepareResult,
+    probe_healthy: bool,
+) -> bool {
+    probe_healthy
+        && !prepared.switched
+        && matches!(prepared.outcome, PrepareOutcome::Prepared)
+        && matches!(selection, EngineSelection::Crossover { .. })
+}
+
 /// Select and prepare the engine for one launch (`selectEngineForLaunch`). `Skip` means the engine layer
 /// does not apply and the launch runs exactly as before.
 pub async fn select_engine_for_launch(
@@ -790,6 +809,23 @@ pub async fn select_engine_for_launch(
                     return step.refuse();
                 }
             }
+        }
+        // RF1: a CrossOver bottle the pre-flight probe warmed must not reach the launch warm.
+        if prepare_left_server_warm(
+            &selection,
+            &prepared,
+            matches!(decision.preflight, Some(CrossoverPreflight::Healthy { .. })),
+        ) && ctx.ledger.games_running_in(&bottle_name).is_empty()
+            && !bin_dir.is_empty()
+        {
+            kill_bottle_wineserver(
+                ctx,
+                &bottle_name,
+                &path_join(&[&bin_dir, "wineserver"]),
+                &[("CX_ROOT".to_string(), dirname(&bin_dir))],
+                Duration::from_millis(KILL_TIMEOUT_MS),
+            )
+            .await;
         }
         if ctx
             .ledger
