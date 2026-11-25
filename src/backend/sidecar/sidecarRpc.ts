@@ -228,17 +228,6 @@ const RUST_INVOKE_TIMEOUT_MS = 60_000
  * Seventeenth (Phase 87, 87-56a): `engine_fallback_ensure` is the first-need download of the pinned engine, a ~228 MB archive
  * the TS reporter let run with no cap of its own beyond the caller's abort. Rust bounds it by its cancel id
  * (`engine_cancel`) and the app shutdown (D-17), so no entry can outlive the sidecar.
- *
- * Eighteenth (Phase 88, 88-13): `knownfix_apply_profile_registry` applies a game's tier-2 registry fixes, one `reg add`
- * helper after another with its own 15 s limit, so several can pass the generic 60 s cap; `knownfix_profile_overlay_env`
- * installs a known-fix overlay on demand, a download with its own 120 s limit. The TS they replace had no cap of its
- * own beyond those limits, and a 60 s cut-off here would fail a launch that Rust is still carrying on. Each is ended by
- * its own limits and the app shutdown, so no entry can outlive the sidecar.
- *
- * Nineteenth (Phase 88, 88-14): `knownfix_apply_registry` is the Steam bridge's registry step, the same chain of 15 s
- * `reg add` helpers as the launcher's, and `knownfix_resolve_overlay_env` is the bridge's overlay install, the same
- * 120 s download. The TS they replace had no cap of its own beyond those limits either, and a 60 s cut-off would drop
- * a fix Rust is still applying. Each is ended by its own limits and the app shutdown.
  */
 const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_DIALOG_OPEN,
@@ -280,16 +269,34 @@ const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_ENGINE_RUN_TOOL,
   RUST_ENGINE_RESOLVE_TOOL_SETTINGS,
   RUST_ENGINE_FALLBACK_ENSURE,
-  RUST_KNOWNFIX_APPLY_PROFILE_REGISTRY,
-  RUST_KNOWNFIX_PROFILE_OVERLAY_ENV,
-  RUST_KNOWNFIX_APPLY_REGISTRY,
-  RUST_KNOWNFIX_RESOLVE_OVERLAY_ENV,
   RUST_WINE_WINETRICKS_APPLY,
   RUST_WINE_WINETRICKS_AVAILABLE,
   RUST_WINE_WINETRICKS_INSTALL,
   RUST_WINE_RUN_COMMAND_FOR_GAME,
   RUST_WINE_TOOL_CALL
 ]
+
+/**
+ * Channels that outlast the generic 60 s cap but still get a finite ceiling (WR-07, Phase 88 code review).
+ *
+ * `knownfix_apply_profile_registry` and `knownfix_apply_registry` apply a game's tier-2 registry fixes, one
+ * `reg add` helper after another with its own 15 s limit; `knownfix_profile_overlay_env` and
+ * `knownfix_resolve_overlay_env` install a known-fix overlay on demand, a download with its own 120 s limit.
+ * A 60 s cut-off would fail a launch Rust is still carrying on, so they are out of the generic cap. They are
+ * not human-gated, though, and every launch awaits two of them before the game starts: Rust bounds each step,
+ * but the shell's thread, argument decode and reply frame sit outside that bound, so a lost reply would hang
+ * the launch with no log line. Ten minutes comfortably exceeds the worst case in Rust (120 s plus several 15 s
+ * helpers) and still ends a lost reply with a named rejection, which the settle helpers turn into a warning.
+ */
+const LONG_RUST_CHANNELS: readonly string[] = [
+  RUST_KNOWNFIX_APPLY_PROFILE_REGISTRY,
+  RUST_KNOWNFIX_PROFILE_OVERLAY_ENV,
+  RUST_KNOWNFIX_APPLY_REGISTRY,
+  RUST_KNOWNFIX_RESOLVE_OVERLAY_ENV
+]
+
+/** The ceiling for a [`LONG_RUST_CHANNELS`] channel. */
+const RUST_LONG_INVOKE_TIMEOUT_MS = 10 * 60_000
 
 function isValidRequest(value: unknown): value is SidecarRpcRequest {
   if (!value || typeof value !== 'object') return false
@@ -724,14 +731,15 @@ export function createSidecarRpc(deps: SidecarRpcDeps): SidecarRpc {
       // CR-04: human-in-the-loop channels get no bound at all — see UNBOUNDED_RUST_CHANNELS.
       let timer: NodeJS.Timeout | null = null
       if (!UNBOUNDED_RUST_CHANNELS.includes(channel)) {
+        const timeoutMs = LONG_RUST_CHANNELS.includes(channel)
+          ? RUST_LONG_INVOKE_TIMEOUT_MS
+          : RUST_INVOKE_TIMEOUT_MS
         timer = setTimeout(() => {
           rustPending.delete(id)
           reject(
-            new Error(
-              `rustInvoke timed out after ${RUST_INVOKE_TIMEOUT_MS}ms: ${channel}`
-            )
+            new Error(`rustInvoke timed out after ${timeoutMs}ms: ${channel}`)
           )
-        }, RUST_INVOKE_TIMEOUT_MS)
+        }, timeoutMs)
         // Don't let a pending rustInvoke keep the process alive on its own -- the sidecar's
         // stdin listener is what actually keeps the event loop running; this timer should
         // never be the reason the process can't exit (e.g. Jest teardown, graceful shutdown).
