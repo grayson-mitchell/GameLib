@@ -1,0 +1,24 @@
+[
+  {
+    "seq": 1,
+    "name": "5678.abcd.1234.8086.pci.id.ucw.cz",
+    "answer": {
+      "txt": [
+        [
+          "i=Example Intel Graphics"
+        ]
+      ]
+    }
+  },
+  {
+    "seq": 2,
+    "name": "8086.pci.id.ucw.cz",
+    "answer": {
+      "txt": [
+        [
+          "i=Intel Corporation"
+        ]
+      ]
+    }
+  }
+]

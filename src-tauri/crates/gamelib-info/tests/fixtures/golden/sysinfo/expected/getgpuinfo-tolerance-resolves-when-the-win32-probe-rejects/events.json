@@ -1,0 +1,8 @@
+[
+  {
+    "seq": 1,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "Could not gather GPU info: Error: spawn powershell ENOENT"
+  }
+]

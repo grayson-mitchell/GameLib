@@ -66,5 +66,6079 @@
         "vendor": []
       }
     }
+  },
+  {
+    "id": "parselspcigpus-keeps-hybrid-gpus-in-order-including-0302-and-0380",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"Ubuntu\"\nVERSION=\"22.04.3 LTS (Jammy Jellyfish)\"\nID=ubuntu\nPRETTY_NAME=\"Ubuntu 22.04.3 LTS\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t04:00.0\nClass:\t0300\nVendor:\t8086\nDevice:\ta7a0\nRev:\tae\nProgIf:\t00\nDriver:\ti915\nModule:\ti915\n\nSlot:\t04:00.0\nClass:\t0302\nVendor:\t10de\nDevice:\t2860\nRev:\tae\nProgIf:\t00\nDriver:\tnvidia\nModule:\tnvidia\n\nSlot:\t04:00.0\nClass:\t0380\nVendor:\t1002\nDevice:\t1234\nRev:\tae\nProgIf:\t00\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "8086.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Intel Corporation"
+            ]
+          ]
+        },
+        "a7a0.8086.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Raptor Lake-P [Iris Xe Graphics]"
+            ]
+          ]
+        },
+        "2860.10de.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=AD107M [GeForce RTX 4060 Max-Q / Mobile]"
+            ]
+          ]
+        },
+        "10de.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=NVIDIA Corporation"
+            ]
+          ]
+        },
+        "1234.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Example Display Controller"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "parselspcigpus-omits-driverversion-without-driver-lowercases-hex-tolerates-crlf",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"Ubuntu\"\nVERSION=\"22.04.3 LTS (Jammy Jellyfish)\"\nID=ubuntu\nPRETTY_NAME=\"Ubuntu 22.04.3 LTS\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t04:00.0\r\nClass:\t0300\r\nVendor:\t10DE\r\nDevice:\t2860\r\nRev:\tae\r\nProgIf:\t00\r\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "2860.10de.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=AD107M [GeForce RTX 4060 Max-Q / Mobile]"
+            ]
+          ]
+        },
+        "10de.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=NVIDIA Corporation"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "parselspcigpus-returns-for-empty-or-garbage-output",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"Ubuntu\"\nVERSION=\"22.04.3 LTS (Jammy Jellyfish)\"\nID=ubuntu\nPRETTY_NAME=\"Ubuntu 22.04.3 LTS\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "nope\n\n::::\nClass:\tzz\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {},
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "lspci-empty-output",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"Ubuntu\"\nVERSION=\"22.04.3 LTS (Jammy Jellyfish)\"\nID=ubuntu\nPRETTY_NAME=\"Ubuntu 22.04.3 LTS\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": ""
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {},
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "lspci-record-with-malformed-ids",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"Ubuntu\"\nVERSION=\"22.04.3 LTS (Jammy Jellyfish)\"\nID=ubuntu\nPRETTY_NAME=\"Ubuntu 22.04.3 LTS\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Class:\t0300\nVendor:\txyz\nDevice:\t1"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {},
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "parselspcigpus-feeds-steam-deck-detection-s",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Custom APU 0405",
+        "cores": 8
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"SteamOS\"\nPRETTY_NAME=\"SteamOS Holo\"\nVERSION_ID=3.5.7\nVERSION_CODENAME=holo\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t163f\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "163f.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=VanGogh [Radeon Custom GPU]"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "getgpuinfo-linux-runs-one-lspci-call-through-the-runner-with-no-env-override",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"Ubuntu\"\nVERSION=\"22.04.3 LTS (Jammy Jellyfish)\"\nID=ubuntu\nPRETTY_NAME=\"Ubuntu 22.04.3 LTS\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t163f\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "163f.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=VanGogh [Radeon Custom GPU]"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "getgpuinfo-linux-resolves-on-enoent",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"Ubuntu\"\nVERSION=\"22.04.3 LTS (Jammy Jellyfish)\"\nID=ubuntu\nPRETTY_NAME=\"Ubuntu 22.04.3 LTS\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "throws": "spawn lspci ENOENT"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {},
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "getgpuinfo-linux-resolves-on-non-zero-exit",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"Ubuntu\"\nVERSION=\"22.04.3 LTS (Jammy Jellyfish)\"\nID=ubuntu\nPRETTY_NAME=\"Ubuntu 22.04.3 LTS\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "code": 1
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {},
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "getgpuinfo-linux-resolves-on-timeout",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"Ubuntu\"\nVERSION=\"22.04.3 LTS (Jammy Jellyfish)\"\nID=ubuntu\nPRETTY_NAME=\"Ubuntu 22.04.3 LTS\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "timedOut": true,
+        "code": null
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {},
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "getgpuinfo-tolerance-resolves-when-the-win32-probe-rejects",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "windows",
+      "arch": "x64",
+      "osRelease": "10.0.22631",
+      "cpu": {
+        "model": "12th Gen Intel(R) Core(TM) i7-12700K",
+        "cores": 20
+      },
+      "totalmem": 34359738368,
+      "freemem": 12884901888,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {},
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": null,
+      "free": null,
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": {
+        "throws": "spawn powershell ENOENT"
+      },
+      "powershellOs": {
+        "stdout": "{\"Caption\":\"Microsoft Windows 11 Pro\",\"Version\":\"10.0.22631\"}"
+      },
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {},
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "getgpuinfo-tolerance-resolves-when-lspci-is-missing-on-linux",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {
+        "FLATPAK_ID": "org.gamelib.GameLib"
+      },
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"Ubuntu\"\nVERSION=\"22.04.3 LTS (Jammy Jellyfish)\"\nID=ubuntu\nPRETTY_NAME=\"Ubuntu 22.04.3 LTS\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "throws": "spawn lspci ENOENT"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {},
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "system-information-probes-spawn-through-the-runner-free-b-with-a-replaced-lang-c-env-and-the-default-timeout",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"Ubuntu\"\nVERSION=\"22.04.3 LTS (Jammy Jellyfish)\"\nID=ubuntu\nPRETTY_NAME=\"Ubuntu 22.04.3 LTS\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t00:01.1\nClass:\t0604\nVendor:\t1022\nDevice:\t1634\nDriver:\tpcieport\n\nSlot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t73bf\nSVendor:\t1da2\nSDevice:\te445\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n\nSlot:\t00:14.0\nClass:\t0c03\nVendor:\t1022\nDevice:\t15b6\nDriver:\txhci_hcd\n"
+      },
+      "free": {
+        "stdout": "Mem:  1000  400  600\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "e445.1da2.73bf.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Navi 21 [Radeon RX 6800/6800 XT / 6900 XT]"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "system-information-probes-spawn-through-the-runner-free-rejects-on-enoent",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"Ubuntu\"\nVERSION=\"22.04.3 LTS (Jammy Jellyfish)\"\nID=ubuntu\nPRETTY_NAME=\"Ubuntu 22.04.3 LTS\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": null,
+      "free": {
+        "throws": "spawn free ENOENT"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": null,
+      "managers": null,
+      "dns": {},
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "system-information-probes-spawn-through-the-runner-macos-sysctl-then-vm-stat-timeout-falls-back-to-defaults",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "mac",
+      "arch": "arm64",
+      "osRelease": "23.4.0",
+      "cpu": {
+        "model": "Apple M2 Pro",
+        "cores": 12
+      },
+      "totalmem": 34359738368,
+      "freemem": 6442450944,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {},
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": null,
+      "free": null,
+      "sysctl": {
+        "timedOut": true,
+        "code": null
+      },
+      "vmStat": {
+        "stdout": "Pages active: 10\nPages wired down: 5\n"
+      },
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {},
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "system-information-probes-spawn-through-the-runner-macos-non-zero-vm-stat-yields-zero-used",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "mac",
+      "arch": "arm64",
+      "osRelease": "23.4.0",
+      "cpu": {
+        "model": "Apple M2 Pro",
+        "cores": 12
+      },
+      "totalmem": 34359738368,
+      "freemem": 6442450944,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {},
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": null,
+      "free": null,
+      "sysctl": {
+        "stdout": "16384"
+      },
+      "vmStat": {
+        "code": 1
+      },
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {},
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "system-information-probes-spawn-through-the-runner-windows-os-info-runs-powershell-and-falls-back-when-it-fails",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "windows",
+      "arch": "x64",
+      "osRelease": "10.0.22631",
+      "cpu": {
+        "model": "12th Gen Intel(R) Core(TM) i7-12700K",
+        "cores": 20
+      },
+      "totalmem": 34359738368,
+      "freemem": 12884901888,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {},
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": null,
+      "free": null,
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": {
+        "stdout": "[]"
+      },
+      "powershellOs": {
+        "code": 1
+      },
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {},
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "system-information-probes-spawn-through-the-runner-windows-gpu-info-parses-powershell-output",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "windows",
+      "arch": "x64",
+      "osRelease": "10.0.22631",
+      "cpu": {
+        "model": "12th Gen Intel(R) Core(TM) i7-12700K",
+        "cores": 20
+      },
+      "totalmem": 34359738368,
+      "freemem": 12884901888,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {},
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": null,
+      "free": null,
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": {
+        "stdout": "{\"AdapterCompatibility\":\"Intel Corporation\",\"DriverVersion\":\"1.2.3\",\"PnPDeviceID\":\"PCI\\\\VEN_8086&DEV_1234&SUBSYS_5678ABCD\"}"
+      },
+      "powershellOs": {
+        "stdout": "{\"Caption\":\"Microsoft Windows 11 Pro\",\"Version\":\"10.0.22631\"}"
+      },
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "8086.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Intel Corporation"
+            ]
+          ]
+        },
+        "5678.abcd.1234.8086.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Example Intel Graphics"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "debug-gog-spawn-reduction-fix-3-getsysteminfo-deps-in-flight-promise-memoization-concurrent-cache-true-callers-share-one-in-flight-fetch-each-version-probe-runs-exactly-once",
+    "call": {
+      "kind": "sequence",
+      "steps": [
+        {
+          "op": "start",
+          "call": "first"
+        },
+        {
+          "op": "start",
+          "call": "second"
+        },
+        {
+          "op": "start",
+          "call": "third"
+        },
+        {
+          "op": "await",
+          "call": "first"
+        },
+        {
+          "op": "await",
+          "call": "second"
+        },
+        {
+          "op": "await",
+          "call": "third"
+        }
+      ]
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"Ubuntu\"\nVERSION=\"22.04.3 LTS (Jammy Jellyfish)\"\nID=ubuntu\nPRETTY_NAME=\"Ubuntu 22.04.3 LTS\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t00:01.1\nClass:\t0604\nVendor:\t1022\nDevice:\t1634\nDriver:\tpcieport\n\nSlot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t73bf\nSVendor:\t1da2\nSDevice:\te445\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n\nSlot:\t00:14.0\nClass:\t0c03\nVendor:\t1022\nDevice:\t15b6\nDriver:\txhci_hcd\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "e445.1da2.73bf.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Navi 21 [Radeon RX 6800/6800 XT / 6900 XT]"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "debug-gog-spawn-reduction-fix-3-getsysteminfo-deps-in-flight-promise-memoization-a-caller-that-arrives-after-the-first-fetch-resolved-gets-the-cached-value-no-new-probes",
+    "call": {
+      "kind": "sequence",
+      "steps": [
+        {
+          "op": "start",
+          "call": "first"
+        },
+        {
+          "op": "await",
+          "call": "first"
+        },
+        {
+          "op": "start",
+          "call": "second"
+        },
+        {
+          "op": "await",
+          "call": "second"
+        }
+      ]
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"Ubuntu\"\nVERSION=\"22.04.3 LTS (Jammy Jellyfish)\"\nID=ubuntu\nPRETTY_NAME=\"Ubuntu 22.04.3 LTS\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t00:01.1\nClass:\t0604\nVendor:\t1022\nDevice:\t1634\nDriver:\tpcieport\n\nSlot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t73bf\nSVendor:\t1da2\nSDevice:\te445\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n\nSlot:\t00:14.0\nClass:\t0c03\nVendor:\t1022\nDevice:\t15b6\nDriver:\txhci_hcd\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "e445.1da2.73bf.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Navi 21 [Radeon RX 6800/6800 XT / 6900 XT]"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "debug-gog-spawn-reduction-fix-3-getsysteminfo-deps-in-flight-promise-memoization-cache-false-always-triggers-a-fresh-fetch-independent-of-any-in-flight-cache-true-call",
+    "call": {
+      "kind": "sequence",
+      "steps": [
+        {
+          "op": "start",
+          "call": "cached"
+        },
+        {
+          "op": "settle"
+        },
+        {
+          "op": "start",
+          "call": "forced",
+          "cache": false
+        },
+        {
+          "op": "await",
+          "call": "cached"
+        },
+        {
+          "op": "await",
+          "call": "forced"
+        }
+      ]
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"Ubuntu\"\nVERSION=\"22.04.3 LTS (Jammy Jellyfish)\"\nID=ubuntu\nPRETTY_NAME=\"Ubuntu 22.04.3 LTS\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t00:01.1\nClass:\t0604\nVendor:\t1022\nDevice:\t1634\nDriver:\tpcieport\n\nSlot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t73bf\nSVendor:\t1da2\nSDevice:\te445\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n\nSlot:\t00:14.0\nClass:\t0c03\nVendor:\t1022\nDevice:\t15b6\nDriver:\txhci_hcd\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "e445.1da2.73bf.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Navi 21 [Radeon RX 6800/6800 XT / 6900 XT]"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "debug-gog-spawn-reduction-fix-3-getsysteminfo-deps-in-flight-promise-memoization-a-second-cache-instance-fetches-again-nothing-is-shared-between-instances",
+    "call": {
+      "kind": "sequence",
+      "steps": [
+        {
+          "op": "start",
+          "call": "first"
+        },
+        {
+          "op": "await",
+          "call": "first"
+        },
+        {
+          "op": "newCache"
+        },
+        {
+          "op": "start",
+          "call": "second"
+        },
+        {
+          "op": "await",
+          "call": "second"
+        }
+      ]
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"Ubuntu\"\nVERSION=\"22.04.3 LTS (Jammy Jellyfish)\"\nID=ubuntu\nPRETTY_NAME=\"Ubuntu 22.04.3 LTS\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t00:01.1\nClass:\t0604\nVendor:\t1022\nDevice:\t1634\nDriver:\tpcieport\n\nSlot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t73bf\nSVendor:\t1da2\nSDevice:\te445\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n\nSlot:\t00:14.0\nClass:\t0c03\nVendor:\t1022\nDevice:\t15b6\nDriver:\txhci_hcd\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "e445.1da2.73bf.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Navi 21 [Radeon RX 6800/6800 XT / 6900 XT]"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "single-flight-two-forced-calls-each-fetch",
+    "call": {
+      "kind": "sequence",
+      "steps": [
+        {
+          "op": "start",
+          "call": "one",
+          "cache": false
+        },
+        {
+          "op": "start",
+          "call": "two",
+          "cache": false
+        },
+        {
+          "op": "await",
+          "call": "one"
+        },
+        {
+          "op": "await",
+          "call": "two"
+        }
+      ]
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"Ubuntu\"\nVERSION=\"22.04.3 LTS (Jammy Jellyfish)\"\nID=ubuntu\nPRETTY_NAME=\"Ubuntu 22.04.3 LTS\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t00:01.1\nClass:\t0604\nVendor:\t1022\nDevice:\t1634\nDriver:\tpcieport\n\nSlot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t73bf\nSVendor:\t1da2\nSDevice:\te445\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n\nSlot:\t00:14.0\nClass:\t0c03\nVendor:\t1022\nDevice:\t15b6\nDriver:\txhci_hcd\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "e445.1da2.73bf.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Navi 21 [Radeon RX 6800/6800 XT / 6900 XT]"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "single-flight-forced-call-after-the-cache-is-warm",
+    "call": {
+      "kind": "sequence",
+      "steps": [
+        {
+          "op": "start",
+          "call": "warm"
+        },
+        {
+          "op": "await",
+          "call": "warm"
+        },
+        {
+          "op": "start",
+          "call": "forced",
+          "cache": false
+        },
+        {
+          "op": "await",
+          "call": "forced"
+        },
+        {
+          "op": "start",
+          "call": "after"
+        },
+        {
+          "op": "await",
+          "call": "after"
+        }
+      ]
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"Ubuntu\"\nVERSION=\"22.04.3 LTS (Jammy Jellyfish)\"\nID=ubuntu\nPRETTY_NAME=\"Ubuntu 22.04.3 LTS\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t00:01.1\nClass:\t0604\nVendor:\t1022\nDevice:\t1634\nDriver:\tpcieport\n\nSlot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t73bf\nSVendor:\t1da2\nSDevice:\te445\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n\nSlot:\t00:14.0\nClass:\t0c03\nVendor:\t1022\nDevice:\t15b6\nDriver:\txhci_hcd\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "e445.1da2.73bf.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Navi 21 [Radeon RX 6800/6800 XT / 6900 XT]"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "free-non-zero-exit-reports-zero-memory",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"Ubuntu\"\nVERSION=\"22.04.3 LTS (Jammy Jellyfish)\"\nID=ubuntu\nPRETTY_NAME=\"Ubuntu 22.04.3 LTS\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t00:01.1\nClass:\t0604\nVendor:\t1022\nDevice:\t1634\nDriver:\tpcieport\n\nSlot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t73bf\nSVendor:\t1da2\nSDevice:\te445\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n\nSlot:\t00:14.0\nClass:\t0c03\nVendor:\t1022\nDevice:\t15b6\nDriver:\txhci_hcd\n"
+      },
+      "free": {
+        "code": 1
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "e445.1da2.73bf.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Navi 21 [Radeon RX 6800/6800 XT / 6900 XT]"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "free-timeout-reports-zero-memory",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"Ubuntu\"\nVERSION=\"22.04.3 LTS (Jammy Jellyfish)\"\nID=ubuntu\nPRETTY_NAME=\"Ubuntu 22.04.3 LTS\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t00:01.1\nClass:\t0604\nVendor:\t1022\nDevice:\t1634\nDriver:\tpcieport\n\nSlot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t73bf\nSVendor:\t1da2\nSDevice:\te445\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n\nSlot:\t00:14.0\nClass:\t0c03\nVendor:\t1022\nDevice:\t15b6\nDriver:\txhci_hcd\n"
+      },
+      "free": {
+        "timedOut": true,
+        "code": null
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "e445.1da2.73bf.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Navi 21 [Radeon RX 6800/6800 XT / 6900 XT]"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "free-output-without-a-labelled-line-reports-zero-memory",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"Ubuntu\"\nVERSION=\"22.04.3 LTS (Jammy Jellyfish)\"\nID=ubuntu\nPRETTY_NAME=\"Ubuntu 22.04.3 LTS\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t00:01.1\nClass:\t0604\nVendor:\t1022\nDevice:\t1634\nDriver:\tpcieport\n\nSlot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t73bf\nSVendor:\t1da2\nSDevice:\te445\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n\nSlot:\t00:14.0\nClass:\t0c03\nVendor:\t1022\nDevice:\t15b6\nDriver:\txhci_hcd\n"
+      },
+      "free": {
+        "stdout": "no labelled line here\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "e445.1da2.73bf.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Navi 21 [Radeon RX 6800/6800 XT / 6900 XT]"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "os-release-run-host-wins-over-snapd-and-etc",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/run/host/os-release": "NAME=\"Host OS\"\nVERSION=\"1\"\n",
+        "/var/lib/snapd/hostfs/etc/os-release": "NAME=\"Snap OS\"\nVERSION=\"2\"\n",
+        "/etc/os-release": "NAME=\"Ubuntu\"\nVERSION=\"22.04.3 LTS (Jammy Jellyfish)\"\nID=ubuntu\nPRETTY_NAME=\"Ubuntu 22.04.3 LTS\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t00:01.1\nClass:\t0604\nVendor:\t1022\nDevice:\t1634\nDriver:\tpcieport\n\nSlot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t73bf\nSVendor:\t1da2\nSDevice:\te445\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n\nSlot:\t00:14.0\nClass:\t0c03\nVendor:\t1022\nDevice:\t15b6\nDriver:\txhci_hcd\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "e445.1da2.73bf.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Navi 21 [Radeon RX 6800/6800 XT / 6900 XT]"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "os-release-snapd-hostfs-wins-over-etc",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/var/lib/snapd/hostfs/etc/os-release": "NAME=\"Snap OS\"\nVERSION=\"2\"\n",
+        "/etc/os-release": "NAME=\"Ubuntu\"\nVERSION=\"22.04.3 LTS (Jammy Jellyfish)\"\nID=ubuntu\nPRETTY_NAME=\"Ubuntu 22.04.3 LTS\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t00:01.1\nClass:\t0604\nVendor:\t1022\nDevice:\t1634\nDriver:\tpcieport\n\nSlot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t73bf\nSVendor:\t1da2\nSDevice:\te445\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n\nSlot:\t00:14.0\nClass:\t0c03\nVendor:\t1022\nDevice:\t15b6\nDriver:\txhci_hcd\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "e445.1da2.73bf.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Navi 21 [Radeon RX 6800/6800 XT / 6900 XT]"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "os-release-none-found",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {},
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t00:01.1\nClass:\t0604\nVendor:\t1022\nDevice:\t1634\nDriver:\tpcieport\n\nSlot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t73bf\nSVendor:\t1da2\nSDevice:\te445\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n\nSlot:\t00:14.0\nClass:\t0c03\nVendor:\t1022\nDevice:\t15b6\nDriver:\txhci_hcd\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "e445.1da2.73bf.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Navi 21 [Radeon RX 6800/6800 XT / 6900 XT]"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "os-release-pretty-name-only-has-no-version",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "PRETTY_NAME=\"Some Distro 1\"\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t00:01.1\nClass:\t0604\nVendor:\t1022\nDevice:\t1634\nDriver:\tpcieport\n\nSlot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t73bf\nSVendor:\t1da2\nSDevice:\te445\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n\nSlot:\t00:14.0\nClass:\t0c03\nVendor:\t1022\nDevice:\t15b6\nDriver:\txhci_hcd\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "e445.1da2.73bf.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Navi 21 [Radeon RX 6800/6800 XT / 6900 XT]"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "os-release-version-id-and-codename-without-version",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=Arch\nVERSION_ID=rolling\nVERSION_CODENAME=base\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t00:01.1\nClass:\t0604\nVendor:\t1022\nDevice:\t1634\nDriver:\tpcieport\n\nSlot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t73bf\nSVendor:\t1da2\nSDevice:\te445\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n\nSlot:\t00:14.0\nClass:\t0c03\nVendor:\t1022\nDevice:\t15b6\nDriver:\txhci_hcd\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "e445.1da2.73bf.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Navi 21 [Radeon RX 6800/6800 XT / 6900 XT]"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "os-release-quoted-version-id-keeps-its-quotes",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"Quoted\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t00:01.1\nClass:\t0604\nVendor:\t1022\nDevice:\t1634\nDriver:\tpcieport\n\nSlot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t73bf\nSVendor:\t1da2\nSDevice:\te445\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n\nSlot:\t00:14.0\nClass:\t0c03\nVendor:\t1022\nDevice:\t15b6\nDriver:\txhci_hcd\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "e445.1da2.73bf.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Navi 21 [Radeon RX 6800/6800 XT / 6900 XT]"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "os-release-without-name-fields-is-linux",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "ID=custom\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t00:01.1\nClass:\t0604\nVendor:\t1022\nDevice:\t1634\nDriver:\tpcieport\n\nSlot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t73bf\nSVendor:\t1da2\nSDevice:\te445\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n\nSlot:\t00:14.0\nClass:\t0c03\nVendor:\t1022\nDevice:\t15b6\nDriver:\txhci_hcd\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "e445.1da2.73bf.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Navi 21 [Radeon RX 6800/6800 XT / 6900 XT]"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "os-release-unquoted-name-and-quoted-version",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=Fedora Linux\nVERSION=\"39 (Workstation Edition)\"\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t00:01.1\nClass:\t0604\nVendor:\t1022\nDevice:\t1634\nDriver:\tpcieport\n\nSlot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t73bf\nSVendor:\t1da2\nSDevice:\te445\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n\nSlot:\t00:14.0\nClass:\t0c03\nVendor:\t1022\nDevice:\t15b6\nDriver:\txhci_hcd\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "e445.1da2.73bf.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Navi 21 [Radeon RX 6800/6800 XT / 6900 XT]"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "os-release-single-quotes-are-kept",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME='Quoted OS'\nVERSION='9'\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t00:01.1\nClass:\t0604\nVendor:\t1022\nDevice:\t1634\nDriver:\tpcieport\n\nSlot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t73bf\nSVendor:\t1da2\nSDevice:\te445\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n\nSlot:\t00:14.0\nClass:\t0c03\nVendor:\t1022\nDevice:\t15b6\nDriver:\txhci_hcd\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "e445.1da2.73bf.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Navi 21 [Radeon RX 6800/6800 XT / 6900 XT]"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "linux-flatpak-env-set",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {
+        "FLATPAK_ID": "org.gamelib.GameLib"
+      },
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"Ubuntu\"\nVERSION=\"22.04.3 LTS (Jammy Jellyfish)\"\nID=ubuntu\nPRETTY_NAME=\"Ubuntu 22.04.3 LTS\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t00:01.1\nClass:\t0604\nVendor:\t1022\nDevice:\t1634\nDriver:\tpcieport\n\nSlot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t73bf\nSVendor:\t1da2\nSDevice:\te445\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n\nSlot:\t00:14.0\nClass:\t0c03\nVendor:\t1022\nDevice:\t15b6\nDriver:\txhci_hcd\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "e445.1da2.73bf.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Navi 21 [Radeon RX 6800/6800 XT / 6900 XT]"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "linux-appimage-env-set",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {
+        "APPIMAGE": "/pins/GameLib.AppImage"
+      },
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"Ubuntu\"\nVERSION=\"22.04.3 LTS (Jammy Jellyfish)\"\nID=ubuntu\nPRETTY_NAME=\"Ubuntu 22.04.3 LTS\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t00:01.1\nClass:\t0604\nVendor:\t1022\nDevice:\t1634\nDriver:\tpcieport\n\nSlot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t73bf\nSVendor:\t1da2\nSDevice:\te445\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n\nSlot:\t00:14.0\nClass:\t0c03\nVendor:\t1022\nDevice:\t15b6\nDriver:\txhci_hcd\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "e445.1da2.73bf.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Navi 21 [Radeon RX 6800/6800 XT / 6900 XT]"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "linux-flatpak-and-appimage-env-set",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {
+        "FLATPAK_ID": "org.gamelib.GameLib",
+        "APPIMAGE": "/pins/GameLib.AppImage"
+      },
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"Ubuntu\"\nVERSION=\"22.04.3 LTS (Jammy Jellyfish)\"\nID=ubuntu\nPRETTY_NAME=\"Ubuntu 22.04.3 LTS\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t00:01.1\nClass:\t0604\nVendor:\t1022\nDevice:\t1634\nDriver:\tpcieport\n\nSlot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t73bf\nSVendor:\t1da2\nSDevice:\te445\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n\nSlot:\t00:14.0\nClass:\t0c03\nVendor:\t1022\nDevice:\t15b6\nDriver:\txhci_hcd\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "e445.1da2.73bf.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Navi 21 [Radeon RX 6800/6800 XT / 6900 XT]"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "windows-flatpak-env-text-has-no-linux-lines",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "windows",
+      "arch": "x64",
+      "osRelease": "10.0.22631",
+      "cpu": {
+        "model": "12th Gen Intel(R) Core(TM) i7-12700K",
+        "cores": 20
+      },
+      "totalmem": 34359738368,
+      "freemem": 12884901888,
+      "env": {
+        "FLATPAK_ID": "org.gamelib.GameLib"
+      },
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {},
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": null,
+      "free": null,
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": {
+        "stdout": "{\"AdapterCompatibility\":\"NVIDIA\",\"DriverVersion\":\"31.0.15.3713\",\"PnPDeviceID\":\"PCI\\\\VEN_10DE&DEV_2684&SUBSYS_88EE1043&REV_A1\\\\4&1A2B3C&0&0008\"}"
+      },
+      "powershellOs": {
+        "stdout": "{\"Caption\":\"Microsoft Windows 11 Pro\",\"Version\":\"10.0.22631\"}"
+      },
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "88ee.1043.2684.10de.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=AD104 [GeForce RTX 4070]"
+            ]
+          ]
+        },
+        "10de.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=NVIDIA Corporation"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "pci-sub-ids-missing-falls-back-and-writes-back",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"Ubuntu\"\nVERSION=\"22.04.3 LTS (Jammy Jellyfish)\"\nID=ubuntu\nPRETTY_NAME=\"Ubuntu 22.04.3 LTS\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t00:01.1\nClass:\t0604\nVendor:\t1022\nDevice:\t1634\nDriver:\tpcieport\n\nSlot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t73bf\nSVendor:\t1da2\nSDevice:\te445\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n\nSlot:\t00:14.0\nClass:\t0c03\nVendor:\t1022\nDevice:\t15b6\nDriver:\txhci_hcd\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "e445.1da2.73bf.1002.pci.id.ucw.cz": {
+          "error": "ENOTFOUND"
+        },
+        "73bf.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Navi 21 [Radeon RX 6800/6800 XT / 6900 XT]"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "pci-vendor-missing-drops-the-gpu",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"Ubuntu\"\nVERSION=\"22.04.3 LTS (Jammy Jellyfish)\"\nID=ubuntu\nPRETTY_NAME=\"Ubuntu 22.04.3 LTS\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t00:01.1\nClass:\t0604\nVendor:\t1022\nDevice:\t1634\nDriver:\tpcieport\n\nSlot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t73bf\nSVendor:\t1da2\nSDevice:\te445\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n\nSlot:\t00:14.0\nClass:\t0c03\nVendor:\t1022\nDevice:\t15b6\nDriver:\txhci_hcd\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "error": "ENOTFOUND"
+        },
+        "e445.1da2.73bf.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Navi 21 [Radeon RX 6800/6800 XT / 6900 XT]"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "pci-device-missing-drops-the-gpu",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"Ubuntu\"\nVERSION=\"22.04.3 LTS (Jammy Jellyfish)\"\nID=ubuntu\nPRETTY_NAME=\"Ubuntu 22.04.3 LTS\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t73bf\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "73bf.1002.pci.id.ucw.cz": {
+          "error": "ENOTFOUND"
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "pci-empty-txt-answer-drops-the-gpu",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"Ubuntu\"\nVERSION=\"22.04.3 LTS (Jammy Jellyfish)\"\nID=ubuntu\nPRETTY_NAME=\"Ubuntu 22.04.3 LTS\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t73bf\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "73bf.1002.pci.id.ucw.cz": {
+          "txt": []
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "pci-cache-hit-makes-no-lookup",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"Ubuntu\"\nVERSION=\"22.04.3 LTS (Jammy Jellyfish)\"\nID=ubuntu\nPRETTY_NAME=\"Ubuntu 22.04.3 LTS\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t00:01.1\nClass:\t0604\nVendor:\t1022\nDevice:\t1634\nDriver:\tpcieport\n\nSlot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t73bf\nSVendor:\t1da2\nSDevice:\te445\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n\nSlot:\t00:14.0\nClass:\t0c03\nVendor:\t1022\nDevice:\t15b6\nDriver:\txhci_hcd\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {},
+      "caches": {
+        "device": [
+          {
+            "key": "e445_1da2_73bf_1002",
+            "value": "Navi 21 [Radeon RX 6800/6800 XT / 6900 XT]",
+            "ageDays": 0
+          }
+        ],
+        "vendor": [
+          {
+            "key": "1002",
+            "value": "Advanced Micro Devices, Inc. [AMD/ATI]",
+            "ageDays": 0
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "pci-entries-six-days-old-are-still-cached",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"Ubuntu\"\nVERSION=\"22.04.3 LTS (Jammy Jellyfish)\"\nID=ubuntu\nPRETTY_NAME=\"Ubuntu 22.04.3 LTS\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t00:01.1\nClass:\t0604\nVendor:\t1022\nDevice:\t1634\nDriver:\tpcieport\n\nSlot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t73bf\nSVendor:\t1da2\nSDevice:\te445\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n\nSlot:\t00:14.0\nClass:\t0c03\nVendor:\t1022\nDevice:\t15b6\nDriver:\txhci_hcd\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {},
+      "caches": {
+        "device": [
+          {
+            "key": "e445_1da2_73bf_1002",
+            "value": "Navi 21 [Radeon RX 6800/6800 XT / 6900 XT]",
+            "ageDays": 6
+          }
+        ],
+        "vendor": [
+          {
+            "key": "1002",
+            "value": "Advanced Micro Devices, Inc. [AMD/ATI]",
+            "ageDays": 6
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "pci-entries-older-than-seven-days-are-looked-up-again",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"Ubuntu\"\nVERSION=\"22.04.3 LTS (Jammy Jellyfish)\"\nID=ubuntu\nPRETTY_NAME=\"Ubuntu 22.04.3 LTS\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t00:01.1\nClass:\t0604\nVendor:\t1022\nDevice:\t1634\nDriver:\tpcieport\n\nSlot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t73bf\nSVendor:\t1da2\nSDevice:\te445\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n\nSlot:\t00:14.0\nClass:\t0c03\nVendor:\t1022\nDevice:\t15b6\nDriver:\txhci_hcd\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "e445.1da2.73bf.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Navi 21 [Radeon RX 6800/6800 XT / 6900 XT]"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [
+          {
+            "key": "e445_1da2_73bf_1002",
+            "value": "Stale device name",
+            "ageDays": 8
+          }
+        ],
+        "vendor": [
+          {
+            "key": "1002",
+            "value": "Stale vendor name",
+            "ageDays": 8
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "pci-vendor-cached-device-looked-up",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"Ubuntu\"\nVERSION=\"22.04.3 LTS (Jammy Jellyfish)\"\nID=ubuntu\nPRETTY_NAME=\"Ubuntu 22.04.3 LTS\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t00:01.1\nClass:\t0604\nVendor:\t1022\nDevice:\t1634\nDriver:\tpcieport\n\nSlot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t73bf\nSVendor:\t1da2\nSDevice:\te445\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n\nSlot:\t00:14.0\nClass:\t0c03\nVendor:\t1022\nDevice:\t15b6\nDriver:\txhci_hcd\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "e445.1da2.73bf.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Navi 21 [Radeon RX 6800/6800 XT / 6900 XT]"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": [
+          {
+            "key": "1002",
+            "value": "Advanced Micro Devices, Inc. [AMD/ATI]",
+            "ageDays": 0
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "pci-generic-device-cached-sub-key-looked-up-then-written-back",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"Ubuntu\"\nVERSION=\"22.04.3 LTS (Jammy Jellyfish)\"\nID=ubuntu\nPRETTY_NAME=\"Ubuntu 22.04.3 LTS\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t00:01.1\nClass:\t0604\nVendor:\t1022\nDevice:\t1634\nDriver:\tpcieport\n\nSlot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t73bf\nSVendor:\t1da2\nSDevice:\te445\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n\nSlot:\t00:14.0\nClass:\t0c03\nVendor:\t1022\nDevice:\t15b6\nDriver:\txhci_hcd\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "e445.1da2.73bf.1002.pci.id.ucw.cz": {
+          "error": "ENOTFOUND"
+        }
+      },
+      "caches": {
+        "device": [
+          {
+            "key": "73bf_1002",
+            "value": "Navi 21 [Radeon RX 6800/6800 XT / 6900 XT]",
+            "ageDays": 0
+          }
+        ],
+        "vendor": [
+          {
+            "key": "1002",
+            "value": "Advanced Micro Devices, Inc. [AMD/ATI]",
+            "ageDays": 0
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "pci-two-gpus-of-one-vendor-share-the-vendor-lookup",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"Ubuntu\"\nVERSION=\"22.04.3 LTS (Jammy Jellyfish)\"\nID=ubuntu\nPRETTY_NAME=\"Ubuntu 22.04.3 LTS\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t73bf\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n\nSlot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t7340\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "73bf.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Navi 21 [Radeon RX 6800/6800 XT / 6900 XT]"
+            ]
+          ]
+        },
+        "7340.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Navi 14 [Radeon RX 5500/5500M / Pro 5500M]"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "pci-txt-answer-without-the-i-prefix-is-kept",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"Ubuntu\"\nVERSION=\"22.04.3 LTS (Jammy Jellyfish)\"\nID=ubuntu\nPRETTY_NAME=\"Ubuntu 22.04.3 LTS\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t73bf\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "73bf.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "Plain Name"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "pci-first-txt-record-wins",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"Ubuntu\"\nVERSION=\"22.04.3 LTS (Jammy Jellyfish)\"\nID=ubuntu\nPRETTY_NAME=\"Ubuntu 22.04.3 LTS\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t73bf\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "73bf.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=First",
+              "i=Chunk"
+            ],
+            [
+              "i=Second"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "steam-deck-apu-0405-lcd-game-mode",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Custom APU 0405",
+        "cores": 8
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": true,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"SteamOS\"\nPRETTY_NAME=\"SteamOS Holo\"\nVERSION_ID=3.5.7\nVERSION_CODENAME=holo\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t163f\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "163f.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=VanGogh [Radeon Custom GPU]"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "steam-deck-apu-0932-oled-desktop-mode",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Custom APU 0932",
+        "cores": 8
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"SteamOS\"\nPRETTY_NAME=\"SteamOS Holo\"\nVERSION_ID=3.5.7\nVERSION_CODENAME=holo\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t1435\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "1435.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=VanGogh [Radeon Custom GPU]"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "steam-deck-apu-0932-oled-game-mode",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Custom APU 0932",
+        "cores": 8
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": true,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"SteamOS\"\nPRETTY_NAME=\"SteamOS Holo\"\nVERSION_ID=3.5.7\nVERSION_CODENAME=holo\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t1435\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "1435.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=VanGogh [Radeon Custom GPU]"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "steam-deck-apu-0932-with-lcd-gpu-reports-lcd",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Custom APU 0932",
+        "cores": 8
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"SteamOS\"\nPRETTY_NAME=\"SteamOS Holo\"\nVERSION_ID=3.5.7\nVERSION_CODENAME=holo\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t163f\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "163f.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=VanGogh [Radeon Custom GPU]"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "steam-deck-apu-0405-with-oled-gpu-reports-oled",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Custom APU 0405",
+        "cores": 8
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": true,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"SteamOS\"\nPRETTY_NAME=\"SteamOS Holo\"\nVERSION_ID=3.5.7\nVERSION_CODENAME=holo\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t1435\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "1435.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=VanGogh [Radeon Custom GPU]"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "steam-deck-apu-with-nvidia-primary-gpu-is-not-a-deck",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Custom APU 0405",
+        "cores": 8
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"SteamOS\"\nPRETTY_NAME=\"SteamOS Holo\"\nVERSION_ID=3.5.7\nVERSION_CODENAME=holo\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t04:00.0\nClass:\t0302\nVendor:\t10de\nDevice:\t2860\nRev:\tae\nProgIf:\t00\nDriver:\tnvidia\nModule:\tnvidia\n\nSlot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t163f\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "2860.10de.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=AD107M [GeForce RTX 4060 Max-Q / Mobile]"
+            ]
+          ]
+        },
+        "10de.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=NVIDIA Corporation"
+            ]
+          ]
+        },
+        "163f.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=VanGogh [Radeon Custom GPU]"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "steam-deck-apu-with-unknown-amd-device-is-not-a-deck",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Custom APU 0405",
+        "cores": 8
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"SteamOS\"\nPRETTY_NAME=\"SteamOS Holo\"\nVERSION_ID=3.5.7\nVERSION_CODENAME=holo\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t73bf\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "73bf.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Navi 21 [Radeon RX 6800/6800 XT / 6900 XT]"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "steam-deck-apu-with-no-gpu-is-not-a-deck",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Custom APU 0405",
+        "cores": 8
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"SteamOS\"\nPRETTY_NAME=\"SteamOS Holo\"\nVERSION_ID=3.5.7\nVERSION_CODENAME=holo\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "nope\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {},
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "steam-deck-other-apu-with-deck-gpu-is-not-a-deck",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Custom APU 0000",
+        "cores": 8
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"SteamOS\"\nPRETTY_NAME=\"SteamOS Holo\"\nVERSION_ID=3.5.7\nVERSION_CODENAME=holo\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t163f\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "163f.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=VanGogh [Radeon Custom GPU]"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "steam-deck-game-mode-on-a-desktop-pc-is-not-a-deck",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": true,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"Ubuntu\"\nVERSION=\"22.04.3 LTS (Jammy Jellyfish)\"\nID=ubuntu\nPRETTY_NAME=\"Ubuntu 22.04.3 LTS\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t00:01.1\nClass:\t0604\nVendor:\t1022\nDevice:\t1634\nDriver:\tpcieport\n\nSlot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t73bf\nSVendor:\t1da2\nSDevice:\te445\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n\nSlot:\t00:14.0\nClass:\t0c03\nVendor:\t1022\nDevice:\t15b6\nDriver:\txhci_hcd\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "e445.1da2.73bf.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Navi 21 [Radeon RX 6800/6800 XT / 6900 XT]"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "mac-sysctl-and-vm-stat-success",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "mac",
+      "arch": "arm64",
+      "osRelease": "23.4.0",
+      "cpu": {
+        "model": "Apple M2 Pro",
+        "cores": 12
+      },
+      "totalmem": 34359738368,
+      "freemem": 6442450944,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {},
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": null,
+      "free": null,
+      "sysctl": {
+        "stdout": "16384\n"
+      },
+      "vmStat": {
+        "stdout": "Mach Virtual Memory Statistics: (page size of 16384 bytes)\nPages free:                               12345.\nPages active:                            100000.\nPages inactive:                           90000.\nPages speculative:                            1.\nPages wired down:                         50000.\n"
+      },
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {},
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "mac-sysctl-garbage-page-size-falls-back-to-4096",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "mac",
+      "arch": "arm64",
+      "osRelease": "23.4.0",
+      "cpu": {
+        "model": "Apple M2 Pro",
+        "cores": 12
+      },
+      "totalmem": 34359738368,
+      "freemem": 6442450944,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {},
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": null,
+      "free": null,
+      "sysctl": {
+        "stdout": "abc\n"
+      },
+      "vmStat": {
+        "stdout": "Mach Virtual Memory Statistics: (page size of 16384 bytes)\nPages free:                               12345.\nPages active:                            100000.\nPages inactive:                           90000.\nPages speculative:                            1.\nPages wired down:                         50000.\n"
+      },
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {},
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "mac-sysctl-spawn-failure-rejects-the-whole-read",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "mac",
+      "arch": "arm64",
+      "osRelease": "23.4.0",
+      "cpu": {
+        "model": "Apple M2 Pro",
+        "cores": 12
+      },
+      "totalmem": 34359738368,
+      "freemem": 6442450944,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {},
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": null,
+      "free": null,
+      "sysctl": {
+        "throws": "spawn sysctl ENOENT"
+      },
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": null,
+      "managers": null,
+      "dns": {},
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "mac-vm-stat-unparseable-reports-zero-used",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "mac",
+      "arch": "arm64",
+      "osRelease": "23.4.0",
+      "cpu": {
+        "model": "Apple M2 Pro",
+        "cores": 12
+      },
+      "totalmem": 34359738368,
+      "freemem": 6442450944,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {},
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": null,
+      "free": null,
+      "sysctl": {
+        "stdout": "16384\n"
+      },
+      "vmStat": {
+        "stdout": "nothing useful\n"
+      },
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {},
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "mac-vm-stat-timeout-reports-zero-used",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "mac",
+      "arch": "arm64",
+      "osRelease": "23.4.0",
+      "cpu": {
+        "model": "Apple M2 Pro",
+        "cores": 12
+      },
+      "totalmem": 34359738368,
+      "freemem": 6442450944,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {},
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": null,
+      "free": null,
+      "sysctl": {
+        "stdout": "16384\n"
+      },
+      "vmStat": {
+        "timedOut": true,
+        "code": null
+      },
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {},
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "mac-comet-bundled-path-arm64",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "mac",
+      "arch": "arm64",
+      "osRelease": "23.4.0",
+      "cpu": {
+        "model": "Apple M2 Pro",
+        "cores": 12
+      },
+      "totalmem": 34359738368,
+      "freemem": 6442450944,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {},
+      "appVersion": "2.15.0",
+      "altCometBin": null,
+      "lspci": null,
+      "free": null,
+      "sysctl": {
+        "stdout": "16384\n"
+      },
+      "vmStat": {
+        "stdout": "Mach Virtual Memory Statistics: (page size of 16384 bytes)\nPages free:                               12345.\nPages active:                            100000.\nPages inactive:                           90000.\nPages speculative:                            1.\nPages wired down:                         50000.\n"
+      },
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {},
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "windows-gpu-array-nvidia-and-amd",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "windows",
+      "arch": "x64",
+      "osRelease": "10.0.22631",
+      "cpu": {
+        "model": "12th Gen Intel(R) Core(TM) i7-12700K",
+        "cores": 20
+      },
+      "totalmem": 34359738368,
+      "freemem": 12884901888,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {},
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": null,
+      "free": null,
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": {
+        "stdout": "[{\"AdapterCompatibility\":\"NVIDIA\",\"DriverVersion\":\"31.0.15.3713\",\"PnPDeviceID\":\"PCI\\\\VEN_10DE&DEV_2684&SUBSYS_88EE1043&REV_A1\\\\4&1A2B3C&0&0008\"},{\"AdapterCompatibility\":\"Advanced Micro Devices, Inc.\",\"DriverVersion\":\"31.0.21001.1\",\"PnPDeviceID\":\"PCI\\\\VEN_1002&DEV_1681&SUBSYS_88231043&REV_C7\\\\4&2B3C4D&0&0108\"}]"
+      },
+      "powershellOs": {
+        "stdout": "{\"Caption\":\"Microsoft Windows 11 Pro\",\"Version\":\"10.0.22631\"}"
+      },
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "88ee.1043.2684.10de.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=AD104 [GeForce RTX 4070]"
+            ]
+          ]
+        },
+        "10de.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=NVIDIA Corporation"
+            ]
+          ]
+        },
+        "8823.1043.1681.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Cezanne [Radeon Vega Series]"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "windows-gpu-malformed-json-yields-no-gpu",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "windows",
+      "arch": "x64",
+      "osRelease": "10.0.22631",
+      "cpu": {
+        "model": "12th Gen Intel(R) Core(TM) i7-12700K",
+        "cores": 20
+      },
+      "totalmem": 34359738368,
+      "freemem": 12884901888,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {},
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": null,
+      "free": null,
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": {
+        "stdout": "not json"
+      },
+      "powershellOs": {
+        "stdout": "{\"Caption\":\"Microsoft Windows 11 Pro\",\"Version\":\"10.0.22631\"}"
+      },
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {},
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "windows-gpu-json-with-missing-fields-yields-no-gpu",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "windows",
+      "arch": "x64",
+      "osRelease": "10.0.22631",
+      "cpu": {
+        "model": "12th Gen Intel(R) Core(TM) i7-12700K",
+        "cores": 20
+      },
+      "totalmem": 34359738368,
+      "freemem": 12884901888,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {},
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": null,
+      "free": null,
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": {
+        "stdout": "{\"AdapterCompatibility\":\"NVIDIA\"}"
+      },
+      "powershellOs": {
+        "stdout": "{\"Caption\":\"Microsoft Windows 11 Pro\",\"Version\":\"10.0.22631\"}"
+      },
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {},
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "windows-gpu-pnp-id-without-ven-and-dev-is-skipped",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "windows",
+      "arch": "x64",
+      "osRelease": "10.0.22631",
+      "cpu": {
+        "model": "12th Gen Intel(R) Core(TM) i7-12700K",
+        "cores": 20
+      },
+      "totalmem": 34359738368,
+      "freemem": 12884901888,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {},
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": null,
+      "free": null,
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": {
+        "stdout": "{\"AdapterCompatibility\":\"NVIDIA\",\"DriverVersion\":\"31.0.15.3713\",\"PnPDeviceID\":\"USB\\\\ROOT_HUB30\\\\4&1\"}"
+      },
+      "powershellOs": {
+        "stdout": "{\"Caption\":\"Microsoft Windows 11 Pro\",\"Version\":\"10.0.22631\"}"
+      },
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {},
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "windows-gpu-timeout-yields-no-gpu",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "windows",
+      "arch": "x64",
+      "osRelease": "10.0.22631",
+      "cpu": {
+        "model": "12th Gen Intel(R) Core(TM) i7-12700K",
+        "cores": 20
+      },
+      "totalmem": 34359738368,
+      "freemem": 12884901888,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {},
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": null,
+      "free": null,
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": {
+        "timedOut": true,
+        "code": null
+      },
+      "powershellOs": {
+        "stdout": "{\"Caption\":\"Microsoft Windows 11 Pro\",\"Version\":\"10.0.22631\"}"
+      },
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {},
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "windows-os-info-success-and-memory-from-os-module",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "windows",
+      "arch": "x64",
+      "osRelease": "10.0.22631",
+      "cpu": {
+        "model": "12th Gen Intel(R) Core(TM) i7-12700K",
+        "cores": 20
+      },
+      "totalmem": 34359738368,
+      "freemem": 12884901888,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {},
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": null,
+      "free": null,
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": {
+        "stdout": "{\"AdapterCompatibility\":\"NVIDIA\",\"DriverVersion\":\"31.0.15.3713\",\"PnPDeviceID\":\"PCI\\\\VEN_10DE&DEV_2684&SUBSYS_88EE1043&REV_A1\\\\4&1A2B3C&0&0008\"}"
+      },
+      "powershellOs": {
+        "stdout": "{\"Caption\":\"Microsoft Windows 11 Pro\",\"Version\":\"10.0.22631\"}"
+      },
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "88ee.1043.2684.10de.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=AD104 [GeForce RTX 4070]"
+            ]
+          ]
+        },
+        "10de.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=NVIDIA Corporation"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "windows-os-info-malformed-json-falls-back",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "windows",
+      "arch": "x64",
+      "osRelease": "10.0.22631",
+      "cpu": {
+        "model": "12th Gen Intel(R) Core(TM) i7-12700K",
+        "cores": 20
+      },
+      "totalmem": 34359738368,
+      "freemem": 12884901888,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {},
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": null,
+      "free": null,
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": {
+        "stdout": "{\"AdapterCompatibility\":\"NVIDIA\",\"DriverVersion\":\"31.0.15.3713\",\"PnPDeviceID\":\"PCI\\\\VEN_10DE&DEV_2684&SUBSYS_88EE1043&REV_A1\\\\4&1A2B3C&0&0008\"}"
+      },
+      "powershellOs": {
+        "stdout": "oops"
+      },
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "88ee.1043.2684.10de.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=AD104 [GeForce RTX 4070]"
+            ]
+          ]
+        },
+        "10de.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=NVIDIA Corporation"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "windows-os-info-powershell-missing-rejects-the-whole-read",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "windows",
+      "arch": "x64",
+      "osRelease": "10.0.22631",
+      "cpu": {
+        "model": "12th Gen Intel(R) Core(TM) i7-12700K",
+        "cores": 20
+      },
+      "totalmem": 34359738368,
+      "freemem": 12884901888,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {},
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": null,
+      "free": null,
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": {
+        "stdout": "{\"AdapterCompatibility\":\"NVIDIA\",\"DriverVersion\":\"31.0.15.3713\",\"PnPDeviceID\":\"PCI\\\\VEN_10DE&DEV_2684&SUBSYS_88EE1043&REV_A1\\\\4&1A2B3C&0&0008\"}"
+      },
+      "powershellOs": {
+        "throws": "spawn powershell ENOENT"
+      },
+      "comet": null,
+      "managers": null,
+      "dns": {
+        "88ee.1043.2684.10de.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=AD104 [GeForce RTX 4070]"
+            ]
+          ]
+        },
+        "10de.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=NVIDIA Corporation"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "windows-comet-bundled-path-exe",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "windows",
+      "arch": "x64",
+      "osRelease": "10.0.22631",
+      "cpu": {
+        "model": "12th Gen Intel(R) Core(TM) i7-12700K",
+        "cores": 20
+      },
+      "totalmem": 34359738368,
+      "freemem": 12884901888,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {},
+      "appVersion": "2.15.0",
+      "altCometBin": null,
+      "lspci": null,
+      "free": null,
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": {
+        "stdout": "{\"AdapterCompatibility\":\"NVIDIA\",\"DriverVersion\":\"31.0.15.3713\",\"PnPDeviceID\":\"PCI\\\\VEN_10DE&DEV_2684&SUBSYS_88EE1043&REV_A1\\\\4&1A2B3C&0&0008\"}"
+      },
+      "powershellOs": {
+        "stdout": "{\"Caption\":\"Microsoft Windows 11 Pro\",\"Version\":\"10.0.22631\"}"
+      },
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "88ee.1043.2684.10de.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=AD104 [GeForce RTX 4070]"
+            ]
+          ]
+        },
+        "10de.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=NVIDIA Corporation"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "legendary-output-without-codename-is-invalid",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"Ubuntu\"\nVERSION=\"22.04.3 LTS (Jammy Jellyfish)\"\nID=ubuntu\nPRETTY_NAME=\"Ubuntu 22.04.3 LTS\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t00:01.1\nClass:\t0604\nVendor:\t1022\nDevice:\t1634\nDriver:\tpcieport\n\nSlot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t73bf\nSVendor:\t1da2\nSDevice:\te445\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n\nSlot:\t00:14.0\nClass:\t0c03\nVendor:\t1022\nDevice:\t15b6\nDriver:\txhci_hcd\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary 0.20.33\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "e445.1da2.73bf.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Navi 21 [Radeon RX 6800/6800 XT / 6900 XT]"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "legendary-error-is-invalid",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"Ubuntu\"\nVERSION=\"22.04.3 LTS (Jammy Jellyfish)\"\nID=ubuntu\nPRETTY_NAME=\"Ubuntu 22.04.3 LTS\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t00:01.1\nClass:\t0604\nVendor:\t1022\nDevice:\t1634\nDriver:\tpcieport\n\nSlot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t73bf\nSVendor:\t1da2\nSDevice:\te445\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n\nSlot:\t00:14.0\nClass:\t0c03\nVendor:\t1022\nDevice:\t15b6\nDriver:\txhci_hcd\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "error": "boom"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "e445.1da2.73bf.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Navi 21 [Radeon RX 6800/6800 XT / 6900 XT]"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "legendary-abort-is-invalid",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"Ubuntu\"\nVERSION=\"22.04.3 LTS (Jammy Jellyfish)\"\nID=ubuntu\nPRETTY_NAME=\"Ubuntu 22.04.3 LTS\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t00:01.1\nClass:\t0604\nVendor:\t1022\nDevice:\t1634\nDriver:\tpcieport\n\nSlot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t73bf\nSVendor:\t1da2\nSDevice:\te445\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n\nSlot:\t00:14.0\nClass:\t0c03\nVendor:\t1022\nDevice:\t15b6\nDriver:\txhci_hcd\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "abort": true
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "e445.1da2.73bf.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Navi 21 [Radeon RX 6800/6800 XT / 6900 XT]"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "gogdl-error-is-invalid",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"Ubuntu\"\nVERSION=\"22.04.3 LTS (Jammy Jellyfish)\"\nID=ubuntu\nPRETTY_NAME=\"Ubuntu 22.04.3 LTS\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t00:01.1\nClass:\t0604\nVendor:\t1022\nDevice:\t1634\nDriver:\tpcieport\n\nSlot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t73bf\nSVendor:\t1da2\nSDevice:\te445\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n\nSlot:\t00:14.0\nClass:\t0c03\nVendor:\t1022\nDevice:\t15b6\nDriver:\txhci_hcd\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "error": "boom"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "e445.1da2.73bf.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Navi 21 [Radeon RX 6800/6800 XT / 6900 XT]"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "gogdl-stdout-is-returned-raw",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"Ubuntu\"\nVERSION=\"22.04.3 LTS (Jammy Jellyfish)\"\nID=ubuntu\nPRETTY_NAME=\"Ubuntu 22.04.3 LTS\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t00:01.1\nClass:\t0604\nVendor:\t1022\nDevice:\t1634\nDriver:\tpcieport\n\nSlot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t73bf\nSVendor:\t1da2\nSDevice:\te445\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n\nSlot:\t00:14.0\nClass:\t0c03\nVendor:\t1022\nDevice:\t15b6\nDriver:\txhci_hcd\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2\n"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "e445.1da2.73bf.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Navi 21 [Radeon RX 6800/6800 XT / 6900 XT]"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "nile-error-is-invalid",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"Ubuntu\"\nVERSION=\"22.04.3 LTS (Jammy Jellyfish)\"\nID=ubuntu\nPRETTY_NAME=\"Ubuntu 22.04.3 LTS\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t00:01.1\nClass:\t0604\nVendor:\t1022\nDevice:\t1634\nDriver:\tpcieport\n\nSlot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t73bf\nSVendor:\t1da2\nSDevice:\te445\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n\nSlot:\t00:14.0\nClass:\t0c03\nVendor:\t1022\nDevice:\t15b6\nDriver:\txhci_hcd\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "error": "boom"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "e445.1da2.73bf.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Navi 21 [Radeon RX 6800/6800 XT / 6900 XT]"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "nile-stdout-is-returned-raw",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"Ubuntu\"\nVERSION=\"22.04.3 LTS (Jammy Jellyfish)\"\nID=ubuntu\nPRETTY_NAME=\"Ubuntu 22.04.3 LTS\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t00:01.1\nClass:\t0604\nVendor:\t1022\nDevice:\t1634\nDriver:\tpcieport\n\nSlot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t73bf\nSVendor:\t1da2\nSDevice:\te445\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n\nSlot:\t00:14.0\nClass:\t0c03\nVendor:\t1022\nDevice:\t15b6\nDriver:\txhci_hcd\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4\n"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "e445.1da2.73bf.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Navi 21 [Radeon RX 6800/6800 XT / 6900 XT]"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "comet-timeout-is-invalid",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"Ubuntu\"\nVERSION=\"22.04.3 LTS (Jammy Jellyfish)\"\nID=ubuntu\nPRETTY_NAME=\"Ubuntu 22.04.3 LTS\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t00:01.1\nClass:\t0604\nVendor:\t1022\nDevice:\t1634\nDriver:\tpcieport\n\nSlot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t73bf\nSVendor:\t1da2\nSDevice:\te445\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n\nSlot:\t00:14.0\nClass:\t0c03\nVendor:\t1022\nDevice:\t15b6\nDriver:\txhci_hcd\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "timedOut": true,
+        "code": null
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "e445.1da2.73bf.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Navi 21 [Radeon RX 6800/6800 XT / 6900 XT]"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "comet-spawn-failure-is-invalid",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"Ubuntu\"\nVERSION=\"22.04.3 LTS (Jammy Jellyfish)\"\nID=ubuntu\nPRETTY_NAME=\"Ubuntu 22.04.3 LTS\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t00:01.1\nClass:\t0604\nVendor:\t1022\nDevice:\t1634\nDriver:\tpcieport\n\nSlot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t73bf\nSVendor:\t1da2\nSDevice:\te445\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n\nSlot:\t00:14.0\nClass:\t0c03\nVendor:\t1022\nDevice:\t15b6\nDriver:\txhci_hcd\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "throws": "spawn comet ENOENT"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "e445.1da2.73bf.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Navi 21 [Radeon RX 6800/6800 XT / 6900 XT]"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "comet-output-is-right-trimmed",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"Ubuntu\"\nVERSION=\"22.04.3 LTS (Jammy Jellyfish)\"\nID=ubuntu\nPRETTY_NAME=\"Ubuntu 22.04.3 LTS\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t00:01.1\nClass:\t0604\nVendor:\t1022\nDevice:\t1634\nDriver:\tpcieport\n\nSlot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t73bf\nSVendor:\t1da2\nSDevice:\te445\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n\nSlot:\t00:14.0\nClass:\t0c03\nVendor:\t1022\nDevice:\t15b6\nDriver:\txhci_hcd\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3  \n\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "e445.1da2.73bf.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Navi 21 [Radeon RX 6800/6800 XT / 6900 XT]"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "comet-non-zero-exit-keeps-its-stdout",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"Ubuntu\"\nVERSION=\"22.04.3 LTS (Jammy Jellyfish)\"\nID=ubuntu\nPRETTY_NAME=\"Ubuntu 22.04.3 LTS\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t00:01.1\nClass:\t0604\nVendor:\t1022\nDevice:\t1634\nDriver:\tpcieport\n\nSlot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t73bf\nSVendor:\t1da2\nSDevice:\te445\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n\nSlot:\t00:14.0\nClass:\t0c03\nVendor:\t1022\nDevice:\t15b6\nDriver:\txhci_hcd\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "code": 1,
+        "stdout": "broken\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "e445.1da2.73bf.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Navi 21 [Radeon RX 6800/6800 XT / 6900 XT]"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "comet-bundled-path-linux-x64",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"Ubuntu\"\nVERSION=\"22.04.3 LTS (Jammy Jellyfish)\"\nID=ubuntu\nPRETTY_NAME=\"Ubuntu 22.04.3 LTS\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": null,
+      "lspci": {
+        "stdout": "Slot:\t00:01.1\nClass:\t0604\nVendor:\t1022\nDevice:\t1634\nDriver:\tpcieport\n\nSlot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t73bf\nSVendor:\t1da2\nSDevice:\te445\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n\nSlot:\t00:14.0\nClass:\t0c03\nVendor:\t1022\nDevice:\t15b6\nDriver:\txhci_hcd\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "e445.1da2.73bf.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Navi 21 [Radeon RX 6800/6800 XT / 6900 XT]"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "app-version-beta-has-the-beta-name",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"Ubuntu\"\nVERSION=\"22.04.3 LTS (Jammy Jellyfish)\"\nID=ubuntu\nPRETTY_NAME=\"Ubuntu 22.04.3 LTS\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n"
+      },
+      "appVersion": "2.16.0-beta.1",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t00:01.1\nClass:\t0604\nVendor:\t1022\nDevice:\t1634\nDriver:\tpcieport\n\nSlot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t73bf\nSVendor:\t1da2\nSDevice:\te445\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n\nSlot:\t00:14.0\nClass:\t0c03\nVendor:\t1022\nDevice:\t15b6\nDriver:\txhci_hcd\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "e445.1da2.73bf.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Navi 21 [Radeon RX 6800/6800 XT / 6900 XT]"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "app-version-alpha-has-the-beta-name",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cores": 16
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"Ubuntu\"\nVERSION=\"22.04.3 LTS (Jammy Jellyfish)\"\nID=ubuntu\nPRETTY_NAME=\"Ubuntu 22.04.3 LTS\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n"
+      },
+      "appVersion": "2.16.0-alpha.2",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t00:01.1\nClass:\t0604\nVendor:\t1022\nDevice:\t1634\nDriver:\tpcieport\n\nSlot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t73bf\nSVendor:\t1da2\nSDevice:\te445\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n\nSlot:\t00:14.0\nClass:\t0c03\nVendor:\t1022\nDevice:\t15b6\nDriver:\txhci_hcd\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "e445.1da2.73bf.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Navi 21 [Radeon RX 6800/6800 XT / 6900 XT]"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "no-cpus-reported-rejects-after-the-probes",
+    "call": {
+      "kind": "info"
+    },
+    "scenario": {
+      "platform": "linux",
+      "arch": "x64",
+      "osRelease": "6.5.0-31-generic",
+      "cpu": {
+        "model": "",
+        "cores": 0
+      },
+      "totalmem": 17179869184,
+      "freemem": 4294967296,
+      "env": {},
+      "steamDeckGameMode": false,
+      "osReleaseFiles": {
+        "/etc/os-release": "NAME=\"Ubuntu\"\nVERSION=\"22.04.3 LTS (Jammy Jellyfish)\"\nID=ubuntu\nPRETTY_NAME=\"Ubuntu 22.04.3 LTS\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n"
+      },
+      "appVersion": "2.15.0",
+      "altCometBin": "/pins/bin/comet",
+      "lspci": {
+        "stdout": "Slot:\t00:01.1\nClass:\t0604\nVendor:\t1022\nDevice:\t1634\nDriver:\tpcieport\n\nSlot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t73bf\nSVendor:\t1da2\nSDevice:\te445\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n\nSlot:\t00:14.0\nClass:\t0c03\nVendor:\t1022\nDevice:\t15b6\nDriver:\txhci_hcd\n"
+      },
+      "free": {
+        "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n"
+      },
+      "sysctl": null,
+      "vmStat": null,
+      "powershellGpu": null,
+      "powershellOs": null,
+      "comet": {
+        "stdout": "comet 0.1.3\n"
+      },
+      "managers": {
+        "legendary": {
+          "stdout": "legendary version \"0.20.33\", codename \"Undue Alarm\"\n"
+        },
+        "gog": {
+          "stdout": "0.9.2"
+        },
+        "nile": {
+          "stdout": "1.0.4"
+        }
+      },
+      "dns": {
+        "1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+            ]
+          ]
+        },
+        "e445.1da2.73bf.1002.pci.id.ucw.cz": {
+          "txt": [
+            [
+              "i=Navi 21 [Radeon RX 6800/6800 XT / 6900 XT]"
+            ]
+          ]
+        }
+      },
+      "caches": {
+        "device": [],
+        "vendor": []
+      }
+    }
+  },
+  {
+    "id": "filesize-vectors",
+    "call": {
+      "kind": "filesize",
+      "values": [
+        0,
+        1,
+        999,
+        1000,
+        1023,
+        1024,
+        1536,
+        999999,
+        1000000,
+        1048575,
+        1048576,
+        999999999,
+        1073741823,
+        1073741824,
+        16642998272,
+        999999999999,
+        1099511627775,
+        1099511627777,
+        1125899906842623
+      ]
+    },
+    "scenario": null
   }
 ]

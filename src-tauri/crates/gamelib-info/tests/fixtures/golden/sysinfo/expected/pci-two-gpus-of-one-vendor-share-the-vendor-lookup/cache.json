@@ -1,0 +1,15 @@
+{
+  "before": {
+    "device": {},
+    "vendor": {}
+  },
+  "after": {
+    "device": {
+      "7340_1002": "Navi 14 [Radeon RX 5500/5500M / Pro 5500M]",
+      "73bf_1002": "Navi 21 [Radeon RX 6800/6800 XT / 6900 XT]"
+    },
+    "vendor": {
+      "1002": "Advanced Micro Devices, Inc. [AMD/ATI]"
+    }
+  }
+}

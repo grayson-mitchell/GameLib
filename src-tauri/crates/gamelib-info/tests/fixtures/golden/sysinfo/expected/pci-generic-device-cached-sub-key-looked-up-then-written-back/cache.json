@@ -1,0 +1,19 @@
+{
+  "before": {
+    "device": {
+      "73bf_1002": "Navi 21 [Radeon RX 6800/6800 XT / 6900 XT]"
+    },
+    "vendor": {
+      "1002": "Advanced Micro Devices, Inc. [AMD/ATI]"
+    }
+  },
+  "after": {
+    "device": {
+      "73bf_1002": "Navi 21 [Radeon RX 6800/6800 XT / 6900 XT]",
+      "e445_1da2_73bf_1002": "Navi 21 [Radeon RX 6800/6800 XT / 6900 XT]"
+    },
+    "vendor": {
+      "1002": "Advanced Micro Devices, Inc. [AMD/ATI]"
+    }
+  }
+}

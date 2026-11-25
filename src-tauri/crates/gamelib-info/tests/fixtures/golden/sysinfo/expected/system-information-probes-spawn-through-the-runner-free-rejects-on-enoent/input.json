@@ -1,0 +1,39 @@
+{
+  "id": "system-information-probes-spawn-through-the-runner-free-rejects-on-enoent",
+  "call": {
+    "kind": "info"
+  },
+  "scenario": {
+    "platform": "linux",
+    "arch": "x64",
+    "osRelease": "6.5.0-31-generic",
+    "cpu": {
+      "model": "AMD Ryzen 7 5800X 8-Core Processor",
+      "cores": 16
+    },
+    "totalmem": 17179869184,
+    "freemem": 4294967296,
+    "env": {},
+    "steamDeckGameMode": false,
+    "osReleaseFiles": {
+      "/etc/os-release": "NAME=\"Ubuntu\"\nVERSION=\"22.04.3 LTS (Jammy Jellyfish)\"\nID=ubuntu\nPRETTY_NAME=\"Ubuntu 22.04.3 LTS\"\nVERSION_ID=\"22.04\"\nVERSION_CODENAME=jammy\n"
+    },
+    "appVersion": "2.15.0",
+    "altCometBin": "/pins/bin/comet",
+    "lspci": null,
+    "free": {
+      "throws": "spawn free ENOENT"
+    },
+    "sysctl": null,
+    "vmStat": null,
+    "powershellGpu": null,
+    "powershellOs": null,
+    "comet": null,
+    "managers": null,
+    "dns": {},
+    "caches": {
+      "device": [],
+      "vendor": []
+    }
+  }
+}

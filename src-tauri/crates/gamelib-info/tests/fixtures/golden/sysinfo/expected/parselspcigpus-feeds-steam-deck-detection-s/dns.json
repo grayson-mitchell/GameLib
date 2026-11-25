@@ -1,0 +1,24 @@
+[
+  {
+    "seq": 2,
+    "name": "163f.1002.pci.id.ucw.cz",
+    "answer": {
+      "txt": [
+        [
+          "i=VanGogh [Radeon Custom GPU]"
+        ]
+      ]
+    }
+  },
+  {
+    "seq": 3,
+    "name": "1002.pci.id.ucw.cz",
+    "answer": {
+      "txt": [
+        [
+          "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+        ]
+      ]
+    }
+  }
+]

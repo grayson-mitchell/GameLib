@@ -1,0 +1,14 @@
+{
+  "before": {
+    "device": {},
+    "vendor": {}
+  },
+  "after": {
+    "device": {
+      "2860_10de": "AD107M [GeForce RTX 4060 Max-Q / Mobile]"
+    },
+    "vendor": {
+      "10de": "NVIDIA Corporation"
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "before": {
+    "device": {},
+    "vendor": {}
+  },
+  "after": {
+    "device": {
+      "73bf_1002": "First"
+    },
+    "vendor": {
+      "1002": "Advanced Micro Devices, Inc. [AMD/ATI]"
+    }
+  }
+}

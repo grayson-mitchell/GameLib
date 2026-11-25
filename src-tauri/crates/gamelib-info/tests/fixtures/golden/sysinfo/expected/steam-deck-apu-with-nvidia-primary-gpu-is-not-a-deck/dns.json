@@ -1,0 +1,46 @@
+[
+  {
+    "seq": 2,
+    "name": "2860.10de.pci.id.ucw.cz",
+    "answer": {
+      "txt": [
+        [
+          "i=AD107M [GeForce RTX 4060 Max-Q / Mobile]"
+        ]
+      ]
+    }
+  },
+  {
+    "seq": 3,
+    "name": "10de.pci.id.ucw.cz",
+    "answer": {
+      "txt": [
+        [
+          "i=NVIDIA Corporation"
+        ]
+      ]
+    }
+  },
+  {
+    "seq": 4,
+    "name": "163f.1002.pci.id.ucw.cz",
+    "answer": {
+      "txt": [
+        [
+          "i=VanGogh [Radeon Custom GPU]"
+        ]
+      ]
+    }
+  },
+  {
+    "seq": 5,
+    "name": "1002.pci.id.ucw.cz",
+    "answer": {
+      "txt": [
+        [
+          "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+        ]
+      ]
+    }
+  }
+]

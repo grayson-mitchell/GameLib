@@ -1,0 +1,8 @@
+[
+  {
+    "seq": 2,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "Could not list GPUs: lspci exited with 1 null"
+  }
+]

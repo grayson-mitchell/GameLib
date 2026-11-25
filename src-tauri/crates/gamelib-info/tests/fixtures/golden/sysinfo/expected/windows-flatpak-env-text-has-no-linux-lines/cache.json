@@ -1,0 +1,14 @@
+{
+  "before": {
+    "device": {},
+    "vendor": {}
+  },
+  "after": {
+    "device": {
+      "88ee_1043_2684_10de": "AD104 [GeForce RTX 4070]"
+    },
+    "vendor": {
+      "10de": "NVIDIA Corporation"
+    }
+  }
+}

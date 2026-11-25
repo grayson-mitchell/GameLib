@@ -1,0 +1,14 @@
+{
+  "before": {
+    "device": {},
+    "vendor": {}
+  },
+  "after": {
+    "device": {
+      "5678_abcd_1234_8086": "Example Intel Graphics"
+    },
+    "vendor": {
+      "8086": "Intel Corporation"
+    }
+  }
+}

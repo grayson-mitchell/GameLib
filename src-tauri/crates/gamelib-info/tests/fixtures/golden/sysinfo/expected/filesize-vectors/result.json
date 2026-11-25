@@ -1,0 +1,99 @@
+{
+  "vectors": [
+    {
+      "value": 0,
+      "base2": "0 B",
+      "plain": "0 B"
+    },
+    {
+      "value": 1,
+      "base2": "1 B",
+      "plain": "1 B"
+    },
+    {
+      "value": 999,
+      "base2": "999 B",
+      "plain": "999 B"
+    },
+    {
+      "value": 1000,
+      "base2": "1000 B",
+      "plain": "1 kB"
+    },
+    {
+      "value": 1023,
+      "base2": "1023 B",
+      "plain": "1.02 kB"
+    },
+    {
+      "value": 1024,
+      "base2": "1 KiB",
+      "plain": "1.02 kB"
+    },
+    {
+      "value": 1536,
+      "base2": "1.5 KiB",
+      "plain": "1.54 kB"
+    },
+    {
+      "value": 999999,
+      "base2": "976.56 KiB",
+      "plain": "1 MB"
+    },
+    {
+      "value": 1000000,
+      "base2": "976.56 KiB",
+      "plain": "1 MB"
+    },
+    {
+      "value": 1048575,
+      "base2": "1 MiB",
+      "plain": "1.05 MB"
+    },
+    {
+      "value": 1048576,
+      "base2": "1 MiB",
+      "plain": "1.05 MB"
+    },
+    {
+      "value": 999999999,
+      "base2": "953.67 MiB",
+      "plain": "1 GB"
+    },
+    {
+      "value": 1073741823,
+      "base2": "1 GiB",
+      "plain": "1.07 GB"
+    },
+    {
+      "value": 1073741824,
+      "base2": "1 GiB",
+      "plain": "1.07 GB"
+    },
+    {
+      "value": 16642998272,
+      "base2": "15.5 GiB",
+      "plain": "16.64 GB"
+    },
+    {
+      "value": 999999999999,
+      "base2": "931.32 GiB",
+      "plain": "1 TB"
+    },
+    {
+      "value": 1099511627775,
+      "base2": "1 TiB",
+      "plain": "1.1 TB"
+    },
+    {
+      "value": 1099511627777,
+      "base2": "1 TiB",
+      "plain": "1.1 TB"
+    },
+    {
+      "value": 1125899906842623,
+      "base2": "1 PiB",
+      "plain": "1.13 PB"
+    }
+  ]
+}

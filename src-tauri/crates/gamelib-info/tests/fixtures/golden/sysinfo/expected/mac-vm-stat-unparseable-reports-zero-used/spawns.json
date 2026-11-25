@@ -1,0 +1,61 @@
+[
+  {
+    "seq": 0,
+    "program": "sysctl",
+    "argv": [
+      "-n",
+      "vm.pagesize"
+    ],
+    "timeoutMs": 30000,
+    "replaceEnv": false,
+    "envDiff": {
+      "set": {},
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": "",
+    "result": {
+      "code": 0,
+      "stdout": "16384\n",
+      "stderr": ""
+    }
+  },
+  {
+    "seq": 1,
+    "program": "vm_stat",
+    "argv": [],
+    "timeoutMs": 30000,
+    "replaceEnv": false,
+    "envDiff": {
+      "set": {},
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": "",
+    "result": {
+      "code": 0,
+      "stdout": "nothing useful\n",
+      "stderr": ""
+    }
+  },
+  {
+    "seq": 4,
+    "program": "/pins/bin/comet",
+    "argv": [
+      "--version"
+    ],
+    "timeoutMs": 5000,
+    "replaceEnv": false,
+    "envDiff": {
+      "set": {},
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": "",
+    "result": {
+      "code": 0,
+      "stdout": "comet 0.1.3\n",
+      "stderr": ""
+    }
+  }
+]

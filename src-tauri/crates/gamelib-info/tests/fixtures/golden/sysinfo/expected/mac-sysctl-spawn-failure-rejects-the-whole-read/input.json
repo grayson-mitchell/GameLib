@@ -1,0 +1,37 @@
+{
+  "id": "mac-sysctl-spawn-failure-rejects-the-whole-read",
+  "call": {
+    "kind": "info"
+  },
+  "scenario": {
+    "platform": "mac",
+    "arch": "arm64",
+    "osRelease": "23.4.0",
+    "cpu": {
+      "model": "Apple M2 Pro",
+      "cores": 12
+    },
+    "totalmem": 34359738368,
+    "freemem": 6442450944,
+    "env": {},
+    "steamDeckGameMode": false,
+    "osReleaseFiles": {},
+    "appVersion": "2.15.0",
+    "altCometBin": "/pins/bin/comet",
+    "lspci": null,
+    "free": null,
+    "sysctl": {
+      "throws": "spawn sysctl ENOENT"
+    },
+    "vmStat": null,
+    "powershellGpu": null,
+    "powershellOs": null,
+    "comet": null,
+    "managers": null,
+    "dns": {},
+    "caches": {
+      "device": [],
+      "vendor": []
+    }
+  }
+}

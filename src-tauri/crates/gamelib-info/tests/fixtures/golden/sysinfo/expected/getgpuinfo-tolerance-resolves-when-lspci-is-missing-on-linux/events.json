@@ -1,0 +1,8 @@
+[
+  {
+    "seq": 2,
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "Could not list GPUs: lspci missing or failed: Error: spawn lspci ENOENT"
+  }
+]

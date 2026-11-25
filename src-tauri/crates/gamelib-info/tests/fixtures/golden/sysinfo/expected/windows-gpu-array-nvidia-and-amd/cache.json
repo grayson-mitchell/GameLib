@@ -1,0 +1,16 @@
+{
+  "before": {
+    "device": {},
+    "vendor": {}
+  },
+  "after": {
+    "device": {
+      "8823_1043_1681_1002": "Cezanne [Radeon Vega Series]",
+      "88ee_1043_2684_10de": "AD104 [GeForce RTX 4070]"
+    },
+    "vendor": {
+      "1002": "Advanced Micro Devices, Inc. [AMD/ATI]",
+      "10de": "NVIDIA Corporation"
+    }
+  }
+}

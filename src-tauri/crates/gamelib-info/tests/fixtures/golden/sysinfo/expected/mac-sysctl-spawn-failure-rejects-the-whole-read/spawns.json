@@ -1,0 +1,24 @@
+[
+  {
+    "seq": 0,
+    "program": "sysctl",
+    "argv": [
+      "-n",
+      "vm.pagesize"
+    ],
+    "timeoutMs": 30000,
+    "replaceEnv": false,
+    "envDiff": {
+      "set": {},
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": "",
+    "result": {
+      "code": null,
+      "stdout": "",
+      "stderr": "",
+      "error": "spawn sysctl ENOENT"
+    }
+  }
+]

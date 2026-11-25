@@ -1,0 +1,67 @@
+[
+  {
+    "seq": 0,
+    "program": "free",
+    "argv": [
+      "-b"
+    ],
+    "timeoutMs": 30000,
+    "replaceEnv": true,
+    "envDiff": {
+      "set": {
+        "LANG": "C"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": "",
+    "result": {
+      "code": 0,
+      "stdout": "               total        used        free      shared  buff/cache   available\nMem:     16642998272  5500000000  1000  100  200  300\nSwap:    0 0 0\n",
+      "stderr": ""
+    }
+  },
+  {
+    "seq": 1,
+    "program": "lspci",
+    "argv": [
+      "-mm",
+      "-v",
+      "-n",
+      "-k"
+    ],
+    "timeoutMs": 30000,
+    "replaceEnv": false,
+    "envDiff": {
+      "set": {},
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": "",
+    "result": {
+      "code": 0,
+      "stdout": "Slot:\t04:00.0\r\nClass:\t0300\r\nVendor:\t10DE\r\nDevice:\t2860\r\nRev:\tae\r\nProgIf:\t00\r\n",
+      "stderr": ""
+    }
+  },
+  {
+    "seq": 6,
+    "program": "/pins/bin/comet",
+    "argv": [
+      "--version"
+    ],
+    "timeoutMs": 5000,
+    "replaceEnv": false,
+    "envDiff": {
+      "set": {},
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": "",
+    "result": {
+      "code": 0,
+      "stdout": "comet 0.1.3\n",
+      "stderr": ""
+    }
+  }
+]

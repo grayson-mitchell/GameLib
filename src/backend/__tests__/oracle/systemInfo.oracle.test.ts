@@ -84,12 +84,13 @@ import {
 } from 'backend/testUtils/launchOracle/probes'
 import { createTestStoreRoot } from 'backend/testUtils/testStoreRoot'
 import type { ProcessRunner } from 'backend/process/types'
+import * as mainLogger from 'backend/logger'
 import type { SystemInfoDeps } from 'backend/utils/systeminfo'
 
 const CRATE = 'gamelib-info'
 const SLICE = 'sysinfo'
 /** The case count this plan committed; a later edit may raise it, never lower it. */
-const SYSINFO_FLOOR = 1
+const SYSINFO_FLOOR = 94
 
 const mode = engineWineOracleMode()
 
@@ -295,7 +296,7 @@ const UBUNTU = [
 const STEAMOS = [
   'NAME="SteamOS"',
   'PRETTY_NAME="SteamOS Holo"',
-  'VERSION_ID="3.5.7"',
+  'VERSION_ID=3.5.7',
   'VERSION_CODENAME=holo',
   ''
 ].join('\n')
@@ -447,14 +448,16 @@ const deck = (
     ...over
   })
 
-/** A Linux box whose only GPU is `gpu`, with its sub ids; the device and vendor lookups answer. */
-const amdGpu = (over: Partial<Scenario> = {}): Scenario => L(over)
-
 // ----- the three systeminfo test files (D-14, D-15): one named case per title
 
-const GPU_LINUX = 'src/backend/utils/systeminfo/__tests__/gpuLinux.test.ts'
-const PROBES = 'src/backend/utils/systeminfo/__tests__/probes.test.ts'
-const INDEX = 'src/backend/utils/systeminfo/__tests__/index.test.ts'
+const SYSINFO_TESTS = join(
+  __dirname,
+  '..',
+  '..',
+  'utils',
+  'systeminfo',
+  '__tests__'
+)
 
 const PARSE = 'parseLspciGpus'
 const LINUX_PROBE = 'getGpuInfo_linux'
@@ -481,11 +484,677 @@ function systemInfoCases(): SysCase[] {
   const add = (...more: SysCase[]): void => {
     cases.push(...more)
   }
+  const one = (id: string, scenario: Scenario): void => add(info(id, scenario))
+  const AMD_NO_SUB = lspciJoin(gpuRec('0300', '1002', '73bf', 'amdgpu'))
+  const sequenceOnLinux = (id: string, steps: Step[]): void =>
+    add(sequence(id, steps, L()))
 
-  // ----- the tracer: Linux, one AMD GPU with sub ids, every lookup found and written back
-  add(
-    info(titled(PARSE, 'keeps only the GPU record of a single AMD system'), L())
+  // ----- gpuLinux.test.ts > parseLspciGpus. The first row is the tracer: Linux, one AMD GPU with sub ids,
+  // every lookup found and written back.
+  one(titled(PARSE, 'keeps only the GPU record of a single AMD system'), L())
+  one(
+    titled(PARSE, 'keeps hybrid GPUs in order, including 0302 and 0380'),
+    L({
+      lspci: {
+        stdout: lspciJoin(
+          gpuRec('0300', '8086', 'a7a0', 'i915'),
+          gpuRec('0302', '10de', '2860', 'nvidia'),
+          gpuRec('0380', '1002', '1234')
+        )
+      },
+      dns: dnsMap({
+        a7a0_8086: txt('Raptor Lake-P [Iris Xe Graphics]'),
+        '8086': txt(INTEL_VENDOR),
+        '2860_10de': txt('AD107M [GeForce RTX 4060 Max-Q / Mobile]'),
+        '10de': txt(NVIDIA_VENDOR),
+        '1234_1002': txt('Example Display Controller'),
+        '1002': txt(AMD_VENDOR)
+      })
+    })
   )
+  one(
+    titled(
+      PARSE,
+      'omits driverVersion without Driver, lowercases hex, tolerates CRLF'
+    ),
+    L({
+      lspci: {
+        stdout: lspciJoin(gpuRec('0300', '10DE', '2860')).replace(/\n/g, '\r\n')
+      },
+      dns: dnsMap({
+        '2860_10de': txt('AD107M [GeForce RTX 4060 Max-Q / Mobile]'),
+        '10de': txt(NVIDIA_VENDOR)
+      })
+    })
+  )
+  one(
+    titled(PARSE, 'returns [] for empty or garbage output'),
+    L({ lspci: { stdout: 'nope\n\n::::\nClass:\tzz\n' }, dns: {} })
+  )
+  one('lspci-empty-output', L({ lspci: { stdout: '' }, dns: {} }))
+  one(
+    'lspci-record-with-malformed-ids',
+    L({
+      lspci: {
+        stdout: rec({ Class: '0300', Vendor: 'xyz', Device: '1' })
+      },
+      dns: {}
+    })
+  )
+  one(
+    titled(PARSE, 'feeds Steam Deck detection (%s)'),
+    deck('0405', '163f', false)
+  )
+
+  // ----- gpuLinux.test.ts > getGpuInfo_linux
+  one(
+    titled(
+      LINUX_PROBE,
+      'runs one lspci call through the runner with no env override'
+    ),
+    L({
+      lspci: { stdout: lspciJoin(gpuRec('0300', '1002', '163f', 'amdgpu')) },
+      dns: dnsMap({
+        '163f_1002': txt('VanGogh [Radeon Custom GPU]'),
+        '1002': txt(AMD_VENDOR)
+      })
+    })
+  )
+  one(
+    titled(LINUX_PROBE, 'resolves [] on ENOENT'),
+    L({ lspci: { throws: 'spawn lspci ENOENT' }, dns: {} })
+  )
+  one(
+    titled(LINUX_PROBE, 'resolves [] on non-zero exit'),
+    L({ lspci: { code: 1 }, dns: {} })
+  )
+  one(
+    titled(LINUX_PROBE, 'resolves [] on timeout'),
+    L({ lspci: { timedOut: true, code: null }, dns: {} })
+  )
+
+  // ----- gpuLinux.test.ts > getGpuInfo tolerance
+  one(
+    titled(TOLERANCE, 'resolves [] when the win32 probe rejects'),
+    W({ powershellGpu: { throws: 'spawn powershell ENOENT' }, dns: {} })
+  )
+  one(
+    titled(TOLERANCE, 'resolves [] when lspci is missing on linux'),
+    L({
+      lspci: { throws: 'spawn lspci ENOENT' },
+      env: { FLATPAK_ID: 'org.gamelib.GameLib' },
+      dns: {}
+    })
+  )
+
+  // ----- probes.test.ts
+  one(
+    titled(
+      PROBE_SUITE,
+      'free -b with a replaced LANG=C env and the default timeout'
+    ),
+    L({ free: { stdout: 'Mem:  1000  400  600\n' } })
+  )
+  one(
+    titled(PROBE_SUITE, 'free rejects on ENOENT'),
+    L({
+      free: { throws: 'spawn free ENOENT' },
+      lspci: null,
+      comet: null,
+      managers: null,
+      dns: {}
+    })
+  )
+  one(
+    titled(
+      PROBE_SUITE,
+      'macOS: sysctl then vm_stat; timeout falls back to defaults'
+    ),
+    M({
+      sysctl: { timedOut: true, code: null },
+      vmStat: { stdout: 'Pages active: 10\nPages wired down: 5\n' }
+    })
+  )
+  one(
+    titled(PROBE_SUITE, 'macOS: non-zero vm_stat yields zero used'),
+    M({ sysctl: { stdout: '16384' }, vmStat: { code: 1 } })
+  )
+  one(
+    titled(
+      PROBE_SUITE,
+      'windows OS info runs powershell and falls back when it fails'
+    ),
+    W({
+      powershellOs: { code: 1 },
+      powershellGpu: { stdout: '[]' },
+      dns: {}
+    })
+  )
+  one(
+    titled(PROBE_SUITE, 'windows GPU info parses powershell output'),
+    W({
+      powershellGpu: { stdout: JSON.stringify(INTEL_WIN) },
+      dns: dnsMap({
+        '5678_abcd_1234_8086': txt('Example Intel Graphics'),
+        '8086': txt(INTEL_VENDOR)
+      })
+    })
+  )
+
+  // ----- index.test.ts: the single-flight cache (debug/gog-spawn-reduction fix 3)
+  sequenceOnLinux(
+    titled(
+      MEMO_SUITE,
+      'concurrent cache=true callers share ONE in-flight fetch -- each version probe runs exactly once'
+    ),
+    [
+      { op: 'start', call: 'first' },
+      { op: 'start', call: 'second' },
+      { op: 'start', call: 'third' },
+      { op: 'await', call: 'first' },
+      { op: 'await', call: 'second' },
+      { op: 'await', call: 'third' }
+    ]
+  )
+  sequenceOnLinux(
+    titled(
+      MEMO_SUITE,
+      'a caller that arrives AFTER the first fetch resolved gets the cached value -- no new probes'
+    ),
+    [
+      { op: 'start', call: 'first' },
+      { op: 'await', call: 'first' },
+      { op: 'start', call: 'second' },
+      { op: 'await', call: 'second' }
+    ]
+  )
+  sequenceOnLinux(
+    titled(
+      MEMO_SUITE,
+      'cache=false always triggers a fresh fetch, independent of any in-flight cache=true call'
+    ),
+    [
+      { op: 'start', call: 'cached' },
+      { op: 'settle' },
+      { op: 'start', call: 'forced', cache: false },
+      { op: 'await', call: 'cached' },
+      { op: 'await', call: 'forced' }
+    ]
+  )
+  sequenceOnLinux(
+    titled(
+      MEMO_SUITE,
+      'a second cache instance fetches again: nothing is shared between instances'
+    ),
+    [
+      { op: 'start', call: 'first' },
+      { op: 'await', call: 'first' },
+      { op: 'newCache' },
+      { op: 'start', call: 'second' },
+      { op: 'await', call: 'second' }
+    ]
+  )
+  // The same single-flight rows with cache=false in flight at once and a forced call after the cache is warm.
+  sequenceOnLinux('single-flight-two-forced-calls-each-fetch', [
+    { op: 'start', call: 'one', cache: false },
+    { op: 'start', call: 'two', cache: false },
+    { op: 'await', call: 'one' },
+    { op: 'await', call: 'two' }
+  ])
+  sequenceOnLinux('single-flight-forced-call-after-the-cache-is-warm', [
+    { op: 'start', call: 'warm' },
+    { op: 'await', call: 'warm' },
+    { op: 'start', call: 'forced', cache: false },
+    { op: 'await', call: 'forced' },
+    { op: 'start', call: 'after' },
+    { op: 'await', call: 'after' }
+  ])
+
+  // ----- Linux memory (free -b)
+  one('free-non-zero-exit-reports-zero-memory', L({ free: { code: 1 } }))
+  one(
+    'free-timeout-reports-zero-memory',
+    L({ free: { timedOut: true, code: null } })
+  )
+  one(
+    'free-output-without-a-labelled-line-reports-zero-memory',
+    L({ free: { stdout: 'no labelled line here\n' } })
+  )
+
+  // ----- Linux os-release locations and fields
+  one(
+    'os-release-run-host-wins-over-snapd-and-etc',
+    L({
+      osReleaseFiles: {
+        '/run/host/os-release': 'NAME="Host OS"\nVERSION="1"\n',
+        '/var/lib/snapd/hostfs/etc/os-release': 'NAME="Snap OS"\nVERSION="2"\n',
+        '/etc/os-release': UBUNTU
+      }
+    })
+  )
+  one(
+    'os-release-snapd-hostfs-wins-over-etc',
+    L({
+      osReleaseFiles: {
+        '/var/lib/snapd/hostfs/etc/os-release': 'NAME="Snap OS"\nVERSION="2"\n',
+        '/etc/os-release': UBUNTU
+      }
+    })
+  )
+  one('os-release-none-found', L({ osReleaseFiles: {} }))
+  one(
+    'os-release-pretty-name-only-has-no-version',
+    L({
+      osReleaseFiles: { '/etc/os-release': 'PRETTY_NAME="Some Distro 1"\n' }
+    })
+  )
+  one(
+    'os-release-version-id-and-codename-without-version',
+    L({
+      osReleaseFiles: {
+        '/etc/os-release':
+          'NAME=Arch\nVERSION_ID=rolling\nVERSION_CODENAME=base\n'
+      }
+    })
+  )
+  one(
+    'os-release-quoted-version-id-keeps-its-quotes',
+    L({
+      osReleaseFiles: {
+        '/etc/os-release':
+          'NAME="Quoted"\nVERSION_ID="22.04"\nVERSION_CODENAME=jammy\n'
+      }
+    })
+  )
+  one(
+    'os-release-without-name-fields-is-linux',
+    L({ osReleaseFiles: { '/etc/os-release': 'ID=custom\n' } })
+  )
+  one(
+    'os-release-unquoted-name-and-quoted-version',
+    L({
+      osReleaseFiles: {
+        '/etc/os-release':
+          'NAME=Fedora Linux\nVERSION="39 (Workstation Edition)"\n'
+      }
+    })
+  )
+  one(
+    'os-release-single-quotes-are-kept',
+    L({
+      osReleaseFiles: { '/etc/os-release': "NAME='Quoted OS'\nVERSION='9'\n" }
+    })
+  )
+
+  // ----- Flatpak and AppImage
+  one(
+    'linux-flatpak-env-set',
+    L({ env: { FLATPAK_ID: 'org.gamelib.GameLib' } })
+  )
+  one(
+    'linux-appimage-env-set',
+    L({ env: { APPIMAGE: '/pins/GameLib.AppImage' } })
+  )
+  one(
+    'linux-flatpak-and-appimage-env-set',
+    L({
+      env: {
+        FLATPAK_ID: 'org.gamelib.GameLib',
+        APPIMAGE: '/pins/GameLib.AppImage'
+      }
+    })
+  )
+  one(
+    'windows-flatpak-env-text-has-no-linux-lines',
+    W({ env: { FLATPAK_ID: 'org.gamelib.GameLib' } })
+  )
+
+  // ----- pci.ids: sub ids, fallback, write-back, missing names and the cache
+  one(
+    'pci-sub-ids-missing-falls-back-and-writes-back',
+    L({
+      dns: dnsMap({
+        e445_1da2_73bf_1002: NXDOMAIN,
+        '73bf_1002': txt(NAVI21),
+        '1002': txt(AMD_VENDOR)
+      })
+    })
+  )
+  one(
+    'pci-vendor-missing-drops-the-gpu',
+    L({
+      dns: dnsMap({ e445_1da2_73bf_1002: txt(NAVI21), '1002': NXDOMAIN })
+    })
+  )
+  one(
+    'pci-device-missing-drops-the-gpu',
+    L({
+      lspci: { stdout: AMD_NO_SUB },
+      dns: dnsMap({ '73bf_1002': NXDOMAIN, '1002': txt(AMD_VENDOR) })
+    })
+  )
+  one(
+    'pci-empty-txt-answer-drops-the-gpu',
+    L({
+      lspci: { stdout: AMD_NO_SUB },
+      dns: dnsMap({ '73bf_1002': { txt: [] }, '1002': txt(AMD_VENDOR) })
+    })
+  )
+  one(
+    'pci-cache-hit-makes-no-lookup',
+    L({
+      dns: {},
+      caches: {
+        device: [{ key: 'e445_1da2_73bf_1002', value: NAVI21, ageDays: 0 }],
+        vendor: [{ key: '1002', value: AMD_VENDOR, ageDays: 0 }]
+      }
+    })
+  )
+  one(
+    'pci-entries-six-days-old-are-still-cached',
+    L({
+      dns: {},
+      caches: {
+        device: [{ key: 'e445_1da2_73bf_1002', value: NAVI21, ageDays: 6 }],
+        vendor: [{ key: '1002', value: AMD_VENDOR, ageDays: 6 }]
+      }
+    })
+  )
+  one(
+    'pci-entries-older-than-seven-days-are-looked-up-again',
+    L({
+      caches: {
+        device: [
+          { key: 'e445_1da2_73bf_1002', value: 'Stale device name', ageDays: 8 }
+        ],
+        vendor: [{ key: '1002', value: 'Stale vendor name', ageDays: 8 }]
+      }
+    })
+  )
+  one(
+    'pci-vendor-cached-device-looked-up',
+    L({
+      dns: dnsMap({ e445_1da2_73bf_1002: txt(NAVI21) }),
+      caches: {
+        device: [],
+        vendor: [{ key: '1002', value: AMD_VENDOR, ageDays: 0 }]
+      }
+    })
+  )
+  one(
+    'pci-generic-device-cached-sub-key-looked-up-then-written-back',
+    L({
+      dns: dnsMap({ e445_1da2_73bf_1002: NXDOMAIN }),
+      caches: {
+        device: [{ key: '73bf_1002', value: NAVI21, ageDays: 0 }],
+        vendor: [{ key: '1002', value: AMD_VENDOR, ageDays: 0 }]
+      }
+    })
+  )
+  one(
+    'pci-two-gpus-of-one-vendor-share-the-vendor-lookup',
+    L({
+      lspci: {
+        stdout: lspciJoin(
+          gpuRec('0300', '1002', '73bf', 'amdgpu'),
+          gpuRec('0300', '1002', '7340', 'amdgpu')
+        )
+      },
+      dns: dnsMap({
+        '73bf_1002': txt(NAVI21),
+        '7340_1002': txt('Navi 14 [Radeon RX 5500/5500M / Pro 5500M]'),
+        '1002': txt(AMD_VENDOR)
+      })
+    })
+  )
+  one(
+    'pci-txt-answer-without-the-i-prefix-is-kept',
+    L({
+      lspci: { stdout: AMD_NO_SUB },
+      dns: dnsMap({
+        '73bf_1002': { txt: [['Plain Name']] },
+        '1002': txt(AMD_VENDOR)
+      })
+    })
+  )
+  one(
+    'pci-first-txt-record-wins',
+    L({
+      lspci: { stdout: AMD_NO_SUB },
+      dns: dnsMap({
+        '73bf_1002': { txt: [['i=First', 'i=Chunk'], ['i=Second']] },
+        '1002': txt(AMD_VENDOR)
+      })
+    })
+  )
+
+  // ----- Steam Deck: every model and mode, and the cases that are not a Deck
+  one('steam-deck-apu-0405-lcd-game-mode', deck('0405', '163f', true))
+  one('steam-deck-apu-0932-oled-desktop-mode', deck('0932', '1435', false))
+  one('steam-deck-apu-0932-oled-game-mode', deck('0932', '1435', true))
+  one(
+    'steam-deck-apu-0932-with-lcd-gpu-reports-lcd',
+    deck('0932', '163f', false)
+  )
+  one(
+    'steam-deck-apu-0405-with-oled-gpu-reports-oled',
+    deck('0405', '1435', true)
+  )
+  one(
+    'steam-deck-apu-with-nvidia-primary-gpu-is-not-a-deck',
+    deck('0405', '163f', false, {
+      lspci: {
+        stdout: lspciJoin(
+          gpuRec('0302', '10de', '2860', 'nvidia'),
+          gpuRec('0300', '1002', '163f', 'amdgpu')
+        )
+      },
+      dns: dnsMap({
+        '2860_10de': txt('AD107M [GeForce RTX 4060 Max-Q / Mobile]'),
+        '10de': txt(NVIDIA_VENDOR),
+        '163f_1002': txt('VanGogh [Radeon Custom GPU]'),
+        '1002': txt(AMD_VENDOR)
+      })
+    })
+  )
+  one(
+    'steam-deck-apu-with-unknown-amd-device-is-not-a-deck',
+    deck('0405', '73bf', false, {
+      dns: dnsMap({ '73bf_1002': txt(NAVI21), '1002': txt(AMD_VENDOR) })
+    })
+  )
+  one(
+    'steam-deck-apu-with-no-gpu-is-not-a-deck',
+    deck('0405', '163f', false, {
+      lspci: { stdout: 'nope\n' },
+      dns: {}
+    })
+  )
+  one(
+    'steam-deck-other-apu-with-deck-gpu-is-not-a-deck',
+    deck('0405', '163f', false, {
+      cpu: { model: 'AMD Custom APU 0000', cores: 8 }
+    })
+  )
+  one(
+    'steam-deck-game-mode-on-a-desktop-pc-is-not-a-deck',
+    L({ steamDeckGameMode: true })
+  )
+
+  // ----- macOS
+  one('mac-sysctl-and-vm-stat-success', M())
+  one(
+    'mac-sysctl-garbage-page-size-falls-back-to-4096',
+    M({ sysctl: { stdout: 'abc\n' } })
+  )
+  one(
+    'mac-sysctl-spawn-failure-rejects-the-whole-read',
+    M({
+      sysctl: { throws: 'spawn sysctl ENOENT' },
+      vmStat: null,
+      comet: null,
+      managers: null
+    })
+  )
+  one(
+    'mac-vm-stat-unparseable-reports-zero-used',
+    M({ vmStat: { stdout: 'nothing useful\n' } })
+  )
+  one(
+    'mac-vm-stat-timeout-reports-zero-used',
+    M({ vmStat: { timedOut: true, code: null } })
+  )
+  one('mac-comet-bundled-path-arm64', M({ altCometBin: null }))
+
+  // ----- Windows
+  one(
+    'windows-gpu-array-nvidia-and-amd',
+    W({
+      powershellGpu: { stdout: JSON.stringify([NVIDIA_WIN, AMD_WIN]) },
+      dns: dnsMap({
+        ...NVIDIA_WIN_DNS,
+        '8823_1043_1681_1002': txt('Cezanne [Radeon Vega Series]'),
+        '1002': txt(AMD_VENDOR)
+      })
+    })
+  )
+  one(
+    'windows-gpu-malformed-json-yields-no-gpu',
+    W({ powershellGpu: { stdout: 'not json' }, dns: {} })
+  )
+  one(
+    'windows-gpu-json-with-missing-fields-yields-no-gpu',
+    W({
+      powershellGpu: { stdout: '{"AdapterCompatibility":"NVIDIA"}' },
+      dns: {}
+    })
+  )
+  one(
+    'windows-gpu-pnp-id-without-ven-and-dev-is-skipped',
+    W({
+      powershellGpu: {
+        stdout: JSON.stringify({
+          ...NVIDIA_WIN,
+          PnPDeviceID: 'USB\\ROOT_HUB30\\4&1'
+        })
+      },
+      dns: {}
+    })
+  )
+  one(
+    'windows-gpu-timeout-yields-no-gpu',
+    W({ powershellGpu: { timedOut: true, code: null }, dns: {} })
+  )
+  one('windows-os-info-success-and-memory-from-os-module', W())
+  one(
+    'windows-os-info-malformed-json-falls-back',
+    W({ powershellOs: { stdout: 'oops' } })
+  )
+  one(
+    'windows-os-info-powershell-missing-rejects-the-whole-read',
+    W({
+      powershellOs: { throws: 'spawn powershell ENOENT' },
+      comet: null,
+      managers: null
+    })
+  )
+  one('windows-comet-bundled-path-exe', W({ altCometBin: null }))
+
+  // ----- version probes
+  one(
+    'legendary-output-without-codename-is-invalid',
+    L({
+      managers: {
+        ...MANAGERS_OK,
+        legendary: { stdout: 'legendary 0.20.33\n' }
+      }
+    })
+  )
+  one(
+    'legendary-error-is-invalid',
+    L({
+      managers: { ...MANAGERS_OK, legendary: { error: 'boom' } }
+    })
+  )
+  one(
+    'legendary-abort-is-invalid',
+    L({
+      managers: { ...MANAGERS_OK, legendary: { abort: true } }
+    })
+  )
+  one(
+    'gogdl-error-is-invalid',
+    L({ managers: { ...MANAGERS_OK, gog: { error: 'boom' } } })
+  )
+  one(
+    'gogdl-stdout-is-returned-raw',
+    L({ managers: { ...MANAGERS_OK, gog: { stdout: '0.9.2\n' } } })
+  )
+  one(
+    'nile-error-is-invalid',
+    L({ managers: { ...MANAGERS_OK, nile: { error: 'boom' } } })
+  )
+  one(
+    'nile-stdout-is-returned-raw',
+    L({ managers: { ...MANAGERS_OK, nile: { stdout: '1.0.4\n' } } })
+  )
+  one('comet-timeout-is-invalid', L({ comet: { timedOut: true, code: null } }))
+  one(
+    'comet-spawn-failure-is-invalid',
+    L({ comet: { throws: 'spawn comet ENOENT' } })
+  )
+  one(
+    'comet-output-is-right-trimmed',
+    L({ comet: { stdout: 'comet 0.1.3  \n\n' } })
+  )
+  one(
+    'comet-non-zero-exit-keeps-its-stdout',
+    L({ comet: { code: 1, stdout: 'broken\n' } })
+  )
+  one('comet-bundled-path-linux-x64', L({ altCometBin: null }))
+
+  // ----- the app version name
+  one('app-version-beta-has-the-beta-name', L({ appVersion: '2.16.0-beta.1' }))
+  one(
+    'app-version-alpha-has-the-beta-name',
+    L({ appVersion: '2.16.0-alpha.2' })
+  )
+
+  // ----- no CPU
+  one(
+    'no-cpus-reported-rejects-after-the-probes',
+    L({ cpu: { model: '', cores: 0 } })
+  )
+
+  // ----- the byte-size format both formatSystemInfo calls use (npm filesize)
+  add({
+    id: 'filesize-vectors',
+    call: {
+      kind: 'filesize',
+      values: [
+        0,
+        1,
+        999,
+        1000,
+        1023,
+        1024,
+        1536,
+        999999,
+        1000000,
+        1048575,
+        1048576,
+        999999999,
+        1073741823,
+        2 ** 30,
+        16642998272,
+        999999999999,
+        1099511627775,
+        2 ** 40 + 1,
+        1125899906842623
+      ]
+    },
+    scenario: null
+  })
 
   return cases
 }
@@ -630,9 +1299,9 @@ function pinClock(): () => void {
   return () => jest.useRealTimers()
 }
 
-const sortedEntries = (
-  cache: ReturnType<Fresh['pciIds']['createPciIdCaches']>['deviceNameCache']
-): Record<string, string> =>
+const sortedEntries = (cache: {
+  entries(): Array<[string, string]>
+}): Record<string, string> =>
   Object.fromEntries(
     cache.entries().sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
   )
@@ -729,22 +1398,26 @@ async function recordOnProfile(
       })
     }
 
-    // ----- the backend log, spied (not mocked) on the registry the code under test uses
-    const logSpies = (
-      ['logDebug', 'logInfo', 'logWarning', 'logError'] as const
-    ).map((name) => {
-      const level = name.slice(3).toLowerCase()
-      const spy = jest.spyOn(mods.logger, name)
-      spy.mockImplementation(((message: unknown, prefix?: unknown) => {
-        events.push({
-          seq: next(),
-          level,
-          prefix: typeof prefix === 'string' ? prefix : null,
-          text: asText(message)
-        })
-      }) as never)
-      return () => spy.mockRestore()
-    })
+    // ----- the backend log, spied (not mocked). The statically imported modules log through the fresh registry's
+    // logger; the ones `import()` loads later (`gpu/linux`, `memory/*`, `osInfo/*`) resolve in this file's own
+    // registry, so both logger instances are spied.
+    const logSpies = [mods.logger, mainLogger].flatMap((loggerModule) =>
+      (['logDebug', 'logInfo', 'logWarning', 'logError'] as const).map(
+        (name) => {
+          const level = name.slice(3).toLowerCase()
+          const spy = jest.spyOn(loggerModule, name)
+          spy.mockImplementation(((message: unknown, prefix?: unknown) => {
+            events.push({
+              seq: next(),
+              level,
+              prefix: typeof prefix === 'string' ? prefix : null,
+              text: asText(message)
+            })
+          }) as never)
+          return () => spy.mockRestore()
+        }
+      )
+    )
 
     // ----- the os-release files: only the three absolute paths are answered, every other path is untouched
     const fsp = fsPromisesModule()
@@ -1075,6 +1748,78 @@ describeSkipOnWindows('system information oracle (88.1-05)', () => {
     expect(recorded.text).not.toBeNull()
   })
 
+  it.each(['gpuLinux.test.ts', 'probes.test.ts', 'index.test.ts'])(
+    'every title of %s is a named case (census, nothing excluded)',
+    (file) => {
+      assertCasesCoverTitles(
+        cases.map((c) => c.id),
+        tsTestTitles(join(SYSINFO_TESTS, file)),
+        {}
+      )
+    }
+  )
+
+  it('the three census files hold 21 titles', () => {
+    const titles = ['gpuLinux.test.ts', 'probes.test.ts', 'index.test.ts'].map(
+      (file) => tsTestTitles(join(SYSINFO_TESTS, file)).length
+    )
+    expect(titles).toEqual([11, 6, 4])
+  })
+
+  describe('the single-flight cache', () => {
+    const legendaryCalls = (recorded: Recorded): number =>
+      (recorded.versions as { manager: string }[]).filter(
+        (v) => v.manager === 'legendary'
+      ).length
+    const sameObjects = (recorded: Recorded): (string | null)[] =>
+      (
+        recorded.result as { calls: { sameObjectAs: string | null }[] }
+      ).calls.map((c) => c.sameObjectAs)
+
+    it('two concurrent callers record exactly one legendary version call and share one object', async () => {
+      const recorded = await recordCase(
+        byId(
+          titled(
+            MEMO_SUITE,
+            'concurrent cache=true callers share ONE in-flight fetch -- each version probe runs exactly once'
+          )
+        )
+      )
+      expect(legendaryCalls(recorded)).toBe(1)
+      expect(sameObjects(recorded)).toEqual([null, 'first', 'first'])
+    })
+
+    it('a later caller records no version call, and cache=false records a fresh set', async () => {
+      const later = await recordCase(
+        byId(
+          titled(
+            MEMO_SUITE,
+            'a caller that arrives AFTER the first fetch resolved gets the cached value -- no new probes'
+          )
+        )
+      )
+      expect(legendaryCalls(later)).toBe(1)
+      expect(sameObjects(later)).toEqual([null, 'first'])
+      const forced = await recordCase(
+        byId('single-flight-forced-call-after-the-cache-is-warm')
+      )
+      expect(legendaryCalls(forced)).toBe(2)
+      expect(sameObjects(forced)).toEqual([null, null, 'forced'])
+    })
+
+    it('a second cache instance fetches again', async () => {
+      const recorded = await recordCase(
+        byId(
+          titled(
+            MEMO_SUITE,
+            'a second cache instance fetches again: nothing is shared between instances'
+          )
+        )
+      )
+      expect(legendaryCalls(recorded)).toBe(2)
+    })
+  })
+
   it('records at least the floor of cases', () => {
     expect(cases.length).toBeGreaterThanOrEqual(SYSINFO_FLOOR)
   })
@@ -1095,8 +1840,3 @@ describeSkipOnWindows('system information oracle (88.1-05)', () => {
     expectEmptyCasesToFail(CRATE, SLICE, SYSINFO_FLOOR)
   })
 })
-
-// Referenced by the census section added with the incident-title rows.
-void [GPU_LINUX, PROBES, INDEX, LINUX_PROBE, TOLERANCE, PROBE_SUITE, MEMO_SUITE]
-void [assertCasesCoverTitles, tsTestTitles, amdGpu, M, W, deck, sequence]
-void [INTEL_VENDOR, INTEL_WIN, AMD_WIN, NXDOMAIN, macBase, windowsBase]

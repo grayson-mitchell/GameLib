@@ -1,0 +1,33 @@
+[
+  {
+    "seq": 6,
+    "manager": "legendary",
+    "args": {
+      "subcommand": null,
+      "--version": true
+    },
+    "options": {
+      "abortId": "legendary-version"
+    }
+  },
+  {
+    "seq": 7,
+    "manager": "gog",
+    "args": [
+      "--version"
+    ],
+    "options": {
+      "abortId": "gogdl-version"
+    }
+  },
+  {
+    "seq": 9,
+    "manager": "nile",
+    "args": [
+      "--version"
+    ],
+    "options": {
+      "abortId": "nile-version"
+    }
+  }
+]

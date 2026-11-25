@@ -1,0 +1,67 @@
+[
+  {
+    "seq": 0,
+    "program": "free",
+    "argv": [
+      "-b"
+    ],
+    "timeoutMs": 30000,
+    "replaceEnv": true,
+    "envDiff": {
+      "set": {
+        "LANG": "C"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": "",
+    "result": {
+      "code": 0,
+      "stdout": "Mem:  1000  400  600\n",
+      "stderr": ""
+    }
+  },
+  {
+    "seq": 1,
+    "program": "lspci",
+    "argv": [
+      "-mm",
+      "-v",
+      "-n",
+      "-k"
+    ],
+    "timeoutMs": 30000,
+    "replaceEnv": false,
+    "envDiff": {
+      "set": {},
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": "",
+    "result": {
+      "code": 0,
+      "stdout": "Slot:\t00:01.1\nClass:\t0604\nVendor:\t1022\nDevice:\t1634\nDriver:\tpcieport\n\nSlot:\t04:00.0\nClass:\t0300\nVendor:\t1002\nDevice:\t73bf\nSVendor:\t1da2\nSDevice:\te445\nRev:\tae\nProgIf:\t00\nDriver:\tamdgpu\nModule:\tamdgpu\n\nSlot:\t00:14.0\nClass:\t0c03\nVendor:\t1022\nDevice:\t15b6\nDriver:\txhci_hcd\n",
+      "stderr": ""
+    }
+  },
+  {
+    "seq": 6,
+    "program": "/pins/bin/comet",
+    "argv": [
+      "--version"
+    ],
+    "timeoutMs": 5000,
+    "replaceEnv": false,
+    "envDiff": {
+      "set": {},
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": "",
+    "result": {
+      "code": 0,
+      "stdout": "comet 0.1.3\n",
+      "stderr": ""
+    }
+  }
+]

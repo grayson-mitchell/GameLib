@@ -1,0 +1,28 @@
+[
+  {
+    "seq": 2,
+    "name": "73bf.1002.pci.id.ucw.cz",
+    "answer": {
+      "txt": [
+        [
+          "i=First",
+          "i=Chunk"
+        ],
+        [
+          "i=Second"
+        ]
+      ]
+    }
+  },
+  {
+    "seq": 3,
+    "name": "1002.pci.id.ucw.cz",
+    "answer": {
+      "txt": [
+        [
+          "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+        ]
+      ]
+    }
+  }
+]

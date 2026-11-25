@@ -1,0 +1,14 @@
+{
+  "before": {
+    "device": {},
+    "vendor": {}
+  },
+  "after": {
+    "device": {
+      "1435_1002": "VanGogh [Radeon Custom GPU]"
+    },
+    "vendor": {
+      "1002": "Advanced Micro Devices, Inc. [AMD/ATI]"
+    }
+  }
+}

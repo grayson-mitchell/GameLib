@@ -33,3 +33,18 @@ and the engine log in Phase 87 and to track the rest as todos, so this is delibe
 
 Reproduce on the signed 0.12.0 build and the current build with the same bottle and compare. With the engine log now reaching
 `gamelib.log` (87-61), read what the launch step logs between the wine command and the exit before guessing a cause.
+
+## Seen again in 87-69 (RF1)
+
+Dated 2026-11-25. The 87-69 re-run 1 gate on the signed 0.13.1 build (finding RF1) reproduced the pattern for non-Steam games on
+CrossOver, and it is not intermittent:
+
+- Trash Goblin (Epic, legendary) and Caravan SandWitch (Amazon, nile) exited in 1 to 2 s on `engine=crossover` with
+  `reason=cx-healthy`. In launch 1 there were 7 `launch deadline cancelled (launcher-exited)` lines for them.
+- Wine-Staging launches of the same games worked (1 launch).
+- The one CrossOver launch right after the pinned-to-crossover restore ran normally, then the next two dropped again.
+- The same nile command run from a shell started the game, also under the sidecar's minimal env (`env -i`); an empty recreated
+  shared prefix did not help.
+
+Tracked by 87-72 (diagnosis) and 87-77 (fix); live proof is re-run 2 item 3 (`87-RERUN-2-HUMAN-UAT.md`); 87-79 closes this todo
+when item 3 passes.

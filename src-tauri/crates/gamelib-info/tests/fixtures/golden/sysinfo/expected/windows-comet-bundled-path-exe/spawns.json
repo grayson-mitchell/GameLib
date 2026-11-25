@@ -1,0 +1,82 @@
+[
+  {
+    "seq": 0,
+    "program": "powershell",
+    "argv": [
+      "Get-CimInstance",
+      "-Class",
+      "Win32_VideoController",
+      "-Property",
+      "AdapterCompatibility,DriverVersion,PnPDeviceID",
+      "|",
+      "Select-Object",
+      "AdapterCompatibility,DriverVersion,PnPDeviceID",
+      "|",
+      "ConvertTo-Json",
+      "-Compress"
+    ],
+    "timeoutMs": 30000,
+    "replaceEnv": false,
+    "envDiff": {
+      "set": {},
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": "",
+    "result": {
+      "code": 0,
+      "stdout": "{\"AdapterCompatibility\":\"NVIDIA\",\"DriverVersion\":\"31.0.15.3713\",\"PnPDeviceID\":\"PCI\\\\VEN_10DE&DEV_2684&SUBSYS_88EE1043&REV_A1\\\\4&1A2B3C&0&0008\"}",
+      "stderr": ""
+    }
+  },
+  {
+    "seq": 3,
+    "program": "powershell",
+    "argv": [
+      "Get-CimInstance",
+      "-Class",
+      "Win32_OperatingSystem",
+      "-Property",
+      "Caption,Version",
+      "|",
+      "Select-Object",
+      "Caption,Version",
+      "|",
+      "ConvertTo-Json",
+      "-Compress"
+    ],
+    "timeoutMs": 30000,
+    "replaceEnv": false,
+    "envDiff": {
+      "set": {},
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": "",
+    "result": {
+      "code": 0,
+      "stdout": "{\"Caption\":\"Microsoft Windows 11 Pro\",\"Version\":\"10.0.22631\"}",
+      "stderr": ""
+    }
+  },
+  {
+    "seq": 6,
+    "program": "<HOME>/public/bin/x64/win32/comet.exe",
+    "argv": [
+      "--version"
+    ],
+    "timeoutMs": 5000,
+    "replaceEnv": false,
+    "envDiff": {
+      "set": {},
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": "",
+    "result": {
+      "code": 0,
+      "stdout": "comet 0.1.3\n",
+      "stderr": ""
+    }
+  }
+]

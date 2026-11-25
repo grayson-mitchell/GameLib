@@ -1,0 +1,46 @@
+[
+  {
+    "seq": 1,
+    "name": "88ee.1043.2684.10de.pci.id.ucw.cz",
+    "answer": {
+      "txt": [
+        [
+          "i=AD104 [GeForce RTX 4070]"
+        ]
+      ]
+    }
+  },
+  {
+    "seq": 2,
+    "name": "10de.pci.id.ucw.cz",
+    "answer": {
+      "txt": [
+        [
+          "i=NVIDIA Corporation"
+        ]
+      ]
+    }
+  },
+  {
+    "seq": 3,
+    "name": "8823.1043.1681.1002.pci.id.ucw.cz",
+    "answer": {
+      "txt": [
+        [
+          "i=Cezanne [Radeon Vega Series]"
+        ]
+      ]
+    }
+  },
+  {
+    "seq": 4,
+    "name": "1002.pci.id.ucw.cz",
+    "answer": {
+      "txt": [
+        [
+          "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+        ]
+      ]
+    }
+  }
+]

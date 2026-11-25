@@ -1,0 +1,68 @@
+[
+  {
+    "seq": 2,
+    "name": "a7a0.8086.pci.id.ucw.cz",
+    "answer": {
+      "txt": [
+        [
+          "i=Raptor Lake-P [Iris Xe Graphics]"
+        ]
+      ]
+    }
+  },
+  {
+    "seq": 3,
+    "name": "8086.pci.id.ucw.cz",
+    "answer": {
+      "txt": [
+        [
+          "i=Intel Corporation"
+        ]
+      ]
+    }
+  },
+  {
+    "seq": 4,
+    "name": "2860.10de.pci.id.ucw.cz",
+    "answer": {
+      "txt": [
+        [
+          "i=AD107M [GeForce RTX 4060 Max-Q / Mobile]"
+        ]
+      ]
+    }
+  },
+  {
+    "seq": 5,
+    "name": "10de.pci.id.ucw.cz",
+    "answer": {
+      "txt": [
+        [
+          "i=NVIDIA Corporation"
+        ]
+      ]
+    }
+  },
+  {
+    "seq": 6,
+    "name": "1234.1002.pci.id.ucw.cz",
+    "answer": {
+      "txt": [
+        [
+          "i=Example Display Controller"
+        ]
+      ]
+    }
+  },
+  {
+    "seq": 7,
+    "name": "1002.pci.id.ucw.cz",
+    "answer": {
+      "txt": [
+        [
+          "i=Advanced Micro Devices, Inc. [AMD/ATI]"
+        ]
+      ]
+    }
+  }
+]

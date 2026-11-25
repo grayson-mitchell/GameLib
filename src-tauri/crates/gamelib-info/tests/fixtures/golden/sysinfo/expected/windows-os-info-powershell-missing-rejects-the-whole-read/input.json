@@ -1,0 +1,54 @@
+{
+  "id": "windows-os-info-powershell-missing-rejects-the-whole-read",
+  "call": {
+    "kind": "info"
+  },
+  "scenario": {
+    "platform": "windows",
+    "arch": "x64",
+    "osRelease": "10.0.22631",
+    "cpu": {
+      "model": "12th Gen Intel(R) Core(TM) i7-12700K",
+      "cores": 20
+    },
+    "totalmem": 34359738368,
+    "freemem": 12884901888,
+    "env": {},
+    "steamDeckGameMode": false,
+    "osReleaseFiles": {},
+    "appVersion": "2.15.0",
+    "altCometBin": "/pins/bin/comet",
+    "lspci": null,
+    "free": null,
+    "sysctl": null,
+    "vmStat": null,
+    "powershellGpu": {
+      "stdout": "{\"AdapterCompatibility\":\"NVIDIA\",\"DriverVersion\":\"31.0.15.3713\",\"PnPDeviceID\":\"PCI\\\\VEN_10DE&DEV_2684&SUBSYS_88EE1043&REV_A1\\\\4&1A2B3C&0&0008\"}"
+    },
+    "powershellOs": {
+      "throws": "spawn powershell ENOENT"
+    },
+    "comet": null,
+    "managers": null,
+    "dns": {
+      "88ee.1043.2684.10de.pci.id.ucw.cz": {
+        "txt": [
+          [
+            "i=AD104 [GeForce RTX 4070]"
+          ]
+        ]
+      },
+      "10de.pci.id.ucw.cz": {
+        "txt": [
+          [
+            "i=NVIDIA Corporation"
+          ]
+        ]
+      }
+    },
+    "caches": {
+      "device": [],
+      "vendor": []
+    }
+  }
+}

@@ -1,0 +1,25 @@
+[
+  {
+    "seq": 0,
+    "program": "free",
+    "argv": [
+      "-b"
+    ],
+    "timeoutMs": 30000,
+    "replaceEnv": true,
+    "envDiff": {
+      "set": {
+        "LANG": "C"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "stdin": "",
+    "result": {
+      "code": null,
+      "stdout": "",
+      "stderr": "",
+      "error": "spawn free ENOENT"
+    }
+  }
+]

@@ -1,0 +1,18 @@
+{
+  "before": {
+    "device": {},
+    "vendor": {}
+  },
+  "after": {
+    "device": {
+      "1234_1002": "Example Display Controller",
+      "2860_10de": "AD107M [GeForce RTX 4060 Max-Q / Mobile]",
+      "a7a0_8086": "Raptor Lake-P [Iris Xe Graphics]"
+    },
+    "vendor": {
+      "1002": "Advanced Micro Devices, Inc. [AMD/ATI]",
+      "8086": "Intel Corporation",
+      "10de": "NVIDIA Corporation"
+    }
+  }
+}

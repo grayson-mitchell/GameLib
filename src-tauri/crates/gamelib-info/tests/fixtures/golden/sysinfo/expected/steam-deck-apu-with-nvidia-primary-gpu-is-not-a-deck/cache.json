@@ -1,0 +1,16 @@
+{
+  "before": {
+    "device": {},
+    "vendor": {}
+  },
+  "after": {
+    "device": {
+      "163f_1002": "VanGogh [Radeon Custom GPU]",
+      "2860_10de": "AD107M [GeForce RTX 4060 Max-Q / Mobile]"
+    },
+    "vendor": {
+      "1002": "Advanced Micro Devices, Inc. [AMD/ATI]",
+      "10de": "NVIDIA Corporation"
+    }
+  }
+}
