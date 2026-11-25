@@ -48,3 +48,8 @@ CrossOver, and it is not intermittent:
 
 Tracked by 87-72 (diagnosis) and 87-77 (fix); live proof is re-run 2 item 3 (`87-RERUN-2-HUMAN-UAT.md`); 87-79 closes this todo
 when item 3 passes.
+
+2026-11-25 (87-72): RF1's cause is named at the bottle's state at spawn: the plain `cx-healthy` branch leaves the wineserver its own
+demo-status probe started running and the launch spawns against that warm server, while the restore branch's switch kills it first and
+launches cold (confidence medium; the isolating shell run is 87-77's first step). See
+`.planning/debug/rf1-crossover-launches-exit-within-two-seconds.md`; 87-77 fixes it.

@@ -1,5 +1,5 @@
 ---
-status: investigating
+status: root-cause-named
 trigger: "RF1: non-Steam CrossOver launches started by GameLib (engine=crossover reason=cx-healthy) exit within 1 to 2 s on the signed 0.13.1 build, while Wine-Staging launches and a shell-run of the logged command work."
 created: 2026-11-25
 updated: 2026-11-25
@@ -92,3 +92,140 @@ What held, which hypothesis it settles:
 
 Run: `cargo test -p gamelib-engine --features testing --test crossover_launch_shape` (6 passed),
 `pnpm exec jest --runTestsByPath src/backend/__tests__/launcher.crossoverEnv.test.ts` (12 passed).
+
+## Live capture
+
+Task 2 of 87-72, 2026-11-25, installed signed 0.13.1 build, CrossOver 26.3.0, Trash Goblin (Epic, legendary) on its per-game
+bottle. Session captures stay in the runner's scratchpad and are not committed; this section carries counts, process names,
+pids, timings and `~` paths only.
+
+- **D0 clean.** Before anything ran: 0 GameLib processes, 0 reapers, 0 wineservers. `ditto` copies of the two bottles (the
+  legendary game's and the nile sibling's) taken into the session directory.
+- **D1, GameLib launch 1 (operator: no window).** `engine=crossover reason=cx-healthy`. Process capture, 0.5 s samples:
+  - t=4.5 s: a `wineloader` / `wineboot --init` / `wineserver` / `winemenubuilder` / `winedevice` set appears with parent
+    pid 44402, which is the Rust shell (the sidecar is pid 44409, the reaper 44403). This is the demo-status probe: the log
+    says `Engine: demo-status probe ... outcome=ok status=licensed elapsedMs=3089`, ending about 3 s later.
+  - t=7.5 s to 8.0 s: `legendary` (ppid the sidecar, pgid the sidecar's) is alive for one to two samples, then gone.
+  - After legendary: no `wineloader`, no `winewrapper.exe --run` and no game exe in any sample. The wineserver and its two
+    `winedevice` hosts, already running since t=4.5 s, are the only wine processes, and they are gone at t=11 s (3 s after
+    legendary, which is wineserver's own idle timeout once no client is left).
+  - `gamelib.log`: one `Launching` line, one `launch deadline ... cancelled (launcher-exited)` about 2 s later, no
+    `Process exited with code` error line (legendary exited 0). Just before legendary, the TS launch ran
+    `--bottle <bottle> --verbose whoami` (`getCrossoverBottleFolder`).
+  - legendary's own output ends at `Launching <appid>...` plus the update notice; it is the same text as in D3.
+- **D2, the launch line.** Variable names only: `CX_BOTTLE`, `GAMEID`, `HEROIC_APP_NAME`, `HEROIC_APP_RUNNER`,
+  `HEROIC_APP_SOURCE`, `LD_PRELOAD`, `LEGENDARY_CONFIG_PATH`, `STORE`, `WINEESYNC`, `WINEMSYNC`, `WINE_FULLSCREEN_FSR`. No
+  `WINEPREFIX`, `WINESERVER` or `WINELOADER`. `CX_BOTTLE` is the game's per-game bottle. The wine binary is CrossOver's
+  `bin/wine` (class: CrossOver). The command is `legendary launch <appid> --wine <CrossOver>/bin/wine --language en`, no
+  `--wine-prefix` on this (legendary) line. The wine error lines of the game's own `launch.log` were not recorded in the
+  session notes.
+- **D3, shell replay (operator: window, game up).** The same command with `env -i` plus exactly the logged variables plus
+  `HOME`, `USER` and a minimal `PATH`, working dir `~`, stdout to a file. Before it: 0 wine processes (a cold bottle).
+  - `legendary` (pgid 48079) is alive t=1.5 s to 2.5 s, then exits (about 1 s, as in D1: legendary hands off and exits in
+    both runs).
+  - t=3.0 s: a `wineloader` appears with parent pid 1 in legendary's process group, together with a fresh `wineserver`,
+    `wineboot.exe` and `winemenubuilder.exe`; t=4.0 s: it is `winewrapper.exe --run`, and the game exe is running; the Unity
+    crash handler follows at t=8 s. All alive at t=29.5 s. The output file shows `msync: bootstrapped mach port` and
+    `msync: up and running`, so the server was started under the launch's sync environment.
+- **D4, not run.** The operator did not approve it, and D3 had already contradicted H4's spawn-command reading.
+- **D5.** Nothing to restore: the D3 replay left the game running and the operator closed it.
+
+What the capture shows, in one line: under GameLib the wine child of legendary never starts, with a wineserver already warm;
+from a shell on a cold bottle it starts.
+
+## Root cause
+
+**Layer:** the bottle's state at the moment legendary spawns its wine child. On the plain `cx-healthy` branch the launch step's
+own preflight probe starts the bottle's wineserver and nothing stops it, so the launch spawns against a warm server the probe
+started with a different environment from the launch's. On the restore branch the engine switch kills that server before the
+launch, so the launch starts a cold one. The branches differ in nothing else that reaches the spawn.
+
+The chain, one hop per file:
+
+1. `src-tauri/crates/gamelib-engine/src/launch/step.rs`, `select_engine_for_launch` (line 479) asks the launch decision
+   (`decision/launch.rs`, `decide_launch_engine`) for the engine; that calls
+   `src-tauri/crates/gamelib-engine/src/decision/preflight.rs`, `preflight_crossover` (line 213), which runs
+   `probe_demo_status` through `run_probe`.
+2. `src-tauri/crates/gamelib-engine/src/crossover/demo_status.rs`, `probe_demo_status` (line 189; the spec at lines 228 to
+   247) spawns `<CrossOver bin>/wine --demo-status` with `CX_BOTTLE=<the game's bottle>` and the shell's inherited environment
+   (`spec.replace_env` false in production). The probe has none of the launch's `WINEESYNC=1` / `WINEMSYNC=1`. A `--demo-status`
+   run against a named bottle boots it: D1 shows `wineboot --init`, `wineserver`, `winemenubuilder` and two `winedevice` hosts
+   with the shell as their parent, and the log's `elapsedMs=3089`.
+3. The probe does not stop that server on success: `preflight_crossover` stops it only after a failed probe (`stop_wineserver`,
+   defined at preflight.rs line 198, called from the retry loop at lines 266 to 281), and 59-REVIEW WR-07 forbids stopping it for a page read or while a
+   game of the title runs. On the plain branch (marker already `crossover`) nothing else touches it.
+4. `src/backend/launcher.ts` then runs the CrossOver bottle's `whoami` (`getCrossoverBottleFolder`, line 922, from
+   `prepareWineLaunch`, line 1050) and the store spawns legendary with the launch env (`setupWineEnvVars`, `CX_BOTTLE` plus
+   `WINEESYNC` and `WINEMSYNC`). Both reach the probe's warm server. In D1 legendary exits in under 1 s and no wine child ever
+   appears.
+5. The restore branch differs exactly here: `src-tauri/crates/gamelib-engine/src/bottles/switch.rs`,
+   `prepare_bottle_for_engine_with` calls `kill_previous` (line 633; defined at line 302) before it restores the DXVK files
+   (`restore`, line 729). That kills the probe's server, so the launch starts cold. This is the "launch right after the
+   pinned-to-crossover restore ran normally, then the next two dropped" observation of re-run 1, and D3's cold start.
+
+**What discriminates it from the other hypotheses:**
+
+- **H1 (the two branches' settings differ): ruled out** by the Task 1 desk invariants. Every spawn-relevant field is equal on
+  both branches, and the switch is handed the same settings the launch runs with.
+- **H2 (a `WINEPREFIX` or `WINESERVER` from elsewhere): ruled out as the cause.** The D2 launch line carries neither. The
+  re-run 1 launch right after the restore ran from GameLib with the same sidecar, the same process environment and the same
+  stdio, and it worked. An environment or a spawn context that breaks the game would have broken that launch too.
+- **H4 (spawn context: pipes, process group, session, parent): ruled out as the cause** by that same launch. The sidecar spawns
+  legendary the same way on every branch (`src/backend/process/runner.ts`, not detached, tracked), and one of them works.
+- **H3 as a teardown, GameLib killing legendary's process group or the bottle when the launcher exits: refuted by the code.**
+  `launcher-exited` is the normal log of `end_engine_launch` (`launch/step.rs` line 985): it stops the watcher, clears the
+  overlay context, cancels the deadline and drops the ledger entry; it kills nothing. `launcher.ts` reaches it from the
+  `.finally` after the command resolves (line 456 onward). `kill_bottle_wineserver` is called only by the engine switch
+  (switch.rs), the fallback bottle, per-game bottle removal and a failed preflight probe, and TS `shutdownWine`
+  (`src/backend/utils.ts` line 965) only from a user Stop. The D1 capture agrees: the server dies 3 s after legendary, its
+  idle timeout, not at legendary's exit. The `launcher-exited` line in the log is the symptom of legendary's early exit, not a
+  cause.
+- **H3 as bottle state: the surviving hypothesis.** D1 (warm server from the probe, no wine child, fails) against D3 (cold
+  server, wine child starts, works), the restore-branch launch (cold after the switch's kill, works) and the plain-branch
+  launches (warm from the probe, fail) all line up on one variable, and the desk table shows the two branches equal everywhere
+  else.
+
+**Confidence: medium.** The discriminator that would make it certain was not run: D4 (the restore pattern, which also needs a
+DXVK round trip on the real bottle) was not approved, and the one-step version below was not tried. Two things stay open, and
+they matter for the fix:
+
+- **Which part of "warm" breaks it.** The probe's server starts without `WINEESYNC` / `WINEMSYNC` while the launch sets both.
+  The CrossOver `ntdll.so` carries `Server is running with WINEMSYNC but this process is not, please enable WINEMSYNC or
+  restart wineserver.`, so a sync-mode mismatch between a server and a client is a refusal Wine itself raises; the reverse
+  direction (the launch's `WINEMSYNC=1` against a probe server without it) was not read from Wine and is the assumed
+  mechanism, not an observed one. The restore branch's DXVK restore is the other thing the plain branch skips, so the cause
+  could be the server or the files; the process capture points at the server, since no file was changed between D1 and D3.
+- **The nile line.** The nile launch passes `--wine-prefix <shared prefix>` (see the desk section). The nile symptom is `Process
+  exited with code 1` where legendary exits 0, so it may carry a second contribution; D3 was run for legendary only.
+
+**The isolating run (first step of 87-77, about 2 minutes with the operator, on a bottle copy or the real bottle with the
+D0 `ditto` copy as the restore path):** from a shell, with the app closed and no wineserver running, run
+`CX_BOTTLE=<bottle> <CrossOver bin>/wine --demo-status`, then at once the D3 command unchanged. Expected on this root cause: no
+window and no wine child (the D1 shape). Then `wineserver -k` for the bottle and the D3 command again: a window. If the warm
+run starts the game, this root cause is wrong and the status returns to `unresolved` with the sync environment and the DXVK
+files as the next two suspects.
+
+## Fix scope
+
+The fix is a state change at the engine step, not at the settings overlay or the TS env: before the launch spawns, a CrossOver
+bottle that the launch step's own probe warmed must not be handed to the launch warm, and a launch that arrives with nothing
+else running in that bottle starts from a cold server, as the restore branch's launch does.
+
+- **Recommended layer: `src-tauri/crates/gamelib-engine/src/launch/step.rs`** (inside 87-77's files). After a healthy preflight on
+  a branch that runs no switch, stop the bottle's wineserver through the existing `kill_bottle_wineserver` when
+  `ctx.ledger.other_games_running(bottle, key)` is empty. It reuses the preflight's own guard (WR-07) and the restore
+  branch's own kill, and the bottle's other running games keep their server.
+- **Alternatives, which are outside 87-77's `files_modified`:** (a) stop the server inside `preflight_crossover` after a
+  successful probe (`decision/preflight.rs`), or (b) run the probe with the launch's sync environment
+  (`crossover/demo_status.rs`, the `spec.env` build at line 232). 87-77 stops and asks before editing either file.
+  `launch/settings.rs`, `launcher.ts` and the TS test need no production change on this cause; the TS file is touched
+  only if the fix changes what the launch spawns.
+- **Red-first test (Rust, `crossover_launch_shape.rs`):** on the plain branch, after `engine_launch_select` returns `use`,
+  the fake runner has recorded an `engine-wineserver-kill` spawn for the game's bottle, with `WINEPREFIX` the bottle's
+  directory, and none when another game of the bottle is in the ledger. It fails at HEAD, because the plain branch records no
+  kill (the restore branch records the switch's). Commit it expected-to-fail first, flip it with the fix.
+- **Existing suites:** a golden that encoded "no kill on the plain branch" changes only with its reason recorded (87-77's
+  D-16 rule). `offline_refusal`, `golden_launch` and `launcher.engineStep` must stay green.
+- **Live proof** is re-run 2 item 3 (`87-RERUN-2-HUMAN-UAT.md`): two plain CrossOver launches in a row of Trash Goblin and
+  Caravan SandWitch both stay up.
+
