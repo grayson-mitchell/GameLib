@@ -47,7 +47,7 @@ Filled in by the planner/executor per task. Requirement-level map; the Sub-phase
 |----------|-----------|----------|-----------|-------------------|-------------|--------|
 | SVC-03 / SC1 | 88.1 | builders match TS vectors (env, wrappers, gamescope, known-fix env, prepare ops) | Rust replay of TS vectors | `cargo test -p gamelib-launch --test golden_builders` | ❌ W0 | ⬜ pending |
 | SVC-03 / SC1 | 88.1 | spawn traces: native, Wine/Proton/CrossOver, gamescope/mangohud, overlay, pre/post (argv, full env, cwd, class, order) | Rust replay of TS traces | `cargo test -p gamelib-launch --test golden_launch` | ❌ W0 | ⬜ pending |
-| SVC-03 / SC1 | 88 | known-fix reader, layering, registry, overlay archive/install, fetch | replay + ported incident tests | `cargo test -p gamelib-knownfix` | ❌ W0 | ⬜ pending |
+| SVC-03 / SC1 | 88 | known-fix reader, layering, registry, overlay archive/install, fetch | replay + ported incident tests | `cargo test -p gamelib-knownfix` | ✅ | ✅ green (P `68979200f`, 88-17) |
 | SVC-03 / SC1 | 88.2 | runner command argv/env, redacted log line, streamed line sequence | replay | `cargo test -p gamelib-launch --test golden_runner` | ❌ W0 | ⬜ pending |
 | SVC-03 / SC2 | 88.3 | funnel order, status events, single-flight join, release on failure | funnel oracle replay | `cargo test -p gamelib-launch --test funnel` | ❌ W0 | ⬜ pending |
 | SVC-03 / SC2 | 88.2 | stub game: start, single flight, quit-kill, survives parent SIGKILL (three OS) | CI smoke + orphan harness | `cargo test -p gamelib-proc` ; `cargo test -p gamelib-launch --test stub_game` | partial | ⬜ pending |
@@ -56,7 +56,7 @@ Filled in by the planner/executor per task. Requirement-level map; the Sub-phase
 | SVC-03 / SC3 | 88.1 | anti-cheat at launch; utils pieces (`errorHandler`, `askForceUninstall`, `isEpicServiceOffline`, `isMacSonomaOrHigher` both ways, `removeQuoteIfNecessary`, D-28 `check_wine_before_launch`/`download_default_wine`; `errorHandler` and `askForceUninstall` land with 88.2's runner, per the 82 amendment) | replay + unit | `cargo test -p gamelib-launch --test utils_pieces` | ❌ W0 | ⬜ pending |
 | SVC-03 / SC4 | 88.3 | TS and registrations deleted, only scheduled shims remain | Jest gate | `pnpm jest src/backend/__tests__/launchPortComplete.test.ts src/backend/__tests__/engineWineShimSchedule.test.ts` | ❌ (gate new) | ⬜ pending |
 | D-08/D-10 | 88.3 | re-adoption (pid + start match, reused pid no match, stale record removed, exit playtime + after-script) | Rust tests | `cargo test -p gamelib-launch --test readopt` | ❌ W0 | ⬜ pending |
-| D-19 | all | channel parity and IPC snapshot | gen + Jest | `pnpm check:ipc-contract` | ✅ | ⬜ pending |
+| D-19 | all | channel parity and IPC snapshot | gen + Jest | `pnpm check:ipc-contract` | ✅ | ✅ green at 88 (P `68979200f`, 88-17); stays a per-sub-phase row |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -78,6 +78,81 @@ Filled in by the planner/executor per task. Requirement-level map; the Sub-phase
 | Behavior | Requirement | Why Manual | Test Instructions |
 |----------|-------------|------------|-------------------|
 | Real game launch on macOS (CrossOver/engine, native), single flight, quit prompt, Force Quit survival and re-adoption, known fix + scripts | SVC-03 SC2, D-08, D-27 | needs the operator's Mac, signed build and real games | `88-HUMAN-UAT.md` (D-17), authored by 88-01 and run only by the 88.3 live-gate plan, never by its author |
+
+---
+
+## Phase proof (88)
+
+Measured by plan 88-17 Task 1, 2026-11-25, from a clean `git worktree add --detach` checkout (under the session scratchpad, removed
+afterwards) with its own `pnpm install --frozen-lockfile`, `pnpm exec vite build`, `pnpm build:sidecar-sea` and a cold `src-tauri/target`.
+The candidate head is main's HEAD after the 88-16 SUMMARY commit; the two machine-checked line shapes follow.
+
+P: 68979200f2e94c561d869c5997437fb99adcc65e
+
+Ancestry: 67 distinct commit hashes found in the 88-01..88-16 SUMMARYs resolve in this repository and every one is an ancestor of P
+(`git merge-base --is-ancestor`, 0 exceptions). SUMMARYs 88-01..88-16 all exist.
+
+| Step | Command (run at P, in the clean worktree) | Exit | Outcome at P |
+|------|--------------------------------------------|------|--------------|
+| 1 | `pnpm install --frozen-lockfile` | 0 | pass |
+| 2 | `pnpm exec vite build` | 0 | pass |
+| 3 | `pnpm build:sidecar-sea` | 0 | pass (arm64 SEA sidecar built) |
+| 4 | `cargo test -p gamelib-knownfix -p gamelib-knownfix-cli -p gamelib-launch -p gamelib-launch-cli -p gamelib-engine -p gamelib-wine` | 0 | pass, 850 passed, 0 red, 0 ignored |
+| 5 | `cargo test --bin gamelib-shell` | 0 | pass, 888 passed, 0 red, 2 ignored |
+| 6 | `pnpm check:ipc-contract` | 0 | pass (ipc_contract.rs and ipcSchemaSnapshot.json up to date) |
+| 7 | `pnpm planning-gates` | 0 | pass, 12/12 |
+| 8 | `pnpm codecheck` (main and meta projects) | 0 | pass |
+| 9 | `pnpm lint` | 0 | pass, 0 errors, 3 warnings (fixable with `--fix`) |
+| 10 | `pnpm test:ci` (first run, cold worktree) | 1 | 1097 suites passed, 6 skipped, 3 failed; 24404 tests passed, 32 failed, 41 skipped. The three red suites are `meta/__tests__/shimAbiGate`, `wireExtendedCompile` and `msvcCallbackBaseLayout`: each `beforeAll` calls `downloadZig()` with a 180 s hook budget and a cold worktree has no `.build-tools/zig`, so the 52 MB pinned zig download outran the budget (three suites also raced one tarball path). The failures are `Exceeded timeout of 180000 ms for a hook`, nothing to do with sub-phase 88 |
+| 11 | the same three suites re-run with `.build-tools/zig` (gitignored cache of the pinned, SHA-256-verified zig 0.16.0, same `.zig-version`) copied in from the main tree | 0 | 3 suites passed, 32 tests passed (the 32 that were red) |
+
+`pnpm test:ci` therefore stands at 1100 suites passed (6 skipped) and 24436 tests passed (41 skipped), 0 red, across steps 10 and 11. The
+clippy ratchet, `pnpm smoke:*` and the rest of the pre-push gate set are not in 88-17's command list and were not re-run here; `cargo fmt`
+and `cargo clippy -p gamelib-shell -D warnings` are known to fail at HEAD on unrelated files (the generated `ipc_contract.rs` and others)
+and were not run.
+
+Golden replays at P (cargo output of `cargo test -p gamelib-knownfix --test golden_<name> -- --nocapture`; the compared count is the number the
+test printed, the floor is the constant in its Rust test file). `golden_reader` and `golden_registry` do not print a compared count; their
+`n` is the number of `expected/<case>` folders at P (125 and 57), which the test compares one for one and passes only when none differs,
+and each equals the `MANIFEST.json` count. `golden_launch_overrides` floor is the unix arm (19; the non-unix arm is 15).
+
+golden reader: compared 125 floor 125
+golden launch_overrides: compared 19 floor 19
+golden registry: compared 57 floor 57
+golden overlay_archive: compared 25 floor 25
+golden overlay_install: compared 41 floor 41
+golden fetcher: compared 38 floor 38
+golden report: compared 48 floor 48
+
+### Sub-phase 88 sweep at P
+
+- `ls src/backend/knownFix*.ts` lists exactly one file, `src/backend/knownFixLaunchReply.ts`: the 88-12 settle helpers that the launcher, the three
+  managers and the Steam bridge use, kept on purpose (88-16 deviation 6). All eight known-fix TypeScript modules the 88-16 delete gate names are
+  absent and `knownFixPortComplete` is green. The plan's literal "is empty" does not hold and cannot: it predates `knownFixLaunchReply.ts`.
+  The Task 1 `<verify>` count is therefore measured with that one kept file excluded (see the deviation in 88-17-SUMMARY.md).
+- `src/backend/launchrust/knownFix*.ts`: `knownFixes.ts` (7 shim rows) and `knownFixTwins.ts` (9 twin rows), 16 in all; `knownFixSurvivors` is green
+  (exports against `SCHEDULE` in both directions) and `rowsDueIn(SCHEDULE, 88)` is `[]`, each row's `deletedBy` is 88.1, 92, 93 or 97.
+  `launchPortComplete.test.ts` and `engineWineShimSchedule.test.ts`: 164 tests passed at P.
+- `88-HUMAN-UAT.md` is present with four items, each `result: pending` (authored by 88-01, unrun, waiting for 88.3).
+- gamelib.log lines added by `gamelib-knownfix` (prohibition 1): 33 call sites of `ctx.log_warn` / `ctx.log_info` plus the reader's one `log.warn`, all through
+  the engine's `EngineLog`. No line formats a URL, query, header, token, account name or a profile path: the interpolated values are the
+  label and fixed phrases, a store-file base name, an app name or file name, an overlay id, a status code, an appId and key/op words, a
+  `FetchError` (a category only: `network`, `status(n)`, `aborted`, ... never a URL, T-87-09), a reason string, and, for rejected entries, the entry
+  JSON cut at 512 UTF-16 units. Observations, none claimed as a defect here: `registry.rs` echoes a rejected registry or dllOverrides entry
+  through `shown()` without the `redact_urls` pass that `overlay/env.rs` applies to overlay entries, and `launch.rs` echoes a rejected
+  `exeOverride` value; both are golden-compared parity lines (D-11) over known-fix data, not user profile paths, and the engine's redactor
+  still holds the line to its rule. The prohibition stays `unresolved` in the plan (no wired check descriptor).
+
+### Decisions proven by this plan's evidence, and what is deferred
+
+D-03, D-11..D-15, D-17 authoring, D-18, D-19, D-20, D-21, D-22, D-24, D-25, D-28 (82 amendments) and D-30 (the split and the gate model) are
+carried by the goldens and gates above. Deferred by D-30 and not claimed: D-01 builder shims and the async ripple, D-28's ports of
+`check_wine_before_launch` and `download_default_wine`, anti-cheat and system info (88.1); D-02 command runner and streaming shim, D-05 Game-class
+spawns, D-06 as amended by D-27, D-07, D-26's ManagerHooks transport, D-29's capture file (88.2); D-01 funnel, D-04, D-08..D-10, D-16 and D-17's
+live run, D-23 funnel events, D-26's full hooks, D-29's single log writer and resume todo, D-31 (88.3).
+
+Flagged assumption (spec-less edge probe): SVC-03's edge-coverage row is `unclassified` and unresolved; the D-14 matrix stands in for edge
+coverage and is not claimed as a verified edge.
 
 ---
 
