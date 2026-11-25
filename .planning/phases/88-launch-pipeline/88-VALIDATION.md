@@ -3,8 +3,9 @@ phase: "88"
 slug: "launch-pipeline"
 # status lifecycle: draft (seeded by plan-phase) → validated (set by validate-phase §6)
 # audit-milestone §5.5 distinguishes NOT-VALIDATED (draft) from PARTIAL (validated + nyquist_compliant: false) (#2117)
-status: draft
-nyquist_compliant: false
+status: validated
+# nyquist_compliant covers sub-phase 88's rows (validate-phase 88, 2026-11-25); the 88.1–88.3 rows stay pending and are re-audited when those sub-phases run validate-phase against this shared file
+nyquist_compliant: true
 wave_0_complete: false
 created: "2026-11-24"
 ---
@@ -64,7 +65,7 @@ Filled in by the planner/executor per task. Requirement-level map; the Sub-phase
 
 ## Wave 0 Requirements
 
-- [ ] `src/backend/launchOracle/` harness (record/compare modes, spawn tracer reuse, pairwise generator, classes file) and manifests
+- [x] `src/backend/launchOracle/` harness (record/compare modes, spawn tracer reuse, pairwise generator, classes file) and manifests (88-04: landed at `src/backend/testUtils/launchOracle/`; base env, probes, pairwise with coverage proof, spawn-class check)
 - [x] `src-tauri/crates/gamelib-launch/` and `gamelib-knownfix/` skeletons, `-p` entries in `.github/workflows/rust-test.yml` (88-17: both crates build and test green on three OSes in run 45533129411)
 - [ ] stub game binary (model on `gamelib-proc/src/bin/standin.rs`) and Windows CommandLine-echo stub
 - [ ] `gamelib-proc` additions with orphan-harness arms (Windows `start_time`, Game job, tree kill)
@@ -226,3 +227,11 @@ are the table above.
 - [ ] `nyquist_compliant: true` set in frontmatter
 
 **Approval:** pending
+
+## Validation Audit 2026-11-25
+
+| Metric | Count |
+|---|---|
+| Gaps found | 0 |
+| Resolved | 0 |
+| Escalated | 0 |
