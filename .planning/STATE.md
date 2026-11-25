@@ -6,10 +6,10 @@ current_phase: 87
 current_phase_name: Engine, Wine and tools
 status: executing
 stopped_at: Completed 88.1-05-PLAN.md
-last_updated: "2026-11-25T09:55:16.806Z"
+last_updated: "2026-11-25T10:15:03.178Z"
 last_activity: 2026-11-25
 last_activity_desc: Phase 87 execution started
-state_head: f0709db9d38d85c4a3cfcb12fcda90f156f93f4f
+state_head: b6a55477b3b29cdd542de335063f1acce44c5a9d
 progress:
   total_phases: 25
   completed_phases: 23
@@ -534,6 +534,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 88.1 P09 | ~3h across two sessions (decision pause) | 3 tasks | 15 files |
 | Phase 88.1 P08 | ~2h | 2 tasks | 29 files |
 | Phase 88.1 P10 | ~3h | 3 tasks | 38 files |
+| Phase 88.1 P11 | 110min | 3 tasks | 24 files |
 
 ## Accumulated Context
 
@@ -1199,6 +1200,9 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 88.1]: 88.1-09: pci.ids TXT lookup is an in-repo query over UDP (operator option A): adds no crate (Cargo.lock names stay 716), needs no re-plan, answers are short single strings so no TCP fallback, reversible; hickory-resolver (B) and nslookup (C) not taken
 - [Phase 88.1]: 88.1-08: launch_verify_wine_prefix answers { res } over gamelib-wine's verify_wine_prefix and is an unbounded channel (wineboot wait, eighteenth doc entry); the command runner's wine binding awaits Rust's env builders and prefix check through the shims, with bootstrap.ts off launcher.ts
 - [Phase 88.1]: 88.1-10: an unresolvable runner binary reads invalid in the system information (the TS rejected the whole read); getSystemInfo and the copy call sysinfo::get_system_info inside the crate's guarded wrapper, not as info_* ops
+- [Phase 88.1]: launch_prepare returns its per-game log as data ({ level, parts }) so the TS LogWriter stays the only writer until 88.3; Discord presence is never constructed
+- [Phase 88.1]: LaunchCtx carries info: Arc<InfoCtx> (gamelib-info is a leaf dependency); the shell shares info_dispatch's context so system information and the launch log use one single-flight cache
+- [Phase 88.1]: launch_prepare takes [args, host]; the shell builds the host (wine host, Deck, Flatpak facts) itself and the channel joins UNBOUNDED_RUST_CHANNELS with its shim in 88.1-15
 
 ### Pending Todos
 
