@@ -1048,32 +1048,6 @@ export const RUST_INFO_WIKI_GET = 'info_wiki_get' as const
 export const RUST_INFO_WIKI_CACHE_CLEAR = 'info_wiki_cache_clear' as const
 
 /**
- * Phase 87 (SVC-02, 87-18): the Rust wine runtime services, pass-throughs to the Tauri-free
- * `gamelib-wine` crate (the same dispatch `gamelib-wine-cli` uses). Each takes ONE positional string,
- * the runtime name: exactly one of `eac_runtime`, `battleye_runtime`, `umu`. Any other value, a second
- * argument or none rejects with the invalid-args marker before the crate sees it.
- *
- * `wine_runtime_is_installed`: whether the runtime is installed and current (its `current_version`
- * matches the lutris list's `created_at`). Resolves a boolean. The launcher's `isRuntimeInstalled`
- * shim (`backend/enginewine/runtimes.ts`) is the one caller; the renderer's `isRuntimeInstalled` is
- * the native channel of the same name.
- */
-export const RUST_WINE_RUNTIME_IS_INSTALLED =
-  'wine_runtime_is_installed' as const
-
-/**
- * Phase 87 (SVC-02, 87-18): `wine_runtime_download` downloads and extracts the runtime (contained tar
- * extraction, a guarded replace of the old folder, `current_version` written last). Resolves `true`
- * when the runtime is installed after the call, `false` on a failed download or extraction.
- *
- * Long-running: listed in the sidecar's `UNBOUNDED_RUST_CHANNELS`. A runtime is a download of tens of
- * megabytes plus an extraction, with no wall-clock ceiling of its own; the crate holds a shutdown
- * registrant and is cancelled by the token. The launcher's `downloadRuntime` shim is the one caller;
- * the renderer's `downloadRuntime` is the native channel of the same name.
- */
-export const RUST_WINE_RUNTIME_DOWNLOAD = 'wine_runtime_download' as const
-
-/**
  * Phase 87 (SVC-02, 87-20): the Rust wine-manager ops, pass-throughs to `gamelib-wine`. The sidecar's
  * callers (the default-wine download in `utils.ts` and the `releasesInfoReady` listener) reach them only
  * through the `backend/enginewine/wineManager.ts` shims;
@@ -1086,26 +1060,6 @@ export const RUST_WINE_RUNTIME_DOWNLOAD = 'wine_runtime_download' as const
  * sidecar's `UNBOUNDED_RUST_CHANNELS` (up to seven feeds in turn).
  */
 export const RUST_WINE_MANAGER_REFRESH = 'wine_manager_refresh' as const
-
-/**
- * Phase 87 (SVC-02, 87-20): `wine_manager_install` installs one release, the whole handler (start
- * notification, `progressOfWineManager`, the sha512-checked download, the unpack, the store entry, the
- * result notification). Args: one `WineVersionInfo` (the shell decodes it strictly: the eleven keys and
- * nothing else, of which `isInstalled`, `hasUpdate` and `installDir` may be absent on a never-installed release); the shell reads `downloadProtonToSteam` and `defaultSteamPath` from the global config
- * itself. Resolves `'success' | 'abort' | 'error'`. The renderer cancels it with `abort(version)`.
- *
- * Long-running: listed in the sidecar's `UNBOUNDED_RUST_CHANNELS` (a download of hundreds of megabytes
- * and an unpack, ended by its own result, the abort or the app shutdown).
- */
-export const RUST_WINE_MANAGER_INSTALL = 'wine_manager_install' as const
-
-/**
- * Phase 87 (SVC-02, 87-20): `wine_manager_list` reads the wine-downloader-info store's release list
- * (the stored `wine-releases`). Args: none. Resolves the array of releases, `[]` when nothing is
- * stored. The default-wine download reads it after a refresh; the sidecar's own store mirror may not
- * have caught up with Rust's write by then.
- */
-export const RUST_WINE_MANAGER_LIST = 'wine_manager_list' as const
 
 /**
  * Phase 87 (SVC-02, 87-20): `wine_releases_info_ready` is the `releasesInfoReady` listener's body: the
@@ -1160,9 +1114,8 @@ export const RUST_WINE_DISCOVER_ALTERNATIVES =
 /**
  * Phase 87 (SVC-02, 87-26): `wine_discover_crossover` is `getCrossover`'s body: the CrossOver installs
  * Spotlight knows (a short labelled `mdfind`), in the order it lists them; an empty list off macOS. Args:
- * none. Resolves the `WineInstallation[]`. The still-TS engine's `resolveCrossoverBinDirAsync`
- * (`engine/crossoverLocation.ts`) reaches it through `enginewine/intraPhase.ts`, an intra-phase shim that
- * 87-56 removes with the engine TS. Bounded (an `mdfind` has a 10 s limit of its own).
+ * none. Resolves the `WineInstallation[]`. Its one TS caller, an intra-phase shim for the engine TS's
+ * `resolveCrossoverBinDirAsync`, went with that TS (87-56), so it has no caller now. Bounded (an `mdfind` has a 10 s limit of its own).
  */
 export const RUST_WINE_DISCOVER_CROSSOVER = 'wine_discover_crossover' as const
 
@@ -1220,15 +1173,6 @@ export const RUST_WINE_WINETRICKS_INSTALLED =
  * `winetricksInstallVerbs` shim (`enginewine/tools.ts`) is its caller.
  */
 export const RUST_WINE_WINETRICKS_INSTALL = 'wine_winetricks_install' as const
-
-/**
- * Phase 87 (SVC-02, 87-35): `wine_winetricks_list_installed` is the same read as `wine_winetricks_installed`
- * for the launcher's installed-packages log line, which holds the settings it launches with (no Game object
- * crosses). Args: one object, the game's target. The `winetricksListInstalled` shim (`enginewine/tools.ts`)
- * is its caller.
- */
-export const RUST_WINE_WINETRICKS_LIST_INSTALLED =
-  'wine_winetricks_list_installed' as const
 
 /**
  * Phase 87 (SVC-02, 87-36): `wine_run_command_for_game` is `runWineCommandForGame`'s body and the launcher's
@@ -1312,13 +1256,11 @@ export const RUST_ENGINE_SELECTION_CLEAR = 'engine_selection_clear' as const
  * the offline refusal, the decision, the first-need pinned-engine download, the bottle switch and the registry) and
  * answers `{kind, key?, selection?, prefix?, logLines?, launchSettings?}`; it may download the 228 MB pinned engine and
  * wait on a dialog, so it has no limit of its own beyond the app shutdown (it joins the sidecar's unbounded list).
- * `engine_launch_arm_deadline` arms the 180 s no-kill deadline and its process watch for a bottle-backed launch and
- * answers `{armed, watching?}`; `engine_launch_end` releases everything a launch held and answers `null`; both are
- * bounded (an in-memory table and one spawn handle).
+ * `engine_launch_end` releases everything a launch held and answers `null`; it is bounded (an in-memory table and one
+ * spawn handle). The launch's 180 s no-kill deadline (`engine_launch_arm_deadline`) is armed in Rust by the launch
+ * itself (88.1-16), so it has no channel.
  */
 export const RUST_ENGINE_LAUNCH_SELECT = 'engine_launch_select' as const
-export const RUST_ENGINE_LAUNCH_ARM_DEADLINE =
-  'engine_launch_arm_deadline' as const
 export const RUST_ENGINE_LAUNCH_END = 'engine_launch_end' as const
 /**
  * Phase 87 (87-52): `getLaunchSettings` over `{key, stored}`: the stored settings with the running launch's engine
@@ -1486,27 +1428,6 @@ export const RUST_KNOWNFIX_LAUNCH_OVERRIDES =
  */
 export const RUST_KNOWNFIX_FETCH_REMOTE = 'knownfix_fetch_remote' as const
 /**
- * Phase 88 (SVC-03, 88-13, D-03, D-19): the launcher's tier-2 registry fixes, reached through
- * `applyKnownFixProfileRegistry` in `launchrust/knownFixes.ts`. `knownfix_apply_profile_registry` takes one
- * object, `{appName, runner, gameSettings}`, applies the game's tier-2 profile `registry` entries to its own
- * prefix (every `reg add` a helper through the wine command core, 15 s each) and answers `null`; a failed
- * `reg add` is a warning in the Rust log, never a rejection. Several commands can pass the 60 s
- * `RUST_INVOKE_TIMEOUT_MS`, so it is in the sidecar's unbounded list.
- */
-export const RUST_KNOWNFIX_APPLY_PROFILE_REGISTRY =
-  'knownfix_apply_profile_registry' as const
-/**
- * Phase 88 (SVC-03, 88-13, D-03, D-19): the overlay env of a non-Steam launch, reached through
- * `knownFixProfileOverlayEnv` in `launchrust/knownFixes.ts`. `knownfix_profile_overlay_env` takes one object,
- * `{appName, runner, gameSettings, tier1Env, processEnvBase}`: the game's tier-2 `overlays` resolved against
- * the base values the caller holds (`processEnvBase` is the sidecar's own env reduced to
- * `KNOWN_FIX_OVERLAY_BASE_ENV_KEYS`), installing an overlay on demand (up to the 120 s download), and answers
- * the env map `{KEY: value}`. The download can pass the 60 s `RUST_INVOKE_TIMEOUT_MS`, so it is in the
- * sidecar's unbounded list.
- */
-export const RUST_KNOWNFIX_PROFILE_OVERLAY_ENV =
-  'knownfix_profile_overlay_env' as const
-/**
  * Phase 88 (SVC-03, 88-14, D-03, D-19): the Steam bridge's registry fixes, reached through `applyRegistryFixes` in
  * `launchrust/knownFixes.ts`. `knownfix_apply_registry` takes one object, `{appId, label, gameSettings, bottleDir}`
  * (`bottleDir` null when the bottle's folder is unknown): Rust reads the Steam tier-2 profile itself, so the fix
@@ -1554,8 +1475,8 @@ export const RUST_LAUNCH_SETUP_ENV_VARS = 'launch_setup_env_vars' as const
 /**
  * Phase 88.1 (SVC-03, 88.1-07, D-01, D-19): the wine environment of a launch. `launch_setup_wine_env_vars` takes
  * `[gameSettings, gameId]` (`gameId` is `null` when unset) and answers the wine environment as a string map; the
- * shell appends the process environment and the Darwin release itself (T-88.1-14). The shim and its callers arrive
- * in 88.1-08. A disk read (the wine's library folders), so it stays inside the 60 s `RUST_INVOKE_TIMEOUT_MS`.
+ * shell appends the process environment and the Darwin release itself (T-88.1-14). Its shim is in
+ * `launchrust/builders.ts`. A disk read (the wine's library folders), so it stays inside the 60 s `RUST_INVOKE_TIMEOUT_MS`.
  */
 export const RUST_LAUNCH_SETUP_WINE_ENV_VARS =
   'launch_setup_wine_env_vars' as const
@@ -1600,7 +1521,7 @@ export const RUST_LAUNCH_EPIC_SERVICE_OFFLINE =
  * environment, the Steam Deck, Flatpak and Darwin facts itself) and answers the TS reply (`success`, `failureReason`,
  * `mangoHudCommand`, `gameModeBin`, `gameScopeCommand`, `offlineMode`) plus `log`, the per-game log lines as
  * `{ level, parts }` for the TS `LogWriter` to write (it stays the only writer until 88.3). It may download the umu
- * runtime, which can outlast the 60 s `RUST_INVOKE_TIMEOUT_MS`; the shim that calls it (88.1-15) lists the channel in
+ * runtime, which can outlast the 60 s `RUST_INVOKE_TIMEOUT_MS`; the `launchrust/prepare.ts` shim lists the channel in
  * the unbounded set, the app shutdown still ends it.
  */
 export const RUST_LAUNCH_PREPARE = 'launch_prepare' as const
@@ -1612,7 +1533,7 @@ export const RUST_LAUNCH_PREPARE = 'launch_prepare' as const
  * CrossOver bottle gained this game (what tells the adapter to run the TS store-setup hook, which stays TS until 88.3),
  * the launch settings the finish step is handed, and the per-game log lines as `{ level, parts }` or
  * `{ slot: 'eosOverlay' }` for the adapter to fill from the runner's `isOverlayEnabled` hook. It may create a wine
- * prefix (`wineboot`), which can outlast the 60 s `RUST_INVOKE_TIMEOUT_MS`; the shim that calls it (88.1-15) lists the
+ * prefix (`wineboot`), which can outlast the 60 s `RUST_INVOKE_TIMEOUT_MS`; the `launchrust/prepare.ts` shim lists the
  * channel in the unbounded set, the app shutdown still ends it.
  */
 export const RUST_LAUNCH_PREPARE_WINE_BEGIN =
@@ -1625,7 +1546,7 @@ export const RUST_LAUNCH_PREPARE_WINE_BEGIN =
  * host facts, the bundled `public` directory and the online answer itself) and answers `{ success, envVars, knownFixEnv,
  * log }`: the wine env with the known-fix env merged over it, the overlay env alone, and the per-game log lines as
  * `{ level, parts }` for the adapter's `LogWriter` to write. It may install a winetricks verb, a DXVK tool, a runtime or a
- * known-fix overlay, which can outlast the 60 s `RUST_INVOKE_TIMEOUT_MS`; the shim that calls it (88.1-15) lists the
+ * known-fix overlay, which can outlast the 60 s `RUST_INVOKE_TIMEOUT_MS`; the `launchrust/prepare.ts` shim lists the
  * channel in the unbounded set, the app shutdown still ends it.
  */
 export const RUST_LAUNCH_PREPARE_WINE_FINISH =
@@ -1639,7 +1560,7 @@ export const RUST_LAUNCH_PREPARE_WINE_FINISH =
  * `wineVersion` when `persistGameWine`, the global `wineVersion` when `globalWineVersion` is set; Rust writes no config,
  * the adapter applies them), with the per-game log lines as `{ level, parts }` for the adapter's `LogWriter`. It may ask
  * the user (the shell's native message box, a dismissal is "No") and may download a wine, which can outlast the 60 s
- * `RUST_INVOKE_TIMEOUT_MS`; the shim that calls it (88.1-16) lists the channel in the unbounded set, the app shutdown
+ * `RUST_INVOKE_TIMEOUT_MS`; the `launchrust/launchUtils.ts` shim lists the channel in the unbounded set, the app shutdown
  * still ends it.
  */
 export const RUST_LAUNCH_CHECK_WINE_BEFORE_LAUNCH =
@@ -2029,11 +1950,7 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_INFO_UMU_GET,
   RUST_INFO_WIKI_GET,
   RUST_INFO_WIKI_CACHE_CLEAR,
-  RUST_WINE_RUNTIME_IS_INSTALLED,
-  RUST_WINE_RUNTIME_DOWNLOAD,
   RUST_WINE_MANAGER_REFRESH,
-  RUST_WINE_MANAGER_INSTALL,
-  RUST_WINE_MANAGER_LIST,
   RUST_WINE_RELEASES_INFO_READY,
   RUST_WINE_VALID,
   RUST_WINE_RUN_COMMAND,
@@ -2044,7 +1961,6 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_WINE_WINETRICKS_AVAILABLE,
   RUST_WINE_WINETRICKS_INSTALLED,
   RUST_WINE_WINETRICKS_INSTALL,
-  RUST_WINE_WINETRICKS_LIST_INSTALLED,
   RUST_WINE_RUN_COMMAND_FOR_GAME,
   RUST_WINE_TOOL_CALL,
   RUST_ENGINE_SET_ONLINE,
@@ -2061,7 +1977,6 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_ENGINE_LEDGER_MARK_STOPPED,
   RUST_ENGINE_SELECTION_CLEAR,
   RUST_ENGINE_LAUNCH_SELECT,
-  RUST_ENGINE_LAUNCH_ARM_DEADLINE,
   RUST_ENGINE_LAUNCH_END,
   RUST_ENGINE_LAUNCH_SETTINGS_GET,
   RUST_ENGINE_STATE_GET,
@@ -2083,8 +1998,6 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_ENGINE_FALLBACK_ENSURE,
   RUST_KNOWNFIX_LAUNCH_OVERRIDES,
   RUST_KNOWNFIX_FETCH_REMOTE,
-  RUST_KNOWNFIX_APPLY_PROFILE_REGISTRY,
-  RUST_KNOWNFIX_PROFILE_OVERLAY_ENV,
   RUST_KNOWNFIX_APPLY_REGISTRY,
   RUST_KNOWNFIX_RESOLVE_OVERLAY_ENV,
   RUST_KNOWNFIX_REPORT_DETECTED,

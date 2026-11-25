@@ -219,14 +219,8 @@ describe('sidecarRpc UNBOUNDED_RUST_CHANNELS covers every human-gated dialog cha
     // deleting (rustInvokeChannel.test.ts proves the channel is unbounded). The read-only
     // safety_check_removal stays bounded. Not a dialog channel either.
     'RUST_SAFETY_REMOVE_TREE',
-    // Phase 87 plan 18: wine_runtime_download is a lutris archive download plus a tar extraction with
-    // no wall-clock ceiling of its own; the crate's shutdown registrant bounds it. The read-only
-    // wine_runtime_is_installed stays bounded. Not a dialog channel either.
-    'RUST_WINE_RUNTIME_DOWNLOAD',
-    // Phase 87 plan 20: the wine-manager install is a download of hundreds of megabytes ended by its own
-    // result, the renderer's abort or the shutdown; the refresh and the releases-info check walk up to
-    // seven feeds in turn. The read-only wine_manager_list stays bounded. Not dialog channels either.
-    'RUST_WINE_MANAGER_INSTALL',
+    // Phase 87 plan 20: the refresh and the releases-info check walk up to seven feeds in turn. Not dialog
+    // channels either. (The runtime download and the manager install lost their sidecar callers in 88.1-19.)
     'RUST_WINE_MANAGER_REFRESH',
     'RUST_WINE_RELEASES_INFO_READY',
     // Phase 87 plan 24: wine_run_command runs a wine command with no time limit of its own (winetricks,
@@ -305,12 +299,10 @@ describe('sidecarRpc UNBOUNDED_RUST_CHANNELS covers every human-gated dialog cha
     }
   })
 
-  // WR-07: the four known-fix channels outlast the generic 60 s cap but are not unbounded; they carry a finite
+  // WR-07: the two known-fix channels outlast the generic 60 s cap but are not unbounded; they carry a finite
   // ceiling so a lost reply cannot hang a launch.
-  test('the four known-fix channels are out of the unbounded list and carry a finite long ceiling', () => {
+  test('the two known-fix channels are out of the unbounded list and carry a finite long ceiling', () => {
     const KNOWNFIX = [
-      'RUST_KNOWNFIX_APPLY_PROFILE_REGISTRY',
-      'RUST_KNOWNFIX_PROFILE_OVERLAY_ENV',
       'RUST_KNOWNFIX_APPLY_REGISTRY',
       'RUST_KNOWNFIX_RESOLVE_OVERLAY_ENV'
     ]

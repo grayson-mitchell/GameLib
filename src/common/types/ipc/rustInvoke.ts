@@ -110,7 +110,6 @@ import {
   RUST_STEAMCM_STORE_ENRICH,
   RUST_STEAMCM_WRAP_RESTORE_IF_OWED,
   RUST_STEAM_API_PIN_RESOLVE,
-  RUST_WINE_MANAGER_INSTALL,
   RUST_WINE_DISCOVER_ALTERNATIVES,
   RUST_WINE_DISCOVER_CROSSOVER,
   RUST_WINE_DXVK_INSTALL_REMOVE,
@@ -118,7 +117,6 @@ import {
   RUST_WINE_WINETRICKS_AVAILABLE,
   RUST_WINE_WINETRICKS_INSTALLED,
   RUST_WINE_WINETRICKS_INSTALL,
-  RUST_WINE_WINETRICKS_LIST_INSTALLED,
   RUST_WINE_RUN_COMMAND_FOR_GAME,
   RUST_WINE_TOOL_CALL,
   RUST_ENGINE_SET_ONLINE,
@@ -135,7 +133,6 @@ import {
   RUST_ENGINE_LEDGER_MARK_STOPPED,
   RUST_ENGINE_SELECTION_CLEAR,
   RUST_ENGINE_LAUNCH_SELECT,
-  RUST_ENGINE_LAUNCH_ARM_DEADLINE,
   RUST_ENGINE_LAUNCH_END,
   RUST_ENGINE_LAUNCH_SETTINGS_GET,
   RUST_ENGINE_STATE_GET,
@@ -155,11 +152,9 @@ import {
   RUST_ENGINE_RESOLVE_TOOL_SETTINGS,
   RUST_ENGINE_NON_CROSSOVER_ENGINE,
   RUST_ENGINE_FALLBACK_ENSURE,
-  RUST_KNOWNFIX_APPLY_PROFILE_REGISTRY,
   RUST_KNOWNFIX_APPLY_REGISTRY,
   RUST_KNOWNFIX_FETCH_REMOTE,
   RUST_KNOWNFIX_LAUNCH_OVERRIDES,
-  RUST_KNOWNFIX_PROFILE_OVERLAY_ENV,
   RUST_KNOWNFIX_REPORT_DETECTED,
   RUST_KNOWNFIX_RESOLVE_OVERLAY_ENV,
   RUST_LAUNCH_EPIC_SERVICE_OFFLINE,
@@ -173,12 +168,9 @@ import {
   RUST_LAUNCH_SETUP_WRAPPER_ENV_VARS,
   RUST_LAUNCH_SETUP_WRAPPERS,
   RUST_LAUNCH_VERIFY_WINE_PREFIX,
-  RUST_WINE_MANAGER_LIST,
   RUST_WINE_MANAGER_REFRESH,
   RUST_WINE_RELEASES_INFO_READY,
   RUST_WINE_RUN_COMMAND,
-  RUST_WINE_RUNTIME_DOWNLOAD,
-  RUST_WINE_RUNTIME_IS_INSTALLED,
   RUST_WINE_VALID,
   RUST_SAFETY_CHECK_REMOVAL,
   RUST_SAFETY_REMOVE_TREE,
@@ -360,22 +352,9 @@ const humbleActionPair = z
 const reasonArg = z.tuple([z.object({ reason: z.string() }).strict()])
 const flowArg = z.tuple([z.object({ flowId: z.string() }).strict()])
 
-/** The runtimes the wine ops take (`RuntimeName`); the generated Rust decode holds the same three. */
-const runtimeName = z
-  .enum(['eac_runtime', 'battleye_runtime', 'umu'])
-  .meta({ title: 'name' })
-
-/**
- * A `WineVersionInfo` as a wine-manager release, opaque to the generated Rust decode (`x-rust-value`; a
- * single object argument would otherwise be rendered field by field, and the generator has no
- * length bounds). The shell validates it strictly in `wine_dispatch::parse_wine_version` (the eleven keys
- * and nothing else, each with its bound) before the crate sees it (T-87-68).
- */
-const wineRelease = z.unknown().meta({ title: 'release', 'x-rust-value': true })
-
 /**
  * A `WineInstallation` (or `null`) as `wine_valid` takes it, opaque to the generated Rust decode
- * (`x-rust-value`, like `wineRelease`). The shell keeps only the six declared keys, each of the declared
+ * (`x-rust-value`). The shell keeps only the six declared keys, each of the declared
  * type, before the crate sees it (T-87-70): a persisted wine with a legacy key still answers.
  */
 const wineInstallation = z
@@ -1019,17 +998,10 @@ export const rustInvokeArgs = {
   [RUST_SHORTCUTS_STEAM_REMOVE]: z.tuple([shortcutSteamArgs]),
   [RUST_SHORTCUTS_STEAM_IS_ADDED]: z.tuple([shortcutSteamArgs]),
   [RUST_STEAM_API_PIN_RESOLVE]: empty,
-  // Phase 87 (SVC-02, 87-18): the wine runtime ops. One positional string, one of the three runtime
-  // names; the shell decodes the same set again (T-87-65) and the crate validates the name a third time.
-  [RUST_WINE_RUNTIME_IS_INSTALLED]: z.tuple([runtimeName]),
-  [RUST_WINE_RUNTIME_DOWNLOAD]: z.tuple([runtimeName]),
-  // Phase 87 (SVC-02, 87-20): the wine-manager ops. The refresh takes one boolean (`fetch`); the list takes
-  // nothing; the install takes one WineVersionInfo (opaque here, decoded strictly in the shell); the
+  // Phase 87 (SVC-02, 87-20): the wine-manager ops. The refresh takes one boolean (`fetch`); the
   // releases-info check takes the ReleasesInfo object, of which the crate reads the five feed stamps
   // (an unknown key is ignored there, as in the TS).
   [RUST_WINE_MANAGER_REFRESH]: z.tuple([z.boolean().meta({ title: 'fetch' })]),
-  [RUST_WINE_MANAGER_INSTALL]: z.tuple([wineRelease]),
-  [RUST_WINE_MANAGER_LIST]: empty,
   [RUST_WINE_RELEASES_INFO_READY]: z.tuple([
     z.unknown().meta({ title: 'releasesInfo', 'x-rust-value': true })
   ]),
@@ -1071,9 +1043,6 @@ export const rustInvokeArgs = {
     z.unknown().meta({ title: 'request', 'x-rust-value': true }),
     z.array(z.string().meta({ title: 'verb' })).meta({ title: 'verbs' })
   ]),
-  [RUST_WINE_WINETRICKS_LIST_INSTALLED]: z.tuple([
-    z.unknown().meta({ title: 'request', 'x-rust-value': true })
-  ]),
   // Phase 87 (SVC-02, 87-36): a wine command on a game. One object, the game facts and the command, opaque here and
   // decoded strictly by the crate (`ForGameArgs`, deny_unknown_fields); the command's shape (`commandParts`) is
   // the crate's guard to judge, so it travels as the renderer sent it. The wine host facts are the shell's.
@@ -1109,7 +1078,6 @@ export const rustInvokeArgs = {
   // the crate (every request struct denies unknown fields; the runner, app name and title are length-bounded there and
   // the engine key is derived, never taken from the caller, T-87-53).
   [RUST_ENGINE_LAUNCH_SELECT]: engineOpRequest,
-  [RUST_ENGINE_LAUNCH_ARM_DEADLINE]: engineOpRequest,
   [RUST_ENGINE_LAUNCH_END]: engineOpRequest,
   [RUST_ENGINE_LAUNCH_SETTINGS_GET]: engineOpRequest,
   // Phase 87 (87-52, D-23): `getEngineState`. `{identity, facts?}`, decoded strictly by the crate; the identity is
@@ -1165,32 +1133,6 @@ export const rustInvokeArgs = {
       .object({
         appName: z.string(),
         runner: z.enum(['gog', 'legendary', 'nile', 'sideload', 'steam'])
-      })
-      .strict()
-  ]),
-  // Phase 88 (SVC-03, 88-13, D-19): the launcher's tier-2 registry fixes. One strict object; `gameSettings` is the
-  // launch settings, opaque to the generated decode (`x-rust-value`) and checked as a JSON object by the crate
-  // (`deny_unknown_fields` on the wrapper, the object test on the settings).
-  [RUST_KNOWNFIX_APPLY_PROFILE_REGISTRY]: z.tuple([
-    z
-      .object({
-        appName: z.string(),
-        runner: z.enum(['gog', 'legendary', 'nile', 'sideload', 'steam']),
-        gameSettings: knownFixGameSettings
-      })
-      .strict()
-  ]),
-  // Phase 88 (SVC-03, 88-13, D-19): the overlay env of a non-Steam launch. `tier1Env` and `processEnvBase` are
-  // string maps (the crate decodes them as `BTreeMap<String, String>` and bounds their size); the base env holds
-  // only `KNOWN_FIX_OVERLAY_BASE_ENV_KEYS`, never the whole process env (T-88-33).
-  [RUST_KNOWNFIX_PROFILE_OVERLAY_ENV]: z.tuple([
-    z
-      .object({
-        appName: z.string(),
-        runner: z.enum(['gog', 'legendary', 'nile', 'sideload', 'steam']),
-        gameSettings: knownFixGameSettings,
-        tier1Env: knownFixEnvMap('tier1Env'),
-        processEnvBase: knownFixEnvMap('processEnvBase')
       })
       .strict()
   ]),

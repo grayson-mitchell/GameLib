@@ -58,9 +58,7 @@ import {
   RUST_STEAMCM_SIGNIN_GUARD_SUBMIT,
   RUST_STEAMCM_WRAP_RESTORE_IF_OWED,
   RUST_SAFETY_REMOVE_TREE,
-  RUST_WINE_RUNTIME_DOWNLOAD,
   RUST_WINE_DISCOVER_ALTERNATIVES,
-  RUST_WINE_MANAGER_INSTALL,
   RUST_WINE_MANAGER_REFRESH,
   RUST_WINE_RELEASES_INFO_READY,
   RUST_WINE_RUN_COMMAND,
@@ -73,8 +71,6 @@ import {
   RUST_ENGINE_RUN_TOOL,
   RUST_ENGINE_RESOLVE_TOOL_SETTINGS,
   RUST_ENGINE_FALLBACK_ENSURE,
-  RUST_KNOWNFIX_APPLY_PROFILE_REGISTRY,
-  RUST_KNOWNFIX_PROFILE_OVERLAY_ENV,
   RUST_KNOWNFIX_APPLY_REGISTRY,
   RUST_KNOWNFIX_RESOLVE_OVERLAY_ENV,
   RUST_WINE_WINETRICKS_APPLY,
@@ -170,20 +166,12 @@ const RUST_INVOKE_TIMEOUT_MS = 60_000
  * shell owns the worker thread, so an unanswered entry cannot outlive the sidecar. The entry holds
  * no timer, so the exit contract is unaffected.
  *
- * Fifth (Phase 87, 87-18): `wine_runtime_download` is the launcher's runtime download (a lutris archive
- * of tens of megabytes plus a tar extraction), moved out of the TS `download` that had no deadline
- * either. The crate holds a shutdown registrant and is cancelled by the token, so a 60 s cut-off would
- * report the launch's runtime as failed while Rust kept extracting. The read-only
- * `wine_runtime_is_installed` stays bounded.
- *
- * Sixth (Phase 87, 87-20): `wine_manager_install` is the default-wine download (a Wine, Proton or GPTK
- * archive of hundreds of megabytes plus an unpack), moved out of the TS install that had no deadline
- * either. It ends on its own result, the renderer's `abort(version)` or the app shutdown, so a 60 s
- * cut-off would report the default wine as not installed while Rust kept downloading.
- * `wine_manager_refresh` and `wine_releases_info_ready` join it: they walk up to seven release feeds in
- * turn, each with its own 60 s request limit in Rust, and the TS refresh they replace swallowed a slow
- * feed rather than failing the caller, so a 60 s cut-off here would turn a slow network into a rejected
- * `getAlternativeWine`. The read-only `wine_manager_list` stays bounded.
+ * Fifth and Sixth (Phase 87, 87-18 and 87-20): `wine_runtime_download` and `wine_manager_install` lost their
+ * sidecar callers in 88.1-19 (the launch's runtime and default-wine installs run in Rust, in process), so
+ * neither is a channel any more. `wine_manager_refresh` and `wine_releases_info_ready` stay: they walk up to
+ * seven release feeds in turn, each with its own 60 s request limit in Rust, and the TS refresh they replace
+ * swallowed a slow feed rather than failing the caller, so a 60 s cut-off here would turn a slow network into
+ * a rejected `getAlternativeWine`.
  *
  * Seventh (Phase 87, 87-24): `wine_run_command` runs a wine command with no time limit of its own (a
  * winetricks component or an installer runs for minutes) and ends on its own exit, a cancel or the app
@@ -199,7 +187,7 @@ const RUST_INVOKE_TIMEOUT_MS = 60_000
  * Tenth (Phase 87, 87-35): the Winetricks calls that read the catalog or run a verb. `wine_winetricks_apply` and
  * `wine_winetricks_available` read the catalog, whose first read downloads the winetricks script and lists it;
  * `wine_winetricks_install` runs one winetricks per verb. None has a limit of its own beyond the app shutdown.
- * `wine_winetricks_installed` and `wine_winetricks_list_installed` read one log file and stay bounded.
+ * `wine_winetricks_installed` reads one log file and stays bounded.
  *
  * Eleventh (Phase 87, 87-36): `wine_run_command_for_game` runs one wine command on a game (a winecfg, an installer, a
  * known-fix program with `wait` true): it ends with the program or the app shutdown, with no limit of its own.
@@ -211,8 +199,8 @@ const RUST_INVOKE_TIMEOUT_MS = 60_000
  * the marker, ledger, removal and selection ops are bounded.
  *
  * Thirteenth (Phase 87, 87-52): `engine_launch_select` is the whole launch-time engine step, which may download the
- * 228 MB pinned engine and run the bottle switch: no limit of its own beyond the app shutdown. The deadline arm and the
- * end of a launch are bounded.
+ * 228 MB pinned engine and run the bottle switch: no limit of its own beyond the app shutdown. The end
+ * of a launch is bounded.
  *
  * Fourteenth (Phase 87, 87-54): `engine_decide_launch` and `engine_preflight_crossover` run the G29 pre-flight, up to two
  * 15 s `--demo-status` probes with a 2 s settle between them and a capped wineserver stop after each, which together can
@@ -283,8 +271,6 @@ const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_STEAMCM_SIGNIN_GUARD_SUBMIT,
   RUST_STEAMCM_WRAP_RESTORE_IF_OWED,
   RUST_SAFETY_REMOVE_TREE,
-  RUST_WINE_RUNTIME_DOWNLOAD,
-  RUST_WINE_MANAGER_INSTALL,
   RUST_WINE_MANAGER_REFRESH,
   RUST_WINE_RELEASES_INFO_READY,
   RUST_WINE_RUN_COMMAND,
@@ -313,18 +299,15 @@ const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
 /**
  * Channels that outlast the generic 60 s cap but still get a finite ceiling (WR-07, Phase 88 code review).
  *
- * `knownfix_apply_profile_registry` and `knownfix_apply_registry` apply a game's tier-2 registry fixes, one
- * `reg add` helper after another with its own 15 s limit; `knownfix_profile_overlay_env` and
- * `knownfix_resolve_overlay_env` install a known-fix overlay on demand, a download with its own 120 s limit.
- * A 60 s cut-off would fail a launch Rust is still carrying on, so they are out of the generic cap. They are
- * not human-gated, though, and every launch awaits two of them before the game starts: Rust bounds each step,
+ * `knownfix_apply_registry` applies a Steam game's tier-2 registry fixes, one `reg add` helper after another
+ * with its own 15 s limit; `knownfix_resolve_overlay_env` installs a known-fix overlay on demand, a download
+ * with its own 120 s limit. A 60 s cut-off would fail a launch Rust is still carrying on, so they are out of
+ * the generic cap. They are not human-gated, though, and every bridge launch awaits both before the game starts: Rust bounds each step,
  * but the shell's thread, argument decode and reply frame sit outside that bound, so a lost reply would hang
  * the launch with no log line. Ten minutes comfortably exceeds the worst case in Rust (120 s plus several 15 s
  * helpers) and still ends a lost reply with a named rejection, which the settle helpers turn into a warning.
  */
 const LONG_RUST_CHANNELS: readonly string[] = [
-  RUST_KNOWNFIX_APPLY_PROFILE_REGISTRY,
-  RUST_KNOWNFIX_PROFILE_OVERLAY_ENV,
   RUST_KNOWNFIX_APPLY_REGISTRY,
   RUST_KNOWNFIX_RESOLVE_OVERLAY_ENV
 ]

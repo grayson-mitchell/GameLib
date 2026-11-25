@@ -201,13 +201,7 @@ pub(crate) fn dispatch_rust_channel(
         RustInvokeChannel::StoreEmbedForward => rpc_store_embed_forward(args, app),
         RustInvokeChannel::StoreEmbedReload => rpc_store_embed_reload(args, app),
         RustInvokeChannel::StoreEmbedNavigate => rpc_store_embed_navigate(args, app),
-        RustInvokeChannel::WineRuntimeIsInstalled => {
-            wine_dispatch::rpc_wine_runtime_is_installed(args)
-        }
-        RustInvokeChannel::WineRuntimeDownload => wine_dispatch::rpc_wine_runtime_download(args),
         RustInvokeChannel::WineManagerRefresh => wine_dispatch::rpc_wine_manager_refresh(args),
-        RustInvokeChannel::WineManagerInstall => wine_dispatch::rpc_wine_manager_install(args),
-        RustInvokeChannel::WineManagerList => wine_dispatch::rpc_wine_manager_list(args),
         RustInvokeChannel::WineReleasesInfoReady => {
             wine_dispatch::rpc_wine_releases_info_ready(args)
         }
@@ -231,9 +225,6 @@ pub(crate) fn dispatch_rust_channel(
         }
         RustInvokeChannel::WineWinetricksInstall => {
             wine_dispatch::rpc_wine_winetricks_install(args)
-        }
-        RustInvokeChannel::WineWinetricksListInstalled => {
-            wine_dispatch::rpc_wine_winetricks_list_installed(args)
         }
         RustInvokeChannel::WineRunCommandForGame => {
             wine_dispatch::rpc_wine_run_command_for_game(args)
@@ -273,9 +264,6 @@ pub(crate) fn dispatch_rust_channel(
         }
         RustInvokeChannel::EngineSelectionClear => engine_dispatch::rpc_selection_clear(args),
         RustInvokeChannel::EngineLaunchSelect => engine_dispatch::rpc_launch_select(args),
-        RustInvokeChannel::EngineLaunchArmDeadline => {
-            engine_dispatch::rpc_launch_arm_deadline(args)
-        }
         RustInvokeChannel::EngineLaunchEnd => engine_dispatch::rpc_launch_end(args),
         RustInvokeChannel::EngineLaunchSettingsGet => {
             engine_dispatch::rpc_launch_settings_get(args)
@@ -316,12 +304,6 @@ pub(crate) fn dispatch_rust_channel(
         }
         RustInvokeChannel::KnownfixFetchRemote => {
             knownfix_dispatch::rpc_knownfix_fetch_remote(args)
-        }
-        RustInvokeChannel::KnownfixApplyProfileRegistry => {
-            knownfix_dispatch::rpc_knownfix_apply_profile_registry(args)
-        }
-        RustInvokeChannel::KnownfixProfileOverlayEnv => {
-            knownfix_dispatch::rpc_knownfix_profile_overlay_env(args)
         }
         RustInvokeChannel::KnownfixApplyRegistry => {
             knownfix_dispatch::rpc_knownfix_apply_registry(args)

@@ -481,7 +481,7 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     expect(matches.length).toBe(1)
   })
 
-  test('71-07 rust_dispatch.rs is a flat router: 191 one-line arms and no catch-all arm', () => {
+  test('71-07 rust_dispatch.rs is a flat router: 208 one-line arms and no catch-all arm', () => {
     const router = readTauriShellProductionFile('rust_dispatch.rs')
     // Phase 85 plan 16: 122 -> 123, store_read_only_notice.
     // Phase 86 plan 08: 123 -> 125, info_recent_add and info_recent_remove.
@@ -521,7 +521,10 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     // Phase 88.1 plan 12: 213 -> 214, launch_prepare_wine_begin.
     // Phase 88.1 plan 13: 214 -> 215, launch_prepare_wine_finish.
     // Phase 88.1 plan 14: 215 -> 216, launch_check_wine_before_launch.
-    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(216)
+    // Phase 88.1 plan 19: 216 -> 208, the eight channels no TS caller reaches any more (wine_runtime_is_installed,
+    // wine_runtime_download, wine_manager_install, wine_manager_list, wine_winetricks_list_installed,
+    // engine_launch_arm_deadline, knownfix_apply_profile_registry and knownfix_profile_overlay_env).
+    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(208)
     expect(router).not.toContain('_ =>')
   })
 
@@ -943,21 +946,15 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       'info_wiki_get',
       'info_wiki_cache_clear',
 
-      // Phase 87 plan 18 -- the two wine runtime ops, pass-through arms into `gamelib-wine`. PROVEN:
-      // `golden_runtimes.rs` replays every 87-05 TS golden (the is-installed and download cases)
-      // against the crate's ops, and `wine_dispatch::tests` drives the arms' validation and the
-      // not-ready answer. The callers are the launcher's two runtime shims (enginewine/runtimes.ts).
-      'wine_runtime_is_installed',
-      'wine_runtime_download',
+      // Phase 87 plan 18's two wine runtime arms (`wine_runtime_is_installed`, `wine_runtime_download`) went in 88.1-19:
+      // the launch's runtime check and download run in Rust, in process, over the crate's ops.
 
-      // Phase 87 plan 20 -- the four wine-manager ops, pass-through arms into `gamelib-wine`. PROVEN:
+      // Phase 87 plan 20 -- the wine-manager ops, pass-through arms into `gamelib-wine`. PROVEN:
       // `golden_wine_manager.rs` replays every 87-07 TS golden (refresh, install, remove) against the
       // crate's ops, and `wine_dispatch::tests` drives the arms' validation and the not-ready answer.
-      // The callers are the shims in enginewine/wineManager.ts (utils.ts, config.ts and the
-      // releasesInfoReady listener).
+      // The callers are the shims in enginewine/wineManager.ts (config.ts and the releasesInfoReady
+      // listener); `wine_manager_install` and `wine_manager_list` went in 88.1-19 (the default-wine install runs in Rust).
       'wine_manager_refresh',
-      'wine_manager_install',
-      'wine_manager_list',
       'wine_releases_info_ready',
 
       // Phase 87 plan 24 -- the two wine-core ops, pass-through arms into `gamelib-wine`. PROVEN:
@@ -972,8 +969,8 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       // Phase 87 plan 26 -- the two wine-discovery ops. PROVEN: `golden_discovery.rs` replays the 87-08 TS goldens
       // (33 macOS, 18 Linux) and the default-wine vectors against the crate, and `wine_dispatch::tests` drives the
       // arms' validation (one boolean or nothing, a fixed bad-args literal, not-ready before install) and the
-      // shell's own DiscoveryHost. The callers are the `discoverAlternativeWine` shim (enginewine/wineDiscovery.ts)
-      // and the `discoverCrossover` intra-phase shim (enginewine/intraPhase.ts).
+      // shell's own DiscoveryHost. The callers are the `discoverAlternativeWine` shim (enginewine/wineDiscovery.ts);
+      // the `discoverCrossover` intra-phase shim (enginewine/intraPhase.ts) went with the engine TS (87-56).
       'wine_discover_alternatives',
       'wine_discover_crossover',
 
@@ -999,7 +996,6 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       'wine_winetricks_available',
       'wine_winetricks_installed',
       'wine_winetricks_install',
-      'wine_winetricks_list_installed',
 
       // Phase 87 plan 36 -- the wine command on a game. PROVEN: `wine_dispatch::tests` drives the arm's strict
       // decode (a fixed bad-args literal, one object, not-ready before install) and the shell's own wine host facts;
@@ -1030,7 +1026,6 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       // goldens drive the ops (the step, the deadline and its watch, the end of a launch, the settings overlay). The
       // callers are the shims in `enginewine/launch.ts`, reached through `launchEngineStep.ts` and the launcher.
       'engine_launch_select',
-      'engine_launch_arm_deadline',
       'engine_launch_end',
       'engine_launch_settings_get',
       // Phase 87 plan 52: the renderer's getEngineState, through the resolver in `sidecar/engineWineResolvers.ts`.
@@ -1070,10 +1065,8 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       // Phase 88 plan 12: the download manager's install-time remote fixes fetch (`launchrust/knownFixes.ts` shim).
       // PROVEN: `knownfix_dispatch::tests` drives the arm's decode, not-ready and the crate's strict decode.
       'knownfix_fetch_remote',
-      // Phase 88 plan 13: the launcher's per-launch registry fixes and overlay env (`launchrust/knownFixes.ts` shims).
-      // PROVEN: `knownfix_dispatch::tests` drives each arm's decode, not-ready and the crate's strict decode.
-      'knownfix_apply_profile_registry',
-      'knownfix_profile_overlay_env',
+      // Phase 88 plan 13's two launcher arms (`knownfix_apply_profile_registry`, `knownfix_profile_overlay_env`) went in
+      // 88.1-19: the launch reaches those ops in Rust, in process.
       // Phase 88 plan 14: the Steam bridge's registry fixes and overlay env (`launchrust/knownFixes.ts` shims).
       // PROVEN: `knownfix_dispatch::tests` drives each arm's decode, not-ready and the crate's strict decode.
       'knownfix_apply_registry',
@@ -1093,19 +1086,19 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       // Phase 88.1 plan 08: the prefix check (`launchrust/builders.ts` shim). PROVEN: `launch_dispatch::tests` drives the arm's decode,
       // not-ready and a crossover wine's empty result over a FakeHome; `gamelib-launch`'s tests drive the crate's strict decode.
       'launch_verify_wine_prefix',
-      // Phase 88.1 plan 11: the Epic status check (no shim until 88.1-15). PROVEN: `launch_dispatch::tests` drives the arm's decode, not-ready and
+      // Phase 88.1 plan 11: the Epic status check (its shim is `launchrust/launchUtils.ts`). PROVEN: `launch_dispatch::tests` drives the arm's decode, not-ready and
       // the offline answer over a FakeHome; `gamelib-launch`'s `utils_pieces.rs` replays golden/epic_status over recorded exchanges.
       'launch_epic_service_offline',
-      // Phase 88.1 plan 11: the prepare step (no shim until 88.1-15). PROVEN: `launch_dispatch::tests` drives the arm's decode, not-ready, the
+      // Phase 88.1 plan 11: the prepare step (its shim is `launchrust/prepare.ts`). PROVEN: `launch_dispatch::tests` drives the arm's decode, not-ready, the
       // reply with its log and the host facts the shell reads; `gamelib-launch`'s `golden_launch.rs` replays golden/prepare_launch.
       'launch_prepare',
-      // Phase 88.1 plan 12: the first half of the wine prepare step (no shim until 88.1-15). PROVEN: `launch_dispatch::tests` drives the arm's decode,
+      // Phase 88.1 plan 12: the first half of the wine prepare step (its shim is `launchrust/prepare.ts`). PROVEN: `launch_dispatch::tests` drives the arm's decode,
       // not-ready and the reply; `gamelib-launch`'s `golden_launch.rs` replays the begin half of golden/prepare_wine.
       'launch_prepare_wine_begin',
-      // Phase 88.1 plan 13: the second half of the wine prepare step (no shim until 88.1-15). PROVEN: `launch_dispatch::tests` drives the arm's decode,
+      // Phase 88.1 plan 13: the second half of the wine prepare step (its shim is `launchrust/prepare.ts`). PROVEN: `launch_dispatch::tests` drives the arm's decode,
       // not-ready and the host facts the shell builds; `gamelib-launch`'s `golden_launch.rs` replays the finish half of golden/prepare_wine.
       'launch_prepare_wine_finish',
-      // Phase 88.1 plan 14: `checkWineBeforeLaunch`, the wine self-heal (no shim until 88.1-16). PROVEN: `launch_dispatch::tests` drives the arm's decode,
+      // Phase 88.1 plan 14: `checkWineBeforeLaunch`, the wine self-heal (its shim is `launchrust/launchUtils.ts`). PROVEN: `launch_dispatch::tests` drives the arm's decode,
       // not-ready and the dismissal of a context with no dialog source; `gamelib-launch`'s `utils_pieces.rs` replays golden/check_wine.
       'launch_check_wine_before_launch',
       // Phase 94 plan 11: the shortcut exists check (`shortcutsResolvers.ts` resolver). PROVEN: `shortcuts_dispatch::tests`

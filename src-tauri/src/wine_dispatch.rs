@@ -836,23 +836,6 @@ fn rpc_wine_op(
     gamelib_wine::dispatch_sync(op, args, wine)
 }
 
-/// The `wine_runtime_is_installed` `rustInvoke` arm (the launcher's `isRuntimeInstalled` shim, 87-18):
-/// the generated decode (one string, one of the three names) first, then the crate, which refuses
-/// anything but exactly one plain-component string again (T-87-65). Rejections are fixed
-/// `<op>:bad-args` literals.
-pub(crate) fn rpc_wine_runtime_is_installed(args: &[Value]) -> Result<Value, String> {
-    WineRuntimeIsInstalledArgs::from_args(args)?;
-    rpc_wine_op(wine_ctx(), "wine_runtime_is_installed", args)
-}
-
-/// The `wine_runtime_download` `rustInvoke` arm (the launcher's `downloadRuntime` shim, 87-18), decoded
-/// the same way. The sidecar leaves this channel unbounded (`UNBOUNDED_RUST_CHANNELS`); the crate's
-/// shutdown registrant and the token bound it instead.
-pub(crate) fn rpc_wine_runtime_download(args: &[Value]) -> Result<Value, String> {
-    WineRuntimeDownloadArgs::from_args(args)?;
-    rpc_wine_op(wine_ctx(), "wine_runtime_download", args)
-}
-
 /// The `wine_manager_refresh` `rustInvoke` arm (the `updateWineVersionInfos` shim, 87-20): the generated
 /// decode (one boolean) first, then the crate, which swallows a failed feed as the TS did. The
 /// sidecar leaves this channel unbounded (`UNBOUNDED_RUST_CHANNELS`).
@@ -862,16 +845,6 @@ pub(crate) fn rpc_wine_manager_refresh(args: &[Value]) -> Result<Value, String> 
         return Err("wine_manager_refresh:bad-args".to_string());
     }
     rpc_wine_op(wine_ctx(), "wine_manager_refresh", args)
-}
-
-/// The `wine_manager_list` `rustInvoke` arm (the `listWineReleases` shim): the stored release list.
-/// The crate refuses any argument.
-pub(crate) fn rpc_wine_manager_list(args: &[Value]) -> Result<Value, String> {
-    WineManagerListArgs::from_args(args)?;
-    if !args.is_empty() {
-        return Err("wine_manager_list:bad-args".to_string());
-    }
-    rpc_wine_op(wine_ctx(), "wine_manager_list", args)
 }
 
 /// Whether this run's DXMT boot task has been started. The first `releasesInfoReady` of a run is the boot
@@ -919,22 +892,6 @@ pub(crate) fn rpc_wine_releases_info_ready(args: &[Value]) -> Result<Value, Stri
         dxmt_on_releases_info(wine, &DXMT_BOOT_STARTED, args)?;
     }
     Ok(answered)
-}
-
-/// The `wine_manager_install` `rustInvoke` arm (the `installWineVersion` shim, the default-wine
-/// download): the release is decoded as strictly as the renderer's is ([`parse_wine_version`], the
-/// eleven keys and nothing else), then installed to its end on this thread and answered as
-/// `'success' | 'abort' | 'error'`. It registers its cancel under the version like the renderer's
-/// install, so `abort(version)` reaches it. Unbounded in the sidecar.
-pub(crate) fn rpc_wine_manager_install(args: &[Value]) -> Result<Value, String> {
-    const BAD: &str = "wine_manager_install:bad-args";
-    WineManagerInstallArgs::from_args(args)?;
-    // `parse_wine_version` is the strict decode and also refuses a second argument.
-    let release = parse_wine_version(args).map_err(|_| BAD.to_string())?;
-    let wine = wine_ctx().ok_or_else(|| "wine_manager_install:not-ready".to_string())?;
-    let outcome =
-        install_blocking(wine, &Value::Object(release.clone())).map_err(|_| BAD.to_string())?;
-    Ok(Value::String(outcome.as_str().to_string()))
 }
 
 /// What the `wine_valid` arm asks the crate about a persisted wine, from a value the sidecar sent: `None`
@@ -1092,13 +1049,6 @@ pub(crate) fn rpc_wine_winetricks_available(args: &[Value]) -> Result<Value, Str
 /// the game's `winetricks.log`. A read: it never creates a bottle.
 pub(crate) fn rpc_wine_winetricks_installed(args: &[Value]) -> Result<Value, String> {
     WineWinetricksInstalledArgs::from_args(args)?;
-    winetricks_read_op("wine_winetricks_installed", args)
-}
-
-/// The `wine_winetricks_list_installed` `rustInvoke` arm (the `winetricksListInstalled` shim, 87-35): the
-/// same read for the launcher's log line, which holds the settings it launches with.
-pub(crate) fn rpc_wine_winetricks_list_installed(args: &[Value]) -> Result<Value, String> {
-    WineWinetricksListInstalledArgs::from_args(args)?;
     winetricks_read_op("wine_winetricks_installed", args)
 }
 
@@ -1317,37 +1267,6 @@ mod tests {
                 "{error}"
             );
             assert!(!error.contains("SECRET"), "{error}");
-        }
-    }
-
-    #[test]
-    fn the_rpc_arms_validate_first_and_answer_not_ready_before_install() {
-        assert!(wine_ctx().is_none());
-        assert_eq!(
-            rpc_wine_runtime_download(&[json!("umu")]),
-            Err("wine_runtime_download:not-ready".to_string())
-        );
-        assert_eq!(
-            rpc_wine_runtime_is_installed(&[json!("eac_runtime")]),
-            Err("wine_runtime_is_installed:not-ready".to_string())
-        );
-        for bad in [
-            vec![],
-            vec![json!(1)],
-            vec![json!("x")],
-            vec![json!("../umu")],
-            vec![json!({ "name": "umu" })],
-        ] {
-            assert_eq!(
-                rpc_wine_runtime_download(&bad),
-                Err("wine_runtime_download:bad-args".to_string()),
-                "{bad:?}"
-            );
-            assert_eq!(
-                rpc_wine_runtime_is_installed(&bad),
-                Err("wine_runtime_is_installed:bad-args".to_string()),
-                "{bad:?}"
-            );
         }
     }
 
@@ -2270,16 +2189,8 @@ mod tests {
             Err("wine_manager_refresh:not-ready".to_string())
         );
         assert_eq!(
-            rpc_wine_manager_list(&[]),
-            Err("wine_manager_list:not-ready".to_string())
-        );
-        assert_eq!(
             rpc_wine_releases_info_ready(&[json!({})]),
             Err("wine_releases_info_ready:not-ready".to_string())
-        );
-        assert_eq!(
-            rpc_wine_manager_install(&[release("Wine-Lutris-9")]),
-            Err("wine_manager_install:not-ready".to_string())
         );
         // Bad arguments are the fixed `<op>:bad-args` before the context is looked at.
         for (answer, op) in [
@@ -2287,15 +2198,6 @@ mod tests {
             (
                 rpc_wine_manager_refresh(&[json!("yes")]),
                 "wine_manager_refresh",
-            ),
-            (rpc_wine_manager_install(&[]), "wine_manager_install"),
-            (
-                rpc_wine_manager_install(&[json!("x")]),
-                "wine_manager_install",
-            ),
-            (
-                rpc_wine_manager_install(&[json!({ "version": "v" })]),
-                "wine_manager_install",
             ),
             (
                 rpc_wine_releases_info_ready(&[]),
@@ -2308,12 +2210,6 @@ mod tests {
         ] {
             assert_eq!(answer, Err(format!("{op}:bad-args")), "{op}");
         }
-        let mut extra = release("Wine-Lutris-9");
-        extra["SECRET-KEY"] = json!(1);
-        assert_eq!(
-            rpc_wine_manager_install(&[extra]),
-            Err("wine_manager_install:bad-args".to_string())
-        );
     }
 
     fn wine_json(kind: &str, bin: &str) -> Value {
@@ -2887,13 +2783,9 @@ mod tests {
         let target =
             json!({ "runner": "steam", "appName": "480", "unavailable": "not-own-bottle" });
         type Arm = fn(&[Value]) -> Result<Value, String>;
-        let arms: [(&str, Arm); 3] = [
+        let arms: [(&str, Arm); 2] = [
             ("wine_winetricks_available", rpc_wine_winetricks_available),
             ("wine_winetricks_installed", rpc_wine_winetricks_installed),
-            (
-                "wine_winetricks_installed",
-                rpc_wine_winetricks_list_installed,
-            ),
         ];
         for (op, arm) in arms {
             assert_eq!(

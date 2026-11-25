@@ -163,11 +163,7 @@ pub(crate) enum RustInvokeChannel {
     InfoUmuGet,
     InfoWikiGet,
     InfoWikiCacheClear,
-    WineRuntimeIsInstalled,
-    WineRuntimeDownload,
     WineManagerRefresh,
-    WineManagerInstall,
-    WineManagerList,
     WineReleasesInfoReady,
     WineValid,
     WineRunCommand,
@@ -178,7 +174,6 @@ pub(crate) enum RustInvokeChannel {
     WineWinetricksAvailable,
     WineWinetricksInstalled,
     WineWinetricksInstall,
-    WineWinetricksListInstalled,
     WineRunCommandForGame,
     WineToolCall,
     EngineSetOnline,
@@ -195,7 +190,6 @@ pub(crate) enum RustInvokeChannel {
     EngineLedgerMarkStopped,
     EngineSelectionClear,
     EngineLaunchSelect,
-    EngineLaunchArmDeadline,
     EngineLaunchEnd,
     EngineLaunchSettingsGet,
     EngineStateGet,
@@ -217,8 +211,6 @@ pub(crate) enum RustInvokeChannel {
     EngineFallbackEnsure,
     KnownfixLaunchOverrides,
     KnownfixFetchRemote,
-    KnownfixApplyProfileRegistry,
-    KnownfixProfileOverlayEnv,
     KnownfixApplyRegistry,
     KnownfixResolveOverlayEnv,
     KnownfixReportDetected,
@@ -383,11 +375,7 @@ impl RustInvokeChannel {
         RustInvokeChannel::InfoUmuGet,
         RustInvokeChannel::InfoWikiGet,
         RustInvokeChannel::InfoWikiCacheClear,
-        RustInvokeChannel::WineRuntimeIsInstalled,
-        RustInvokeChannel::WineRuntimeDownload,
         RustInvokeChannel::WineManagerRefresh,
-        RustInvokeChannel::WineManagerInstall,
-        RustInvokeChannel::WineManagerList,
         RustInvokeChannel::WineReleasesInfoReady,
         RustInvokeChannel::WineValid,
         RustInvokeChannel::WineRunCommand,
@@ -398,7 +386,6 @@ impl RustInvokeChannel {
         RustInvokeChannel::WineWinetricksAvailable,
         RustInvokeChannel::WineWinetricksInstalled,
         RustInvokeChannel::WineWinetricksInstall,
-        RustInvokeChannel::WineWinetricksListInstalled,
         RustInvokeChannel::WineRunCommandForGame,
         RustInvokeChannel::WineToolCall,
         RustInvokeChannel::EngineSetOnline,
@@ -415,7 +402,6 @@ impl RustInvokeChannel {
         RustInvokeChannel::EngineLedgerMarkStopped,
         RustInvokeChannel::EngineSelectionClear,
         RustInvokeChannel::EngineLaunchSelect,
-        RustInvokeChannel::EngineLaunchArmDeadline,
         RustInvokeChannel::EngineLaunchEnd,
         RustInvokeChannel::EngineLaunchSettingsGet,
         RustInvokeChannel::EngineStateGet,
@@ -437,8 +423,6 @@ impl RustInvokeChannel {
         RustInvokeChannel::EngineFallbackEnsure,
         RustInvokeChannel::KnownfixLaunchOverrides,
         RustInvokeChannel::KnownfixFetchRemote,
-        RustInvokeChannel::KnownfixApplyProfileRegistry,
-        RustInvokeChannel::KnownfixProfileOverlayEnv,
         RustInvokeChannel::KnownfixApplyRegistry,
         RustInvokeChannel::KnownfixResolveOverlayEnv,
         RustInvokeChannel::KnownfixReportDetected,
@@ -603,11 +587,7 @@ impl RustInvokeChannel {
             "info_umu_get" => Some(RustInvokeChannel::InfoUmuGet),
             "info_wiki_get" => Some(RustInvokeChannel::InfoWikiGet),
             "info_wiki_cache_clear" => Some(RustInvokeChannel::InfoWikiCacheClear),
-            "wine_runtime_is_installed" => Some(RustInvokeChannel::WineRuntimeIsInstalled),
-            "wine_runtime_download" => Some(RustInvokeChannel::WineRuntimeDownload),
             "wine_manager_refresh" => Some(RustInvokeChannel::WineManagerRefresh),
-            "wine_manager_install" => Some(RustInvokeChannel::WineManagerInstall),
-            "wine_manager_list" => Some(RustInvokeChannel::WineManagerList),
             "wine_releases_info_ready" => Some(RustInvokeChannel::WineReleasesInfoReady),
             "wine_valid" => Some(RustInvokeChannel::WineValid),
             "wine_run_command" => Some(RustInvokeChannel::WineRunCommand),
@@ -618,7 +598,6 @@ impl RustInvokeChannel {
             "wine_winetricks_available" => Some(RustInvokeChannel::WineWinetricksAvailable),
             "wine_winetricks_installed" => Some(RustInvokeChannel::WineWinetricksInstalled),
             "wine_winetricks_install" => Some(RustInvokeChannel::WineWinetricksInstall),
-            "wine_winetricks_list_installed" => Some(RustInvokeChannel::WineWinetricksListInstalled),
             "wine_run_command_for_game" => Some(RustInvokeChannel::WineRunCommandForGame),
             "wine_tool_call" => Some(RustInvokeChannel::WineToolCall),
             "engine_set_online" => Some(RustInvokeChannel::EngineSetOnline),
@@ -635,7 +614,6 @@ impl RustInvokeChannel {
             "engine_ledger_mark_stopped" => Some(RustInvokeChannel::EngineLedgerMarkStopped),
             "engine_selection_clear" => Some(RustInvokeChannel::EngineSelectionClear),
             "engine_launch_select" => Some(RustInvokeChannel::EngineLaunchSelect),
-            "engine_launch_arm_deadline" => Some(RustInvokeChannel::EngineLaunchArmDeadline),
             "engine_launch_end" => Some(RustInvokeChannel::EngineLaunchEnd),
             "engine_launch_settings_get" => Some(RustInvokeChannel::EngineLaunchSettingsGet),
             "engine_state_get" => Some(RustInvokeChannel::EngineStateGet),
@@ -657,8 +635,6 @@ impl RustInvokeChannel {
             "engine_fallback_ensure" => Some(RustInvokeChannel::EngineFallbackEnsure),
             "knownfix_launch_overrides" => Some(RustInvokeChannel::KnownfixLaunchOverrides),
             "knownfix_fetch_remote" => Some(RustInvokeChannel::KnownfixFetchRemote),
-            "knownfix_apply_profile_registry" => Some(RustInvokeChannel::KnownfixApplyProfileRegistry),
-            "knownfix_profile_overlay_env" => Some(RustInvokeChannel::KnownfixProfileOverlayEnv),
             "knownfix_apply_registry" => Some(RustInvokeChannel::KnownfixApplyRegistry),
             "knownfix_resolve_overlay_env" => Some(RustInvokeChannel::KnownfixResolveOverlayEnv),
             "knownfix_report_detected" => Some(RustInvokeChannel::KnownfixReportDetected),
@@ -825,11 +801,7 @@ impl RustInvokeChannel {
             RustInvokeChannel::InfoUmuGet => "info_umu_get",
             RustInvokeChannel::InfoWikiGet => "info_wiki_get",
             RustInvokeChannel::InfoWikiCacheClear => "info_wiki_cache_clear",
-            RustInvokeChannel::WineRuntimeIsInstalled => "wine_runtime_is_installed",
-            RustInvokeChannel::WineRuntimeDownload => "wine_runtime_download",
             RustInvokeChannel::WineManagerRefresh => "wine_manager_refresh",
-            RustInvokeChannel::WineManagerInstall => "wine_manager_install",
-            RustInvokeChannel::WineManagerList => "wine_manager_list",
             RustInvokeChannel::WineReleasesInfoReady => "wine_releases_info_ready",
             RustInvokeChannel::WineValid => "wine_valid",
             RustInvokeChannel::WineRunCommand => "wine_run_command",
@@ -840,7 +812,6 @@ impl RustInvokeChannel {
             RustInvokeChannel::WineWinetricksAvailable => "wine_winetricks_available",
             RustInvokeChannel::WineWinetricksInstalled => "wine_winetricks_installed",
             RustInvokeChannel::WineWinetricksInstall => "wine_winetricks_install",
-            RustInvokeChannel::WineWinetricksListInstalled => "wine_winetricks_list_installed",
             RustInvokeChannel::WineRunCommandForGame => "wine_run_command_for_game",
             RustInvokeChannel::WineToolCall => "wine_tool_call",
             RustInvokeChannel::EngineSetOnline => "engine_set_online",
@@ -857,7 +828,6 @@ impl RustInvokeChannel {
             RustInvokeChannel::EngineLedgerMarkStopped => "engine_ledger_mark_stopped",
             RustInvokeChannel::EngineSelectionClear => "engine_selection_clear",
             RustInvokeChannel::EngineLaunchSelect => "engine_launch_select",
-            RustInvokeChannel::EngineLaunchArmDeadline => "engine_launch_arm_deadline",
             RustInvokeChannel::EngineLaunchEnd => "engine_launch_end",
             RustInvokeChannel::EngineLaunchSettingsGet => "engine_launch_settings_get",
             RustInvokeChannel::EngineStateGet => "engine_state_get",
@@ -879,8 +849,6 @@ impl RustInvokeChannel {
             RustInvokeChannel::EngineFallbackEnsure => "engine_fallback_ensure",
             RustInvokeChannel::KnownfixLaunchOverrides => "knownfix_launch_overrides",
             RustInvokeChannel::KnownfixFetchRemote => "knownfix_fetch_remote",
-            RustInvokeChannel::KnownfixApplyProfileRegistry => "knownfix_apply_profile_registry",
-            RustInvokeChannel::KnownfixProfileOverlayEnv => "knownfix_profile_overlay_env",
             RustInvokeChannel::KnownfixApplyRegistry => "knownfix_apply_registry",
             RustInvokeChannel::KnownfixResolveOverlayEnv => "knownfix_resolve_overlay_env",
             RustInvokeChannel::KnownfixReportDetected => "knownfix_report_detected",
@@ -3509,50 +3477,6 @@ impl InfoWikiCacheClearArgs {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
-pub(crate) enum WineRuntimeIsInstalledArgsName {
-    #[serde(rename = "eac_runtime")]
-    EacRuntime,
-    #[serde(rename = "battleye_runtime")]
-    BattleyeRuntime,
-    #[serde(rename = "umu")]
-    Umu,
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct WineRuntimeIsInstalledArgs {
-    pub(crate) name: WineRuntimeIsInstalledArgsName,
-}
-
-impl WineRuntimeIsInstalledArgs {
-    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
-        let name = serde_json::from_value(args.first().ok_or_else(|| "wine_runtime_is_installed:bad-args".to_string())?.clone()).map_err(|_| "wine_runtime_is_installed:bad-args".to_string())?;
-        Ok(Self { name })
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
-pub(crate) enum WineRuntimeDownloadArgsName {
-    #[serde(rename = "eac_runtime")]
-    EacRuntime,
-    #[serde(rename = "battleye_runtime")]
-    BattleyeRuntime,
-    #[serde(rename = "umu")]
-    Umu,
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct WineRuntimeDownloadArgs {
-    pub(crate) name: WineRuntimeDownloadArgsName,
-}
-
-impl WineRuntimeDownloadArgs {
-    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
-        let name = serde_json::from_value(args.first().ok_or_else(|| "wine_runtime_download:bad-args".to_string())?.clone()).map_err(|_| "wine_runtime_download:bad-args".to_string())?;
-        Ok(Self { name })
-    }
-}
-
 #[derive(Debug, Clone)]
 pub(crate) struct WineManagerRefreshArgs {
     pub(crate) fetch: bool,
@@ -3562,27 +3486,6 @@ impl WineManagerRefreshArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let fetch = serde_json::from_value(args.first().ok_or_else(|| "wine_manager_refresh:bad-args".to_string())?.clone()).map_err(|_| "wine_manager_refresh:bad-args".to_string())?;
         Ok(Self { fetch })
-    }
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct WineManagerInstallArgs {
-    pub(crate) release: Value,
-}
-
-impl WineManagerInstallArgs {
-    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
-        let release = serde_json::from_value(args.first().ok_or_else(|| "wine_manager_install:bad-args".to_string())?.clone()).map_err(|_| "wine_manager_install:bad-args".to_string())?;
-        Ok(Self { release })
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub(crate) struct WineManagerListArgs;
-
-impl WineManagerListArgs {
-    pub(crate) fn from_args(_args: &[Value]) -> Result<Self, String> {
-        Ok(Self)
     }
 }
 
@@ -3704,18 +3607,6 @@ impl WineWinetricksInstallArgs {
         let request = serde_json::from_value(args.first().ok_or_else(|| "wine_winetricks_install:bad-args".to_string())?.clone()).map_err(|_| "wine_winetricks_install:bad-args".to_string())?;
         let verbs = serde_json::from_value(args.get(1).ok_or_else(|| "wine_winetricks_install:bad-args".to_string())?.clone()).map_err(|_| "wine_winetricks_install:bad-args".to_string())?;
         Ok(Self { request, verbs })
-    }
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct WineWinetricksListInstalledArgs {
-    pub(crate) request: Value,
-}
-
-impl WineWinetricksListInstalledArgs {
-    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
-        let request = serde_json::from_value(args.first().ok_or_else(|| "wine_winetricks_list_installed:bad-args".to_string())?.clone()).map_err(|_| "wine_winetricks_list_installed:bad-args".to_string())?;
-        Ok(Self { request })
     }
 }
 
@@ -3907,18 +3798,6 @@ pub(crate) struct EngineLaunchSelectArgs {
 impl EngineLaunchSelectArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let request = serde_json::from_value(args.first().ok_or_else(|| "engine_launch_select:bad-args".to_string())?.clone()).map_err(|_| "engine_launch_select:bad-args".to_string())?;
-        Ok(Self { request })
-    }
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct EngineLaunchArmDeadlineArgs {
-    pub(crate) request: Value,
-}
-
-impl EngineLaunchArmDeadlineArgs {
-    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
-        let request = serde_json::from_value(args.first().ok_or_else(|| "engine_launch_arm_deadline:bad-args".to_string())?.clone()).map_err(|_| "engine_launch_arm_deadline:bad-args".to_string())?;
         Ok(Self { request })
     }
 }
@@ -4207,70 +4086,6 @@ impl KnownfixFetchRemoteArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let first = args.first().ok_or_else(|| "knownfix_fetch_remote:bad-args".to_string())?;
         serde_json::from_value(first.clone()).map_err(|_| "knownfix_fetch_remote:bad-args".to_string())
-    }
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub(crate) struct KnownfixApplyProfileRegistryArgs {
-    #[serde(rename = "appName")]
-    pub(crate) app_name: String,
-    pub(crate) runner: KnownfixApplyProfileRegistryArgsRunner,
-    #[serde(rename = "gameSettings")]
-    pub(crate) game_settings: Value,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
-pub(crate) enum KnownfixApplyProfileRegistryArgsRunner {
-    #[serde(rename = "gog")]
-    Gog,
-    #[serde(rename = "legendary")]
-    Legendary,
-    #[serde(rename = "nile")]
-    Nile,
-    #[serde(rename = "sideload")]
-    Sideload,
-    #[serde(rename = "steam")]
-    Steam,
-}
-
-impl KnownfixApplyProfileRegistryArgs {
-    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
-        let first = args.first().ok_or_else(|| "knownfix_apply_profile_registry:bad-args".to_string())?;
-        serde_json::from_value(first.clone()).map_err(|_| "knownfix_apply_profile_registry:bad-args".to_string())
-    }
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub(crate) struct KnownfixProfileOverlayEnvArgs {
-    #[serde(rename = "appName")]
-    pub(crate) app_name: String,
-    pub(crate) runner: KnownfixProfileOverlayEnvArgsRunner,
-    #[serde(rename = "gameSettings")]
-    pub(crate) game_settings: Value,
-    #[serde(rename = "tier1Env")]
-    pub(crate) tier1_env: Value,
-    #[serde(rename = "processEnvBase")]
-    pub(crate) process_env_base: Value,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
-pub(crate) enum KnownfixProfileOverlayEnvArgsRunner {
-    #[serde(rename = "gog")]
-    Gog,
-    #[serde(rename = "legendary")]
-    Legendary,
-    #[serde(rename = "nile")]
-    Nile,
-    #[serde(rename = "sideload")]
-    Sideload,
-    #[serde(rename = "steam")]
-    Steam,
-}
-
-impl KnownfixProfileOverlayEnvArgs {
-    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
-        let first = args.first().ok_or_else(|| "knownfix_profile_overlay_env:bad-args".to_string())?;
-        serde_json::from_value(first.clone()).map_err(|_| "knownfix_profile_overlay_env:bad-args".to_string())
     }
 }
 
