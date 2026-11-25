@@ -10,7 +10,9 @@
 //! inside the parentheses of a gunzip failure is the decoder's own, and the compressed bytes of a written
 //! archive depend on the deflate implementation, so the replay compares their size and sha256 only when
 //! the compressed bytes are the golden's, and otherwise requires the gunzipped tar to equal the golden's
-//! tar byte for byte and the archive to be one the reader accepts. A count floor lives in this file, so
+//! tar byte for byte and the archive to be one the reader accepts. At least one case must reproduce the
+//! recorded gzip bytes (the other cases take their compressed fields from the golden, so the gzip bytes
+//! are compared only where they match; they are not pinned independently). A count floor lives in this file, so
 //! editing the JSON alone cannot lower the bar, and an empty case list fails.
 
 use std::io::Read;
@@ -329,6 +331,14 @@ fn every_overlay_archive_golden_replays() {
         OVERLAY_ARCHIVE_FLOOR,
     )
     .unwrap();
+    // The "same" branch compares the replay with itself, so it proves nothing unless at least one case
+    // reproduced the recorded gzip bytes. Without this a writer that never matches Node's zlib (a changed
+    // level, strategy or header) passes by copying every compressed field out of the golden (WR-08). The
+    // compressed bytes are not otherwise compared against anything independent of the golden.
+    assert!(
+        compressed.identical >= 1,
+        "no case reproduced the recorded gzip bytes; the compressed comparison is vacuous"
+    );
     println!(
         "compared {compared} overlay archive cases; compressed bytes identical to the golden in {}, \
          differing (tar compared instead) in {}",
