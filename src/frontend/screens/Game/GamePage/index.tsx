@@ -33,7 +33,10 @@ import {
   useSteamAccount
 } from 'frontend/state/accountHooks'
 import useLibraryState from 'frontend/state/libraryState'
-import { releasesPlayClicked } from './playClickedLatch'
+import {
+  releasesPlayClicked,
+  releasesPlayClickedForFrame
+} from './playClickedLatch'
 import { CachedImage, UpdateComponent, TabPanel } from 'frontend/components/UI'
 
 import {
@@ -373,6 +376,17 @@ const GamePageContent = React.memo(function GamePageContent({
     // once we receive a "launching" or "playing" status update we can safely unset this state
     if (releasesPlayClicked(status)) setPlayClicked(false)
   }, [status])
+
+  // 87-73 (RF2): the rendered status can miss a `launching` that a `done` followed at once (a refused launch),
+  // so this game's own backend frames release the latch as well. Subscribed for the page's life, not from the
+  // click, so no frame can arrive before the listener is in place.
+  useEffect(() => {
+    return window.api.handleGameStatus((_e, frame) => {
+      if (releasesPlayClickedForFrame(frame, appName, runner)) {
+        setPlayClicked(false)
+      }
+    })
+  }, [appName, runner])
 
   function handleUpdate() {
     if (isStore(gameInfo, 'sideload')) return

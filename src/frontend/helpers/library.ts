@@ -162,6 +162,40 @@ type LaunchOptions = {
   notPlayableOffline?: boolean
 }
 
+type LaunchResult = { status: 'done' | 'error' | 'abort' }
+
+// One id per launch dialog, so a close names only its own dialog (WR-01).
+let launchDialogCounter = 0
+
+/**
+ * What `launch()`'s two dialogs share so their promise settles on every way they close (87-73, RF2). The caller's
+ * Play-click latch is held until that promise settles, so a dialog dismissed without a button (the header X, Escape)
+ * must settle it. A dialog with its own `onClose` is closed by that `onClose` alone, so this closes it by id.
+ * MessageBoxModal runs `onClose` before a button's `onClick` in the same click: `choose()` is called first thing in
+ * every button handler and the abort is decided in a microtask, after the whole click handler has run.
+ */
+function launchDialogLifecycle(
+  showDialogModal: (options: DialogModalOptions) => void,
+  settle: (result: LaunchResult) => void,
+  name: string,
+  appName: string
+) {
+  const dialogId = ['launch', name, appName, ++launchDialogCounter].join(':')
+  let chosen = false
+  return {
+    dialogId,
+    choose: () => {
+      chosen = true
+    },
+    onClose: () => {
+      showDialogModal({ showDialog: false, dialogId })
+      queueMicrotask(() => {
+        if (!chosen) settle({ status: 'abort' })
+      })
+    }
+  }
+}
+
 const launch = async ({
   appName,
   t,
@@ -197,16 +231,23 @@ const launch = async ({
       }
 
       // promisifies the showDialogModal button click callbacks
-      const launchFinished = new Promise<{
-        status: 'done' | 'error' | 'abort'
-      }>((res) => {
+      const launchFinished = new Promise<LaunchResult>((res) => {
+        const dialog = launchDialogLifecycle(
+          showDialogModal,
+          res,
+          'update',
+          appName
+        )
         showDialogModal({
           message: t('gamepage:box.update.message'),
           title: t('gamepage:box.update.title'),
+          dialogId: dialog.dialogId,
+          onClose: dialog.onClose,
           buttons: [
             {
               text: t('gamepage:box.yes'),
               onClick: async () => {
+                dialog.choose()
                 const gameInfo = await getGameInfo(appName, runner)
                 if (gameInfo && !isStore(gameInfo, 'sideload')) {
                   void updateGame({ appName, runner, gameInfo })
@@ -218,6 +259,7 @@ const launch = async ({
             {
               text: t('box.no'),
               onClick: () => {
+                dialog.choose()
                 // User chose to skip the update, now check launch options
                 res(
                   checkLaunchOptionsAndLaunch({
@@ -254,7 +296,15 @@ const launch = async ({
 
   if (notPlayableOffline) {
     return new Promise((res) => {
+      const dialog = launchDialogLifecycle(
+        showDialogModal,
+        res,
+        'offline-warning',
+        appName
+      )
       showDialogModal({
+        dialogId: dialog.dialogId,
+        onClose: dialog.onClose,
         title: t('gamepage:box.offline_warning.title', 'Offline Warning'),
         message: t(
           'gamepage:box.offline_warning.message',
@@ -265,6 +315,7 @@ const launch = async ({
           {
             text: t('box.ok', 'OK'),
             onClick: () => {
+              dialog.choose()
               // MessageBoxModal closes the dialog before onClick runs; a second close dropped the next queued dialog (WR-01).
               res({ status: 'abort' })
             }
@@ -272,6 +323,7 @@ const launch = async ({
           {
             text: t('gamepage:box.offline_warning.playAnyway', 'Play Anyway'),
             onClick: async () => {
+              dialog.choose()
               // MessageBoxModal closes the dialog before onClick runs; a second close dropped the next queued dialog (WR-01).
               res(await proceedToLaunch())
             }
