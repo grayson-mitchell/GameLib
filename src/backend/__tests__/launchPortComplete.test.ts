@@ -23,7 +23,12 @@
  * Modelled on `engineWinePortComplete` (87-03) and loggerPortComplete (82 D-05).
  */
 import { assertAtOrAboveFloor } from 'backend/testUtils/censusFloor'
-import { findRollbackFlag, walkStripped } from 'backend/testUtils/infoPortGate'
+import {
+  findExportedValues,
+  findRollbackFlag,
+  walkStripped
+} from 'backend/testUtils/infoPortGate'
+import type { StrippedFile } from 'backend/testUtils/infoPortGate'
 import type { SliceSpec } from 'backend/testUtils/portSliceGate'
 import {
   BACKEND_FILES_FLOOR,
@@ -37,6 +42,7 @@ import {
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
+import { rowsDueIn, SCHEDULE } from './engineWineShimSchedule.test'
 
 /** The two rollback flags D-18 forbids; named here once so the scan and its self-tests agree. */
 const FORBIDDEN_FLAGS = ['GAMELIB_LAUNCH', 'GAMELIB_KNOWNFIX'] as const
@@ -165,6 +171,146 @@ const KNOWN_FIX: SliceSpec = {
 
 describe('knownFixPortComplete', () => {
   runSlice(KNOWN_FIX)
+})
+
+/** The two files that hold every known-fix survivor: the scheduled shims and the scheduled twins. */
+const KNOWN_FIX_SURVIVOR_FILES = [
+  'src/backend/launchrust/knownFixes.ts',
+  'src/backend/launchrust/knownFixTwins.ts'
+] as const
+
+/**
+ * The phases that may delete a known-fix survivor (88-16, D-25): 88.1 (the launch step moves into Rust), 92 (the
+ * managers' own phase), 93 (the download manager) and 97 (the Steam bridge and its TS known-fix application). None is
+ * 88, so nothing the sub-phase 88 ports leaves a survivor due inside it.
+ */
+const KNOWN_FIX_DELETED_BY: readonly number[] = [88.1, 92, 93, 97]
+
+interface SurvivorRow {
+  file: string
+  name: string
+  deletedBy: number
+}
+
+/**
+ * Both directions between the exported values of `files` and the schedule rows that name those files: an export with
+ * no row is unscheduled, a row naming something the file does not export is orphaned.
+ */
+function knownFixSurvivorDiff(
+  files: readonly StrippedFile[],
+  schedule: readonly SurvivorRow[],
+  survivorFiles: readonly string[] = KNOWN_FIX_SURVIVOR_FILES
+): { unscheduled: string[]; orphaned: string[] } {
+  const exported = new Set<string>()
+  for (const file of survivorFiles) {
+    const f = files.find((x) => x.path === file)
+    if (f === undefined) {
+      throw new Error(`survivor file ${file} was not read by the walk`)
+    }
+    for (const name of findExportedValues(f.path, f.code)) {
+      exported.add(`${file}#${name}`)
+    }
+  }
+  const scheduled = new Set(
+    schedule
+      .filter((r) => survivorFiles.includes(r.file))
+      .map((r) => `${r.file}#${r.name}`)
+  )
+  return {
+    unscheduled: [...exported].filter((k) => !scheduled.has(k)).sort(),
+    orphaned: [...scheduled].filter((k) => !exported.has(k)).sort()
+  }
+}
+
+describe('knownFixSurvivors', () => {
+  const rows = SCHEDULE.filter((r) =>
+    (KNOWN_FIX_SURVIVOR_FILES as readonly string[]).includes(r.file)
+  )
+
+  it('anti-vacuity: both survivor files are read and 16 rows (7 shims, 9 twins) are scheduled', () => {
+    assertAtOrAboveFloor('known-fix survivor rows', rows.length, 16)
+    for (const file of KNOWN_FIX_SURVIVOR_FILES) {
+      expect(tsWalk.files.some((f) => f.path === file)).toBe(true)
+      expect(rows.some((r) => r.file === file)).toBe(true)
+    }
+  })
+
+  it('every export under launchrust/knownFixes.ts and knownFixTwins.ts is a schedule row, and every row is exported', () => {
+    expect(knownFixSurvivorDiff(tsWalk.files, SCHEDULE)).toEqual({
+      unscheduled: [],
+      orphaned: []
+    })
+  })
+
+  it('no known-fix row is due in 88 (the sub-phase deletes everything that is not scheduled later)', () => {
+    expect(rowsDueIn(SCHEDULE, 88)).toEqual([])
+  })
+
+  it('every known-fix row names a deletion phase of 88.1, 92, 93 or 97', () => {
+    expect(
+      rows
+        .filter((r) => !KNOWN_FIX_DELETED_BY.includes(r.deletedBy))
+        .map((r) => `${r.file}#${r.name}: ${String(r.deletedBy)}`)
+    ).toEqual([])
+  })
+
+  describe('planted violations', () => {
+    const planted = (path: string, code: string): StrippedFile => ({
+      path,
+      raw: code,
+      code
+    })
+    const [shims, twins] = KNOWN_FIX_SURVIVOR_FILES
+    const row = (file: string, name: string, deletedBy = 97): SurvivorRow => ({
+      file,
+      name,
+      deletedBy
+    })
+
+    it('self-test: an exported value with no schedule row is reported unscheduled', () => {
+      const files = [
+        planted(shims, 'export async function a() {}\nexport const b = 1'),
+        planted(twins, 'export function c() {}')
+      ]
+      expect(
+        knownFixSurvivorDiff(files, [row(shims, 'a'), row(twins, 'c')])
+      ).toEqual({ unscheduled: [`${shims}#b`], orphaned: [] })
+    })
+
+    it('self-test: a schedule row naming something the file does not export is reported orphaned, and a type export is not a value', () => {
+      const files = [
+        planted(shims, 'export type T = 1\nexport function a() {}'),
+        planted(twins, 'export function c() {}')
+      ]
+      expect(
+        knownFixSurvivorDiff(files, [
+          row(shims, 'a'),
+          row(twins, 'c'),
+          row(twins, 'gone')
+        ])
+      ).toEqual({ unscheduled: [], orphaned: [`${twins}#gone`] })
+    })
+
+    it('self-test: a survivor file the walk did not read fails loudly instead of passing empty', () => {
+      expect(() =>
+        knownFixSurvivorDiff([planted(shims, 'export function a() {}')], [])
+      ).toThrow(/was not read by the walk/)
+    })
+
+    it('self-test: a row due in 88 and a row with a phase outside the allowed four are both found', () => {
+      const due = [
+        row(shims, 'a', 88),
+        row(twins, 'c', 93),
+        row(twins, 'd', 90)
+      ]
+      expect(rowsDueIn(due, 88).map((r) => r.name)).toEqual(['a'])
+      expect(
+        due
+          .filter((r) => !KNOWN_FIX_DELETED_BY.includes(r.deletedBy))
+          .map((r) => r.name)
+      ).toEqual(['a', 'd'])
+    })
+  })
 })
 
 describe('noRollbackFlag', () => {
