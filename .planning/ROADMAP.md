@@ -665,7 +665,7 @@ Plans:
   3. Wine, CrossOver and Staging downloads, Winetricks and DXVK/DXMT/vkd3d tools install and report progress as before
   4. `wine/`, `tools/` and engine TypeScript and their sidecar registrations are deleted in this phase, except scheduled resolvers listed in the schedule test (D-23)
 
-**Plans:** 73/82 plans executed in 41 waves; planned 2026-11-23, revised the same day so every plan fits the 100k smart-zone budget (executes after Phase 86 closes); 87-56a/b/c added 2026-11-24 for the 87-56 remainder; 87-60..87-70 added 2026-11-24 as gap closure for the 87-59 live gate (F1-F5 and the engine-log gap) in 8 gap waves; 87-71..87-79 added 2026-11-25 as gap closure cycle 2 for the 87-69 re-run findings (RF1-RF6) in 6 gap waves
+**Plans:** 75/82 plans executed in 41 waves; planned 2026-11-23, revised the same day so every plan fits the 100k smart-zone budget (executes after Phase 86 closes); 87-56a/b/c added 2026-11-24 for the 87-56 remainder; 87-60..87-70 added 2026-11-24 as gap closure for the 87-59 live gate (F1-F5 and the engine-log gap) in 8 gap waves; 87-71..87-79 added 2026-11-25 as gap closure cycle 2 for the 87-69 re-run findings (RF1-RF6) in 6 gap waves
 
 Plans:
 **Wave 1**
@@ -854,11 +854,11 @@ Plans:
 **Gap closure cycle 2 (87-69 re-run findings; user decisions 2026-11-25)**
 
 **Gap wave 1**
-- [ ] 87-71-PLAN.md — Author the re-run 2 contract 87-RERUN-2-HUMAN-UAT.md (7 items, before any fix, D-21/D-E) and file O1 and O2 as todos; link the RF1 todo
+- [x] 87-71-PLAN.md — Author the re-run 2 contract 87-RERUN-2-HUMAN-UAT.md (7 items, before any fix, D-21/D-E) and file O1 and O2 as todos; link the RF1 todo
 
 **Gap wave 2** *(blocked on 87-71)*
 - [ ] 87-72-PLAN.md — RF1 diagnosis only: reproduce the 1-2 s CrossOver exit (desk side-by-side, then a live operator capture) and name the cause with evidence; no fix
-- [ ] 87-73-PLAN.md — RF2: a refused, failed or rejected launch ends its status and display sleep blocker; the Play-click latch cannot outlive the launch
+- [x] 87-73-PLAN.md — RF2: a refused, failed or rejected launch ends its status and display sleep blocker; the Play-click latch cannot outlive the launch
 - [ ] 87-74-PLAN.md — RF3: trace Cancel in the uninstall dialog to the Steam shortcut removal, cut the hop, test every close path
 - [ ] 87-75-PLAN.md — RF4: bottle-backed games on the shared default prefix reach the bottle removal (default prefix never a target); RF6: in-use and unsafe-name notice wording
 

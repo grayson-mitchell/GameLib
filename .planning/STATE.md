@@ -6,10 +6,10 @@ current_phase: 87
 current_phase_name: Engine, Wine and tools
 status: executing
 stopped_at: Completed 88.1-05-PLAN.md
-last_updated: "2026-11-25T07:46:49.865Z"
+last_updated: "2026-11-25T08:00:35.876Z"
 last_activity: 2026-11-25
 last_activity_desc: Phase 87 execution started
-state_head: aa4b60947b8ff4667a9847016a24537ce8237b0e
+state_head: 3d2967bdf63739701fadd189a11e0d128e3549fb
 progress:
   total_phases: 25
   completed_phases: 23
@@ -526,6 +526,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 88.1 P04 | 30 min | 2 tasks | 3 files |
 | Phase 88.1 P05 | 55 min | 2 tasks | 100 files |
 | Phase 87 P71 | 25 min | 3 tasks | 4 files |
+| Phase 87 P73 | 35 min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -1181,6 +1182,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 88.1]: 88.1-04: isMacSonomaOrHigher's Darwin-major>=14 threshold is kept as recorded (Darwin 22 picks the toolkit) and filed as a todo; the mac Wine-Crossover direction is recorded at Darwin 13
 - [Phase 87]: 87-71: re-run 2 contract authored (7 items, run by 87-79 only); the plan text's literal 'launch deadline cancelled (launcher-exited)' is really 'launch deadline for key <k> cancelled (launcher-exited)' (deadline.rs:195), so the contract greps 'cancelled (launcher-exited)'
 - [Phase 88.1]: 88.1-05: system-information goldens run the code under test in a fresh jest registry behind a dns.resolveTxt spy re-installed per case, spy both logger instances, and seed the pci caches on a pinned Date; the three systeminfo test files hold 21 titles, not 20 — pci_ids.ts promisifies resolveTxt at load and backend/utils loads it almost everywhere; resetMocks wipes a spy answer before every test
+- [Phase 87]: 87-73: launch() dialogs close themselves by dialogId and decide their abort in a microtask, because DialogHandler skips its close when onClose is set and MessageBoxModal runs onClose before a button's onClick
 
 ### Pending Todos
 
