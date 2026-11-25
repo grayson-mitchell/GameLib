@@ -332,6 +332,9 @@ pub(crate) fn dispatch_rust_channel(
         RustInvokeChannel::KnownfixReportDetected => {
             knownfix_dispatch::rpc_knownfix_report_detected(args)
         }
+        RustInvokeChannel::LaunchSetupWrapperEnvVars => {
+            launch_dispatch::rpc_launch_setup_wrapper_env_vars(args)
+        }
         RustInvokeChannel::ShortcutsExist => shortcuts_dispatch::rpc_shortcuts_exist(args),
         RustInvokeChannel::ShortcutsAdd => shortcuts_dispatch::rpc_shortcuts_add(args),
         RustInvokeChannel::ShortcutsRemove => shortcuts_dispatch::rpc_shortcuts_remove(args),

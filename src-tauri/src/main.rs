@@ -129,6 +129,7 @@ mod info_secrets;
 mod ipc_contract;
 mod keyring_dispatch;
 mod knownfix_dispatch;
+mod launch_dispatch;
 mod log_dispatch;
 mod log_upload;
 mod login_window;
@@ -1944,6 +1945,9 @@ fn run_setup(
         // Phase 88 (88-08, D-20): the known-fix context, over the same engine context and the bundled
         // `<public>/fixes` layer. Nothing here reads a file or spawns; a channel before this answers not ready.
         knownfix_dispatch::install(info_dispatch::bundled_public_dir(app.handle()));
+        // Phase 88.1 (88.1-07, D-20): the launch context, over the engine, known-fix and wine contexts just built.
+        // Nothing here reads a file or spawns; a launch channel before this answers not ready.
+        launch_dispatch::install();
     }
     // Phase 94 (SVC-05, D-20): the one shortcuts context, built right after the host opened. Nothing here
     // spawns a process or waits; an op before this answers not-ready.
@@ -2449,6 +2453,7 @@ mod tests {
         "ipc_contract.rs",
         "keyring_dispatch.rs",
         "knownfix_dispatch.rs",
+        "launch_dispatch.rs",
         "log_dispatch.rs",
         "log_upload.rs",
         "login_window.rs",
@@ -2518,6 +2523,7 @@ mod tests {
         include_str!("ipc_contract.rs"),
         include_str!("keyring_dispatch.rs"),
         include_str!("knownfix_dispatch.rs"),
+        include_str!("launch_dispatch.rs"),
         include_str!("log_dispatch.rs"),
         include_str!("log_upload.rs"),
         include_str!("login_window.rs"),

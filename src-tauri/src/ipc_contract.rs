@@ -222,6 +222,7 @@ pub(crate) enum RustInvokeChannel {
     KnownfixApplyRegistry,
     KnownfixResolveOverlayEnv,
     KnownfixReportDetected,
+    LaunchSetupWrapperEnvVars,
     ShortcutsExist,
     ShortcutsAdd,
     ShortcutsRemove,
@@ -431,6 +432,7 @@ impl RustInvokeChannel {
         RustInvokeChannel::KnownfixApplyRegistry,
         RustInvokeChannel::KnownfixResolveOverlayEnv,
         RustInvokeChannel::KnownfixReportDetected,
+        RustInvokeChannel::LaunchSetupWrapperEnvVars,
         RustInvokeChannel::ShortcutsExist,
         RustInvokeChannel::ShortcutsAdd,
         RustInvokeChannel::ShortcutsRemove,
@@ -640,6 +642,7 @@ impl RustInvokeChannel {
             "knownfix_apply_registry" => Some(RustInvokeChannel::KnownfixApplyRegistry),
             "knownfix_resolve_overlay_env" => Some(RustInvokeChannel::KnownfixResolveOverlayEnv),
             "knownfix_report_detected" => Some(RustInvokeChannel::KnownfixReportDetected),
+            "launch_setup_wrapper_env_vars" => Some(RustInvokeChannel::LaunchSetupWrapperEnvVars),
             "shortcuts_exist" => Some(RustInvokeChannel::ShortcutsExist),
             "shortcuts_add" => Some(RustInvokeChannel::ShortcutsAdd),
             "shortcuts_remove" => Some(RustInvokeChannel::ShortcutsRemove),
@@ -851,6 +854,7 @@ impl RustInvokeChannel {
             RustInvokeChannel::KnownfixApplyRegistry => "knownfix_apply_registry",
             RustInvokeChannel::KnownfixResolveOverlayEnv => "knownfix_resolve_overlay_env",
             RustInvokeChannel::KnownfixReportDetected => "knownfix_report_detected",
+            RustInvokeChannel::LaunchSetupWrapperEnvVars => "launch_setup_wrapper_env_vars",
             RustInvokeChannel::ShortcutsExist => "shortcuts_exist",
             RustInvokeChannel::ShortcutsAdd => "shortcuts_add",
             RustInvokeChannel::ShortcutsRemove => "shortcuts_remove",
@@ -4302,6 +4306,35 @@ impl KnownfixReportDetectedArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let first = args.first().ok_or_else(|| "knownfix_report_detected:bad-args".to_string())?;
         serde_json::from_value(first.clone()).map_err(|_| "knownfix_report_detected:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct LaunchSetupWrapperEnvVarsArgs {
+    #[serde(rename = "appName")]
+    pub(crate) app_name: String,
+    #[serde(rename = "appRunner")]
+    pub(crate) app_runner: LaunchSetupWrapperEnvVarsArgsAppRunner,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+pub(crate) enum LaunchSetupWrapperEnvVarsArgsAppRunner {
+    #[serde(rename = "gog")]
+    Gog,
+    #[serde(rename = "legendary")]
+    Legendary,
+    #[serde(rename = "nile")]
+    Nile,
+    #[serde(rename = "sideload")]
+    Sideload,
+    #[serde(rename = "steam")]
+    Steam,
+}
+
+impl LaunchSetupWrapperEnvVarsArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "launch_setup_wrapper_env_vars:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "launch_setup_wrapper_env_vars:bad-args".to_string())
     }
 }
 

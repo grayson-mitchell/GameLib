@@ -156,7 +156,10 @@ export async function launchGame(
       }
 
       const env = {
-        ...deps.launcher.setupWrapperEnvVars({ appName, appRunner: runner }),
+        ...(await deps.launcher.setupWrapperEnvVars({
+          appName,
+          appRunner: runner
+        })),
         ...deps.launcher.setupEnvVars(
           gameSettings,
           gameInfo.install.install_path

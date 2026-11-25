@@ -83,6 +83,8 @@ import {
   settleKnownFixRegistry
 } from './knownFixLaunchReply'
 import { overlayBaseEnv } from 'common/knownFixOverlayCatalogue'
+import { setupWrapperEnvVars as setupWrapperEnvVarsShim } from './launchrust/builders'
+import { settleEnvMap } from './launchBuilderReply'
 import {
   isCLINoGui,
   isLinux,
@@ -1346,7 +1348,9 @@ const wrapperStoreEnv: Record<Runner, Record<string, string>> = {
   steam: {}
 }
 
-function setupWrapperEnvVars(wrapperEnv: WrapperEnv) {
+// The TypeScript original: the managers reach the Rust builder through the launcher member (88.1-07); this body stays
+// as what the launch-builders oracle records its golden from, until 88.1-17 deletes both.
+export function setupWrapperEnvVars(wrapperEnv: WrapperEnv) {
   const ret: Record<string, string> = {}
 
   ret.HEROIC_APP_NAME = wrapperEnv.appName
@@ -1729,7 +1733,7 @@ export interface Launcher {
     ...a: DropFirst<Parameters<typeof prepareWineLaunch>>
   ): ReturnType<typeof prepareWineLaunch>
   setupEnvVars: typeof setupEnvVars
-  setupWrapperEnvVars: typeof setupWrapperEnvVars
+  setupWrapperEnvVars(wrapperEnv: WrapperEnv): Promise<Record<string, string>>
   setupWineEnvVars(
     ...a: DropFirst<Parameters<typeof setupWineEnvVars>>
   ): ReturnType<typeof setupWineEnvVars>
@@ -1767,7 +1771,11 @@ export function createLauncher(deps: LauncherDeps): Launcher {
     launchCleanup: (...a) => launchCleanup(deps, ...a),
     prepareWineLaunch: (...a) => prepareWineLaunch(deps, ...a),
     setupEnvVars,
-    setupWrapperEnvVars,
+    setupWrapperEnvVars: async (wrapperEnv) =>
+      settleEnvMap(
+        await setupWrapperEnvVarsShim(deps, wrapperEnv),
+        'setupWrapperEnvVars'
+      ),
     setupWineEnvVars: (...a) => setupWineEnvVars(deps, ...a),
     setupWrappers,
     launchEventCallback: (params) => launchEventCallback(ctx, params),

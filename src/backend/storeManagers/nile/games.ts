@@ -409,10 +409,10 @@ export default class NileGameManager implements Game {
 
     let commandEnv = {
       ...process.env,
-      ...this.deps.launcher.setupWrapperEnvVars({
+      ...(await this.deps.launcher.setupWrapperEnvVars({
         appName: this.id,
         appRunner: 'nile'
-      }),
+      })),
       ...(isWindows
         ? {}
         : this.deps.launcher.setupEnvVars(

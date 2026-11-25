@@ -701,10 +701,10 @@ export default class GOGGame implements Game {
 
     let commandEnv = {
       ...process.env,
-      ...this.deps.launcher.setupWrapperEnvVars({
+      ...(await this.deps.launcher.setupWrapperEnvVars({
         appName: this.id,
         appRunner: 'gog'
-      }),
+      })),
       ...(isWindows
         ? {}
         : this.deps.launcher.setupEnvVars(

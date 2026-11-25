@@ -101,7 +101,9 @@ interface ScheduleRow extends ShimRow {
 const LAUNCHER_IMPORTERS: readonly string[] = [
   'src/backend/services/types.ts',
   'src/backend/sidecar/bootstrap.ts',
-  'src/backend/storeManagers/index.ts'
+  'src/backend/storeManagers/index.ts',
+  // 88.1-01: the launch oracle's fake deps import the `LauncherDeps` type to build the real Launcher over fakes.
+  'src/backend/testUtils/launchOracle/fakeLauncherDeps.ts'
 ]
 /** Every non-test importer of `utils/compatibility_layers.ts` (the twin check is per file). */
 const COMPATIBILITY_LAYERS_IMPORTERS: readonly string[] = [
@@ -163,6 +165,13 @@ const ENGINE_TWIN_IMPORTERS: readonly string[] = [
 const TOOLS_SHIM_IMPORTERS: readonly string[] = [
   'src/backend/launcher.ts',
   'src/backend/storeManagers/steam/bridgeKnownFixes.ts'
+]
+/**
+ * Every non-test importer of `launchrust/builders.ts` (the check is per file, so every row of that file lists them
+ * all): the launcher binds the shims into its members, which the three managers' `launch()` call (88.1-07).
+ */
+const LAUNCH_BUILDER_SHIM_IMPORTERS: readonly string[] = [
+  'src/backend/launcher.ts'
 ]
 /**
  * Every non-test importer of `launchrust/knownFixes.ts` (the check is per file, so every row of that file lists them
@@ -1153,6 +1162,18 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     channel: 'RUST_KNOWNFIX_REPORT_DETECTED',
     callers: KNOWN_FIX_SHIM_IMPORTERS,
     deletedBy: 97
+  },
+  // 88.1-07 (D-01, D-19): the launch builders the managers call. The managers' `launch()` awaits each member of the
+  // launcher, which `createLauncher` binds to these shims and narrows through `launchBuilderReply.ts`. They go when
+  // 91 (legendary) and 92 (gog and nile) move the launch flow into Rust, which calls the builders in process.
+  {
+    name: 'setupWrapperEnvVars',
+    file: 'src/backend/launchrust/builders.ts',
+    shape: 'shim',
+    channel: 'RUST_LAUNCH_SETUP_WRAPPER_ENV_VARS',
+    callers: LAUNCH_BUILDER_SHIM_IMPORTERS,
+    // legendary's launch leaves in 91, gog's and nile's in 92
+    deletedBy: 92
   },
   // 88-13 (87 D-24): the synchronous known-fix twins, for callers 88 cannot make async. `installFixes` and
   // `getKnownFixesEnvVariables` read the tier-1 fix inline in the launcher until 88.1/97 move them; the env log line goes

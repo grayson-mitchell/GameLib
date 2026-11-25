@@ -1001,10 +1001,10 @@ export default class LegendaryGame implements Game {
 
     let commandEnv = {
       ...process.env,
-      ...this.deps.launcher.setupWrapperEnvVars({
+      ...(await this.deps.launcher.setupWrapperEnvVars({
         appName: this.appName,
         appRunner: 'legendary'
-      }),
+      })),
       ...this.deps.launcher.setupEnvVars(
         gameSettings,
         gameInfo.install.install_path

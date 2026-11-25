@@ -162,6 +162,7 @@ import {
   RUST_KNOWNFIX_PROFILE_OVERLAY_ENV,
   RUST_KNOWNFIX_REPORT_DETECTED,
   RUST_KNOWNFIX_RESOLVE_OVERLAY_ENV,
+  RUST_LAUNCH_SETUP_WRAPPER_ENV_VARS,
   RUST_WINE_MANAGER_LIST,
   RUST_WINE_MANAGER_REFRESH,
   RUST_WINE_RELEASES_INFO_READY,
@@ -1221,6 +1222,16 @@ export const rustInvokeArgs = {
         op: z.enum(['add', 'remove']),
         detector: z.enum(['macho', 'ceg']),
         enabled: z.boolean()
+      })
+      .strict()
+  ]),
+  // Phase 88.1 (SVC-03, 88.1-07, D-19): the wrapper env of a launch. One strict object, `{appName, appRunner}`; the
+  // runner is one of the five names and the shell decodes the same set again before the crate does a third time.
+  [RUST_LAUNCH_SETUP_WRAPPER_ENV_VARS]: z.tuple([
+    z
+      .object({
+        appName: z.string(),
+        appRunner: z.enum(['gog', 'legendary', 'nile', 'sideload', 'steam'])
       })
       .strict()
   ])

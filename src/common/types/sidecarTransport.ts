@@ -1535,6 +1535,14 @@ export const RUST_KNOWNFIX_RESOLVE_OVERLAY_ENV =
  * `RUST_INVOKE_TIMEOUT_MS`.
  */
 export const RUST_KNOWNFIX_REPORT_DETECTED = 'knownfix_report_detected' as const
+/**
+ * Phase 88.1 (SVC-03, 88.1-07, D-01, D-19): the wrapper env of a launch, reached through `setupWrapperEnvVars` in
+ * `launchrust/builders.ts`. `launch_setup_wrapper_env_vars` takes one object, `{appName, appRunner}`, and answers the
+ * `HEROIC_APP_NAME`, `HEROIC_APP_RUNNER`, `GAMEID` and per-store variables as a string map. A pure computation, so it
+ * stays inside the 60 s `RUST_INVOKE_TIMEOUT_MS`.
+ */
+export const RUST_LAUNCH_SETUP_WRAPPER_ENV_VARS =
+  'launch_setup_wrapper_env_vars' as const
 export const RUST_ENGINE_STATE_RECORD_DECISION =
   'engine_state_record_decision' as const
 export const RUST_ENGINE_STATE_PUBLISH_OVERLAY_NOTICE =
@@ -1979,6 +1987,7 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_KNOWNFIX_APPLY_REGISTRY,
   RUST_KNOWNFIX_RESOLVE_OVERLAY_ENV,
   RUST_KNOWNFIX_REPORT_DETECTED,
+  RUST_LAUNCH_SETUP_WRAPPER_ENV_VARS,
   RUST_SHORTCUTS_EXIST,
   RUST_SHORTCUTS_ADD,
   RUST_SHORTCUTS_REMOVE,

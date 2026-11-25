@@ -12,7 +12,7 @@
  *   expected/<case>/events.json   every backend log line the builder wrote, in order, paths normalised
  *
  * The ops a case can name:
- *   wrapperEnvVars   `launcher.setupWrapperEnvVars({ appName, appRunner })`, every runner
+ *   wrapperEnvVars   `setupWrapperEnvVars({ appName, appRunner })` of launcher.ts, every runner
  *   wrappers         `launcher.setupWrappers(settings, mangoHud, gameMode, gameScope)`
  *   shlexSplit       npm `shlex.split(input)` (the managers split wrapper args with it)
  *   shlexJoin        npm `shlex.join(words)` (the managers pass `join(wrappers)` to `--wrapper`)
@@ -67,7 +67,7 @@ import {
   withInjected
 } from 'backend/testUtils/launchOracle/probes'
 import * as logger from 'backend/logger'
-import { createLauncher } from 'backend/launcher'
+import { createLauncher, setupWrapperEnvVars } from 'backend/launcher'
 import { isMacSonomaOrHigher, removeQuoteIfNecessary } from 'backend/utils'
 import type { GameSettings, Runner, WrapperVariable } from 'common/types'
 import { fix } from './knownFixReader.cases'
@@ -507,7 +507,9 @@ function runCall(
 ): unknown {
   switch (call.op) {
     case 'wrapperEnvVars':
-      return launcher.setupWrapperEnvVars({
+      // The TypeScript original: the launcher's member is the Rust shim from 88.1-07, so the golden is
+      // recorded from the function itself.
+      return setupWrapperEnvVars({
         appName: call.appName,
         appRunner: call.appRunner
       })
