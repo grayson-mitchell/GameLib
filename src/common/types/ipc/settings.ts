@@ -4,7 +4,6 @@ import type { AppSettings, GameSettings } from '../../types'
 
 import {
   nonEmptyString,
-  optionalArg,
   runnerArg,
   type InvokeFns,
   type SendFns
