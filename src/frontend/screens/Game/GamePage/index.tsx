@@ -21,9 +21,10 @@ import {
   sendKill,
   updateGame
 } from 'frontend/helpers'
-import { Link, NavLink, useLocation, useParams } from 'react-router-dom'
+import { Link, NavLink, useParams } from 'react-router-dom'
 import { Trans, useTranslation } from 'react-i18next'
 import { confirmSteamUpdate } from 'frontend/helpers/steamUpdateConfirm'
+import GamePageGate from './GamePageGate'
 import AdoptionNote from './components/AdoptionNote'
 import SteamUpdateButton from './components/SteamUpdateButton'
 import {
@@ -100,16 +101,15 @@ import {
   isSteamBottleSetupActiveFor
 } from 'frontend/state/SteamBottleSetup'
 
-export default React.memo(function GamePage(): JSX.Element | null {
+const GamePageContent = React.memo(function GamePageContent({
+  initialGameInfo
+}: {
+  initialGameInfo: GameInfo
+}): JSX.Element | null {
   const { appName, runner } = useParams() as { appName: string; runner: Runner }
-  const location = useLocation() as {
-    state: { gameInfo: GameInfo }
-  }
   const { t, i18n } = useTranslation('gamepage')
   const { t: t2 } = useTranslation()
   const { t: tGamelib } = useTranslation('gamelib')
-
-  const { gameInfo: locationGameInfo } = location.state
 
   const [wikiInfo, setWikiInfo] = useState<WikiInfo | null>(null)
 
@@ -123,7 +123,7 @@ export default React.memo(function GamePage(): JSX.Element | null {
 
   const { settingsModalProps } = useUiState.keys('settingsModalProps')
 
-  const [gameInfo, setGameInfo] = useState(locationGameInfo)
+  const [gameInfo, setGameInfo] = useState(initialGameInfo)
   const [gameSettings, setGameSettings] = useState<GameSettings | null>(null)
 
   const { status, folder, statusContext } = hasStatus(gameInfo)
@@ -275,8 +275,9 @@ export default React.memo(function GamePage(): JSX.Element | null {
     // here (mirroring gog.library/epic.library) so a backend-pushed install-state
     // change (focus-triggered reconcile or the bottle install poller's 'done'
     // completion) actually triggers a getGameInfo() refetch for the steam runner.
-    // Without this, GamePage's local `gameInfo` state — seeded once from
-    // location.state at mount — never refreshes, and the button stays stuck on
+    // Without this, GamePage's local `gameInfo` state — seeded once at mount
+    // from the gate's resolved GameInfo (router state, the library store, or
+    // getGameInfo) — never refreshes, and the button stays stuck on
     // Install even after the ACF confirms the game is fully installed.
   }, [status, gog.library, epic.library, steam.library, isMoving])
 
@@ -828,4 +829,12 @@ export default React.memo(function GamePage(): JSX.Element | null {
       showDialogModal: showDialogModal
     })
   }
+})
+
+export default React.memo(function GamePage(): JSX.Element {
+  return (
+    <GamePageGate>
+      {(gameInfo) => <GamePageContent initialGameInfo={gameInfo} />}
+    </GamePageGate>
+  )
 })

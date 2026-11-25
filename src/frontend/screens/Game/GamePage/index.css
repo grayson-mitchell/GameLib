@@ -978,3 +978,20 @@
   border: 1px solid var(--accent);
   border-radius: 6px;
 }
+
+/* Not-found state of the game page (quick 261125-r0j). */
+.gamePageNotFound {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-md);
+  color: var(--text-default);
+  font-size: var(--text-md);
+  text-align: center;
+}
+
+.gamePageNotFound .button {
+  text-decoration: none;
+}
