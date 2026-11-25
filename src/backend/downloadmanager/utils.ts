@@ -1,6 +1,7 @@
 import type { AppRuntimeSlice } from 'backend/appRuntime'
 import { logError, logInfo, LogPrefix, logWarning } from 'backend/logger'
-import { isEpicServiceOffline, sendGameStatusUpdate } from '../utils'
+import { sendGameStatusUpdate } from '../utils'
+import { isEpicServiceOffline } from 'backend/launchrust/launchUtils'
 import type { AbortRegistry } from 'backend/utils/aborthandler/aborthandler'
 import { ButtonOptions, DMStatus, InstallParams, Runner } from 'common/types'
 import { InstallResult, InstallErrorAction } from 'common/types/game_manager'

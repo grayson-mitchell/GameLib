@@ -122,6 +122,8 @@
 
 import { isStore } from 'common/storeCapabilities'
 import type { IpcRegistry } from './ipcRegistry'
+// Ahead of the long comment below: the schedule's importer scan strips that comment wrongly and loses what follows it.
+import { isEpicServiceOffline } from '../launchrust/launchUtils'
 import {
   importEngineSettings,
   isWritableEngineOverride
@@ -167,13 +169,9 @@ import {
 } from '../services/managerDeps'
 import { resolveGameTitle } from '../downloadmanager/utils'
 // Plan 34.6-06 (REQ-34.6-04): byte-equivalent port of moveInstall/importGame
-// (main.ts:1112-1245, D-02). getGame/isEpicServiceOffline/sendGameStatusUpdate/writeConfig are
-// the same `backend/utils.ts` exports main.ts itself imports for these two handlers.
-import {
-  isEpicServiceOffline,
-  sendGameStatusUpdate,
-  writeConfig
-} from '../utils'
+// (main.ts:1112-1245, D-02). sendGameStatusUpdate and writeConfig are the same `backend/utils.ts` exports main.ts itself
+// imports for these two handlers; the Epic status check is Rust's (88.1-16).
+import { sendGameStatusUpdate, writeConfig } from '../utils'
 import { notify, showDialogBoxModalAuto } from '../dialog/dialog'
 // Gap plan 34.6-18 (REQ-34.6-05, T-34.5-C6-49-03, 34.6-VERIFICATION.md
 // CR-01): `moveInstall`/`importGame` validate their renderer-supplied `path`
@@ -694,10 +692,7 @@ export function registerInstallFlows(deps: InstallFlowDeps): void {
       }
 
       if (isStore(runner, 'legendary')) {
-        const epicOffline = await isEpicServiceOffline({
-          notifications: deps.host.notifications,
-          onlineMonitor: deps.onlineMonitor
-        })
+        const epicOffline = await isEpicServiceOffline(deps.host)
         if (epicOffline) {
           // No `event` property — see the identical rationale on `moveInstall` above.
           showDialogBoxModalAuto(deps.host, {

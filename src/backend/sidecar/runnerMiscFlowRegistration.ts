@@ -92,7 +92,8 @@ import type { GOGCloudSavesLocation } from 'common/types/gog'
 import type { Game } from 'common/types/game_manager'
 import type { AppPaths } from '../process/context'
 import type { ManagerDeps } from '../services/types'
-import { isEpicServiceOffline } from '../utils'
+import { isEpicServiceOffline } from '../launchrust/launchUtils'
+import type { RustInvokeDeps } from '../host/rustInvokeDeps'
 import { logInfo, logWarning, LogPrefix } from '../logger'
 import { getDefaultSavePath } from '../save_sync'
 import type { SaveSyncDeps } from '../save_sync'
@@ -110,7 +111,8 @@ import type { SaveSyncDeps } from '../save_sync'
  */
 export function registerRunnerMiscFlows(
   deps: Pick<ManagerDeps, 'config' | 'onlineMonitor' | 'notifications'> &
-    SaveSyncDeps & {
+    SaveSyncDeps &
+    RustInvokeDeps & {
       paths: Pick<AppPaths, 'publicDir'>
       ipc: Pick<IpcRegistry, 'handle'>
     }

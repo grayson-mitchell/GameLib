@@ -54,12 +54,11 @@ jest.mock('axios', () => {
 })
 
 // ── backend/utils — no real on-disk Steam install to scan in CI (mirrors steamAuthFlows.test.ts);
-// also supplies isEpicServiceOffline/clearCache, both real exports of this same module that
-// runnerAuthFlowRegistration.ts / legendary/user.ts import ─────────────────────────────────────
+// also supplies clearCache, a real export of this same module that legendary/user.ts imports
+// (the Epic status check is a Rust shim since 88.1-16) ────────────────────────────────────────
 jest.mock('backend/utils', () => ({
   getSteamLibraries: jest.fn(),
   getFileSize: jest.fn(),
-  isEpicServiceOffline: jest.fn(() => Promise.resolve(false)),
   clearCache: jest.fn()
 }))
 
@@ -128,6 +127,7 @@ import { registerRunnerAuthFlows } from '../runnerAuthFlowRegistration'
 import { createIpcRegistry } from '../ipcRegistry'
 import { ipcViews } from 'backend/testUtils/ipcViews'
 import { logWarning } from 'backend/logger'
+import { RUST_LAUNCH_EPIC_SERVICE_OFFLINE } from 'common/types/sidecarTransport'
 // REAL module — pure, no seam/logger side effects requiring a mock (T-34.5-34 integration proof).
 import { matchOAuthRedirect } from '../oauthLoginCapture'
 
@@ -391,6 +391,21 @@ describe('T-34.5-18 — logoutGOG never lets a synchronous GOGUser.logout() thro
     ).not.toThrow()
     expect(mockGOGLogout).toHaveBeenCalled()
     expect(logWarning).not.toHaveBeenCalled()
+  })
+})
+
+describe('88.1-16: getEpicGamesStatus is answered by Rust', () => {
+  it('sends launch_epic_service_offline with no service over the registered transport and answers its reply', async () => {
+    const request = flowDeps.requestRustInvoke as jest.Mock
+    request.mockResolvedValueOnce(true)
+    const answer = await defined(
+      handlerRegistry.get('getEpicGamesStatus'),
+      'getEpicGamesStatus handler'
+    )({})
+    expect(answer).toBe(true)
+    expect(request).toHaveBeenLastCalledWith(RUST_LAUNCH_EPIC_SERVICE_OFFLINE, [
+      undefined
+    ])
   })
 })
 

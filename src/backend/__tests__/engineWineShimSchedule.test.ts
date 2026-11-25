@@ -181,6 +181,18 @@ const LAUNCH_PREPARE_SHIM_IMPORTERS: readonly string[] = [
   'src/backend/launchAdapters.ts'
 ]
 /**
+ * Every non-test importer of `launchrust/launchUtils.ts` (the check is per file, so every row of that file lists them all):
+ * the three sidecar flow registrations that answer the Epic status or gate on it, the legendary library and the download
+ * manager's install and update gates (88.1-16).
+ */
+const LAUNCH_UTILS_SHIM_IMPORTERS: readonly string[] = [
+  'src/backend/downloadmanager/utils.ts',
+  'src/backend/sidecar/installFlowRegistration.ts',
+  'src/backend/sidecar/runnerAuthFlowRegistration.ts',
+  'src/backend/sidecar/runnerMiscFlowRegistration.ts',
+  'src/backend/storeManagers/legendary/library.ts'
+]
+/**
  * Every non-test importer of `launchrust/knownFixes.ts` (the check is per file, so every row of that file lists them
  * all): the three managers' `launch()` and the download manager's install-time fetch (88-12), and the shared
  * launcher's per-launch registry fixes and overlay env (88-13), and the Steam bridge's registry fixes and overlay env
@@ -1197,6 +1209,17 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     callers: LAUNCH_PREPARE_SHIM_IMPORTERS,
     // legendary's launch leaves in 91, gog's and nile's in 92
     deletedBy: 92
+  },
+  // 88.1-16 (D-01, D-19): whether Epic is down. Every caller asks Rust; the online answer is the engine's own flag, which the TS
+  // monitor feeds through `setEngineOnline`. The sidecar flow registrations calling it leave at the shell cutover (98).
+  {
+    name: 'isEpicServiceOffline',
+    file: 'src/backend/launchrust/launchUtils.ts',
+    shape: 'shim',
+    channel: 'RUST_LAUNCH_EPIC_SERVICE_OFFLINE',
+    callers: LAUNCH_UTILS_SHIM_IMPORTERS,
+    // the three sidecar flow registrations (install, runnerAuth, runnerMisc) are the last callers
+    deletedBy: 98
   },
   // 88-13 (87 D-24): the synchronous known-fix twins, for callers 88 cannot make async. `installFixes` and
   // `getKnownFixesEnvVariables` read the tier-1 fix inline in the launcher until 88.1/97 move them; the env log line goes

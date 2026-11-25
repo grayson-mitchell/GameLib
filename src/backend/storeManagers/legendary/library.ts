@@ -18,10 +18,10 @@ import {
   GameOverride
 } from 'common/types/legendary'
 import { LegendaryUser } from './user'
+import { isEpicServiceOffline } from 'backend/launchrust/launchUtils'
 import {
   formatEpicStoreUrl,
   getLegendaryBin,
-  isEpicServiceOffline,
   getFileSize,
   axiosClient
 } from '../../utils'
