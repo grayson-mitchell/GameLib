@@ -6,10 +6,10 @@ current_phase: 87
 current_phase_name: Engine, Wine and tools
 status: executing
 stopped_at: Completed 88.1-05-PLAN.md
-last_updated: "2026-11-25T09:46:36.840Z"
+last_updated: "2026-11-25T09:55:16.806Z"
 last_activity: 2026-11-25
 last_activity_desc: Phase 87 execution started
-state_head: 0c973787a3afc3d5f762536bfb078a9bd6332306
+state_head: f0709db9d38d85c4a3cfcb12fcda90f156f93f4f
 progress:
   total_phases: 25
   completed_phases: 23
@@ -1286,6 +1286,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261125-pmb | Game page Back always returns to the Library (icon labelled Back to Library; Downloads drops fromDM) | 2026-11-25 | 8a044d243 | — | [261125-pmb-game-page-back-always-returns-to-the-lib](./quick/261125-pmb-game-page-back-always-returns-to-the-lib/) |
 | 261125-qp9 | Steam-managed download row opens the game page with its gameInfo (plain-text title when not in the library) | 2026-11-25 | 5e16ee214 | — | [261125-qp9-steam-managed-download-row-opens-the-gam](./quick/261125-qp9-steam-managed-download-row-opens-the-gam/) |
 | 261125-r0j | The game page loads the game itself when opened without router state (store, then getGameInfo; loading and not-found states) | 2026-11-25 | a94f6f9db | — | [261125-r0j-game-page-loads-the-game-itself-when-ope](./quick/261125-r0j-game-page-loads-the-game-itself-when-ope/) |
+| 261125-uzz | Remove from Steam proves the shortcut is GameLib's before deleting it and its grid art | 2026-11-25 | f0709db9d | — | [261125-uzz-remove-from-steam-proves-the-shortcut-is](./quick/261125-uzz-remove-from-steam-proves-the-shortcut-is/) |
 
 ## Deferred Items
 
