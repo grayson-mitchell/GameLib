@@ -58,6 +58,14 @@ fn contained_dest(root: &Path, file: &str) -> Option<PathBuf> {
     }
 }
 
+/// An app name that can sit in a URL path segment unencoded: ASCII letters, digits, `.`, `_` and `-`.
+fn url_safe_app_name(app_name: &str) -> bool {
+    !app_name.is_empty()
+        && app_name
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'.' | b'_' | b'-'))
+}
+
 /// `JSON.stringify(value, null, 2)`: two-space indent, `key: value`, `[]` and `{}` for the empty ones.
 fn pretty(value: &JsValue, depth: usize, out: &mut String) {
     let pad = |out: &mut String, depth: usize| out.push_str(&"  ".repeat(depth));
@@ -158,6 +166,12 @@ async fn run(ctx: &KnownFixCtx, app_name: &str, runner: Runner) -> Result<(), St
     let Some(store) = store_suffix(runner) else {
         return Ok(());
     };
+    // `contained_dest` guards only the on-disk name. The request URL is built from the same text, so
+    // a `?`, `#`, `%` or control character would re-target the request while still passing it (WR-02).
+    if !url_safe_app_name(app_name) {
+        ctx.log_warn("Refusing known-fixes fetch for an unsafe app name");
+        return Ok(());
+    }
     let file = format!("{app_name}-{store}.json");
     let root = ctx.paths.fixes.as_path();
     let Some(dest) = contained_dest(root, &file) else {
@@ -252,6 +266,16 @@ mod tests {
             "/abs-gog.json",
         ] {
             assert_eq!(contained_dest(root, refused), None, "{refused}");
+        }
+    }
+
+    #[test]
+    fn an_app_name_with_a_url_metacharacter_is_refused() {
+        for ok in ["1", "a.b-c_d", "Fortnite", "1207658930"] {
+            assert!(url_safe_app_name(ok), "{ok}");
+        }
+        for refused in ["", "a?b", "a#b", "..%2fx", "a b", "a\nb", "a/b", "a\u{e9}"] {
+            assert!(!url_safe_app_name(refused), "{refused:?}");
         }
     }
 
