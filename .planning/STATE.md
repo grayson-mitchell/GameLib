@@ -6,10 +6,10 @@ current_phase: 87
 current_phase_name: Engine, Wine and tools
 status: executing
 stopped_at: Completed 88.1-05-PLAN.md
-last_updated: "2026-11-25T07:46:22.337Z"
+last_updated: "2026-11-25T07:46:49.865Z"
 last_activity: 2026-11-25
 last_activity_desc: Phase 87 execution started
-state_head: d89f4be621dc516144a7e3193fc92e004ed5fbb2
+state_head: aa4b60947b8ff4667a9847016a24537ce8237b0e
 progress:
   total_phases: 25
   completed_phases: 23
@@ -1180,6 +1180,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 88.1]: 88.1-04: check_wine dialogs run through the real createDialogs over a scripted dialog_message reply, so a dismissal is the TS-mapped answer (cancelId absent, so the last button, No); settings writes are recorded as data for the Rust reply to return
 - [Phase 88.1]: 88.1-04: isMacSonomaOrHigher's Darwin-major>=14 threshold is kept as recorded (Darwin 22 picks the toolkit) and filed as a todo; the mac Wine-Crossover direction is recorded at Darwin 13
 - [Phase 87]: 87-71: re-run 2 contract authored (7 items, run by 87-79 only); the plan text's literal 'launch deadline cancelled (launcher-exited)' is really 'launch deadline for key <k> cancelled (launcher-exited)' (deadline.rs:195), so the contract greps 'cancelled (launcher-exited)'
+- [Phase 88.1]: 88.1-05: system-information goldens run the code under test in a fresh jest registry behind a dns.resolveTxt spy re-installed per case, spy both logger instances, and seed the pci caches on a pinned Date; the three systeminfo test files hold 21 titles, not 20 — pci_ids.ts promisifies resolveTxt at load and backend/utils loads it almost everywhere; resetMocks wipes a spy answer before every test
 
 ### Pending Todos
 
