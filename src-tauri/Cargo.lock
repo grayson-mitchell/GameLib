@@ -1793,6 +1793,7 @@ dependencies = [
  "gamelib-engine",
  "gamelib-knownfix",
  "gamelib-launch",
+ "gamelib-proc",
  "gamelib-store",
  "gamelib-testutil",
  "gamelib-wine",

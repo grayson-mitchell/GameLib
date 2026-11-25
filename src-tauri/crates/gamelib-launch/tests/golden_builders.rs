@@ -3,6 +3,8 @@
 //! - `golden/builders` (113 cases): `setupWrapperEnvVars`, `setupWrappers` pairwise, npm shlex split and
 //!   join vectors, the tier-1 known-fix env over seeded layers, `removeQuoteIfNecessary`,
 //!   `isMacSonomaOrHigher` with its log lines, and the `setupWineEnvVars` library-folder incident cases;
+//! - `golden/gamescope` (65 cases): `buildGameScopeCommand` rows and the `gamescope --help` probe over a
+//!   scripted spawn seam.
 //!
 //! A count floor lives in this file next to each replay (equal to the MANIFEST's), so editing the JSON
 //! alone cannot lower the bar, and an empty list fails. The only differences from the TS are the entries
@@ -13,11 +15,15 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use gamelib_core::clock::SystemClock;
+use gamelib_core::process::SpecOutput;
 use gamelib_core::shutdown::Shutdown;
 use gamelib_engine::ctx::{EngineCtx, EnginePaths, Platform};
 use gamelib_engine::testing::{RecordingLog, ScriptedSpecRunner};
 use gamelib_knownfix::ctx::KnownFixCtx;
 use gamelib_launch::builders::env::{is_mac_sonoma_or_higher, remove_quote_if_necessary};
+use gamelib_launch::builders::gamescope::{
+    build_gamescope_command, probe_gamescope_help, GamescopeSettings,
+};
 use gamelib_launch::builders::wrappers::{join, split};
 use gamelib_launch::ctx::LaunchCtx;
 use gamelib_launch::dispatch;
@@ -28,6 +34,8 @@ use serde_json::{json, Value};
 
 /// `golden/builders` holds 113 cases, the MANIFEST floor; a later edit may raise this, never lower it.
 const BUILDERS_FLOOR: usize = 113;
+/// `golden/gamescope` holds 65 cases, the MANIFEST floor.
+const GAMESCOPE_FLOOR: usize = 65;
 
 /// Every `call.op` of `golden/builders` this file replays. The test fails when `cases.json` holds a kind
 /// that is not listed, so a new kind cannot be counted without being compared.
@@ -41,6 +49,11 @@ const HANDLED_KINDS: [&str; 8] = [
     "wrapperEnvVars",
     "wrappers",
 ];
+const GAMESCOPE_KINDS: [&str; 3] = ["build", "probe", "probeThenBuild"];
+
+const BIN: &str = "/usr/bin/gamescope";
+/// The call site the probe's spawn is recorded under; its class is in `golden/classes.json`.
+const PROBE_SITE: &str = "prepare_launch.gamescope_help";
 
 fn fixtures() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/golden")
@@ -465,13 +478,172 @@ fn every_builders_golden_replays() {
 }
 
 // ---------------------------------------------------------------------------------------------
+// golden/gamescope
+// ---------------------------------------------------------------------------------------------
+
+fn class_of(site: &str) -> String {
+    read_json(&fixtures().join("classes.json"))[site]
+        .as_str()
+        .unwrap_or_else(|| panic!("{site} has no class in classes.json"))
+        .to_string()
+}
+
+/// One build's answer: the argv, or `{ error }` when the builder threw.
+fn build_one(settings: &Value, help: &str, show_mangohud: bool) -> Value {
+    let settings: GamescopeSettings = serde_json::from_value(settings.clone()).unwrap();
+    match build_gamescope_command(BIN, &settings, help, show_mangohud) {
+        Ok(argv) => json!(argv),
+        Err(e) => json!({ "error": e.message() }),
+    }
+}
+
+/// The scripted answer of a recorded probe: a throw is a spawn failure (`code: None`, the reason in
+/// stderr); a timeout carries its stderr and no code.
+fn scripted_output(scripted: &Value) -> SpecOutput {
+    if let Some(reason) = scripted["throws"].as_str() {
+        return SpecOutput {
+            code: None,
+            stderr: reason.to_string(),
+            ..SpecOutput::default()
+        };
+    }
+    SpecOutput {
+        code: scripted["code"].as_i64().map(|c| c as i32),
+        stderr: scripted["stderr"].as_str().unwrap_or_default().to_string(),
+        timed_out: scripted["timedOut"].as_bool().unwrap_or(false),
+        ..SpecOutput::default()
+    }
+}
+
+/// Runs the probe over a scripted runner; returns the help text and the recorded spawn in the golden's
+/// `spawns.json` shape.
+fn run_probe(scripted: &Value) -> (String, Value) {
+    let home = FakeHome::new("launch-gamescope-");
+    let base: Vec<(String, String)> = home
+        .env()
+        .into_iter()
+        .map(|(k, v)| (k.to_string(), v.to_string_lossy().into_owned()))
+        .collect();
+    let runner =
+        Arc::new(ScriptedSpecRunner::new(base).on(BIN, &["--help"], scripted_output(scripted)));
+    let help = runtime().block_on(probe_gamescope_help(runner.as_ref(), BIN));
+    assert!(runner.unscripted().is_empty());
+    let spawns: Vec<Value> = runner
+        .spawns()
+        .iter()
+        .map(|spawn| {
+            let mut result = json!({
+                "code": spawn.result.code,
+                "stdout": spawn.result.stdout,
+                "stderr": spawn.result.stderr,
+            });
+            if spawn.result.timed_out {
+                result["timedOut"] = json!(true);
+            }
+            if let Some(reason) = scripted["throws"].as_str() {
+                result["stderr"] = json!("");
+                result["error"] = json!(reason);
+            }
+            assert_eq!(spawn.label, "gamescope-help");
+            json!({
+                "callSite": PROBE_SITE,
+                "program": spawn.program,
+                "argv": spawn.argv,
+                "timeoutMs": spawn.timeout.map(|t| t.as_millis() as u64),
+                "envDiff": { "set": spawn.env_set, "unset": spawn.env_unset },
+                "cwd": spawn.cwd.as_ref().map(|p| p.to_string_lossy().into_owned()),
+                "result": result,
+                "class": class_of(PROBE_SITE),
+            })
+        })
+        .collect();
+    (help, Value::Array(spawns))
+}
+
+fn run_gamescope_case(case: &Value) -> (Value, Value) {
+    let call = &case["call"];
+    match call["op"].as_str().unwrap() {
+        "build" => {
+            let builds = call["builds"].as_array().unwrap();
+            let answers = builds
+                .iter()
+                .map(|b| {
+                    build_one(
+                        &b["settings"],
+                        b["help"].as_str().unwrap(),
+                        b["showMangohud"].as_bool().unwrap_or(false),
+                    )
+                })
+                .collect();
+            (Value::Array(answers), json!([]))
+        }
+        "probe" => {
+            let (help, spawns) = run_probe(&call["scripted"]);
+            (json!({ "help": help }), spawns)
+        }
+        "probeThenBuild" => {
+            let (help, spawns) = run_probe(&call["scripted"]);
+            let argv = build_one(&call["settings"], &help, false);
+            (json!({ "help": help, "argv": argv }), spawns)
+        }
+        other => panic!("{}: unhandled kind {other}", case["id"]),
+    }
+}
+
+#[test]
+fn every_gamescope_golden_replays() {
+    let cases = load_cases("gamescope");
+    check_floor("golden/gamescope cases", cases.len(), GAMESCOPE_FLOOR).unwrap();
+    let kinds: BTreeSet<&str> = cases
+        .iter()
+        .map(|c| c["call"]["op"].as_str().unwrap())
+        .collect();
+    let handled: BTreeSet<&str> = GAMESCOPE_KINDS.into_iter().collect();
+    assert_eq!(kinds, handled);
+    let deltas = Deltas::load("gamescope");
+    let mut failures = Vec::new();
+    let mut compared = 0usize;
+    let mut probes = BTreeSet::new();
+    for case in &cases {
+        let id = case["id"].as_str().unwrap();
+        let (result, spawns) = run_gamescope_case(case);
+        if case["call"]["op"] != "build" {
+            probes.insert(case["call"]["scripted"].to_string());
+        }
+        failures.extend(deltas.compare(
+            id,
+            "result.json",
+            expected("gamescope", id, "result.json"),
+            result,
+        ));
+        failures.extend(deltas.compare(
+            id,
+            "spawns.json",
+            expected("gamescope", id, "spawns.json"),
+            spawns,
+        ));
+        compared += 1;
+    }
+    deltas.assert_all_used("gamescope");
+    // The three probe forms (a normal exit, a timeout, a spawn error) and the old-CLI help are all in.
+    assert!(probes.len() >= 4, "probe forms replayed: {probes:?}");
+    eprintln!("golden gamescope: compared {compared} floor {GAMESCOPE_FLOOR}");
+    assert!(
+        failures.is_empty(),
+        "{} differences over {compared} cases:\n{}",
+        failures.len(),
+        failures.join("\n")
+    );
+    check_floor("golden/gamescope cases compared", compared, GAMESCOPE_FLOOR).unwrap();
+}
+
+// ---------------------------------------------------------------------------------------------
 // The floors and the manifests
 // ---------------------------------------------------------------------------------------------
 
 #[test]
-#[allow(clippy::single_element_loop)]
 fn the_floors_match_the_manifests_and_an_empty_list_fails() {
-    for (slice, floor) in [("builders", BUILDERS_FLOOR)] {
+    for (slice, floor) in [("builders", BUILDERS_FLOOR), ("gamescope", GAMESCOPE_FLOOR)] {
         let manifest = manifest(slice);
         let cases = load_cases(slice);
         assert_eq!(

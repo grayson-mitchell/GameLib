@@ -3,6 +3,7 @@
 //! 88.1-01 recorded from the TypeScript (`tests/golden_builders.rs`).
 //!
 //! - [`wrappers`]: `setupWrapperEnvVars`, `setupWrappers` and the npm-shlex `split` / `join` they use.
+//! - [`gamescope`]: `buildGameScopeCommand` and the bounded `gamescope --help` probe.
 //! - [`known_fix_env`]: the tier-1 `envVariables` of a game, raw.
 //! - [`env`]: `setupEnvVars`, `setupWineEnvVars` and `isMacSonomaOrHigher` over the 87 wine core, called
 //!   in place (87 D-22), never re-ported.
@@ -11,5 +12,6 @@
 //! neither.
 
 pub mod env;
+pub mod gamescope;
 pub mod known_fix_env;
 pub mod wrappers;
