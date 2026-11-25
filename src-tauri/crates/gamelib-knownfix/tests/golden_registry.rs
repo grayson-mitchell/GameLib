@@ -469,8 +469,10 @@ async fn run_step(
         }
         "prefixDir" => {
             let settings = rig.expand_deep(&step["settings"]);
+            // `Path::join` on Windows writes `\x\pfx` for the recorded `/x/pfx`, and a path with no profile
+            // placeholder in it is not folded by `normalise_text`, so the separators are folded here.
             let dir = prefix_dir(rig.root(), &settings)
-                .map(|p| Value::String(p.to_string_lossy().into_owned()))
+                .map(|p| Value::String(p.to_string_lossy().replace('\\', "/")))
                 .unwrap_or(Value::Null);
             json!({"op": op, "settings": step["settings"], "dir": dir})
         }
