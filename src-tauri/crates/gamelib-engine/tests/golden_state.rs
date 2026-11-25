@@ -68,11 +68,31 @@ const DELTA_CASES: [&str; 2] = [
     "publisher-throws",
 ];
 
-/// The two differences that touch more than one case, each asserted where the replay compares a case.
-const GENERAL_DELTAS: [&str; 2] = [
+/// The differences that touch more than one case, each asserted where the replay compares a case.
+const GENERAL_DELTAS: [&str; 3] = [
     "a-corrupt-notices-file-leaves-one-copy-of-its-bytes",
     "a-notices-file-the-host-wrote-is-0600",
+    "a-state-read-carries-the-offline-launch-verdict",
 ];
+
+/// The key a state read adds (RF5, 87-76); the TS state had no such field.
+const READ_TIME_VERDICT: &str = "offlineLaunchRefused";
+
+/// The state reply as the golden recorded it: the read-time verdict (the third general delta) is taken
+/// out of the compared reply after it was checked to be a boolean, and asserted by its own tests.
+fn without_read_time_verdict(state: Value) -> Value {
+    match state {
+        Value::Object(mut fields) => {
+            let verdict = fields.remove(READ_TIME_VERDICT);
+            assert!(
+                verdict.as_ref().is_some_and(Value::is_boolean),
+                "a state read carries the verdict as a boolean: {verdict:?}"
+            );
+            Value::Object(fields)
+        }
+        other => other,
+    }
+}
 
 fn golden_dir() -> PathBuf {
     common::fixtures().join("golden/state")
@@ -408,7 +428,7 @@ async fn replay(case: &Value) -> Outcome {
                     ctx.host = Arc::new(StoreHost::new());
                     get_game_engine_state(&ctx, &identity(), &probes)
                         .await
-                        .map(|s| s.map_or(Value::Null, |s| s.to_value()))
+                        .map(|s| s.map_or(Value::Null, |s| without_read_time_verdict(s.to_value())))
                 } else {
                     let effective = effective_for(get("effective"));
                     let bottle = match get("bottle") {
@@ -438,7 +458,11 @@ async fn replay(case: &Value) -> Outcome {
                     let mut failed = None;
                     for done in futures_util::future::join_all(runs).await {
                         match done {
-                            Ok(state) => states.push(state.map_or(Value::Null, |s| s.to_value())),
+                            Ok(state) => {
+                                states.push(state.map_or(Value::Null, |s| {
+                                    without_read_time_verdict(s.to_value())
+                                }))
+                            }
                             Err(message) => failed = Some(message),
                         }
                     }

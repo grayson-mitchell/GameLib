@@ -35,6 +35,7 @@ use crate::game_prefix::{resolve_game_prefix, GamePrefix};
 use crate::ids::AUTOMATIC;
 use crate::jsutil::js_to_string;
 use crate::key::{engine_key_for, uses_bottle_runtime};
+use crate::launch::step::offline_gate_verdict;
 use crate::state::notices::NO_CROSSOVER_KEY;
 use crate::state::publish::emit_engine_state;
 
@@ -100,6 +101,12 @@ pub struct EngineState {
     pub prefix_kind: Option<String>,
     pub per_game_bottle_name: Option<String>,
     pub legacy_label: Option<Value>,
+    /// RF5 (87-76): a read-time verdict, set on the `engine_state_get` reply only and never on a state
+    /// published as `engineStateChanged`. True when an offline launch of this game would be refused by the
+    /// launch step's offline gate right now; the step and this field take the gate's inputs from the one
+    /// function ([`offline_gate_verdict`]), so they cannot drift. A boolean, never a path.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub offline_launch_refused: Option<bool>,
 }
 
 impl EngineState {
@@ -378,6 +385,7 @@ fn compute(
         prefix_kind: facts.prefix_kind.clone(),
         per_game_bottle_name: facts.per_game_bottle_name.clone(),
         legacy_label,
+        offline_launch_refused: None,
     }
 }
 
@@ -438,7 +446,7 @@ pub async fn get_engine_state(
         .last_crossover_installed
         .insert(key.clone(), crossover_installed);
     let label = label_for(ctx, &key);
-    Ok(Some(ctx.notices.with_view(ctx, |store| {
+    let mut state = ctx.notices.with_view(ctx, |store| {
         compute(
             &runner,
             &app_name,
@@ -451,7 +459,12 @@ pub async fn get_engine_state(
             store,
             None,
         )
-    })))
+    });
+    // RF5: the read path alone carries the verdict. A Legacy engine skips the step before its gate.
+    let on_bottle = bottle.is_some() && !matches!(effective, EffectiveEngine::Legacy { .. });
+    let gate = offline_gate_verdict(ctx, on_bottle, bottle.unwrap_or_default(), &override_id).await;
+    state.offline_launch_refused = Some(gate.is_some_and(|(_, verdict)| verdict.is_some()));
+    Ok(Some(state))
 }
 
 /// The single flight of a bottle's page pre-flight: concurrent callers share one probe and one answer,

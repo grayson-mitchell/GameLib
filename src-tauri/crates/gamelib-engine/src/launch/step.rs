@@ -445,6 +445,35 @@ impl Step<'_> {
     }
 }
 
+/// G22/G25: the offline gate's inputs and verdict for one game, gathered in one place so the launch step and
+/// the engine state the game page reads (`offlineLaunchRefused`, 87-76) cannot drift apart. Offline is taken
+/// as true: the caller decides whether the launch is offline. `None` when the gate does not apply (the game
+/// is not on its bottle, or its engine is neither Automatic nor CrossOver); otherwise the inputs and the
+/// verdict, `None` meaning the launch is not certainly blocked.
+pub(crate) async fn offline_gate_verdict(
+    ctx: &EngineCtx,
+    on_bottle: bool,
+    bottle_name: &str,
+    effective_id: &str,
+) -> Option<(OfflineRefusalInput, Option<OfflineArm>)> {
+    if !on_bottle || (effective_id != AUTOMATIC && effective_id != CROSSOVER) {
+        return None;
+    }
+    let current_pin_installed = pins()
+        .map(|table| is_pinned_engine_installed(ctx, &table.current))
+        .unwrap_or(false);
+    let input = OfflineRefusalInput {
+        offline: true,
+        override_id: effective_id.to_string(),
+        crossover_missing: is_crossover_missing(ctx, &[]).await,
+        marker_kind: read_bottle_engine_marker_kind(ctx, bottle_name),
+        current_pin_installed,
+        restore_needs_absent_pin: restore_needs_absent_pin(ctx, bottle_name),
+    };
+    let verdict = offline_launch_certainly_blocked(&input);
+    Some((input, verdict))
+}
+
 /// Select and prepare the engine for one launch (`selectEngineForLaunch`). `Skip` means the engine layer
 /// does not apply and the launch runs exactly as before.
 pub async fn select_engine_for_launch(
@@ -554,19 +583,12 @@ pub async fn select_engine_for_launch(
     // monitor's answer and `ctx.is_online()` the flag the download reads; both come from the one monitor, and
     // the line below shows them side by side (87-63, F1: a launch the gate let through used to leave no trace).
     let context_online = ctx.is_online();
-    if on_bottle && args.offline && (effective_id == AUTOMATIC || effective_id == CROSSOVER) {
-        let current_pin_installed = pins()
-            .map(|table| is_pinned_engine_installed(ctx, &table.current))
-            .unwrap_or(false);
-        let input = OfflineRefusalInput {
-            offline: true,
-            override_id: effective_id.clone(),
-            crossover_missing: is_crossover_missing(ctx, &[]).await,
-            marker_kind: read_bottle_engine_marker_kind(ctx, &bottle_name),
-            current_pin_installed,
-            restore_needs_absent_pin: restore_needs_absent_pin(ctx, &bottle_name),
-        };
-        let verdict = offline_launch_certainly_blocked(&input);
+    let gate = if args.offline {
+        offline_gate_verdict(ctx, on_bottle, &bottle_name, &effective_id).await
+    } else {
+        None
+    };
+    if let Some((input, verdict)) = gate {
         step.note(&offline_gate_line(&GateFacts {
             request_offline: args.offline,
             context_online,
