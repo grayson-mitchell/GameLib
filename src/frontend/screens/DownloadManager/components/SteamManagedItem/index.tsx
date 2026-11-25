@@ -17,14 +17,14 @@ export default function SteamManagedItem({ row }: { row: GameStatus }) {
   const { t: tGamelib } = useTranslation('gamelib')
   const [progress] = hasProgress(row.appName, 'steam')
 
-  const title =
-    steam.library.find((game) => game.app_name === row.appName)?.title ??
-    row.appName
+  const gameInfo = steam.library.find((game) => game.app_name === row.appName)
+  const title = gameInfo?.title ?? row.appName
 
   return (
     <SteamManagedItemView
       appName={row.appName}
       title={title}
+      gameInfo={gameInfo}
       percent={steamManagedPercent(progress.percent)}
       bytes={progress.bytes}
       t={(key, fallback) => tGamelib(key, fallback)}

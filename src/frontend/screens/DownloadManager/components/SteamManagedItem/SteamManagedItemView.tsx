@@ -1,15 +1,19 @@
 import { Link } from 'react-router-dom'
+import type { GameInfo } from 'common/types'
 
 // quick 261105-vfq: pure view for the Downloads "Managed by Steam" row, split
 // out of index.tsx (which imports CSS) so jest can load it. Pause stays
 // disabled (Steam's); Cancel stops GameLib's wait via onCancel.
+// quick 261125-qp9: GamePage reads location.state.gameInfo while it renders, so
+// the title links only when it has a gameInfo to carry; otherwise plain text.
 export function SteamManagedItemView({
   appName,
   title,
   percent,
   bytes,
   t,
-  onCancel
+  onCancel,
+  gameInfo
 }: {
   appName: string
   title: string
@@ -17,6 +21,7 @@ export function SteamManagedItemView({
   bytes?: string
   t: (key: string, fallback: string) => string
   onCancel: () => void
+  gameInfo?: GameInfo
 }) {
   const note = t(
     'gamelib:downloadManager.steamManaged.note',
@@ -30,12 +35,17 @@ export function SteamManagedItemView({
   return (
     <div className="steamManagedItem">
       <div className="steamManagedItem__text">
-        <Link
-          className="steamManagedItem__title"
-          to={`/gamepage/steam/${appName}`}
-        >
-          {title}
-        </Link>
+        {gameInfo ? (
+          <Link
+            className="steamManagedItem__title"
+            to={`/gamepage/steam/${appName}`}
+            state={{ gameInfo }}
+          >
+            {title}
+          </Link>
+        ) : (
+          <span className="steamManagedItem__title">{title}</span>
+        )}
         <span className="steamManagedItem__progress">
           {bytes ? `${bytes} · ${percent}%` : `${percent}%`}
         </span>
