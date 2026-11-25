@@ -200,6 +200,7 @@ fn remove_first_match_and_rekey() {
         &p,
         &ShortcutsOp::Remove {
             app_name: first.app_name.clone().unwrap(),
+            launch_options: None,
         },
     );
     assert!(r.written && r.matched);
@@ -219,6 +220,7 @@ fn remove_absent_name() {
         &p,
         &ShortcutsOp::Remove {
             app_name: "no such".into(),
+            launch_options: None,
         },
     );
     assert!(!r.written && !r.matched);
@@ -233,6 +235,7 @@ fn remove_requires_exact_name() {
         &p,
         &ShortcutsOp::Remove {
             app_name: "synthetic game".into(),
+            launch_options: None,
         },
     );
     assert!(!r.matched);
@@ -332,6 +335,7 @@ fn truncated_refuses_every_op() {
         },
         ShortcutsOp::Remove {
             app_name: "A".into(),
+            launch_options: None,
         },
     ] {
         let (_d, p) = staged("truncated.vdf");
@@ -417,4 +421,121 @@ fn concurrent_adds_are_all_kept() {
     want.sort();
     assert_eq!(got, want);
     no_tmp(&p);
+}
+
+// ---- remove names the entry's LaunchOptions (quick 261125-uzz) ----
+
+/// The raw bytes of a `shortcuts.vdf` holding one entry per list of `(key, value)` string fields:
+/// `\0shortcuts\0`, then per entry `\0{index}\0`, each field `\x01{Key}\0{value}\0` and `\x08`, then
+/// `\x08\x08`.
+fn raw_file(entries: &[&[(&str, &str)]]) -> Vec<u8> {
+    let mut out = b"\0shortcuts\0".to_vec();
+    for (index, fields) in entries.iter().enumerate() {
+        out.extend_from_slice(format!("\0{index}\0").as_bytes());
+        for (key, value) in *fields {
+            out.push(1);
+            out.extend_from_slice(key.as_bytes());
+            out.push(0);
+            out.extend_from_slice(value.as_bytes());
+            out.push(0);
+        }
+        out.push(8);
+    }
+    out.extend_from_slice(&[8, 8]);
+    out
+}
+
+/// Two entries both titled `Same`: the user's first, GameLib's second.
+fn same_titled() -> (tempfile::TempDir, PathBuf) {
+    let d = tempfile::tempdir().unwrap();
+    let p = d.path().join("shortcuts.vdf");
+    fs::write(
+        &p,
+        raw_file(&[
+            &[
+                ("AppName", "Same"),
+                ("Exe", "\"/a\""),
+                ("LaunchOptions", "user-args"),
+            ],
+            &[
+                ("AppName", "Same"),
+                ("Exe", "\"/b\""),
+                ("LaunchOptions", "gamelib-args"),
+            ],
+        ]),
+    )
+    .unwrap();
+    (d, p)
+}
+
+#[test]
+fn remove_with_launch_options_takes_the_entry_that_carries_them() {
+    let (_d, p) = same_titled();
+    let r = apply_shortcuts(
+        &p,
+        &ShortcutsOp::Remove {
+            app_name: "Same".into(),
+            launch_options: Some("gamelib-args".into()),
+        },
+    );
+    assert!(r.written && r.matched);
+    assert_eq!(r.index_key.as_deref(), Some("1"));
+    assert_eq!(r.removed_exe.as_deref(), Some("\"/b\""));
+    let after = read_shortcuts(&p);
+    assert_eq!(after.entries.len(), 1);
+    assert_eq!(after.entries[0].index_key, "0");
+    assert_eq!(
+        after.entries[0].launch_options.as_deref(),
+        Some("user-args")
+    );
+    no_tmp(&p);
+}
+
+#[test]
+fn remove_with_launch_options_no_entry_carries_matches_nothing() {
+    let (_d, p) = same_titled();
+    let before = bytes(&p);
+    let r = apply_shortcuts(
+        &p,
+        &ShortcutsOp::Remove {
+            app_name: "Same".into(),
+            launch_options: Some("other".into()),
+        },
+    );
+    assert!(!r.written && !r.matched);
+    assert_eq!(bytes(&p), before);
+}
+
+#[test]
+fn remove_wire_shape_takes_launch_options_and_still_takes_a_title_only_removal() {
+    let apply = |path: &Path, mutation: serde_json::Value| {
+        gamelib_steamfiles::dispatch(
+            "steamfiles_shortcuts_apply",
+            &[serde_json::json!({"path": path.to_string_lossy(), "mutation": mutation})],
+        )
+        .unwrap()
+    };
+    let (_d, p) = same_titled();
+    let r = apply(
+        &p,
+        serde_json::json!({"op":"remove","appName":"Same","launchOptions":"gamelib-args"}),
+    );
+    assert_eq!(r["written"], serde_json::json!(true), "{r}");
+    let after = read_shortcuts(&p);
+    assert_eq!(after.entries.len(), 1);
+    assert_eq!(
+        after.entries[0].launch_options.as_deref(),
+        Some("user-args")
+    );
+
+    let (_d2, p2) = same_titled();
+    let r = apply(&p2, serde_json::json!({"op":"remove","appName":"Same"}));
+    assert_eq!(r["written"], serde_json::json!(true), "{r}");
+    assert_eq!(r["indexKey"], serde_json::json!("0"), "{r}");
+    let after = read_shortcuts(&p2);
+    assert_eq!(after.entries.len(), 1);
+    assert_eq!(
+        after.entries[0].launch_options.as_deref(),
+        Some("gamelib-args")
+    );
 }

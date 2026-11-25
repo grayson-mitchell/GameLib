@@ -27,6 +27,15 @@
 //! - `add-art-data-url-square`: the TS oracle's `createFromDataURL` was a double that wrote `jpeg:90`; the
 //!   port really decodes the data URL, and the recorded one is a truncated PNG header, so nothing is written
 //!   for it.
+//!
+//! The steam removal deltas (quick 261125-uzz) are recorded in `deltas.json`, an object keyed by case id like
+//! `golden/remove/deltas.json`. The TS removed the first entry titled like the game, whoever wrote it; the
+//! port removes an entry only when its `LaunchOptions` carry GameLib's launch URL for the game's app name. The
+//! nine goldens whose upstream `shortcuts.vdf` entry carries no such URL therefore replay twice: refused as
+//! seeded (no apply call, the grid art stays, the corrupt notice instead of the TS's), and again with every
+//! entry titled like the game reporting the `LaunchOptions` the port itself writes, where the TS's recorded
+//! success and apply-failure answers stay pinned for GameLib's own entry (each recorded apply gaining only the
+//! `launchOptions` the removal now names). No golden file is edited.
 
 use std::collections::BTreeMap;
 use std::fs;
@@ -113,7 +122,7 @@ fn cases() -> BTreeMap<String, Value> {
             .file_name()
             .and_then(|n| n.to_str())
             .unwrap_or_default();
-        if !name.ends_with(".json") || name == "MANIFEST.json" {
+        if !name.ends_with(".json") || name == "MANIFEST.json" || name == "deltas.json" {
             continue;
         }
         let text = fs::read_to_string(&path).expect("a golden is readable");
@@ -129,6 +138,12 @@ fn cases() -> BTreeMap<String, Value> {
     );
     assert!(cases.len() >= floor, "steam: under the floor {floor}");
     cases
+}
+
+/// The recorded steam removal deltas (`deltas.json`): case id to the reason it differs.
+fn deltas() -> BTreeMap<String, String> {
+    let text = fs::read_to_string(golden_dir().join("deltas.json")).expect("deltas.json");
+    serde_json::from_str(&text).expect("deltas.json is an object of strings")
 }
 
 fn family<'a>(cases: &'a BTreeMap<String, Value>, prefix: &str) -> Vec<(&'a String, &'a Value)> {
@@ -258,11 +273,27 @@ fn read_shortcuts(path: &Path) -> ShortcutsSummary {
 struct GoldenFiles {
     script: String,
     calls: Mutex<Vec<Value>>,
+    /// The title and the `LaunchOptions` every entry with that title reports, when a case replays with its
+    /// entry proven (the file on disk is never changed).
+    proven: Mutex<Option<(String, String)>>,
 }
 
 impl GoldenFiles {
     fn record(&self, call: Value) {
         self.calls.lock().expect("calls").push(call);
+    }
+
+    /// The summary of `path`, with the proven `LaunchOptions` applied to every entry titled like the game.
+    fn summary(&self, path: &Path) -> ShortcutsSummary {
+        let mut summary = read_shortcuts(path);
+        if let Some((title, options)) = self.proven.lock().expect("proven").as_ref() {
+            for entry in &mut summary.entries {
+                if entry.app_name.as_deref() == Some(title.as_str()) {
+                    entry.launch_options = Some(options.clone());
+                }
+            }
+        }
+        summary
     }
 }
 
@@ -272,7 +303,7 @@ impl SteamShortcutsFile for GoldenFiles {
             "channel": "steamfiles_shortcuts_read",
             "args": { "path": path.to_string_lossy() }
         }));
-        Ok(read_shortcuts(path))
+        Ok(self.summary(path))
     }
 
     fn apply(&self, path: &Path, mutation: &ShortcutsMutation) -> Result<ApplyResult, String> {
@@ -303,11 +334,16 @@ impl SteamShortcutsFile for GoldenFiles {
             }
             "not-written-silent" => result = ApplyResult::default(),
             _ => {
-                if let ShortcutsMutation::Remove { app_name } = mutation {
-                    let found = read_shortcuts(path)
-                        .entries
-                        .into_iter()
-                        .find(|entry| entry.app_name.as_deref() == Some(app_name.as_str()));
+                if let ShortcutsMutation::Remove {
+                    app_name,
+                    launch_options,
+                } = mutation
+                {
+                    // As `gamelib-steamfiles` matches: the AppName and the LaunchOptions, both exactly.
+                    let found = self.summary(path).entries.into_iter().find(|entry| {
+                        entry.app_name.as_deref() == Some(app_name.as_str())
+                            && entry.launch_options.as_deref() == Some(launch_options.as_str())
+                    });
                     result.matched = found.is_some();
                     result.index_key = found.as_ref().map(|entry| entry.index_key.clone());
                     result.removed_exe = found.as_ref().and_then(|entry| entry.exe.clone());
@@ -628,6 +664,12 @@ struct Run {
 }
 
 fn build(golden: &Value) -> Run {
+    build_with(golden, false)
+}
+
+/// `build`, and when `proven` every entry titled like the game reports the `LaunchOptions` the crate's own
+/// writer gives that game (never a value typed here).
+fn build_with(golden: &Value, proven: bool) -> Run {
     let profile = Profile {
         home: FakeHome::new("gamelib-shortcuts-steam-"),
     };
@@ -640,6 +682,7 @@ fn build(golden: &Value) -> Run {
     let files = Arc::new(GoldenFiles {
         script: input["apply"].as_str().expect("apply").to_string(),
         calls: Mutex::new(Vec::new()),
+        proven: Mutex::new(None),
     });
     let wiki = Arc::new(GoldenWiki {
         answer: input["wiki"].get("value").cloned(),
@@ -704,6 +747,13 @@ fn build(golden: &Value) -> Run {
         "addSteamShortcuts": true,
         "defaultSteamPath": steam_path,
     });
+    let game: ShortcutGame = serde_json::from_value(game).expect("a game");
+    if proven {
+        *files.proven.lock().expect("proven") = Some((
+            game.title.clone(),
+            gamelib_shortcuts::steam::entry::launch_options(&ctx, &game),
+        ));
+    }
     Run {
         profile,
         ctx,
@@ -711,7 +761,7 @@ fn build(golden: &Value) -> Run {
         wiki,
         http,
         ui,
-        game: serde_json::from_value(game).expect("a game"),
+        game,
         settings: serde_json::from_value(settings).expect("settings"),
     }
 }
@@ -731,9 +781,35 @@ const ESCAPED_TITLE: &[&str] = &["add-title-unicode-quotes"];
 const NOT_A_DATE: &[&str] = &["add-lastplayed-not-a-date"];
 const DATA_URL: &[&str] = &["add-art-data-url-square"];
 
+/// How a case replays: as recorded, or (a removal with a recorded delta) refused as seeded or proven.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Arm {
+    Recorded,
+    Refused,
+    Proven,
+}
+
+/// The `i18n` default text a golden recorded for `key`.
+fn recorded_text(golden: &Value, key: &str) -> String {
+    golden["i18n"]
+        .as_array()
+        .expect("i18n")
+        .iter()
+        .find(|call| call["key"] == key)
+        .unwrap_or_else(|| panic!("no recorded {key}"))["defaultValue"]
+        .as_str()
+        .expect("a default text")
+        .to_string()
+}
+
 /// Replays one add, is-added or remove case and compares everything the golden recorded.
 async fn replay_case(id: &str, golden: &Value) {
-    let run = build(golden);
+    replay_arm(id, golden, Arm::Recorded).await;
+}
+
+async fn replay_arm(id: &str, golden: &Value, arm: Arm) {
+    let run = build_with(golden, arm == Arm::Proven);
+    let steam_before = tree_of(&run.profile.steam());
     let op = golden["input"]["op"].as_str().expect("op");
     let returned = match op {
         "add" => Value::Bool(steam_add(&run.ctx, &run.game, &run.settings).await),
@@ -773,6 +849,24 @@ async fn replay_case(id: &str, golden: &Value) {
         }
         assert_eq!(changed, 1, "{id}: one LastPlayTime was recorded");
     }
+    let is_apply = |call: &Value| call["channel"] == "steamfiles_shortcuts_apply";
+    match arm {
+        Arm::Recorded => {}
+        Arm::Refused => {
+            let calls = expected_calls.as_array_mut().expect("calls");
+            let before = calls.len();
+            calls.retain(|call| !is_apply(call));
+            assert!(calls.len() < before, "{id}: a recorded apply to drop");
+        }
+        Arm::Proven => {
+            let options = gamelib_shortcuts::steam::entry::launch_options(&run.ctx, &run.game);
+            for call in expected_calls.as_array_mut().expect("calls") {
+                if is_apply(call) {
+                    call["args"]["mutation"]["launchOptions"] = json!(options);
+                }
+            }
+        }
+    }
     let calls = Value::Array(run.files.calls.lock().expect("calls").clone());
     assert_eq!(
         normalise(profile, &calls),
@@ -793,22 +887,33 @@ async fn replay_case(id: &str, golden: &Value) {
     // The notification and the dialog.
     let title = golden["input"]["title"].as_str().expect("title");
     let notified = run.ui.notices();
-    let want_notices: Vec<(String, String)> = golden["notifications"]
-        .as_array()
-        .expect("notifications")
-        .iter()
-        .map(|n| {
-            let body = n["body"].as_str().expect("body");
-            let body = if ESCAPED_TITLE.contains(&id) {
-                assert_ne!(html_escape(title), title, "{id}: a title that escapes");
-                body.replacen(title, &html_escape(title), 1)
-            } else {
-                assert_eq!(html_escape(title), title, "{id}: the title is not escaped");
-                body.to_string()
-            };
-            (n["title"].as_str().expect("title").to_string(), body)
-        })
-        .collect();
+    let want_notices: Vec<(String, String)> = if arm == Arm::Refused {
+        // The corrupt notice, as `remove-apply-throws` recorded its text, for this title.
+        assert_eq!(html_escape(title), title, "{id}: the title is not escaped");
+        let throws = template("remove-apply-throws");
+        vec![(
+            recorded_text(&throws, "notify.finished.remove.steam.title"),
+            recorded_text(&throws, "notify.finished.remove.steam.corrupt")
+                .replace("{{game}}", title),
+        )]
+    } else {
+        golden["notifications"]
+            .as_array()
+            .expect("notifications")
+            .iter()
+            .map(|n| {
+                let body = n["body"].as_str().expect("body");
+                let body = if ESCAPED_TITLE.contains(&id) {
+                    assert_ne!(html_escape(title), title, "{id}: a title that escapes");
+                    body.replacen(title, &html_escape(title), 1)
+                } else {
+                    assert_eq!(html_escape(title), title, "{id}: the title is not escaped");
+                    body.to_string()
+                };
+                (n["title"].as_str().expect("title").to_string(), body)
+            })
+            .collect()
+    };
     assert_eq!(notified, want_notices, "{id}: the notifications");
     let dialogs = run.ui.dialogs();
     let want_dialogs: Vec<(String, String, String)> = golden["dialogs"]
@@ -835,11 +940,37 @@ async fn replay_case(id: &str, golden: &Value) {
         want_steam.retain(|(_, _, text)| text.as_deref() != Some("jpeg:90"));
         assert_eq!(want_steam.len(), before - 1, "{id}: the faked jpeg file");
     }
-    assert_eq!(
-        tree_of(&profile.steam()),
-        want_steam,
-        "{id}: the Steam folder after the call"
-    );
+    if arm == Arm::Refused {
+        // Nothing was removed: the tree is what it was, the TS's after-tree is part of it, and what the TS
+        // removed is only grid art, which the port keeps.
+        let after = tree_of(&profile.steam());
+        assert_eq!(
+            after, steam_before,
+            "{id}: a refused removal changes nothing"
+        );
+        for file in &want_steam {
+            assert!(steam_before.contains(file), "{id}: recorded {}", file.0);
+        }
+        for (path, _, _) in steam_before
+            .iter()
+            .filter(|file| !want_steam.contains(file))
+        {
+            let parts: Vec<&str> = path.split('/').collect();
+            assert!(
+                parts.len() > 4
+                    && parts[0] == "userdata"
+                    && parts[2] == "config"
+                    && parts[3] == "grid",
+                "{id}: the TS removed {path}, which is not grid art"
+            );
+        }
+    } else {
+        assert_eq!(
+            tree_of(&profile.steam()),
+            want_steam,
+            "{id}: the Steam folder after the call"
+        );
+    }
     assert_eq!(
         tree_of(&profile.icons()),
         golden_tree(&golden["tree"]["icons"]),
@@ -903,10 +1034,60 @@ async fn every_remove_from_steam_golden_replays() {
     let cases = cases();
     let removals = family(&cases, "remove-");
     assert!(!removals.is_empty(), "no remove goldens");
+    let deltas = deltas();
+    let mut against = 0;
     for (id, golden) in &removals {
-        replay_case(id, golden).await;
+        // The delta set, checked without the code under test: the TS applied a removal, and no seeded
+        // user's file holds an entry titled like the game that carries a GameLib launch URL.
+        let applied = golden["steamfiles"]
+            .as_array()
+            .expect("calls")
+            .iter()
+            .any(|call| call["channel"] == "steamfiles_shortcuts_apply");
+        let has_delta = deltas.contains_key(id.as_str());
+        assert_eq!(
+            has_delta,
+            applied && !seeds_a_gamelib_entry(golden),
+            "{id}: deltas.json and the seeded entries disagree"
+        );
+        if has_delta {
+            replay_arm(id, golden, Arm::Refused).await;
+            replay_arm(id, golden, Arm::Proven).await;
+            against += 1;
+        } else {
+            replay_case(id, golden).await;
+        }
     }
-    println!("steam remove: {} replayed", removals.len());
+    assert_eq!(against, deltas.len(), "every recorded delta replayed");
+    println!(
+        "steam remove: {} replayed, {against} against a recorded delta (refused, then proven)",
+        removals.len()
+    );
+}
+
+/// Whether a user folder other than `0` and `ac` seeds an entry titled like the game whose `LaunchOptions`
+/// carry a GameLib launch URL.
+fn seeds_a_gamelib_entry(golden: &Value) -> bool {
+    let run = build(golden);
+    let title = golden["input"]["title"].as_str().expect("title");
+    golden["input"]["users"]
+        .as_object()
+        .expect("users")
+        .keys()
+        .filter(|user| *user != "0" && *user != "ac")
+        .any(|user| {
+            let file = run.profile.steam().join("userdata").join(user);
+            read_shortcuts(&file.join("config").join("shortcuts.vdf"))
+                .entries
+                .iter()
+                .any(|entry| {
+                    entry.app_name.as_deref() == Some(title)
+                        && entry
+                            .launch_options
+                            .as_deref()
+                            .is_some_and(|options| options.contains("gamelib://launch"))
+                })
+        })
 }
 
 #[test]
@@ -921,6 +1102,12 @@ fn the_families_cover_the_whole_manifest() {
         assert!(
             cases.contains_key(*id),
             "the delta names a case that is gone: {id}"
+        );
+    }
+    for id in deltas().keys() {
+        assert!(
+            id.starts_with("remove-") && cases.contains_key(id),
+            "deltas.json names no removal case: {id}"
         );
     }
 }
@@ -978,7 +1165,7 @@ async fn a_real_png_data_url_cover_is_written_as_a_jpeg() {
 /// pointed at is untouched (T-94-37).
 #[tokio::test]
 async fn removal_unlinks_a_grid_link_and_never_touches_what_it_points_at() {
-    let run = build(&template("remove-basic"));
+    let run = build_with(&template("remove-basic"), true);
     let config = run.profile.steam().join("userdata/1001/config");
     let summary = read_shortcuts(&config.join("shortcuts.vdf"));
     let entry = &summary.entries[0];
@@ -1012,7 +1199,7 @@ async fn removal_unlinks_a_grid_link_and_never_touches_what_it_points_at() {
 #[tokio::test]
 async fn removal_deletes_only_the_five_names_the_ids_give() {
     let golden = template("remove-basic");
-    let run = build(&golden);
+    let run = build_with(&golden, true);
     let grid = run.profile.steam().join("userdata/1001/config/grid");
     // `seedRemovedGrid` seeded the five names and `unrelated.jpg`; three more files of the user's.
     for name in ["123456789p.jpg", "notes.txt"] {
@@ -1024,6 +1211,37 @@ async fn removal_deletes_only_the_five_names_the_ids_give() {
         .map(|(path, _, _)| path)
         .collect();
     assert_eq!(left, ["123456789p.jpg", "notes.txt", "unrelated.jpg"]);
+}
+/// An entry titled like the game that carries no GameLib launch URL is not GameLib's: it stays, with its
+/// art, and the outcome is not reported as a success.
+#[tokio::test]
+async fn a_same_titled_shortcut_gamelib_did_not_write_keeps_its_art_and_is_not_reported_removed() {
+    let golden = template("remove-basic");
+    let run = build(&golden);
+    let grid = run.profile.steam().join("userdata/1001/config/grid");
+    let before = tree_of(&grid);
+    assert!(
+        before.iter().any(|(path, _, _)| path == "unrelated.jpg") && before.len() > 1,
+        "the five grid files and unrelated.jpg are seeded"
+    );
+    steam_remove(&run.ctx, &run.game, &run.settings);
+    assert!(
+        !run.files
+            .calls
+            .lock()
+            .expect("calls")
+            .iter()
+            .any(|call| call["channel"] == "steamfiles_shortcuts_apply"),
+        "no removal was asked for"
+    );
+    assert_eq!(tree_of(&grid), before, "the grid art stays");
+    let notices = run.ui.notices();
+    assert_eq!(notices.len(), 1);
+    assert_ne!(
+        notices[0].1,
+        golden["notifications"][0]["body"].as_str().expect("body"),
+        "not the recorded success"
+    );
 }
 #[tokio::test]
 async fn the_steam_ops_validate_their_arguments_and_need_the_shell_seam() {

@@ -20,9 +20,15 @@
 //! - an unparseable `lastPlayed` means now (see [`entry::last_play_time`]);
 //! - a folder that cannot be created is that user's error, not a crash.
 //!
-//! Removal is by title, as the TS did: the first entry whose `AppName` equals the game's title goes, whoever
-//! wrote it. The shortcut's own `Exe` and `AppName` (as `shortcuts.vdf` held them) name the grid art that goes
-//! with it. That is filed as a todo; the goldens require it.
+//! Removal proves the entry is GameLib's first (quick 261125-uzz). The TS removed the first entry whose
+//! `AppName` equals the game's title, whoever wrote it; here an entry goes only when its `LaunchOptions` carry
+//! GameLib's launch URL for this game's app name ([`proves_app_name`]). In each user's file the target is the
+//! first entry titled like the game that proves it, named to the edit by its exact `LaunchOptions`, which
+//! `gamelib-steamfiles` matches again on its own locked re-read. A same-titled entry that does not prove it
+//! (the user's own, or another launcher's) stays with its grid art, and the outcome is reported as not removed
+//! (a log note and the corrupt notice), never as success. The removed entry's own `Exe` and `AppName` (as
+//! `shortcuts.vdf` held them) name the grid art that goes with it. The removal goldens replay against
+//! `tests/fixtures/golden/steam/deltas.json` for the entries the TS removed that carry no GameLib launch URL.
 
 pub mod art;
 pub mod entry;
@@ -33,7 +39,9 @@ use std::path::{Path, PathBuf};
 use serde::Deserialize;
 use serde_json::{json, Map, Value};
 
-use crate::ctx::{ShortcutsCtx, ShortcutsMutation, ShortcutsSummary, SteamShortcutsFile};
+use crate::ctx::{
+    EntrySummary, ShortcutsCtx, ShortcutsMutation, ShortcutsSummary, SteamShortcutsFile,
+};
 use crate::game::{ShortcutGame, ShortcutSettings};
 use crate::icons::get_icon;
 
@@ -244,6 +252,54 @@ fn has_title(summary: &ShortcutsSummary, title: &str) -> bool {
         .any(|entry| entry.app_name.as_deref() == Some(title))
 }
 
+/// The start of the launch URL GameLib writes into a shortcut's `LaunchOptions`.
+const LAUNCH_URL_PREFIX: &str = "gamelib://launch?appName=";
+
+/// Whether `launch_options` carry GameLib's launch URL for `app_name`: the proof that GameLib wrote the
+/// entry for this game. It accepts the URL [`entry::launch_options`] writes, with the app name raw, and the
+/// one `launch_url(app_name, runner, true)` writes, with it percent-encoded. Anything else is refused: a
+/// different app name, a pre-rebrand `heroic://` URL, a value that percent-decodes to invalid UTF-8, an
+/// empty app name. The runner is not compared.
+fn proves_app_name(launch_options: &str, app_name: &str) -> bool {
+    if app_name.is_empty() {
+        return false;
+    }
+    launch_options
+        .match_indices(LAUNCH_URL_PREFIX)
+        .any(|(at, prefix)| {
+            let after = &launch_options[at + prefix.len()..];
+            // The raw form: the app name, then `&runner=`, whatever bytes the name holds.
+            if after
+                .strip_prefix(app_name)
+                .is_some_and(|rest| rest.starts_with("&runner="))
+            {
+                return true;
+            }
+            // The encoded form: the value up to the first `&`, quote or whitespace, decoded.
+            let end = after
+                .find(|c: char| c == '&' || c == '"' || c.is_ascii_whitespace())
+                .unwrap_or(after.len());
+            percent_encoding::percent_decode_str(&after[..end])
+                .decode_utf8()
+                .is_ok_and(|decoded| decoded == app_name)
+        })
+}
+
+/// The first entry titled `title` whose `LaunchOptions` prove `app_name`: the entry a removal targets.
+fn proven_entry<'a>(
+    summary: &'a ShortcutsSummary,
+    title: &str,
+    app_name: &str,
+) -> Option<&'a EntrySummary> {
+    summary.entries.iter().find(|entry| {
+        entry.app_name.as_deref() == Some(title)
+            && entry
+                .launch_options
+                .as_deref()
+                .is_some_and(|options| proves_app_name(options, app_name))
+    })
+}
+
 fn config_paths(userdata: &Path, folder: &str) -> (PathBuf, PathBuf) {
     let config_dir = userdata.join(folder).join("config");
     let shortcuts_file = config_dir.join("shortcuts.vdf");
@@ -388,9 +444,11 @@ pub async fn steam_add(
 
 // ---------------------------------------------------------------- remove
 
-/// Removes a game from Steam (`removeNonSteamGame`): the first entry titled like the game in every user's
-/// `shortcuts.vdf`, and its grid art. A missing userdata folder is silent (the user may have moved Steam; the
-/// game is then taken as gone). Raises the outcome's notification.
+/// Removes a game from Steam (`removeNonSteamGame`): in every user's `shortcuts.vdf`, the first entry titled
+/// like the game whose `LaunchOptions` prove GameLib wrote it for this game ([`proves_app_name`]), and that
+/// entry's grid art. A same-titled entry that does not prove it is left in place with its art and the outcome
+/// is the "could not be removed" notice, never the success one. A missing userdata folder is silent (the user
+/// may have moved Steam; the game is then taken as gone). Raises the outcome's notification.
 pub fn steam_remove(ctx: &ShortcutsCtx, game: &ShortcutGame, settings: &ShortcutSettings) {
     let Some(files) = ctx.steam_files.clone() else {
         ctx.note("shortcuts steam: no shortcuts.vdf seam installed");
@@ -408,6 +466,7 @@ pub fn steam_remove(ctx: &ShortcutsCtx, game: &ShortcutGame, settings: &Shortcut
 
     let mut errors: Vec<String> = Vec::new();
     let mut removed = false;
+    let mut refused = 0usize;
     for folder in &folders {
         let (config_dir, shortcuts_file) = config_paths(&userdata, folder);
         if !config_dir.exists() || !shortcuts_file.exists() {
@@ -427,8 +486,16 @@ pub fn steam_remove(ctx: &ShortcutsCtx, game: &ShortcutGame, settings: &Shortcut
         if !has_title(&summary, &game.title) {
             continue;
         }
+        let Some(target) = proven_entry(&summary, &game.title, &game.app_name) else {
+            refused += 1;
+            ctx.note(
+                "shortcuts steam: a shortcut titled like the game was left in place, it does not carry GameLib's launch URL for this game",
+            );
+            continue;
+        };
         let mutation = ShortcutsMutation::Remove {
             app_name: game.title.clone(),
+            launch_options: target.launch_options.clone().unwrap_or_default(),
         };
         match files.apply(&shortcuts_file, &mutation) {
             Ok(result) if !result.written => {
@@ -449,7 +516,7 @@ pub fn steam_remove(ctx: &ShortcutsCtx, game: &ShortcutGame, settings: &Shortcut
         }
     }
 
-    if errors.is_empty() {
+    if errors.is_empty() && refused == 0 {
         // The game was on no Steam shortcut list: nothing to say.
         if !removed {
             return;
@@ -611,6 +678,118 @@ mod tests {
         assert_eq!(
             check_userdata_dir(None),
             Err("userdata does not exist. Can't add/remove game to/from Steam!".to_string())
+        );
+    }
+
+    fn proof_ctx(platform: crate::ctx::Platform) -> ShortcutsCtx {
+        use gamelib_core::clock::SystemClock;
+        use gamelib_core::shutdown::Shutdown;
+        use gamelib_store::host::StoreHost;
+        use std::sync::Arc;
+        ShortcutsCtx::new(
+            Arc::new(StoreHost::new()),
+            Arc::new(SystemClock),
+            platform,
+            Shutdown::new(),
+        )
+    }
+
+    fn proof_game(app_name: &str, runner: &str) -> ShortcutGame {
+        serde_json::from_value(json!({
+            "appName": app_name,
+            "runner": runner,
+            "title": "Game",
+            "isDlc": false,
+            "canAddSteamShortcut": true,
+        }))
+        .expect("a game")
+    }
+
+    #[test]
+    fn the_proof_accepts_what_the_add_path_writes() {
+        use crate::ctx::Platform;
+        let hostile = "a b&c\"d%25e";
+        for app in ["game-one", hostile] {
+            let game = proof_game(app, "legendary");
+            let linux = proof_ctx(Platform::Linux);
+            let windows = proof_ctx(Platform::Windows);
+            let flatpak = proof_ctx(Platform::Linux).with_launch_env(
+                Some("com.example.GameLib".to_string()),
+                None,
+                None,
+            );
+            for ctx in [&linux, &windows, &flatpak] {
+                let options = launch_options(ctx, &game);
+                assert!(proves_app_name(&options, app), "{options}");
+            }
+        }
+        let encoded = format!(
+            "--no-gui \"{}\"",
+            crate::launch_url::launch_url(hostile, "gog", true)
+        );
+        assert!(proves_app_name(&encoded, hostile), "{encoded}");
+    }
+
+    #[test]
+    fn the_proof_refuses_what_is_not_this_games_launch_url() {
+        assert!(!proves_app_name("", "X"));
+        assert!(!proves_app_name("-fullscreen", "X"));
+        assert!(!proves_app_name(
+            "--no-gui \"heroic://launch?appName=X&runner=legendary\"",
+            "X"
+        ));
+        let url =
+            |app: &str| format!("--no-gui \"gamelib://launch?appName={app}&runner=legendary\"");
+        assert!(proves_app_name(&url("X"), "X"));
+        assert!(!proves_app_name(&url("X2"), "X"));
+        assert!(!proves_app_name(&url("X"), "X2"));
+        assert!(!proves_app_name(&url("X"), ""));
+        assert!(!proves_app_name(&url(""), ""));
+        // A value that decodes to invalid UTF-8 is a refusal, never a lossy match.
+        let bad = "--no-gui \"gamelib://launch?appName=%FF&runner=gog\"";
+        assert!(!proves_app_name(bad, "\u{FFFD}"));
+        // The raw form still matches the same bytes taken literally.
+        assert!(proves_app_name(bad, "%FF"));
+    }
+
+    #[test]
+    fn the_target_is_the_proven_entry_not_the_first_titled_one() {
+        let entry = |key: &str, title: &str, options: &str| EntrySummary {
+            index_key: key.to_string(),
+            app_name: Some(title.to_string()),
+            launch_options: Some(options.to_string()),
+            ..Default::default()
+        };
+        let ours = "--no-gui \"gamelib://launch?appName=A&runner=gog\"";
+        let mut summary = ShortcutsSummary {
+            exists: true,
+            parsed: true,
+            has_shortcuts_root: true,
+            root_is_list: true,
+            entries: vec![
+                entry("0", "T", "-x"),
+                entry("1", "T", ours),
+                entry("2", "Other", ours),
+            ],
+            ..Default::default()
+        };
+        assert_eq!(
+            proven_entry(&summary, "T", "A").map(|e| e.index_key.as_str()),
+            Some("1")
+        );
+        summary.entries.remove(1);
+        assert!(proven_entry(&summary, "T", "A").is_none());
+    }
+
+    #[test]
+    fn the_removal_names_launch_options_on_the_wire() {
+        let mutation = ShortcutsMutation::Remove {
+            app_name: "Same".to_string(),
+            launch_options: "gamelib-args".to_string(),
+        };
+        assert_eq!(
+            serde_json::to_value(&mutation).expect("json"),
+            json!({"op": "remove", "appName": "Same", "launchOptions": "gamelib-args"})
         );
     }
 

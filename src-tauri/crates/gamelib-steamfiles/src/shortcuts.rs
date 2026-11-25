@@ -6,7 +6,9 @@
 //! Index rules (match `steam-shortcut-editor` as far as plan 11's golden confirms): Add keys the
 //! new entry at max numeric key + 1 ("0" when empty); Remove deletes the first entry whose
 //! `AppName` equals the name exactly, then re-keys every remaining entry "0".."n-1" in file
-//! order. Everything GameLib does not touch (unknown fields, type tags, key order) is preserved.
+//! order. With `launchOptions`, Remove deletes the first entry whose `AppName` and `LaunchOptions` both match
+//! exactly: the shortcuts service names the entry it proved its own, and the match is made again here on the
+//! locked re-read. Everything GameLib does not touch (unknown fields, type tags, key order) is preserved.
 
 use crate::atomic::atomic_write;
 use crate::kv_bin::{parse_bin, serialize_bin, BinDoc, BinLimits, BinNode};
@@ -38,7 +40,12 @@ pub enum ShortcutsOp {
         fields: Vec<EntryField>,
     },
     #[serde(rename = "remove", rename_all = "camelCase")]
-    Remove { app_name: String },
+    Remove {
+        app_name: String,
+        /// When set, only an entry whose `LaunchOptions` equal this exactly is removed.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        launch_options: Option<String>,
+    },
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
@@ -192,6 +199,13 @@ fn app_name_of(entry: &BinNode) -> Option<String> {
     }
 }
 
+fn launch_options_of(entry: &BinNode) -> Option<String> {
+    match entry {
+        BinNode::Map(f) => str_of(find_ci(f, "launchoptions")),
+        _ => None,
+    }
+}
+
 /// One lock per `shortcuts.vdf` path, process-wide. Each rustInvoke runs on its own thread, so
 /// without it two overlapping edits would both read the old file and the second write would drop
 /// the first edit (75 WR-03).
@@ -311,11 +325,16 @@ fn apply_shortcuts_locked(path: &Path, op: &ShortcutsOp) -> ShortcutsApplyResult
             result.matched = true;
             result.index_key = Some(String::from_utf8_lossy(k).into_owned());
         }
-        ShortcutsOp::Remove { app_name } => {
-            let Some(pos) = list
-                .iter()
-                .position(|(_, v)| app_name_of(v).as_deref() == Some(app_name.as_str()))
-            else {
+        ShortcutsOp::Remove {
+            app_name,
+            launch_options,
+        } => {
+            let Some(pos) = list.iter().position(|(_, v)| {
+                app_name_of(v).as_deref() == Some(app_name.as_str())
+                    && launch_options
+                        .as_ref()
+                        .map_or(true, |want| launch_options_of(v).as_deref() == Some(want))
+            }) else {
                 return result;
             };
             let (k, removed) = list.remove(pos);

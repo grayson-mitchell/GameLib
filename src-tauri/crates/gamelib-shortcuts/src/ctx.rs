@@ -104,7 +104,9 @@ pub enum EntryField {
 }
 
 /// The described edit `steamfiles_shortcuts_apply` takes: add one entry, or remove the first entry whose
-/// `AppName` equals `app_name` exactly.
+/// `AppName` and `LaunchOptions` equal `app_name` and `launch_options` exactly. A removal always names the
+/// entry's `LaunchOptions`, so this crate cannot ask for a title-only removal: it names only an entry it proved
+/// GameLib's (`steam::steam_remove`).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "op", rename_all = "camelCase")]
 pub enum ShortcutsMutation {
@@ -116,6 +118,8 @@ pub enum ShortcutsMutation {
     Remove {
         #[serde(rename = "appName")]
         app_name: String,
+        #[serde(rename = "launchOptions")]
+        launch_options: String,
     },
 }
 

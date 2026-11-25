@@ -795,9 +795,18 @@ mod tests {
         let again = seam.apply(&file, &add).unwrap();
         assert!(!again.written && again.already_present);
         assert_eq!(seam.read(&file).unwrap().entries.len(), 1);
+        // A removal naming other LaunchOptions matches nothing: the entry stays.
+        let other = ShortcutsMutation::Remove {
+            app_name: "Game One".to_string(),
+            launch_options: "--other".to_string(),
+        };
+        let refused = seam.apply(&file, &other).unwrap();
+        assert!(!refused.written && !refused.matched);
+        assert_eq!(seam.read(&file).unwrap().entries.len(), 1);
         // A removal names the entry it took out, for the grid art.
         let removal = ShortcutsMutation::Remove {
             app_name: "Game One".to_string(),
+            launch_options: "--no-gui".to_string(),
         };
         let removed = seam.apply(&file, &removal).unwrap();
         assert!(removed.written && removed.matched);
