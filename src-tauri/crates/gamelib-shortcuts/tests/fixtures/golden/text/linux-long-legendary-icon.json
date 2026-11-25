@@ -1,0 +1,35 @@
+{
+  "platform": "linux",
+  "input": {
+    "title": "Long xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "appName": "longapp",
+    "runner": "legendary",
+    "settings": {
+      "addDesktopShortcuts": true,
+      "addStartMenuShortcuts": true,
+      "addSteamShortcuts": false
+    },
+    "fromMenu": false,
+    "withIcon": true
+  },
+  "outcome": "resolved",
+  "tree": {
+    "Applications": [],
+    "Desktop": [
+      {
+        "path": "Long xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.desktop",
+        "kind": "file",
+        "mode": "0777",
+        "utf8": "[Desktop Entry]\nName=Long xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nExec=xdg-open gamelib://launch?appName=longapp&runner=legendary\nTerminal=false\nType=Application\nIcon=<ICONS>/longapp.jpg\nCategories=Game;\n"
+      }
+    ],
+    ".local/share/applications": [
+      {
+        "path": "Long xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.desktop",
+        "kind": "file",
+        "mode": null,
+        "utf8": "[Desktop Entry]\nName=Long xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nExec=xdg-open gamelib://launch?appName=longapp&runner=legendary\nTerminal=false\nType=Application\nIcon=<ICONS>/longapp.jpg\nCategories=Game;\n"
+      }
+    ]
+  }
+}

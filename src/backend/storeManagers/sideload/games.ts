@@ -12,8 +12,9 @@ import { existsSync } from 'graceful-fs'
 import i18next from 'i18next'
 import {
   addShortcuts as addShortcutsUtil,
-  removeShortcuts as removeShortcutsUtil
-} from '../../shortcuts/shortcuts/shortcuts'
+  removeShortcuts as removeShortcutsUtil,
+  removeNonSteamGame
+} from 'backend/humbleshortcuts/shortcuts'
 import { notify } from '../../dialog/dialog'
 import { launchGame } from 'backend/storeManagers/storeManagerCommon/games'
 import { Game, InstallResult, RemoveArgs } from 'common/types/game_manager'
@@ -32,7 +33,6 @@ import { pushRemovalRefusal } from 'backend/safety/refusal'
 import type { SafetyRequest } from 'common/types/safety'
 import { removeRecentGame } from 'backend/info/recentGames'
 import { isLinux, isMac, isWindows } from 'backend/constants/environment'
-import { removeNonSteamGame } from 'backend/shortcuts/nonesteamgame/nonesteamgame'
 import type { ManagerDeps } from 'backend/services/types'
 
 import type LogWriter from 'backend/logger/targetWriter'
@@ -88,11 +88,11 @@ export default class SideloadGame implements Game {
   }
 
   async addShortcuts(fromMenu?: boolean): Promise<void> {
-    return addShortcutsUtil(this.deps, this, fromMenu)
+    await addShortcutsUtil(this.deps, this, fromMenu)
   }
 
   async removeShortcuts(): Promise<void> {
-    return removeShortcutsUtil(this.deps, this)
+    await removeShortcutsUtil(this.deps, this)
   }
 
   async isGameAvailable(): Promise<boolean> {
@@ -228,7 +228,14 @@ export default class SideloadGame implements Game {
 
     notify(this.deps, { title, body: i18next.t('notify.uninstalled') })
 
-    removeShortcutsUtil(this.deps, this)
+    // The shortcut removals are Rust's now and can reject (a transport failure); the uninstall already
+    // succeeded, so they are logged and never turned into an uninstall failure.
+    removeShortcutsUtil(this.deps, this).catch((error: unknown) => {
+      logWarning(
+        [`removing the shortcuts of ${this.id} failed:`, error],
+        LogPrefix.Backend
+      )
+    })
     // Recent-games bookkeeping is Rust's now and can reject (a transport or store failure); the
     // uninstall already succeeded, so it is logged and never turned into an uninstall failure.
     removeRecentGame(this.deps, this.id).catch((error: unknown) => {
@@ -237,7 +244,12 @@ export default class SideloadGame implements Game {
         LogPrefix.Backend
       )
     })
-    removeNonSteamGame(this.deps, this)
+    removeNonSteamGame(this.deps, this).catch((error: unknown) => {
+      logWarning(
+        [`removing ${this.id} from Steam failed:`, error],
+        LogPrefix.Backend
+      )
+    })
 
     sendGameStatusUpdate(this.deps, {
       appName: this.id,

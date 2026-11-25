@@ -12,10 +12,15 @@
  * two whole directories instead, so a future reintroduction cannot hide by landing in a file
  * nobody thought to check.
  *
- * SCOPE -- exactly two directories plus one single file, and why:
- * `src/backend/humble` and `src/backend/storeManagers` are swept in full. `src/backend/sidecar`
+ * SCOPE -- exactly three directories plus one single file, and why:
+ * `src/backend/humble`, `src/backend/storeManagers` and `src/backend/login` are swept in full.
+ * Phase 94 Plan 04 (D-03) added `src/backend/login` as the third root: the seam left the humble
+ * root for it (a scheduled survivor, deleted by Phase 92), so the sweep follows it. Its own
+ * per-root vacuity control below finds `getLoginWindowSeamOrThrow` in the moved file. The humble
+ * root stays until Phase 94 Plan 30 deletes that directory. `src/backend/sidecar`
  * is DELIBERATELY NOT swept as a whole directory: it is where
- * `src/backend/sidecar/humbleLoginFlowRegistration.ts:457` lives --
+ * `src/backend/sidecar/loginSeamRegistration.ts` (the smoke hook, moved there from
+ * `humbleLoginFlowRegistration.ts` by 94-04) lives --
  *   `const seam = getLoginWindowSeam(); if (!seam) { smokeLog('no seam installed — aborting ' +
  *   '(this is a FAIL, not a skip)', ...) }`
  * -- a defensive null-check inside a block gated by `process.env.GAMELIB_LOGIN_SEAM_SMOKE === '1'`
@@ -30,7 +35,7 @@
  * `src/backend/sidecar/oauthLoginCapture.ts:195` -- which would otherwise have zero gate coverage
  * at all if the directory sweep is correctly excluded. `OAUTH_LOGIN_CAPTURE_FILE` below is a
  * single-file assertion covering exactly that one file, narrow enough that
- * `humbleLoginFlowRegistration.ts` is never touched by it.
+ * `loginSeamRegistration.ts` is never touched by it.
  *
  * RELATIONSHIP TO `seamBranchParity.test.ts` (stated explicitly, not left implicit):
  * `src/backend/sidecar/__tests__/seamBranchParity.test.ts` guards a NARROWER, DEEPER invariant --
@@ -71,6 +76,7 @@ import { at } from './fixtures/indexed'
 const REPO_ROOT = join(__dirname, '..', '..')
 const HUMBLE_ROOT = join(REPO_ROOT, 'src/backend/humble')
 const STORE_MANAGERS_ROOT = join(REPO_ROOT, 'src/backend/storeManagers')
+const LOGIN_ROOT = join(REPO_ROOT, 'src/backend/login')
 const OAUTH_LOGIN_CAPTURE_FILE = join(
   REPO_ROOT,
   'src/backend/sidecar/oauthLoginCapture.ts'
@@ -172,7 +178,8 @@ function sweepForOffenders(targets: string[]): string[] {
 describe('REQ-39-03: getLoginWindowSeam() predicate-family static zero-match completeness gate', () => {
   describe.each([
     ['src/backend/humble', HUMBLE_ROOT],
-    ['src/backend/storeManagers', STORE_MANAGERS_ROOT]
+    ['src/backend/storeManagers', STORE_MANAGERS_ROOT],
+    ['src/backend/login', LOGIN_ROOT]
   ])('scoped root: %s', (rootLabel, rootPath) => {
     it(`has zero surviving getLoginWindowSeam() predicate matches (every form in the family, unioned) under ${rootLabel}`, () => {
       const offenders = sweepForOffenders([rootPath])
@@ -206,9 +213,9 @@ describe('REQ-39-03: getLoginWindowSeam() predicate-family static zero-match com
   })
 
   it(
-    'src/backend/sidecar/oauthLoginCapture.ts (OUTSIDE both scoped roots) has zero surviving ' +
+    'src/backend/sidecar/oauthLoginCapture.ts (OUTSIDE all scoped roots) has zero surviving ' +
       'predicate matches -- a deliberately narrow single-file assertion, NOT a widened sweep of ' +
-      'src/backend/sidecar (see file header: humbleLoginFlowRegistration.ts:457 keeps a ' +
+      'src/backend/sidecar (see file header: loginSeamRegistration.ts keeps a ' +
       'deliberate !seam guard in that same directory and must never be swept)',
     () => {
       const offenders = sweepForOffenders([OAUTH_LOGIN_CAPTURE_FILE])

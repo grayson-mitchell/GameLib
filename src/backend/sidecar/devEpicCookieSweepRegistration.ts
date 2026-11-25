@@ -43,7 +43,7 @@
 
 import type { IpcRegistry } from './ipcRegistry'
 import type { AppInfo } from '../process/context'
-import type { LoginWindowSeamSlot } from '../humble/loginWindowSeam'
+import type { LoginWindowSeamSlot } from '../login/loginWindowSeam'
 import { logInfo, LogPrefix } from '../logger'
 
 /** Verbatim copy of `EPIC_COOKIE_CLEAR_NO_WINDOW_LABEL` (`legendary/user.ts:57`). */

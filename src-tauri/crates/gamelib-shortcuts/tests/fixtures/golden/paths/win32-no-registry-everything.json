@@ -1,0 +1,26 @@
+{
+  "platform": "win32",
+  "windowsRegistry": false,
+  "input": {
+    "title": "$(a);`b`'\"&|<>",
+    "units": [
+      36,
+      40,
+      97,
+      41,
+      59,
+      96,
+      98,
+      96,
+      39,
+      34,
+      38,
+      124,
+      60,
+      62
+    ]
+  },
+  "sanitized": "$(a);`b`'&",
+  "desktop": null,
+  "menu": "<APPDATA>\\Microsoft\\Windows\\Start Menu\\Programs\\$(a);`b`'&.lnk"
+}

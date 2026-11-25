@@ -13,7 +13,7 @@ export interface AppInfo {
   isPackaged: boolean
 }
 
-// `standardBrowserUserAgent()` (backend/humble/userAgent.ts) regex-extracts a `(<platform>)`
+// `standardBrowserUserAgent()` (backend/login/userAgent.ts) regex-extracts a `(<platform>)`
 // token and a `Chrome/<version>` token from this string, so it is shaped to match that happy
 // path. It DELIBERATELY carries no `Electron/x.y.z` token: the function exists to strip that
 // token so Google's SSO does not fingerprint an embedded browser. Chrome/142.0.7444.52 is the

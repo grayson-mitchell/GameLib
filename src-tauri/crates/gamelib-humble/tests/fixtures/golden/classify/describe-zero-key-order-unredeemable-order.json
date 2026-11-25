@@ -1,0 +1,24 @@
+{
+  "fn": "describeZeroKeyOrder",
+  "input": {
+    "order": {
+      "gamekey": "order-expired",
+      "human_name": "Expired Bundle",
+      "tpkd_dict": {
+        "all_tpks": [
+          {
+            "machine_name": "expiredgame_steam",
+            "human_name": "Expired Game",
+            "key_type": "steam",
+            "redeemed_key_value": "REDACTED",
+            "expiration": "2020-01-01T00:00:00Z"
+          }
+        ]
+      }
+    }
+  },
+  "output": {
+    "anomalous": true,
+    "detail": "tpkd_dict.all_tpks=array(1) skipped=[[0]:object-skipped-by-defensive-catch fields=[machine_name,human_name,key_type,redeemed_key_value,expiration]]"
+  }
+}

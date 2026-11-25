@@ -1,0 +1,7 @@
+{
+  "about": "The fallback resolveAppInfo builds for win32",
+  "input": {
+    "userAgentFallback": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.7444.52 Safari/537.36"
+  },
+  "output": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.7444.52 Safari/537.36"
+}

@@ -1,0 +1,11 @@
+{
+  "fn": "extractExpiration",
+  "input": {
+    "tpk": {
+      "num_days_until_expired": 1.7976931348623157e+308
+    },
+    "now": "2026-07-06T00:00:00.000Z",
+    "tz": "UTC"
+  },
+  "output": null
+}

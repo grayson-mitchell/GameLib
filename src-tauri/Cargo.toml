@@ -32,6 +32,11 @@ gamelib-wine = { path = "crates/gamelib-wine" }
 # `gamelib-engine`; none of them ever depends on it (D-04).
 gamelib-knownfix = { path = "crates/gamelib-knownfix" }
 gamelib-launch = { path = "crates/gamelib-launch" }
+# Phase 94 (SVC-04, SVC-05): Tauri-free Humble Bundle and shortcut services, behind the humble_* and
+# shortcuts_* arms from the plans that follow. Neither depends on the other, on `tauri` or on `keyring`.
+# `gamelib-shortcuts` has its own `rust-version` (1.87, for `icns`), like `gamelib-depot`.
+gamelib-humble = { path = "crates/gamelib-humble" }
+gamelib-shortcuts = { path = "crates/gamelib-shortcuts" }
 # Phase 83 (FND-04, D-11): spawn classes, the Windows kill-on-close Job, group kill and the
 # SIGKILL reaper (`--gamelib-reaper`, dispatched first in `fn main`). Already pinned in Cargo.lock.
 gamelib-proc = { path = "crates/gamelib-proc" }
@@ -508,5 +513,7 @@ members = [
   "crates/gamelib-knownfix-cli",
   "crates/gamelib-launch",
   "crates/gamelib-launch-cli",
+  "crates/gamelib-humble",
+  "crates/gamelib-shortcuts",
 ]
 resolver = "2"

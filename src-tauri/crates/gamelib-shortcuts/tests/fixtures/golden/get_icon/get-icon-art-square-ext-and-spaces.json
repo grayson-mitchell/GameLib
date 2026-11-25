@@ -1,0 +1,32 @@
+{
+  "input": {
+    "runner": "legendary",
+    "appName": "icon-app",
+    "artSquare": "https://art.example.test/my cover/{ext}/a b.{ext}",
+    "installPathGiven": true,
+    "installFiles": [],
+    "productApi": {
+      "kind": "null"
+    },
+    "presentIcons": [],
+    "download": "ok",
+    "iconsFolderExistedBefore": false
+  },
+  "outcome": {
+    "result": "resolved",
+    "icon": "<ICONS>/icon-app.jpg"
+  },
+  "productApiCalls": [],
+  "aborts": [
+    "https://art.example.test/my%20cover/jpg/a%20b.{ext}"
+  ],
+  "downloads": [
+    {
+      "url": "https://art.example.test/my%20cover/jpg/a%20b.{ext}",
+      "dest": "<ICONS>/icon-app.jpg"
+    }
+  ],
+  "iconsFolder": [
+    "icon-app.jpg"
+  ]
+}

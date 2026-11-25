@@ -1,0 +1,15 @@
+{
+  "platform": "darwin",
+  "windowsRegistry": null,
+  "input": {
+    "title": "CON",
+    "units": [
+      67,
+      79,
+      78
+    ]
+  },
+  "sanitized": "",
+  "desktop": "<DESKTOP>/.app",
+  "menu": "<HOME>/Applications/.app"
+}

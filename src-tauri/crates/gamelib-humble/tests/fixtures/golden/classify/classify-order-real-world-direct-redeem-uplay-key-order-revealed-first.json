@@ -1,0 +1,67 @@
+{
+  "fn": "classifyOrder",
+  "input": {
+    "order": {
+      "gamekey": "order-real-uplay-direct",
+      "product": {
+        "category": "bundle",
+        "human_name": "Ubisoft Bundle"
+      },
+      "tpkd_dict": {
+        "all_tpks": [
+          {
+            "machine_name": "raymanlegends_uplay",
+            "gamekey": "order-real-uplay-direct",
+            "key_type": "uplay",
+            "key_type_human_name": "Uplay",
+            "human_name": "Rayman Legends",
+            "direct_redeem": true,
+            "instructions_html": "<a href='https://support.humblebundle.com/'>Uplay Key Instructions</a>",
+            "preinstruction_text": "Copy this key into the uPlay client.",
+            "class": "uplaybutton",
+            "keyindex": 0,
+            "visible": true,
+            "sold_out": false,
+            "exclusive_countries": [],
+            "disallowed_countries": [],
+            "show_custom_instructions_in_user_libraries": false,
+            "redeemed_key_val": "REDACTED"
+          }
+        ]
+      }
+    },
+    "revealed": {
+      "only": [
+        "raymanlegends_uplay"
+      ]
+    },
+    "redeemed": {
+      "all": false
+    },
+    "now": "2026-11-24T12:00:00.000Z"
+  },
+  "output": {
+    "gamekey": "order-real-uplay-direct",
+    "keys": [
+      {
+        "gamekey": "order-real-uplay-direct",
+        "machineName": "raymanlegends_uplay",
+        "state": "REVEALED",
+        "title": "Rayman Legends",
+        "platform": "uplay",
+        "expiration": null,
+        "origin": "Ubisoft Bundle",
+        "ownedElsewhere": false,
+        "matchConfidence": "none"
+      }
+    ],
+    "allTerminal": false,
+    "freezeEligible": true,
+    "keyIndexByComposite": {
+      "order-real-uplay-direct:raymanlegends_uplay": 0
+    },
+    "revealedKeyValueByComposite": {
+      "order-real-uplay-direct:raymanlegends_uplay": "REDACTED"
+    }
+  }
+}

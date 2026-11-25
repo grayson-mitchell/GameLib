@@ -49,7 +49,7 @@ import { createTestTokenStoreSlot } from './testTokenStore'
 import { createTestSteamBottle } from './testSteamBottle'
 import { createInertTestSteamUser } from './testSteamUser'
 import { createTestHumbleServices } from './testHumble'
-import { createLoginWindowSeamSlot } from '../humble/loginWindowSeam'
+import { createLoginWindowSeamSlot } from '../login/loginWindowSeam'
 import { createTestBridgeHelpers } from './testBridgeHelpers'
 import { createTestAppPaths } from './testAppPaths'
 import type { Runner } from 'common/types'
@@ -218,6 +218,9 @@ export function createTestServices(
   const signInProbe =
     overrides.signInProbe ?? createTestSignInProbe({ ipc: host.ipc })
   const steamUser = overrides.steamUser ?? createInertTestSteamUser()
+  // One seam slot per services bundle, shared with the Humble services this bundle builds (94-04).
+  const loginWindowSeam =
+    overrides.loginWindowSeam ?? createLoginWindowSeamSlot()
   return {
     stores,
     storeRegistry: overrides.storeRegistry ?? createStoreRegistry(),
@@ -265,12 +268,14 @@ export function createTestServices(
     steamBottle:
       overrides.steamBottle ?? createTestSteamBottle({ stores, config }),
     steamUser,
+    loginWindowSeam,
     humble:
       overrides.humble ??
       createTestHumbleServices({
         stores,
         steamUser,
-        signInOutcomes: signInProbe.outcomes
+        signInOutcomes: signInProbe.outcomes,
+        loginWindowSeam
       })
   }
 }

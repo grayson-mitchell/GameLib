@@ -1,0 +1,30 @@
+{
+  "family": "remove",
+  "platform": "darwin",
+  "input": {
+    "title": "Plain Game",
+    "appName": "plainapp",
+    "createdByTheTypeScript": "both",
+    "desktop": "dangling-gamelib-link",
+    "menu": null,
+    "registryDesktop": null,
+    "seededBeforeAdd": false
+  },
+  "createOutcome": {
+    "result": "resolved"
+  },
+  "gameLibWroteEverythingPresent": true,
+  "outcome": {
+    "result": "resolved"
+  },
+  "tree": {
+    "before": [
+      {
+        "path": "Desktop/Plain Game.app",
+        "kind": "symlink",
+        "symlinkTarget": "<HOME>/Applications/Plain Game.app"
+      }
+    ],
+    "after": []
+  }
+}

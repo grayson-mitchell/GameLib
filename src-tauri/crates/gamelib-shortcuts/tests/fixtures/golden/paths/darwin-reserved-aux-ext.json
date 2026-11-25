@@ -1,0 +1,19 @@
+{
+  "platform": "darwin",
+  "windowsRegistry": null,
+  "input": {
+    "title": "aux.txt",
+    "units": [
+      97,
+      117,
+      120,
+      46,
+      116,
+      120,
+      116
+    ]
+  },
+  "sanitized": "",
+  "desktop": "<DESKTOP>/.app",
+  "menu": "<HOME>/Applications/.app"
+}

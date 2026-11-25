@@ -1,0 +1,2 @@
+0:{"a":"$@1","f":"","b":"x"}
+1:{"results":[{"id":"fake-gamekey-0001","title":"Fake Bundle Portal","entitlements":{"keys":[{"id":"portal2_steam","title":"Portal 2","keyIntegrationId":"steam","gameKey":null,"redeemedAt":"2026-11-01T00:00:00.000Z","expired":false,"redemptionData":{"keyFormatted":"REDACTED"}}],"downloads":[]}}],"bundlesCount":0,"pagination":{"page":1,"totalPages":1,"totalDocs":1},"success":true}

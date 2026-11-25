@@ -1,0 +1,19 @@
+{
+  "input": {
+    "text": "a\u0001\u001fb",
+    "units": [
+      97,
+      1,
+      31,
+      98
+    ]
+  },
+  "output": {
+    "text": "ab",
+    "units": [
+      97,
+      98
+    ],
+    "utf8Bytes": 2
+  }
+}

@@ -68,7 +68,7 @@ import { createTestOnlineMonitor } from 'backend/testUtils/testOnlineMonitor'
  *  - `../stores`  -> libraryStore/installStore/gamesOverrideStore stubs (not on the
  *                           call path this probe drives)
  *  - `../user`           -> LegendaryUser (not on the call path; `../user` itself pulls in
- *                           `GlobalConfig`/`humble/loginWindowSeam` and other heavy chains)
+ *                           `GlobalConfig`/`login/loginWindowSeam` and other heavy chains)
  *  - `../games`          -> LegendaryGame (not constructed by this probe; its own import
  *                           chain pulls in `GameConfig`/`GlobalConfig`/`libraryManagerMap`)
  *  - real, UNMOCKED: `fs`/`graceful-fs` (the entire question is whether `getGameInfo`

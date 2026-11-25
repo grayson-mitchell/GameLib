@@ -1,0 +1,15 @@
+{
+  "fn": "describeSkippedEntitlements",
+  "input": {
+    "order": {
+      "gamekey": "order-drm-free",
+      "human_name": "DRM Free Bundle",
+      "tpkd_dict": {},
+      "product": {
+        "category": "bundle",
+        "human_name": "DRM Free Bundle"
+      }
+    }
+  },
+  "output": null
+}

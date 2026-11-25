@@ -1,0 +1,12 @@
+{
+  "platform": "darwin",
+  "windowsRegistry": null,
+  "input": {
+    "title": "Emoji 🎮 Game 𝒳",
+    "desktop": "none",
+    "menu": "present"
+  },
+  "exists": true,
+  "macDesktopShortcutPresent": false,
+  "macDesktopShortcutWanted": true
+}

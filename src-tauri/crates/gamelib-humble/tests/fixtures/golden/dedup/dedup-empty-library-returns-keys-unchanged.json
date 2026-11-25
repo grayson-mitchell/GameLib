@@ -1,0 +1,33 @@
+{
+  "fn": "recomputeOwnership",
+  "input": {
+    "keys": [
+      {
+        "gamekey": "order-1",
+        "machineName": "somegame_steam",
+        "state": "UNREVEALED",
+        "title": "Portal 2",
+        "platform": "steam",
+        "expiration": null,
+        "origin": "Some Bundle",
+        "ownedElsewhere": true,
+        "matchConfidence": "exact"
+      }
+    ],
+    "steamGames": [],
+    "overridden": []
+  },
+  "output": [
+    {
+      "gamekey": "order-1",
+      "machineName": "somegame_steam",
+      "state": "UNREVEALED",
+      "title": "Portal 2",
+      "platform": "steam",
+      "expiration": null,
+      "origin": "Some Bundle",
+      "ownedElsewhere": true,
+      "matchConfidence": "exact"
+    }
+  ]
+}

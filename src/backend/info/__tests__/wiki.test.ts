@@ -1,10 +1,8 @@
-import { clearWikiGameInfoCache, getUmuId, getWikiGameInfo } from '../wiki'
+import { clearWikiGameInfoCache, getUmuId } from '../wiki'
 import {
   RUST_INFO_UMU_GET,
-  RUST_INFO_WIKI_CACHE_CLEAR,
-  RUST_INFO_WIKI_GET
+  RUST_INFO_WIKI_CACHE_CLEAR
 } from 'common/types/sidecarTransport'
-import type { Game } from 'common/types/game_manager'
 import { rustInvokeArgs } from 'common/types/ipc/rustInvoke'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 
@@ -56,67 +54,6 @@ describe('getUmuId shim', () => {
     await expect(
       getUmuId(fakeDeps(new Error('boom')).deps, 'a', 'gog')
     ).rejects.toThrow('boom')
-  })
-})
-
-/** Only what the resolver reads: `getGameInfo()`. Any other member throws if it is touched. */
-function fakeGame(info: {
-  title: string
-  app_name: string
-  runner: string
-}): Game {
-  return {
-    getGameInfo: () => info
-  } as unknown as Game
-}
-
-describe('getWikiGameInfo resolver', () => {
-  it('declares only the title, app name and runner and makes one RUST_INFO_WIKI_GET call', async () => {
-    const { deps, calls } = fakeDeps({ pcgamingwiki: null })
-    const game = fakeGame({
-      title: 'Hades™: Battle Out of Hell',
-      app_name: 'hades-1',
-      runner: 'gog'
-    })
-    await expect(getWikiGameInfo(deps, game)).resolves.toEqual({
-      pcgamingwiki: null
-    })
-    expect(calls).toEqual([
-      [
-        RUST_INFO_WIKI_GET,
-        [
-          {
-            title: 'Hades™: Battle Out of Hell',
-            appName: 'hades-1',
-            runner: 'gog',
-            forceRefresh: undefined
-          }
-        ]
-      ]
-    ])
-  })
-
-  it('carries forceRefresh through, and its arguments pass the channel schema', async () => {
-    const { deps, calls } = fakeDeps(null)
-    const game = fakeGame({ title: 'T', app_name: 'a', runner: 'sideload' })
-    await getWikiGameInfo(deps, game, true)
-    await getWikiGameInfo(deps, game)
-    for (const [, args] of calls) {
-      expect(rustInvokeArgs[RUST_INFO_WIKI_GET].safeParse(args).success).toBe(
-        true
-      )
-    }
-    expect(
-      (calls[0]?.[1] as { forceRefresh?: boolean }[])[0]?.forceRefresh
-    ).toBe(true)
-  })
-
-  it('resolves null when Rust found nothing and rejects with its failure', async () => {
-    const game = fakeGame({ title: 'T', app_name: 'a', runner: 'steam' })
-    await expect(getWikiGameInfo(fakeDeps(null).deps, game)).resolves.toBeNull()
-    await expect(
-      getWikiGameInfo(fakeDeps(new Error('info_wiki_get:bad-args')).deps, game)
-    ).rejects.toThrow('info_wiki_get:bad-args')
   })
 })
 

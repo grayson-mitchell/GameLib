@@ -8,10 +8,6 @@ const SHORTCUTS_DIR = join(
   REPO_ROOT,
   'src-tauri/crates/gamelib-steamfiles/tests/fixtures/shortcuts'
 )
-const UPSTREAM_SRC = join(
-  REPO_ROOT,
-  'src/backend/shortcuts/nonesteamgame/__tests__/test_data'
-)
 const WRITE = process.env.GAMELIB_WRITE_STEAMFILES_FIXTURES === '1'
 
 describe('shortcuts.vdf fixture builder', () => {
@@ -44,21 +40,20 @@ describe('shortcuts.vdf fixture builder', () => {
     }
   })
 
-  test('upstream test_data is copied verbatim', () => {
-    const names = readdirSync(UPSTREAM_SRC).filter((n) => n.endsWith('.vdf'))
-    expect(names).toHaveLength(7)
-    const dest = join(SHORTCUTS_DIR, 'upstream')
-    if (WRITE) {
-      mkdirSync(dest, { recursive: true })
-      for (const n of names) {
-        writeFileSync(join(dest, n), readFileSync(join(UPSTREAM_SRC, n)))
-      }
-    }
-    expect(readdirSync(dest).sort()).toEqual([...names].sort())
-    for (const n of names) {
-      expect(
-        readFileSync(join(dest, n)).equals(readFileSync(join(UPSTREAM_SRC, n)))
-      ).toBe(true)
-    }
+  // Phase 94 plan 24: the TypeScript non-Steam shortcuts service and its `test_data` were deleted, so the crate's
+  // `shortcuts/upstream/` is the only copy of the seven upstream files. It is no longer rewritten from a source.
+  test('the upstream test_data copy still holds its seven files', () => {
+    const names = readdirSync(join(SHORTCUTS_DIR, 'upstream')).filter((n) =>
+      n.endsWith('.vdf')
+    )
+    expect(names.sort()).toEqual([
+      'shortcuts_commandmc.vdf',
+      'shortcuts_felipecrs.vdf',
+      'shortcuts_missing_appname.vdf',
+      'shortcuts_missing_exe.vdf',
+      'shortcuts_missing_launchoptions.vdf',
+      'shortcuts_redromnon.vdf',
+      'shortcuts_valid.vdf'
+    ])
   })
 })

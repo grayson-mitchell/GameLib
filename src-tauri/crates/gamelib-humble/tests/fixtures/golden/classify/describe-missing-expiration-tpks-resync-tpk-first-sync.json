@@ -1,0 +1,22 @@
+{
+  "fn": "describeMissingExpirationTpks",
+  "input": {
+    "order": {
+      "gamekey": "order-resync",
+      "human_name": "Resync Bundle",
+      "tpkd_dict": {
+        "all_tpks": [
+          {
+            "machine_name": "resyncgame_steam",
+            "human_name": "Resync Game",
+            "key_type": "steam",
+            "redeemed_key_value": null,
+            "expiration": null
+          }
+        ]
+      }
+    },
+    "now": "2026-11-24T12:00:00.000Z"
+  },
+  "output": "tpksMissingExpiration=1 candidateFields=[machine_name,human_name,key_type,redeemed_key_value,expiration]"
+}

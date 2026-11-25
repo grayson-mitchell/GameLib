@@ -160,7 +160,7 @@ function bootedWorld(opts?: {
         bridgeHelpers: fakes.bridgeHelpers,
         steamBottle: fakes.steamBottle,
         steamUser: fakes.steamUser,
-        loginWindowSeam: fakes.humble.loginWindowSeam
+        loginWindowSeam: fakes.loginWindowSeam
       })
       prebuilt.managers = built
       prebuilt.launcher = built.launcher

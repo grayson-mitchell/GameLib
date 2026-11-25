@@ -83,7 +83,6 @@ import { readFileSync } from 'fs'
 import { join } from 'path'
 
 import { registerRunnerAuthFlows } from '../runnerAuthFlowRegistration'
-import { registerShortcutsFlows } from '../shortcutsFlowRegistration'
 import { registerRunnerMiscFlows } from '../runnerMiscFlowRegistration'
 import { registerEosOverlayFlows } from '../eosOverlayFlowRegistration'
 // Phase 34.6 Plan 09 (REQ-34.6-02/04/08/13): `enrichmentFlowRegistration.ts` is NOT one of this
@@ -142,7 +141,7 @@ const flowDeps = {
   sendFrontendMessage: jest.fn(),
   ...services,
   signIn: services.signInProbe,
-  loginWindowSeam: services.humble.loginWindowSeam,
+  loginWindowSeam: services.loginWindowSeam,
   ipc: testIpc,
   dialogs: services.host.dialogs,
   appState: services.host.appState,
@@ -153,7 +152,6 @@ const flowDeps = {
 handlerRegistry.clear()
 listenerRegistry.clear()
 registerRunnerAuthFlows(flowDeps)
-registerShortcutsFlows(flowDeps)
 registerRunnerMiscFlows(flowDeps)
 // Phase 34.6 Plan 08 (REQ-34.6-01/13, D-09): the EOS overlay cluster joins the module-scope
 // snapshot below. Its absence here (before this plan) is exactly what made the EOS 8 register
@@ -219,15 +217,11 @@ const RUNNER_AUTH_CHANNELS = [
 // `runWineCommandForGame`, the DXVK toggles and the Winetricks reads are scheduled resolvers, registered by
 // `registerEngineWineResolvers` (`engineWineResolvers.test.ts` proves them); none belongs to the modules below.
 
-const SHORTCUTS_CHANNELS = [
-  'addShortcut',
-  'removeShortcut',
-  'shortcutsExists',
-  'addToSteam',
-  'removeFromSteam',
-  'isAddedToSteam',
-  'processShortcut'
-]
+// Phase 94 Plans 11 and 22: the shortcuts cluster left this file. `shortcutsFlowRegistration.ts` is deleted (D-27, SC4):
+// `shortcutsExists`, `addShortcut`, `removeShortcut`, `addToSteam`, `removeFromSteam` and `isAddedToSteam` are scheduled
+// resolvers (`humbleshortcuts/shortcuts.ts`) answered by Rust and registered by `registerShortcutsResolvers`, which
+// `shortcutsResolvers.test.ts` proves; `processShortcut` moved unchanged to `appShellFlowRegistration.ts`
+// (`registerProcessShortcut`, proven by `appShellFlows.test.ts`). None belongs to the modules below.
 
 const RUNNER_MISC_CHANNELS = [
   'getLegendaryVersion',
@@ -287,7 +281,6 @@ const ENRICHMENT_CHANNELS = [
 
 const ALL_CHANNELS = [
   ...RUNNER_AUTH_CHANNELS,
-  ...SHORTCUTS_CHANNELS,
   ...RUNNER_MISC_CHANNELS,
   ...EOS_OVERLAY_CHANNELS,
   ...ENRICHMENT_CHANNELS
@@ -304,12 +297,6 @@ const MODULES: ReadonlyArray<{
     register: () => registerRunnerAuthFlows(flowDeps),
     file: 'runnerAuthFlowRegistration.ts',
     declaredChannels: RUNNER_AUTH_CHANNELS
-  },
-  {
-    name: 'registerShortcutsFlows',
-    register: () => registerShortcutsFlows(flowDeps),
-    file: 'shortcutsFlowRegistration.ts',
-    declaredChannels: SHORTCUTS_CHANNELS
   },
   {
     name: 'registerRunnerMiscFlows',
@@ -459,7 +446,7 @@ describe('curated-import guard — none of the six modules imports ipc_handler o
   it('gate self-test: a synthetic source with a named import of an ipc_handler path is detected', () => {
     const synthetic = [
       "import { registerFoo } from '../shortcuts/ipc_handler'",
-      'export function registerShortcutsFlows(): void {}'
+      'export function registerSomeFlows(): void {}'
     ].join('\n')
     expect(importsForbiddenModule(synthetic)).toBe(true)
   })
@@ -555,9 +542,9 @@ describe("containment pin — each module registers only its own declared channe
 // every cluster plan (34.5-05 through 34.5-12) has now landed. Unlike Describe 5 above, this
 // block registers all five modules TOGETHER against a single cleared pair of registries, because
 // the property under test here is the union across all four, not any one module in isolation.
+// Phase 94 Plan 22: `processShortcut` left this list; it moved unchanged to `appShellFlowRegistration.ts`.
 const SEND_CHANNELS = [
-  'logoutGOG',
-  'processShortcut'
+  'logoutGOG'
   // Quick 261012-ca6 (2026-10-12): `addShortcut` and `removeShortcut` were removed from this list
   // (4 -> 2). They are invoke-kind now so the renderer can learn the outcome of a write.
   // Phase 34.6 Plan 07 (D-11) added `winetricksInstall` here as send-kind; Phase 45 Plan 02
@@ -574,7 +561,7 @@ describe('completeness — all 66 channels are registered with the right kind, a
     restoreCanonicalRegistrations()
   })
 
-  it('exactly 39 channels are handle-kind and exactly 2 are listen-kind (Phase 88 Plan 08: 41/2 -> 39/2, getKnownFixes and getGamelibFixStatus are native `knownfix` channels; Phase 87 Plan 36: 44/2 -> 41/2, runWineCommandForGame, runWineCommand and callTool are scheduled resolvers; Phase 87 Plan 35: 49/2 -> 44/2, the five Winetricks channels are scheduled resolvers or native `wine` channels; Phase 87 Plan 34: 52/2 -> 49/2, the three DXVK toggles are scheduled resolvers; Phase 87 Plan 26: 53/2 -> 52/2, getAlternativeWine is a native `wine` channel; Phase 87 Plan 24: 54/2 -> 53/2, wine.isValidVersion is a native `wine` channel; Phase 87 Plan 20: 57/2 -> 54/2, installWineVersion, refreshWineVersionInfo and removeWineVersion are native `wine` channels; Phase 87 Plan 18: 58/2 -> 57/2, downloadRuntime is a native `wine` channel; Phase 87 Plan 17: 59/2 -> 58/2, isRuntimeInstalled is a native `wine` channel; Phase 86 Plan 22: 60/2 -> 59/2, getWikiGameInfo is a native `info` channel; Phase 86 Plan 16: 65/2 -> 60/2, the five ITAD channels are native `info` channels; Phase 86 Plan 15: 70/2 -> 65/2, the five steamgriddb.* channels are native `info` channels; Phase 47 Plan 12: 70/2 -> 72/2, +2 invoke itad.getKeyStatus/itad.setApiKey; Quick 261029-mkz, d601ff705: 68/2 -> 70/2, +2 invoke getRunsForMeMap/setRunsForMe, +0 send; Quick 261027-ch9, a2385f6bf: 67/2 -> 68/2, +1 invoke getGamelibFixStatus, +0 send; Quick 261012-ca6, 2026-10-12: 65/4 -> 67/2, +2 invoke -2 send, kind-swapped not added, total channels unchanged; Phase 34.6 Plan 10: 59/5 -> 62/5, +3 invoke +0 send; Phase 45 Plan 01, 2026-10-10: 62/5 -> 65/5, +3 invoke winetricksApply/winetricksQueueState/winetricksCancelRemaining +0 send; Phase 45 Plan 02, 2026-10-10: 65/5 -> 65/4, +0 invoke -1 send — winetricksInstall retired outright, not kind-swapped)', () => {
+  it('exactly 33 channels are handle-kind and exactly 1 is listen-kind (88/94 merge: 39/2 -> 33/1, the removals of both phases together; Phase 94 Plan 22: 40/2 -> 35/1, the shortcuts module is deleted: addShortcut, removeShortcut, addToSteam, removeFromSteam and isAddedToSteam are scheduled resolvers and processShortcut moved to appShellFlowRegistration.ts; Phase 94 Plan 11: 41/2 -> 40/2, shortcutsExists is a scheduled resolver; Phase 88 Plan 08: 41/2 -> 39/2, getKnownFixes and getGamelibFixStatus are native `knownfix` channels; Phase 87 Plan 36: 44/2 -> 41/2, runWineCommandForGame, runWineCommand and callTool are scheduled resolvers; Phase 87 Plan 35: 49/2 -> 44/2, the five Winetricks channels are scheduled resolvers or native `wine` channels; Phase 87 Plan 34: 52/2 -> 49/2, the three DXVK toggles are scheduled resolvers; Phase 87 Plan 26: 53/2 -> 52/2, getAlternativeWine is a native `wine` channel; Phase 87 Plan 24: 54/2 -> 53/2, wine.isValidVersion is a native `wine` channel; Phase 87 Plan 20: 57/2 -> 54/2, installWineVersion, refreshWineVersionInfo and removeWineVersion are native `wine` channels; Phase 87 Plan 18: 58/2 -> 57/2, downloadRuntime is a native `wine` channel; Phase 87 Plan 17: 59/2 -> 58/2, isRuntimeInstalled is a native `wine` channel; Phase 86 Plan 22: 60/2 -> 59/2, getWikiGameInfo is a native `info` channel; Phase 86 Plan 16: 65/2 -> 60/2, the five ITAD channels are native `info` channels; Phase 86 Plan 15: 70/2 -> 65/2, the five steamgriddb.* channels are native `info` channels; Phase 47 Plan 12: 70/2 -> 72/2, +2 invoke itad.getKeyStatus/itad.setApiKey; Quick 261029-mkz, d601ff705: 68/2 -> 70/2, +2 invoke getRunsForMeMap/setRunsForMe, +0 send; Quick 261027-ch9, a2385f6bf: 67/2 -> 68/2, +1 invoke getGamelibFixStatus, +0 send; Quick 261012-ca6, 2026-10-12: 65/4 -> 67/2, +2 invoke -2 send, kind-swapped not added, total channels unchanged; Phase 34.6 Plan 10: 59/5 -> 62/5, +3 invoke +0 send; Phase 45 Plan 01, 2026-10-10: 62/5 -> 65/5, +3 invoke winetricksApply/winetricksQueueState/winetricksCancelRemaining +0 send; Phase 45 Plan 02, 2026-10-10: 65/5 -> 65/4, +0 invoke -1 send — winetricksInstall retired outright, not kind-swapped)', () => {
     const handleChannels = [...handlerRegistry.keys()]
     const listenChannels = [...listenerRegistry.entries()]
       .filter(([, listeners]) => listeners.length > 0)
@@ -608,11 +595,15 @@ describe('completeness — all 66 channels are registered with the right kind, a
     // winetricksQueueState/winetricksCancelRemaining are native `wine` channels -- 49-5=44.
     // Phase 87 Plan 36 (D-23): runWineCommandForGame, runWineCommand and callTool are scheduled resolvers -- 44-3=41.
     // Phase 88 Plan 08 (D-19): getKnownFixes and getGamelibFixStatus are native `knownfix` channels -- 41-2=39.
-    expect(handleChannels.length).toBe(39)
-    expect(listenChannels.length).toBe(2)
+    // Phase 94 Plan 11: `shortcutsExists` is a scheduled resolver, not one of the six modules' -- 41-1=40.
+    // Phase 94 Plan 22: `addShortcut` left first (40-1=39), then the shortcuts module was deleted: its four remaining
+    // After the 88/94 merge: 41 - 2 (88-08) - 1 (shortcutsExists) - 1 (addShortcut) - 4 (the shortcuts module's
+    // remaining handles) = 33 handles, and 2 - 1 (processShortcut) = 1 listener.
+    expect(handleChannels.length).toBe(33)
+    expect(listenChannels.length).toBe(1)
   })
 
-  it('the send set is precisely the 2 named channels — set equality, not a size-only check (a size-only check would pass if two channels swapped kinds)', () => {
+  it('the send set is precisely the 1 named channel — set equality, not a size-only check (a size-only check would pass if two channels swapped kinds)', () => {
     const listenChannels = new Set(
       [...listenerRegistry.entries()]
         .filter(([, listeners]) => listeners.length > 0)
@@ -639,7 +630,7 @@ describe('completeness — all 66 channels are registered with the right kind, a
     }
   )
 
-  it('per-module declared counts are exactly 11 / 7 / 11 / 8 / 4, totalling 41 (Phase 88 Plan 08: enrichment 6 -> 4, getKnownFixes and getGamelibFixStatus are native `knownfix` channels; Phase 87 Plan 36: registerWineToolsFlows 2 -> 0 and the module is deleted, callTool leaves registerRunnerMiscFlows 12 -> 11, all three are scheduled resolvers; Phase 87 Plan 35: registerWineToolsFlows 4 -> 2, winetricksAvailable and winetricksInstalled are scheduled resolvers; Phase 87 Plan 34: registerWineToolsFlows 7 -> 4, the three DXVK toggles are scheduled resolvers; Phase 87 Plan 26: registerWineToolsFlows 8 -> 7, getAlternativeWine is a native `wine` channel; Phase 87 Plan 24: registerWineToolsFlows 9 -> 8, wine.isValidVersion is a native `wine` channel; Phase 87 Plan 20: registerWineToolsFlows 12 -> 9, installWineVersion, refreshWineVersionInfo and removeWineVersion are native `wine` channels; Phase 87 Plan 18: registerRunnerMiscFlows 13 -> 12, downloadRuntime is a native `wine` channel; Phase 87 Plan 17: registerRunnerMiscFlows 14 -> 13, isRuntimeInstalled is a native `wine` channel; Phase 86 Plan 22: enrichment 7 -> 6, getWikiGameInfo is a native `info` channel; Phase 86 Plan 16: enrichment 12 -> 7, the five ITAD channels are native `info` channels; Phase 86 Plan 15: enrichment 17 -> 12, the five steamgriddb.* channels are native `info` channels; Phase 86 Plan 12: enrichment 18 -> 17, getAnticheatInfo is a native `info` channel; Phase 86 Plan 08: enrichment 19 -> 18, removeRecent is a native `info` channel; Phase 47 Plan 12: enrichment 17 -> 19; Quick 261029-mkz, d601ff705: enrichment 15 -> 17; Quick 261027-ch9, a2385f6bf: enrichment 14 -> 15; Phase 34.6 Plan 10: registerRunnerMiscFlows grew 11 -> 14; Phase 45 Plan 02 retired winetricksInstall from registerWineToolsFlows, 13 -> 12)', () => {
+  it('per-module declared counts are exactly 11 / 11 / 8 / 4, totalling 34 (88/94 merge: the removals of both phases together; Phase 94 Plan 22: registerShortcutsFlows 6 -> 0 and the module is deleted; Phase 94 Plan 11: registerShortcutsFlows 7 -> 6, shortcutsExists is a scheduled resolver; Phase 88 Plan 08: enrichment 6 -> 4, getKnownFixes and getGamelibFixStatus are native `knownfix` channels; Phase 87 Plan 36: registerWineToolsFlows 2 -> 0 and the module is deleted, callTool leaves registerRunnerMiscFlows 12 -> 11, all three are scheduled resolvers; Phase 87 Plan 35: registerWineToolsFlows 4 -> 2, winetricksAvailable and winetricksInstalled are scheduled resolvers; Phase 87 Plan 34: registerWineToolsFlows 7 -> 4, the three DXVK toggles are scheduled resolvers; Phase 87 Plan 26: registerWineToolsFlows 8 -> 7, getAlternativeWine is a native `wine` channel; Phase 87 Plan 24: registerWineToolsFlows 9 -> 8, wine.isValidVersion is a native `wine` channel; Phase 87 Plan 20: registerWineToolsFlows 12 -> 9, installWineVersion, refreshWineVersionInfo and removeWineVersion are native `wine` channels; Phase 87 Plan 18: registerRunnerMiscFlows 13 -> 12, downloadRuntime is a native `wine` channel; Phase 87 Plan 17: registerRunnerMiscFlows 14 -> 13, isRuntimeInstalled is a native `wine` channel; Phase 86 Plan 22: enrichment 7 -> 6, getWikiGameInfo is a native `info` channel; Phase 86 Plan 16: enrichment 12 -> 7, the five ITAD channels are native `info` channels; Phase 86 Plan 15: enrichment 17 -> 12, the five steamgriddb.* channels are native `info` channels; Phase 86 Plan 12: enrichment 18 -> 17, getAnticheatInfo is a native `info` channel; Phase 86 Plan 08: enrichment 19 -> 18, removeRecent is a native `info` channel; Phase 47 Plan 12: enrichment 17 -> 19; Quick 261029-mkz, d601ff705: enrichment 15 -> 17; Quick 261027-ch9, a2385f6bf: enrichment 14 -> 15; Phase 34.6 Plan 10: registerRunnerMiscFlows grew 11 -> 14; Phase 45 Plan 02 retired winetricksInstall from registerWineToolsFlows, 13 -> 12)', () => {
     const counts = MODULES.map((m) => m.declaredChannels.length)
     // Measured (jest failure ACTUAL) and independently re-derived (64 prior total + 3 new = 67,
     // then -1 for winetricksInstall's retirement = 66, then +1 getGamelibFixStatus = 67, then +2 getRunsForMeMap/setRunsForMe = 69, then +2 itad.getKeyStatus/itad.setApiKey = 71) — agree.
@@ -657,8 +648,13 @@ describe('completeness — all 66 channels are registered with the right kind, a
     // Phase 87 Plan 35 (D-23): 48 - 2 (winetricksAvailable, winetricksInstalled) = 46.
     // Phase 87 Plan 36 (D-23): 46 - 2 (runWineCommandForGame, runWineCommand: the module is deleted) - 1 (callTool) = 43.
     // Phase 88 Plan 08 (D-19): 43 - 2 (getKnownFixes, getGamelibFixStatus) = 41.
-    expect(counts).toEqual([11, 7, 11, 8, 4])
-    expect(counts.reduce((sum, n) => sum + n, 0)).toBe(41)
+    // Phase 94 Plan 11: 43 - 1 (shortcutsExists, a scheduled resolver) = 42; registerShortcutsFlows 7 -> 6.
+    // Phase 94 Plan 22: 42 - 1 (addShortcut, a scheduled resolver) = 41; registerShortcutsFlows 6 -> 5.
+    // Phase 94 Plan 22: 41 - 5 (the shortcuts module: `removeShortcut`, `addToSteam`, `removeFromSteam`,
+    // `isAddedToSteam` and `processShortcut`, all scheduled resolvers or moved) = 36; the module is deleted.
+    // After the 88/94 merge: 43 - 2 (88-08) - 7 (the whole shortcuts module, 94-11 and 94-22) = 34.
+    expect(counts).toEqual([11, 11, 8, 4])
+    expect(counts.reduce((sum, n) => sum + n, 0)).toBe(34)
   })
 
   afterAll(() => {

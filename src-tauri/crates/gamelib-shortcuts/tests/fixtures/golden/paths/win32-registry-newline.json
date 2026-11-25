@@ -1,0 +1,23 @@
+{
+  "platform": "win32",
+  "windowsRegistry": true,
+  "input": {
+    "title": "Line1\nLine2",
+    "units": [
+      76,
+      105,
+      110,
+      101,
+      49,
+      10,
+      76,
+      105,
+      110,
+      101,
+      50
+    ]
+  },
+  "sanitized": "Line1Line2",
+  "desktop": "Z:\\GameLibOracle\\Desktop\\Line1Line2.lnk",
+  "menu": "<APPDATA>\\Microsoft\\Windows\\Start Menu\\Programs\\Line1Line2.lnk"
+}

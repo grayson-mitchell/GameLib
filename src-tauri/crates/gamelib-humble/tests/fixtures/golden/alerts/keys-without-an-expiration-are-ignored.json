@@ -1,0 +1,26 @@
+{
+  "input": {
+    "about": "A null expiration is never a transition: nothing shown, nothing written",
+    "locale": "en",
+    "dateLocale": "en-US (pinned, the host default is not recorded)",
+    "steamDeckGameMode": false
+  },
+  "runs": [
+    {
+      "keys": [
+        {
+          "gamekey": "fake-gamekey-0001",
+          "machineName": "fake_game_1_steam",
+          "title": "Fake Game One",
+          "expiration": null
+        }
+      ],
+      "suppressNotifications": false,
+      "notifyHumbleExpirations": true,
+      "i18nCalls": [],
+      "notifications": []
+    }
+  ],
+  "stateBefore": {},
+  "stateAfter": {}
+}

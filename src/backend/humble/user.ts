@@ -11,19 +11,19 @@ import {
 import { getSessionStatus } from './adapter'
 import type { HumbleSyncFence } from './syncFence'
 import { HumbleUserData } from 'common/types/humble'
-import { standardBrowserUserAgent } from './userAgent'
+import { standardBrowserUserAgent } from '../login/userAgent'
 import {
   classifyCookieRead,
   type CookieReadVerdict,
   type LoginWindowSeamSlot
-} from './loginWindowSeam'
+} from '../login/loginWindowSeam'
 import type { HumbleSecretKey, HumbleSecretStore } from './secretStore'
 import type { SignInProbeOutcome } from 'common/signInState'
 import type { AppInfo } from 'backend/process/context'
 import type { ManagerDeps, Stores } from 'backend/services/types'
 
 // Re-exported so existing callers (user.test.ts, plus the D-08
-// GAMELIB_LOGIN_SEAM_SMOKE hook in humbleLoginFlowRegistration.ts) are
+// GAMELIB_LOGIN_SEAM_SMOKE hook in loginSeamRegistration.ts) are
 // unaffected by the round-6 move into its own module (see userAgent.ts's doc
 // comment for why the move was needed). The `humbleGetLoginUserAgent` IPC
 // handler that used to call this via ipc_handler.ts was removed by Phase 40
@@ -273,7 +273,7 @@ export class HumbleUser {
     // session shape under the Tauri sidecar (tauri-login-webview-cookies.md §
     // "Requirements" #7), so a seam is installed at sidecar startup and
     // drives a real Rust-owned login window instead. `loginWindowSeam.getOrThrow()`
-    // enforces that precondition — if registerHumbleLoginFlows() has not yet
+    // enforces that precondition — if registerLoginWindowSeam() has not yet
     // run, this throws rather than silently falling back to a dead path.
     const seam = this.deps.loginWindowSeam.getOrThrow()
     // The hoisted function declarations below have no `this`; they reach the instance through

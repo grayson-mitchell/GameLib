@@ -1,0 +1,19 @@
+{
+  "family": "icon",
+  "input": {
+    "title": "Factorio",
+    "installDirectory": "Factorio",
+    "files": {
+      "bin/x64/factorio.exe": 10,
+      "Other.exe": 900
+    },
+    "storeExecutable": null,
+    "shell": "file",
+    "injectedEntriesBeforeTheRealOnes": 0
+  },
+  "answer": {
+    "icon": "<HOME>\\Games\\Factorio\\bin\\x64\\factorio.exe",
+    "iconIndex": 0,
+    "source": "install-dir"
+  }
+}

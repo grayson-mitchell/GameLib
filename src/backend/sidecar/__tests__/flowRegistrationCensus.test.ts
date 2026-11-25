@@ -81,7 +81,9 @@ const EXPECTED: Record<string, { invoke: number; send: number }> = {
   //
   // Phase 83 Plan 03 / 83-03 (2026-11-20): invoke 7 -> 6 -- `getHeroicVersion` is served by the Rust native
   // router (nativeChannels.json), so its sidecar registration is gone. Send count unchanged.
-  'appShellFlowRegistration.ts': { invoke: 6, send: 13 },
+  // Phase 94 Plan 22 (D-27): send 13 -> 14 -- `processShortcut` (ctrl+q/k/j/l) moved here UNCHANGED from the deleted
+  // `shortcutsFlowRegistration.ts`, installed by `registerProcessShortcut`.
+  'appShellFlowRegistration.ts': { invoke: 6, send: 14 },
   'clipboardFlowRegistration.ts': { invoke: 1, send: 2 },
   // Phase 61 Plan 13 (2026-11-07): the store-agnostic engine domain (getEngineState, listEngineOptions,
   // getDefaultEngine, getPerGameBottleName, dismissEngineNotice)
@@ -112,7 +114,9 @@ const EXPECTED: Record<string, { invoke: number; send: number }> = {
   // Phase 86 Plan 10 (D-17): invoke 16 -> 14 -- `getAllGameOverrides` and
   // `getGameMetadataOverride` are native `info` channels.
   'gameDetailsFlowRegistration.ts': { invoke: 14, send: 3 },
-  'humbleFlowRegistration.ts': { invoke: 15, send: 1 },
+  // Phase 94 Plan 13 (D-16): invoke 15 -> 13 -- `humbleGetGiftedAt` and `humbleGetOwnershipOverrides` are
+  // native `humble` channels.
+  'humbleFlowRegistration.ts': { invoke: 13, send: 1 },
   // Phase 40 Plan 03 (D-11): invoke 4 -> 3, send 2 -> 1 -- `humbleGetLoginUserAgent`
   // (invoke-kind) and `humbleLoginNavigated` (send-kind) removed after a four-surface sweep
   // found zero remaining callers (see 40-CHANNEL-RECENSUS.md); their only renderer caller was
@@ -147,7 +151,11 @@ const EXPECTED: Record<string, { invoke: number; send: number }> = {
   'shellFilesFlowRegistration.ts': { invoke: 3, send: 10 },
   // Quick 261012-ca6 (2026-10-12): invoke 4 -> 6, send 3 -> 1 -- `addShortcut` and
   // `removeShortcut` moved from send to invoke so the renderer can learn the write's outcome.
-  'shortcutsFlowRegistration.ts': { invoke: 6, send: 1 },
+  // Phase 94 Plan 11: invoke 6 -> 5 -- `shortcutsExists` is the scheduled resolver `resolveShortcutsExists`
+  // (`shortcutsResolvers.ts`), answered by Rust.
+  // Phase 94 Plan 22: the row is gone with `shortcutsFlowRegistration.ts` (D-27, SC4). Its five invoke channels are
+  // scheduled resolvers (`humbleshortcuts/shortcuts.ts`, registered by `registerShortcutsResolvers`) answered by
+  // Rust; `processShortcut` moved unchanged to `appShellFlowRegistration.ts` (send +1, below).
   // Phase 51 Plan 13 (2026-10-21): invoke 18 -> 20 -- `getSteamBridgeRoute` and
   // `setSteamBridgeUserRoute` registered for the bridge-routing notice dialog.
   // Quick 261024-h5y (2026-10-24): invoke 20 -> 21 -- the bottled-Steam "finish install" channel
@@ -188,6 +196,10 @@ const EXPECTED: Record<string, { invoke: number; send: number }> = {
  * names both of its handlers outright, so neither states a number.
  */
 const NO_COUNT_CLAIM = new Set([
+  // Phase 94 Plan 22: the file holds `registerProcessShortcut`'s one send channel next to `registerAppShellFlows`'s
+  // 19, so the registration function's docstring states its own 19 (6 invoke + 13 send) in words that are not a
+  // file-wide total, and the file's census total is the EXPECTED row above.
+  'appShellFlowRegistration.ts',
   'dialogFlowRegistration.ts',
   'steamAuthFlowRegistration.ts',
   'steamFlowRegistration.ts'

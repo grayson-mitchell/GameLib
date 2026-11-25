@@ -1,0 +1,19 @@
+{
+  "family": "icon",
+  "input": {
+    "title": "Total War: PHARAOH DYNASTIES",
+    "installDirectory": "Total War PHARAOH DYNASTIES",
+    "files": {
+      "Pharaoh.exe": 100,
+      "launcher/launcher.exe": 900
+    },
+    "storeExecutable": null,
+    "shell": "file",
+    "injectedEntriesBeforeTheRealOnes": 0
+  },
+  "answer": {
+    "icon": "<HOME>\\Games\\Total War PHARAOH DYNASTIES\\Pharaoh.exe",
+    "iconIndex": 0,
+    "source": "install-dir"
+  }
+}

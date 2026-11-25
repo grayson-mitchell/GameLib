@@ -1,0 +1,30 @@
+{
+  "platform": "win32",
+  "windowsRegistry": true,
+  "input": {
+    "title": "Game `touch pwned`",
+    "units": [
+      71,
+      97,
+      109,
+      101,
+      32,
+      96,
+      116,
+      111,
+      117,
+      99,
+      104,
+      32,
+      112,
+      119,
+      110,
+      101,
+      100,
+      96
+    ]
+  },
+  "sanitized": "Game `touch pwned`",
+  "desktop": "Z:\\GameLibOracle\\Desktop\\Game `touch pwned`.lnk",
+  "menu": "<APPDATA>\\Microsoft\\Windows\\Start Menu\\Programs\\Game `touch pwned`.lnk"
+}

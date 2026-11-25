@@ -1,0 +1,21 @@
+{
+  "fn": "describeSkippedEntitlements",
+  "input": {
+    "order": {
+      "gamekey": "order-gog",
+      "human_name": "GOG Bundle",
+      "tpkd_dict": {
+        "all_tpks": [
+          {
+            "machine_name": "goggame_gog",
+            "human_name": "GOG Game",
+            "key_type": "gog",
+            "redeemed_key_value": null,
+            "expiration": null
+          }
+        ]
+      }
+    }
+  },
+  "output": null
+}

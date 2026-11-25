@@ -24,8 +24,10 @@
  * `main.rs`'s 60s `INVOKE_TIMEOUT`, so a stuck conversion surfaces as a named shim error rather
  * than an opaque transport timeout.
  *
- * Two production call sites this shim exists to un-stub, both cited here so a future reader can
- * find them without re-deriving the trace:
+ * Phase 94 plan 24 deleted the two production call sites this shim was written for (the TypeScript
+ * shortcuts service moved to Rust); the host `imageTools` service still wraps it until Phase 98, and
+ * the macOS icon geometry oracle (`testUtils/shortcutsIconGeometry`) still drives it. They were, cited
+ * here so a future reader can find the history without re-deriving the trace:
  *   - `shortcuts.ts:259` `nativeImage.createFromBuffer(iconBuffer)` — the macOS `.app` shortcut's
  *     `convertPngToICNS` chain, previously dead for EVERY macOS game (F-34.5-G6-07).
  *   - `steamhelper.ts:121` `nativeImage.createFromDataURL(imgUrl).toJPEG(90)` — reached from
@@ -60,7 +62,7 @@ const SIPS_TIMEOUT_MS = 15_000
  * (shortcuts.ts convertPngToICNS, steamhelper.ts createFromDataURL().toJPEG).
  */
 const SYNC_REASON =
-  "mirrors Electron's synchronous NativeImage API; both production call sites chain it synchronously (shortcuts.ts convertPngToICNS, steamhelper.ts createFromDataURL().toJPEG)"
+  "mirrors Electron's synchronous NativeImage API; its two call sites (the macOS shortcut icon chain and the Steam artwork conversion, both in Rust since Phase 94) chained it synchronously"
 
 export interface NativeImageDeps {
   runSync: ProcessRunner['runSync']

@@ -1,0 +1,61 @@
+[package]
+name = "gamelib-humble"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.77.2"
+publish = false
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+# Tauri-free Humble Bundle services (Phase 94, SVC-04): the session, library sync, key redeem and the
+# TS regex-and-date parity ports, from the TypeScript sidecar. No `tauri`, no `keyring` (the shell owns
+# the Keychain and hands secrets in through its own seam), no environment reads, and no dependency on
+# `gamelib-shortcuts` (or the reverse): directories, clock and platform arrive in `HumbleCtx`.
+gamelib-core = { path = "../gamelib-core" }
+# Persisted state goes through the one store owner (Phase 85), never file I/O of this crate's own.
+gamelib-store = { path = "../gamelib-store" }
+# User-facing notice text is resolved through the shared catalog.
+gamelib-i18n = { path = "../gamelib-i18n" }
+# `rt-multi-thread` like gamelib-info's runtime: the shell calls `dispatch_sync` from several plain
+# worker threads, and concurrent `block_on` calls on a current-thread runtime stall. `sync` for the
+# single-flight sign-in and sync slots.
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "sync"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# The shell's pin (src-tauri/Cargo.toml): no default features, the TLS provider is installed by the
+# shell. The `query` feature stays OFF: query strings are built by hand, because reqwest's `.query()`
+# encodes differently from axios.
+reqwest = { version = "0.13", default-features = false, features = ["rustls-no-provider"] }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std"] }
+# Order and redeem URLs, and the host check on a download link.
+url = "2"
+# JS `encodeURIComponent` parity for the key-redeem and order paths.
+percent-encoding = "2"
+# The Humble page and key-text patterns: every pattern spells its JS semantics out (`.`, `\s`, `\d`), so
+# no Unicode table feature is needed (and a stray `\s` or `\d` fails to compile rather than quietly
+# matching the Rust set; the gamelib-info rule). The version the lockfile already holds. `unicode-gencat`
+# (and nothing else) is on for the Steam app-id resolver, whose JS patterns are `\p{M}`, `\p{L}` and
+# `\p{N}` over the `u` flag; it adds no `\s`, `\d` or `\w`, so a stray shorthand class still fails to compile.
+regex = { version = "1", default-features = false, features = ["std", "perf", "unicode-gencat"] }
+# NFKD for the resolver's title match (`String.prototype.normalize('NFKD')`). Already in the lockfile and in use by
+# gamelib-info and gamelib-safety; no new package.
+unicode-normalization = "0.1"
+# Fixed-offset civil time only (order dates, the sync timestamp): no tz database is read.
+jiff = { version = "0.2", default-features = false, features = ["std"] }
+
+[features]
+# Replay seams for the golden tests and any CLI (later plans add theirs).
+testing = []
+
+[dev-dependencies]
+gamelib-humble = { path = ".", features = ["testing"] }
+gamelib-testutil = { path = "../gamelib-testutil" }
+tempfile = "3"
+# `start_paused` for the resolver's 350 ms gaps: a paused clock makes the sleeps instant and countable.
+tokio = { version = "1", features = ["test-util"] }
+
+[lints.clippy]
+dbg_macro = "deny"
+todo = "deny"

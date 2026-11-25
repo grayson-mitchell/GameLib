@@ -16,6 +16,14 @@ import { fakeSafetyRustInvoke } from 'backend/testUtils/fakeSafetyRust'
 import type { RequestRustInvoke } from 'backend/host'
 import type { GOGManagerDeps } from '../library'
 
+// Phase 94 Plan 22: an uninstall also asks Rust to remove the game's desktop and Steam shortcuts (`shortcuts_remove` and
+// `shortcuts_steam_remove`, resolvers in `humbleshortcuts/shortcuts.ts`); the safety fake answers every other channel
+// through its `base`, so these tests give it an answer for exactly those two and nothing else.
+const shortcutsReply: RequestRustInvoke = (channel) =>
+  channel === 'shortcuts_remove' || channel === 'shortcuts_steam_remove'
+    ? Promise.resolve(null)
+    : Promise.reject(new Error(`unexpected channel ${channel}`))
+
 const ID = '1207658930'
 const root = join(tmpdir(), `gamelib-gog-uninstall-safety-${process.pid}`)
 const paths = createTestAppPaths(root)
@@ -247,7 +255,7 @@ describe('GOGGame.uninstall guard (82-07)', () => {
   })
 
   it('a yes verdict removes both folders and the manifest, then writes the installed store', async () => {
-    const { requestRustInvoke } = fakeSafetyRustInvoke()
+    const { requestRustInvoke } = fakeSafetyRustInvoke({ base: shortcutsReply })
     const h = build(requestRustInvoke)
 
     const res = await h.game.uninstall({ shouldRemovePrefix: false })
@@ -266,7 +274,9 @@ describe('GOGGame.uninstall guard (82-07)', () => {
   winIt(
     'a yes verdict runs unins000.exe once, elevated, with the full switch set (261120-uzn)',
     async () => {
-      const { requestRustInvoke } = fakeSafetyRustInvoke()
+      const { requestRustInvoke } = fakeSafetyRustInvoke({
+        base: shortcutsReply
+      })
       const h = build(requestRustInvoke)
 
       await h.game.uninstall({ shouldRemovePrefix: false })
@@ -296,7 +306,9 @@ describe('GOGGame.uninstall guard (82-07)', () => {
 
   it('an absent gog-support folder does not block the uninstall (CR-01)', async () => {
     rmSync(gogSupportPath, { recursive: true, force: true })
-    const { requestRustInvoke, calls } = fakeSafetyRustInvoke()
+    const { requestRustInvoke, calls } = fakeSafetyRustInvoke({
+      base: shortcutsReply
+    })
     const h = build(requestRustInvoke)
 
     const res = await h.game.uninstall({ shouldRemovePrefix: false })

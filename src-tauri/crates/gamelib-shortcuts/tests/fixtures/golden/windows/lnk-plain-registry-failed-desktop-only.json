@@ -1,0 +1,52 @@
+{
+  "family": "lnk",
+  "platform": "win32",
+  "input": {
+    "title": "Plain Game",
+    "appName": "plainapp",
+    "runner": "legendary",
+    "settings": {
+      "addDesktopShortcuts": true,
+      "addStartMenuShortcuts": false
+    },
+    "fromMenu": false,
+    "registryDesktop": null,
+    "powershell": {
+      "code": 0
+    },
+    "lnkPresentAfterExit0": true,
+    "install": null
+  },
+  "outcome": {
+    "result": "rejected",
+    "message": "Could not write shortcuts: Desktop: the Windows Desktop folder could not be read from the registry (User Shell Folders \"Desktop\"), so no Desktop shortcut was written"
+  },
+  "spawns": [
+    {
+      "program": "reg.exe",
+      "argv": [
+        "query",
+        "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders",
+        "/v",
+        "Desktop"
+      ],
+      "options": {
+        "replaceEnv": false,
+        "timeoutMs": 5000,
+        "windowsHide": true,
+        "inheritsProcessEnv": null
+      },
+      "envDiff": {
+        "set": {},
+        "unset": []
+      },
+      "cwd": null,
+      "stdin": null,
+      "result": {
+        "code": 1,
+        "stdout": "",
+        "stderr": "ERROR: not found"
+      }
+    }
+  ]
+}

@@ -1,0 +1,51 @@
+{
+  "fn": "classifyOrder",
+  "input": {
+    "order": {
+      "gamekey": "order-unknown-platform",
+      "product": {
+        "category": "bundle",
+        "human_name": "Indie Store Bundle"
+      },
+      "tpkd_dict": {
+        "all_tpks": [
+          {
+            "machine_name": "indiegame_weirdstore",
+            "gamekey": "order-unknown-platform",
+            "key_type": "weirdstore",
+            "key_type_human_name": "Weird Store",
+            "human_name": "Indie Game",
+            "is_expired": false
+          }
+        ]
+      }
+    },
+    "revealed": {
+      "all": true
+    },
+    "redeemed": {
+      "all": false
+    },
+    "now": "2026-11-24T12:00:00.000Z"
+  },
+  "output": {
+    "gamekey": "order-unknown-platform",
+    "keys": [
+      {
+        "gamekey": "order-unknown-platform",
+        "machineName": "indiegame_weirdstore",
+        "state": "REVEALED",
+        "title": "Indie Game",
+        "platform": "weirdstore",
+        "expiration": null,
+        "origin": "Indie Store Bundle",
+        "ownedElsewhere": false,
+        "matchConfidence": "none"
+      }
+    ],
+    "allTerminal": false,
+    "freezeEligible": false,
+    "keyIndexByComposite": {},
+    "revealedKeyValueByComposite": {}
+  }
+}

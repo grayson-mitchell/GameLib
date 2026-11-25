@@ -1,0 +1,37 @@
+{
+  "input": {
+    "runner": "gog",
+    "appName": "1207658645",
+    "artSquare": "https://art.example.test/square.{ext}",
+    "installPathGiven": false,
+    "installFiles": [
+      "goggame-1207658645.ico"
+    ],
+    "productApi": {
+      "kind": "icon",
+      "icon": "//images.gog.example/abc_icon.png"
+    },
+    "presentIcons": [],
+    "download": "ok",
+    "iconsFolderExistedBefore": false
+  },
+  "outcome": {
+    "result": "resolved",
+    "icon": "<ICONS>/1207658645.png"
+  },
+  "productApiCalls": [
+    "1207658645"
+  ],
+  "aborts": [
+    "https://images.gog.example/abc_icon.png"
+  ],
+  "downloads": [
+    {
+      "url": "https://images.gog.example/abc_icon.png",
+      "dest": "<ICONS>/1207658645.png"
+    }
+  ],
+  "iconsFolder": [
+    "1207658645.png"
+  ]
+}

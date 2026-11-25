@@ -1,0 +1,15 @@
+{
+  "fn": "describeSkippedEntitlements",
+  "input": {
+    "order": {
+      "gamekey": "order-stripped",
+      "uid": "uid-stripped",
+      "product": {
+        "category": "bundle",
+        "human_name": "Stripped Order"
+      },
+      "subproducts": []
+    }
+  },
+  "output": null
+}

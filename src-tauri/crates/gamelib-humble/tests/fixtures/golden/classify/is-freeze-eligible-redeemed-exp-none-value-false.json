@@ -1,0 +1,11 @@
+{
+  "fn": "isFreezeEligible",
+  "input": {
+    "key": {
+      "state": "REDEEMED",
+      "expiration": null,
+      "revealedKeyValuePresent": false
+    }
+  },
+  "output": true
+}

@@ -1,0 +1,83 @@
+{
+  "input": {
+    "about": "An empty item list is a miss, recorded with checkedAt and the term version",
+    "seed": {}
+  },
+  "trace": [
+    {
+      "seq": 0,
+      "atMs": 0,
+      "kind": "request",
+      "params": {
+        "term": "Fake Missing Game",
+        "l": "english",
+        "cc": "US"
+      },
+      "timeoutMs": 8000,
+      "userAgent": "GameLib"
+    }
+  ],
+  "runs": [
+    {
+      "titles": [
+        "Fake Missing Game"
+      ],
+      "summary": {
+        "requested": 1,
+        "resolved": 0,
+        "cached": 0,
+        "misses": 1,
+        "errors": 0,
+        "deferred": 0
+      },
+      "lookups": [
+        {
+          "title": "Fake Missing Game",
+          "cached": null
+        }
+      ]
+    }
+  ],
+  "requests": [
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Fake+Missing+Game&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    }
+  ],
+  "logs": [
+    {
+      "seq": 1,
+      "atMs": 0,
+      "level": "info",
+      "message": "Humble: resolved 0/1 Steam app ids (0 cached, 1 misses, 0 errors, 0 deferred)"
+    }
+  ],
+  "stateBefore": {},
+  "stateAfter": {
+    "store_cache/humble_steam_appid.json": {
+      "utf8": "{\n\t\"fake missing game\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521600000,\n\t\t\"termVersion\": 2\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"fake missing game\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t}\n}"
+    }
+  }
+}

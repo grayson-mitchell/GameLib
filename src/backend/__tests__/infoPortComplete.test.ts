@@ -608,10 +608,9 @@ describe('discountsPortComplete', () => {
  * both to them. This list is exactly the files that hold such a member and can only shrink: delete the
  * member, the handlers.ts line, then the entry. OWED once handlers.ts is clean.
  */
-const INERT_DEPS_EXEMPT = [
-  'src/backend/sidecar/enrichmentFlowRegistration.ts',
-  'src/backend/sidecar/shortcutsFlowRegistration.ts'
-]
+// Phase 94 Plan 22 deleted `sidecar/shortcutsFlowRegistration.ts` (and with it its inert `infoCaches` and `appRuntime`
+// members and the handlers.ts lines that passed them), so only one file is left.
+const INERT_DEPS_EXEMPT = ['src/backend/sidecar/enrichmentFlowRegistration.ts']
 
 /**
  * 86-24 (SC4, D-13, D-18 and D-29 row 5): the wiki game info slice, umu included, is Rust. The CodeWeavers,
@@ -719,14 +718,15 @@ describe('wikiPortComplete', () => {
     expect(generator?.code).toContain("'umu'")
   })
 
-  it('info/wiki.ts holds the shims and the resolver and reaches Rust only through the two wiki constants', () => {
+  // Phase 94 plan 24: the `getWikiGameInfo` resolver (RUST_INFO_WIKI_GET) is deleted; the Rust shortcuts crate reaches the
+  // wiki lookup in-process through the shell's `WikiLookup`, so only the two shims remain.
+  it('info/wiki.ts holds the two shims and reaches Rust only through the umu and wiki-cache constants', () => {
     const calls = findRustInfoCalls(tsWalk.files).filter((c) =>
       c.path.endsWith('src/backend/info/wiki.ts')
     )
     expect(calls.map((c) => c.constant).sort()).toEqual([
       'RUST_INFO_UMU_GET',
-      'RUST_INFO_WIKI_CACHE_CLEAR',
-      'RUST_INFO_WIKI_GET'
+      'RUST_INFO_WIKI_CACHE_CLEAR'
     ])
     const wiki = tsWalk.files.find((f) => f.path === 'src/backend/info/wiki.ts')
     expect(wiki?.code).not.toMatch(/axios|fetch\(|URLSearchParams/)

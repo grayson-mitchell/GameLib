@@ -1,0 +1,34 @@
+{
+  "platform": "win32",
+  "windowsRegistry": false,
+  "input": {
+    "title": "Tom & Jerry && echo hi",
+    "units": [
+      84,
+      111,
+      109,
+      32,
+      38,
+      32,
+      74,
+      101,
+      114,
+      114,
+      121,
+      32,
+      38,
+      38,
+      32,
+      101,
+      99,
+      104,
+      111,
+      32,
+      104,
+      105
+    ]
+  },
+  "sanitized": "Tom & Jerry && echo hi",
+  "desktop": null,
+  "menu": "<APPDATA>\\Microsoft\\Windows\\Start Menu\\Programs\\Tom & Jerry && echo hi.lnk"
+}

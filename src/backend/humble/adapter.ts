@@ -5,7 +5,7 @@ import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { AdapterResult } from 'common/types/humble'
 import { HUMBLE_BASE_URL, ORY_SESSION_COOKIE_PREFIX } from './constants'
 import type { AppInfo } from 'backend/process/context'
-import type { LoginWindowSeamSlot } from './loginWindowSeam'
+import type { LoginWindowSeamSlot } from '../login/loginWindowSeam'
 import type { HumbleActionIdCache, HumbleActionIdEntry } from './actionIdCache'
 
 /**

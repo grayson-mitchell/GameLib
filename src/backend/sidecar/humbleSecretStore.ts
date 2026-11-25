@@ -17,8 +17,8 @@
  * first-run case (not logged), and a genuine failure logs exactly one warning naming the
  * channel — never the secret value. There is no fallback of any kind here (D-08/REQ-28-07) —
  * a keyring failure is a failure; the one-time plaintext migration (this module, added by this
- * plan's Task 2) is a distinct, separately-guarded concern layered on top, not a fallback
- * baked into this store's own methods.
+ * plan's Task 2, now Rust's since Phase 94) is a distinct, separately-guarded concern layered on top, not a
+ * fallback baked into this store's own methods.
  *
  * Import discipline: this module imports the slot-name constants from `keyringTokenStore.ts`
  * rather than retyping the literals `'humble-session'`/`'humble-csrf'` — a drift between the TS
@@ -38,12 +38,8 @@
  * cached session, the same correctness floor `SidecarKeyringSlotStore` documents for itself.
  */
 
-import { logInfo, logWarning, LogPrefix } from '../logger'
+import { logInfo, LogPrefix } from '../logger'
 import type { RequestRustInvoke } from '../host'
-import {
-  RUST_KEYRING_GET,
-  RUST_KEYRING_SET
-} from 'common/types/sidecarTransport'
 import {
   SidecarKeyringSlotStore,
   KEYRING_SLOT_HUMBLE_SESSION,
@@ -51,8 +47,6 @@ import {
 } from './keyringTokenStore'
 import type { HumbleSecretStore, HumbleSecretKey } from '../humble/secretStore'
 import type { TokenReadOutcome } from '../storeManagers/steam/tokenStore'
-import type { Stores } from '../services/types'
-import { HUMBLE_TOKEN_STORE_KEY } from '../humble/constants'
 
 export class SidecarHumbleSecretStore implements HumbleSecretStore {
   /** One `SidecarKeyringSlotStore` per secret, owned by THIS instance (D-05, C-WR-2: the former
@@ -138,8 +132,8 @@ export class SidecarHumbleSecretStore implements HumbleSecretStore {
 /**
  * Builds the keyring-backed Humble secret store the boot injects into `createHumbleServices()`
  * (a boot-built instance, no registry). Construction does no I/O and arms nothing; the receipt
- * line and the one-time plaintext migration belong to `startSidecarHumbleSecretStore()` below,
- * which the 'secret-stores' boot step runs after the RPC server is bound (T-28-10 placement).
+ * line belongs to `startSidecarHumbleSecretStore()` below, which the 'secret-stores' boot step runs
+ * after the RPC server is bound (T-28-10 placement).
  */
 export function createSidecarHumbleSecretStore(
   requestRustInvoke: RequestRustInvoke
@@ -148,138 +142,20 @@ export function createSidecarHumbleSecretStore(
 }
 
 /**
- * Logs a confirmation line to `gamelib.log` and fires (never awaited -- sidecar startup is
- * synchronous) the one-time plaintext migration below, so an existing plaintext Humble credential
- * moves into the keyring the first time this runs against it. Plan 12's own doc comment flagged
- * the risk this line exists to close: a store that is not actually the keyring one would persist
- * the session in plaintext (F-1, again) -- so the choice must be OBSERVABLE, not assumed. The
- * live-gate re-run (plan 20) greps `gamelib.log` for this exact line.
+ * Logs a confirmation line to `gamelib.log`: the keyring-backed Humble secret store is the one in use.
+ * Plan 12's own doc comment flagged the risk this line exists to close: a store that is not actually
+ * the keyring one would persist the session in plaintext (F-1, again) -- so the choice must be
+ * OBSERVABLE, not assumed. The live-gate re-run (plan 20) greps `gamelib.log` for this exact line.
+ *
+ * The one-time plaintext-to-keyring migration is NOT run here any more (Phase 94, D-18): Rust owns it
+ * (`start_humble_migration` in `src-tauri/src/humble_secrets.rs`, bounded boot work holding a
+ * `humble-migration` shutdown registrant), so there is one migrator at every commit. This store keeps
+ * serving reads until the Humble user and library move to Rust (94-29); both read the same Keychain
+ * items.
  */
-export function startSidecarHumbleSecretStore(
-  store: Pick<SidecarHumbleSecretStore, 'invalidateCache'>,
-  deps: HumbleMigrationDeps
-): void {
+export function startSidecarHumbleSecretStore(): void {
   logInfo(
     '[bootstrap] Humble secret store installed: keyring-backed (humble-session/humble-csrf slots)',
     LogPrefix.Backend
   )
-  void migrateHumbleSecrets(store, deps).catch((error) => {
-    logWarning(
-      `Humble secret migration failed unexpectedly: ${errorMessage(error)}`,
-      LogPrefix.Backend
-    )
-  })
-}
-
-/** What the one-time migration reads and writes: the humble config store family. */
-export interface HumbleMigrationDeps {
-  stores: Pick<Stores, 'humble'>
-  requestRustInvoke: RequestRustInvoke
-}
-
-// ── One-time plaintext-to-keyring migration (Task 2, D-GAP-01/T-34.4.1-57) ──────────────────────
-
-/** configStore key + keyring slot for each secret's migration. Mirrors `secretStore.ts`'s own
- * (not exported) `STORE_KEYS` map — duplicated deliberately, since that module documents
- * `csrfToken` has no dedicated constant today, only the literal `'csrfToken'`. */
-const MIGRATION_TARGETS: Record<
-  HumbleSecretKey,
-  { configKey: 'sessionCookie' | 'csrfToken'; slot: string }
-> = {
-  sessionCookie: {
-    configKey: HUMBLE_TOKEN_STORE_KEY,
-    slot: KEYRING_SLOT_HUMBLE_SESSION
-  },
-  csrfToken: { configKey: 'csrfToken', slot: KEYRING_SLOT_HUMBLE_CSRF }
-}
-
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error)
-}
-
-/**
- * One-time migration of a single plaintext secret into the keyring. Order of operations is the
- * whole design and MUST NOT be reordered (D-GAP-01/T-34.4.1-57): read the configStore plaintext
- * -> write it to the keyring -> read it back -> compare -> only on an EXACT match, delete the
- * configStore key and clear `encryptionDegraded`. Any failure at any step — a rejecting write, a
- * rejecting readback, or a mismatched readback — LEAVES THE PLAINTEXT IN PLACE, keeps the user
- * signed in, keeps `encryptionDegraded` as-is (already `true` on the Tauri-created shape this
- * migrates), and logs exactly one warning naming the failure mode — never the secret value, never
- * a length, never the readback's actual contents (T-34.4.1-59). Handled independently per secret
- * (this function is called once per `HumbleSecretKey`) so a `csrfToken` failure can never strand a
- * migrated `sessionCookie`.
- *
- * The readback is the liveness proof — an API that resolves successfully without doing the thing
- * is exactly the `navigator.clipboard`-under-Tauri failure shape this project has already been
- * bitten by. A mismatched readback is NEVER rounded up to success.
- */
-export async function migrateOneSecret(
-  store: Pick<SidecarHumbleSecretStore, 'invalidateCache'>,
-  deps: HumbleMigrationDeps,
-  key: HumbleSecretKey
-): Promise<void> {
-  const { configKey, slot } = MIGRATION_TARGETS[key]
-
-  const plaintext = deps.stores.humble.configStore.get_nodefault(configKey)
-  if (!plaintext || typeof plaintext !== 'string') {
-    // Absent — healthy "nothing to migrate" case (already migrated on a prior run, or this
-    // secret was never stored). No keyring write, no log.
-    return
-  }
-
-  try {
-    await deps.requestRustInvoke(RUST_KEYRING_SET, [plaintext, slot])
-  } catch (error) {
-    logWarning(
-      `Humble secret migration (${key}): keyring write failed, leaving plaintext in place: ${errorMessage(error)}`,
-      LogPrefix.Backend
-    )
-    return
-  }
-
-  // The write went straight to `requestRustInvoke` (bypassing the slot store's own
-  // setToken(), which is what normally invalidates its cache) BECAUSE this migration must prove
-  // the readback came from a REAL keyring round trip, not a cache (the "liveness proof" this
-  // function's own doc comment describes) -- but that same bypass means the store's cache is
-  // now stale relative to what the keyring actually holds, and must be invalidated here
-  // explicitly (34.4.1 gap cycle 2 plan 26 regression found by
-  // `migrateHumbleSecrets (both secrets, independently)`'s existing round-trip test: without
-  // this line, a `getSecret()` called BEFORE migration -- which legitimately caches the
-  // pre-migration '' -- would keep resolving that stale cached '' forever after, even though the
-  // migration just wrote a real value).
-  store.invalidateCache(key)
-
-  let readback: unknown
-  try {
-    readback = await deps.requestRustInvoke(RUST_KEYRING_GET, [slot])
-  } catch (error) {
-    logWarning(
-      `Humble secret migration (${key}): keyring readback failed, leaving plaintext in place: ${errorMessage(error)}`,
-      LogPrefix.Backend
-    )
-    return
-  }
-
-  if (readback !== plaintext) {
-    logWarning(
-      `Humble secret migration (${key}): keyring readback did not match the written value, leaving plaintext in place`,
-      LogPrefix.Backend
-    )
-    return
-  }
-
-  deps.stores.humble.configStore.delete(configKey)
-  deps.stores.humble.configStore.set('encryptionDegraded', false)
-}
-
-/**
- * Runs the one-time migration for both secrets, independently. Called (fire-and-forget) from
- * `startSidecarHumbleSecretStore()` above.
- */
-export async function migrateHumbleSecrets(
-  store: Pick<SidecarHumbleSecretStore, 'invalidateCache'>,
-  deps: HumbleMigrationDeps
-): Promise<void> {
-  await migrateOneSecret(store, deps, 'sessionCookie')
-  await migrateOneSecret(store, deps, 'csrfToken')
 }

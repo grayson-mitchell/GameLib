@@ -1,0 +1,1460 @@
+{
+  "input": {
+    "cookie": "fake",
+    "steam": null,
+    "seed": {}
+  },
+  "calls": [
+    {
+      "name": "humbleSync",
+      "args": [],
+      "result": {
+        "status": "ok"
+      },
+      "events": [
+        {
+          "channel": "humbleSyncProgress",
+          "payload": {
+            "done": 0,
+            "total": 12
+          }
+        },
+        {
+          "channel": "humbleSyncProgress",
+          "payload": {
+            "done": 1,
+            "total": 12
+          }
+        },
+        {
+          "channel": "humbleKeysUpdated",
+          "payload": [
+            {
+              "gamekey": "fake-gamekey-0101",
+              "machineName": "fake_game_1_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 1",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 1",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            }
+          ]
+        },
+        {
+          "channel": "humbleSyncProgress",
+          "payload": {
+            "done": 2,
+            "total": 12
+          }
+        },
+        {
+          "channel": "humbleKeysUpdated",
+          "payload": [
+            {
+              "gamekey": "fake-gamekey-0101",
+              "machineName": "fake_game_1_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 1",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 1",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0102",
+              "machineName": "fake_game_2_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 2",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 2",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            }
+          ]
+        },
+        {
+          "channel": "humbleSyncProgress",
+          "payload": {
+            "done": 3,
+            "total": 12
+          }
+        },
+        {
+          "channel": "humbleKeysUpdated",
+          "payload": [
+            {
+              "gamekey": "fake-gamekey-0101",
+              "machineName": "fake_game_1_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 1",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 1",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0102",
+              "machineName": "fake_game_2_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 2",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 2",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0103",
+              "machineName": "fake_game_3_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 3",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 3",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            }
+          ]
+        },
+        {
+          "channel": "humbleSyncProgress",
+          "payload": {
+            "done": 4,
+            "total": 12
+          }
+        },
+        {
+          "channel": "humbleKeysUpdated",
+          "payload": [
+            {
+              "gamekey": "fake-gamekey-0101",
+              "machineName": "fake_game_1_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 1",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 1",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0102",
+              "machineName": "fake_game_2_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 2",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 2",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0103",
+              "machineName": "fake_game_3_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 3",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 3",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0104",
+              "machineName": "fake_game_4_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 4",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 4",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            }
+          ]
+        },
+        {
+          "channel": "humbleSyncProgress",
+          "payload": {
+            "done": 5,
+            "total": 12
+          }
+        },
+        {
+          "channel": "humbleKeysUpdated",
+          "payload": [
+            {
+              "gamekey": "fake-gamekey-0101",
+              "machineName": "fake_game_1_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 1",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 1",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0102",
+              "machineName": "fake_game_2_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 2",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 2",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0103",
+              "machineName": "fake_game_3_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 3",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 3",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0104",
+              "machineName": "fake_game_4_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 4",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 4",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0105",
+              "machineName": "fake_game_5_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 5",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 5",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            }
+          ]
+        },
+        {
+          "channel": "humbleSyncProgress",
+          "payload": {
+            "done": 6,
+            "total": 12
+          }
+        },
+        {
+          "channel": "humbleKeysUpdated",
+          "payload": [
+            {
+              "gamekey": "fake-gamekey-0101",
+              "machineName": "fake_game_1_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 1",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 1",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0102",
+              "machineName": "fake_game_2_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 2",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 2",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0103",
+              "machineName": "fake_game_3_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 3",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 3",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0104",
+              "machineName": "fake_game_4_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 4",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 4",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0105",
+              "machineName": "fake_game_5_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 5",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 5",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0106",
+              "machineName": "fake_game_6_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 6",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 6",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            }
+          ]
+        },
+        {
+          "channel": "humbleSyncProgress",
+          "payload": {
+            "done": 7,
+            "total": 12
+          }
+        },
+        {
+          "channel": "humbleKeysUpdated",
+          "payload": [
+            {
+              "gamekey": "fake-gamekey-0101",
+              "machineName": "fake_game_1_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 1",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 1",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0102",
+              "machineName": "fake_game_2_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 2",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 2",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0103",
+              "machineName": "fake_game_3_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 3",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 3",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0104",
+              "machineName": "fake_game_4_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 4",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 4",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0105",
+              "machineName": "fake_game_5_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 5",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 5",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0106",
+              "machineName": "fake_game_6_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 6",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 6",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0107",
+              "machineName": "fake_game_7_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 7",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 7",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            }
+          ]
+        },
+        {
+          "channel": "humbleSyncProgress",
+          "payload": {
+            "done": 8,
+            "total": 12
+          }
+        },
+        {
+          "channel": "humbleKeysUpdated",
+          "payload": [
+            {
+              "gamekey": "fake-gamekey-0101",
+              "machineName": "fake_game_1_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 1",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 1",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0102",
+              "machineName": "fake_game_2_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 2",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 2",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0103",
+              "machineName": "fake_game_3_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 3",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 3",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0104",
+              "machineName": "fake_game_4_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 4",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 4",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0105",
+              "machineName": "fake_game_5_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 5",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 5",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0106",
+              "machineName": "fake_game_6_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 6",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 6",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0107",
+              "machineName": "fake_game_7_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 7",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 7",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0108",
+              "machineName": "fake_game_8_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 8",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 8",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            }
+          ]
+        },
+        {
+          "channel": "humbleSyncProgress",
+          "payload": {
+            "done": 9,
+            "total": 12
+          }
+        },
+        {
+          "channel": "humbleKeysUpdated",
+          "payload": [
+            {
+              "gamekey": "fake-gamekey-0101",
+              "machineName": "fake_game_1_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 1",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 1",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0102",
+              "machineName": "fake_game_2_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 2",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 2",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0103",
+              "machineName": "fake_game_3_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 3",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 3",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0104",
+              "machineName": "fake_game_4_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 4",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 4",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0105",
+              "machineName": "fake_game_5_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 5",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 5",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0106",
+              "machineName": "fake_game_6_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 6",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 6",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0107",
+              "machineName": "fake_game_7_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 7",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 7",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0108",
+              "machineName": "fake_game_8_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 8",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 8",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0109",
+              "machineName": "fake_game_9_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 9",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 9",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            }
+          ]
+        },
+        {
+          "channel": "humbleSyncProgress",
+          "payload": {
+            "done": 10,
+            "total": 12
+          }
+        },
+        {
+          "channel": "humbleKeysUpdated",
+          "payload": [
+            {
+              "gamekey": "fake-gamekey-0101",
+              "machineName": "fake_game_1_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 1",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 1",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0102",
+              "machineName": "fake_game_2_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 2",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 2",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0103",
+              "machineName": "fake_game_3_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 3",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 3",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0104",
+              "machineName": "fake_game_4_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 4",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 4",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0105",
+              "machineName": "fake_game_5_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 5",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 5",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0106",
+              "machineName": "fake_game_6_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 6",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 6",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0107",
+              "machineName": "fake_game_7_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 7",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 7",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0108",
+              "machineName": "fake_game_8_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 8",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 8",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0109",
+              "machineName": "fake_game_9_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 9",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 9",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0110",
+              "machineName": "fake_game_10_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 10",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 10",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            }
+          ]
+        },
+        {
+          "channel": "humbleSyncProgress",
+          "payload": {
+            "done": 11,
+            "total": 12
+          }
+        },
+        {
+          "channel": "humbleKeysUpdated",
+          "payload": [
+            {
+              "gamekey": "fake-gamekey-0101",
+              "machineName": "fake_game_1_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 1",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 1",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0102",
+              "machineName": "fake_game_2_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 2",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 2",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0103",
+              "machineName": "fake_game_3_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 3",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 3",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0104",
+              "machineName": "fake_game_4_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 4",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 4",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0105",
+              "machineName": "fake_game_5_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 5",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 5",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0106",
+              "machineName": "fake_game_6_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 6",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 6",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0107",
+              "machineName": "fake_game_7_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 7",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 7",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0108",
+              "machineName": "fake_game_8_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 8",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 8",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0109",
+              "machineName": "fake_game_9_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 9",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 9",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0110",
+              "machineName": "fake_game_10_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 10",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 10",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0111",
+              "machineName": "fake_game_11_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 11",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 11",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            }
+          ]
+        },
+        {
+          "channel": "humbleSyncProgress",
+          "payload": {
+            "done": 12,
+            "total": 12
+          }
+        },
+        {
+          "channel": "humbleKeysUpdated",
+          "payload": [
+            {
+              "gamekey": "fake-gamekey-0101",
+              "machineName": "fake_game_1_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 1",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 1",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0102",
+              "machineName": "fake_game_2_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 2",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 2",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0103",
+              "machineName": "fake_game_3_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 3",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 3",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0104",
+              "machineName": "fake_game_4_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 4",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 4",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0105",
+              "machineName": "fake_game_5_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 5",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 5",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0106",
+              "machineName": "fake_game_6_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 6",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 6",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0107",
+              "machineName": "fake_game_7_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 7",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 7",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0108",
+              "machineName": "fake_game_8_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 8",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 8",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0109",
+              "machineName": "fake_game_9_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 9",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 9",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0110",
+              "machineName": "fake_game_10_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 10",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 10",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0111",
+              "machineName": "fake_game_11_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 11",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 11",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            },
+            {
+              "gamekey": "fake-gamekey-0112",
+              "machineName": "fake_game_12_gog",
+              "state": "UNREVEALED",
+              "title": "Fake Game 12",
+              "platform": "gog",
+              "expiration": null,
+              "origin": "Fake Bundle 12",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            }
+          ]
+        },
+        {
+          "channel": "humbleSyncStateChanged",
+          "payload": {
+            "syncedAt": 1795521600000,
+            "syncError": "none",
+            "classifierVersion": 7
+          }
+        }
+      ],
+      "warnings": [],
+      "expiryDigest": [
+        {
+          "keyCount": 12,
+          "suppressNotifications": true
+        }
+      ],
+      "notifications": []
+    },
+    {
+      "name": "humbleGetSyncState",
+      "args": [],
+      "result": {
+        "syncedAt": 1795521600000,
+        "syncError": "none",
+        "classifierVersion": 7
+      },
+      "events": [],
+      "warnings": [],
+      "expiryDigest": [],
+      "notifications": []
+    }
+  ],
+  "requests": [
+    {
+      "method": "GET",
+      "target": "/home/library",
+      "headers": [
+        [
+          "Accept",
+          "text/html"
+        ],
+        [
+          "Cookie",
+          "ory_session_fake=REDACTED"
+        ],
+        [
+          "User-Agent",
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "www.humblebundle.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/_next/static/chunks/aaa.js",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "www.humblebundle.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/_next/static/chunks/bbb.js",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "www.humblebundle.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "POST",
+      "target": "/home/library",
+      "headers": [
+        [
+          "host",
+          "www.humblebundle.com"
+        ],
+        [
+          "connection",
+          "keep-alive"
+        ],
+        [
+          "Cookie",
+          "ory_session_fake=REDACTED"
+        ],
+        [
+          "User-Agent",
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+        ],
+        [
+          "Accept",
+          "text/x-component"
+        ],
+        [
+          "Next-Action",
+          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        ],
+        [
+          "Next-Router-State-Tree",
+          "%5B%22%22%2C%7B%22children%22%3A%5B%22(default)%22%2C%7B%22children%22%3A%5B%22(account)%22%2C%7B%22children%22%3A%5B%22home%22%2C%7B%22children%22%3A%5B%22library%22%2C%7B%22children%22%3A%5B%22__PAGE__%22%2C%7B%7D%2Cnull%2Cnull%2C0%5D%7D%2Cnull%2Cnull%2C4%5D%7D%2Cnull%2Cnull%2C8%5D%7D%2Cnull%2Cnull%2C8%5D%7D%2Cnull%2Cnull%2C8%5D%7D%2Cnull%2Cnull%2C24%5D"
+        ],
+        [
+          "Origin",
+          "https://www.humblebundle.com"
+        ],
+        [
+          "Referer",
+          "https://www.humblebundle.com/home/library"
+        ],
+        [
+          "content-type",
+          "multipart/form-data; boundary=<BOUNDARY>"
+        ],
+        [
+          "accept-language",
+          "*"
+        ],
+        [
+          "sec-fetch-mode",
+          "cors"
+        ],
+        [
+          "accept-encoding",
+          "gzip, deflate"
+        ],
+        [
+          "content-length",
+          "<LENGTH>"
+        ]
+      ],
+      "multipart": [
+        {
+          "name": "_1_requestId",
+          "value": "1"
+        },
+        {
+          "name": "_1_query",
+          "value": ""
+        },
+        {
+          "name": "_1_sort",
+          "value": "mostRecent"
+        },
+        {
+          "name": "_1_cursor",
+          "value": "5"
+        },
+        {
+          "name": "_1_page",
+          "value": "1"
+        },
+        {
+          "name": "_1_limit",
+          "value": "5"
+        },
+        {
+          "name": "_1_hideRevealed",
+          "value": "false"
+        },
+        {
+          "name": "_1_hideExpired",
+          "value": "false"
+        },
+        {
+          "name": "_1_dateExpires",
+          "value": ""
+        },
+        {
+          "name": "0",
+          "value": "[{\"results\":[],\"pagination\":{\"page\":1,\"totalPages\":1,\"totalDocs\":0},\"success\":true},\"$K1\"]"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "target": "/home/library?page=2",
+      "headers": [
+        [
+          "host",
+          "www.humblebundle.com"
+        ],
+        [
+          "connection",
+          "keep-alive"
+        ],
+        [
+          "Cookie",
+          "ory_session_fake=REDACTED"
+        ],
+        [
+          "User-Agent",
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+        ],
+        [
+          "Accept",
+          "text/x-component"
+        ],
+        [
+          "Next-Action",
+          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        ],
+        [
+          "Next-Router-State-Tree",
+          "%5B%22%22%2C%7B%22children%22%3A%5B%22(default)%22%2C%7B%22children%22%3A%5B%22(account)%22%2C%7B%22children%22%3A%5B%22home%22%2C%7B%22children%22%3A%5B%22library%22%2C%7B%22children%22%3A%5B%22__PAGE__%22%2C%7B%7D%2Cnull%2Cnull%2C0%5D%7D%2Cnull%2Cnull%2C4%5D%7D%2Cnull%2Cnull%2C8%5D%7D%2Cnull%2Cnull%2C8%5D%7D%2Cnull%2Cnull%2C8%5D%7D%2Cnull%2Cnull%2C24%5D"
+        ],
+        [
+          "Origin",
+          "https://www.humblebundle.com"
+        ],
+        [
+          "Referer",
+          "https://www.humblebundle.com/home/library?page=2"
+        ],
+        [
+          "content-type",
+          "multipart/form-data; boundary=<BOUNDARY>"
+        ],
+        [
+          "accept-language",
+          "*"
+        ],
+        [
+          "sec-fetch-mode",
+          "cors"
+        ],
+        [
+          "accept-encoding",
+          "gzip, deflate"
+        ],
+        [
+          "content-length",
+          "<LENGTH>"
+        ]
+      ],
+      "multipart": [
+        {
+          "name": "_1_requestId",
+          "value": "1"
+        },
+        {
+          "name": "_1_query",
+          "value": ""
+        },
+        {
+          "name": "_1_sort",
+          "value": "mostRecent"
+        },
+        {
+          "name": "_1_cursor",
+          "value": "10"
+        },
+        {
+          "name": "_1_page",
+          "value": "2"
+        },
+        {
+          "name": "_1_limit",
+          "value": "5"
+        },
+        {
+          "name": "_1_hideRevealed",
+          "value": "false"
+        },
+        {
+          "name": "_1_hideExpired",
+          "value": "false"
+        },
+        {
+          "name": "_1_dateExpires",
+          "value": ""
+        },
+        {
+          "name": "0",
+          "value": "[{\"results\":[{\"id\":\"fake-gamekey-0101\",\"title\":\"Fake Bundle 1\",\"entitlements\":{\"keys\":[{\"id\":\"fake_game_1_gog\",\"title\":\"Fake Game 1\",\"keyIntegrationId\":\"gog\",\"gameKey\":null,\"redeemedAt\":null,\"expired\":false}],\"downloads\":[]}},{\"id\":\"fake-gamekey-0102\",\"title\":\"Fake Bundle 2\",\"entitlements\":{\"keys\":[{\"id\":\"fake_game_2_gog\",\"title\":\"Fake Game 2\",\"keyIntegrationId\":\"gog\",\"gameKey\":null,\"redeemedAt\":null,\"expired\":false}],\"downloads\":[]}},{\"id\":\"fake-gamekey-0103\",\"title\":\"Fake Bundle 3\",\"entitlements\":{\"keys\":[{\"id\":\"fake_game_3_gog\",\"title\":\"Fake Game 3\",\"keyIntegrationId\":\"gog\",\"gameKey\":null,\"redeemedAt\":null,\"expired\":false}],\"downloads\":[]}},{\"id\":\"fake-gamekey-0104\",\"title\":\"Fake Bundle 4\",\"entitlements\":{\"keys\":[{\"id\":\"fake_game_4_gog\",\"title\":\"Fake Game 4\",\"keyIntegrationId\":\"gog\",\"gameKey\":null,\"redeemedAt\":null,\"expired\":false}],\"downloads\":[]}},{\"id\":\"fake-gamekey-0105\",\"title\":\"Fake Bundle 5\",\"entitlements\":{\"keys\":[{\"id\":\"fake_game_5_gog\",\"title\":\"Fake Game 5\",\"keyIntegrationId\":\"gog\",\"gameKey\":null,\"redeemedAt\":null,\"expired\":false}],\"downloads\":[]}}],\"bundlesCount\":0,\"pagination\":{\"page\":1,\"totalPages\":3,\"totalDocs\":12},\"success\":true},\"$K1\"]"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "target": "/home/library?page=3",
+      "headers": [
+        [
+          "host",
+          "www.humblebundle.com"
+        ],
+        [
+          "connection",
+          "keep-alive"
+        ],
+        [
+          "Cookie",
+          "ory_session_fake=REDACTED"
+        ],
+        [
+          "User-Agent",
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+        ],
+        [
+          "Accept",
+          "text/x-component"
+        ],
+        [
+          "Next-Action",
+          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        ],
+        [
+          "Next-Router-State-Tree",
+          "%5B%22%22%2C%7B%22children%22%3A%5B%22(default)%22%2C%7B%22children%22%3A%5B%22(account)%22%2C%7B%22children%22%3A%5B%22home%22%2C%7B%22children%22%3A%5B%22library%22%2C%7B%22children%22%3A%5B%22__PAGE__%22%2C%7B%7D%2Cnull%2Cnull%2C0%5D%7D%2Cnull%2Cnull%2C4%5D%7D%2Cnull%2Cnull%2C8%5D%7D%2Cnull%2Cnull%2C8%5D%7D%2Cnull%2Cnull%2C8%5D%7D%2Cnull%2Cnull%2C24%5D"
+        ],
+        [
+          "Origin",
+          "https://www.humblebundle.com"
+        ],
+        [
+          "Referer",
+          "https://www.humblebundle.com/home/library?page=3"
+        ],
+        [
+          "content-type",
+          "multipart/form-data; boundary=<BOUNDARY>"
+        ],
+        [
+          "accept-language",
+          "*"
+        ],
+        [
+          "sec-fetch-mode",
+          "cors"
+        ],
+        [
+          "accept-encoding",
+          "gzip, deflate"
+        ],
+        [
+          "content-length",
+          "<LENGTH>"
+        ]
+      ],
+      "multipart": [
+        {
+          "name": "_1_requestId",
+          "value": "1"
+        },
+        {
+          "name": "_1_query",
+          "value": ""
+        },
+        {
+          "name": "_1_sort",
+          "value": "mostRecent"
+        },
+        {
+          "name": "_1_cursor",
+          "value": "15"
+        },
+        {
+          "name": "_1_page",
+          "value": "3"
+        },
+        {
+          "name": "_1_limit",
+          "value": "5"
+        },
+        {
+          "name": "_1_hideRevealed",
+          "value": "false"
+        },
+        {
+          "name": "_1_hideExpired",
+          "value": "false"
+        },
+        {
+          "name": "_1_dateExpires",
+          "value": ""
+        },
+        {
+          "name": "0",
+          "value": "[{\"results\":[{\"id\":\"fake-gamekey-0106\",\"title\":\"Fake Bundle 6\",\"entitlements\":{\"keys\":[{\"id\":\"fake_game_6_gog\",\"title\":\"Fake Game 6\",\"keyIntegrationId\":\"gog\",\"gameKey\":null,\"redeemedAt\":null,\"expired\":false}],\"downloads\":[]}},{\"id\":\"fake-gamekey-0107\",\"title\":\"Fake Bundle 7\",\"entitlements\":{\"keys\":[{\"id\":\"fake_game_7_gog\",\"title\":\"Fake Game 7\",\"keyIntegrationId\":\"gog\",\"gameKey\":null,\"redeemedAt\":null,\"expired\":false}],\"downloads\":[]}},{\"id\":\"fake-gamekey-0108\",\"title\":\"Fake Bundle 8\",\"entitlements\":{\"keys\":[{\"id\":\"fake_game_8_gog\",\"title\":\"Fake Game 8\",\"keyIntegrationId\":\"gog\",\"gameKey\":null,\"redeemedAt\":null,\"expired\":false}],\"downloads\":[]}},{\"id\":\"fake-gamekey-0109\",\"title\":\"Fake Bundle 9\",\"entitlements\":{\"keys\":[{\"id\":\"fake_game_9_gog\",\"title\":\"Fake Game 9\",\"keyIntegrationId\":\"gog\",\"gameKey\":null,\"redeemedAt\":null,\"expired\":false}],\"downloads\":[]}},{\"id\":\"fake-gamekey-0110\",\"title\":\"Fake Bundle 10\",\"entitlements\":{\"keys\":[{\"id\":\"fake_game_10_gog\",\"title\":\"Fake Game 10\",\"keyIntegrationId\":\"gog\",\"gameKey\":null,\"redeemedAt\":null,\"expired\":false}],\"downloads\":[]}}],\"bundlesCount\":0,\"pagination\":{\"page\":2,\"totalPages\":3,\"totalDocs\":12},\"success\":true},\"$K1\"]"
+        }
+      ]
+    }
+  ],
+  "stateAfter": {
+    "store_cache/humble_library.json": {
+      "utf8": "{\n\t\"fake-gamekey-0101\": {\n\t\t\"gamekey\": \"fake-gamekey-0101\",\n\t\t\"keys\": [\n\t\t\t{\n\t\t\t\t\"gamekey\": \"fake-gamekey-0101\",\n\t\t\t\t\"machineName\": \"fake_game_1_gog\",\n\t\t\t\t\"state\": \"UNREVEALED\",\n\t\t\t\t\"title\": \"Fake Game 1\",\n\t\t\t\t\"platform\": \"gog\",\n\t\t\t\t\"expiration\": null,\n\t\t\t\t\"origin\": \"Fake Bundle 1\",\n\t\t\t\t\"ownedElsewhere\": false,\n\t\t\t\t\"matchConfidence\": \"none\",\n\t\t\t\t\"keyindex\": \"gog\"\n\t\t\t}\n\t\t],\n\t\t\"allTerminal\": false,\n\t\t\"freezeEligible\": false\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"fake-gamekey-0101\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake-gamekey-0102\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake-gamekey-0103\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake-gamekey-0104\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake-gamekey-0105\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake-gamekey-0106\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake-gamekey-0107\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake-gamekey-0108\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake-gamekey-0109\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake-gamekey-0110\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake-gamekey-0111\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake-gamekey-0112\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t},\n\t\"fake-gamekey-0102\": {\n\t\t\"gamekey\": \"fake-gamekey-0102\",\n\t\t\"keys\": [\n\t\t\t{\n\t\t\t\t\"gamekey\": \"fake-gamekey-0102\",\n\t\t\t\t\"machineName\": \"fake_game_2_gog\",\n\t\t\t\t\"state\": \"UNREVEALED\",\n\t\t\t\t\"title\": \"Fake Game 2\",\n\t\t\t\t\"platform\": \"gog\",\n\t\t\t\t\"expiration\": null,\n\t\t\t\t\"origin\": \"Fake Bundle 2\",\n\t\t\t\t\"ownedElsewhere\": false,\n\t\t\t\t\"matchConfidence\": \"none\",\n\t\t\t\t\"keyindex\": \"gog\"\n\t\t\t}\n\t\t],\n\t\t\"allTerminal\": false,\n\t\t\"freezeEligible\": false\n\t},\n\t\"fake-gamekey-0103\": {\n\t\t\"gamekey\": \"fake-gamekey-0103\",\n\t\t\"keys\": [\n\t\t\t{\n\t\t\t\t\"gamekey\": \"fake-gamekey-0103\",\n\t\t\t\t\"machineName\": \"fake_game_3_gog\",\n\t\t\t\t\"state\": \"UNREVEALED\",\n\t\t\t\t\"title\": \"Fake Game 3\",\n\t\t\t\t\"platform\": \"gog\",\n\t\t\t\t\"expiration\": null,\n\t\t\t\t\"origin\": \"Fake Bundle 3\",\n\t\t\t\t\"ownedElsewhere\": false,\n\t\t\t\t\"matchConfidence\": \"none\",\n\t\t\t\t\"keyindex\": \"gog\"\n\t\t\t}\n\t\t],\n\t\t\"allTerminal\": false,\n\t\t\"freezeEligible\": false\n\t},\n\t\"fake-gamekey-0104\": {\n\t\t\"gamekey\": \"fake-gamekey-0104\",\n\t\t\"keys\": [\n\t\t\t{\n\t\t\t\t\"gamekey\": \"fake-gamekey-0104\",\n\t\t\t\t\"machineName\": \"fake_game_4_gog\",\n\t\t\t\t\"state\": \"UNREVEALED\",\n\t\t\t\t\"title\": \"Fake Game 4\",\n\t\t\t\t\"platform\": \"gog\",\n\t\t\t\t\"expiration\": null,\n\t\t\t\t\"origin\": \"Fake Bundle 4\",\n\t\t\t\t\"ownedElsewhere\": false,\n\t\t\t\t\"matchConfidence\": \"none\",\n\t\t\t\t\"keyindex\": \"gog\"\n\t\t\t}\n\t\t],\n\t\t\"allTerminal\": false,\n\t\t\"freezeEligible\": false\n\t},\n\t\"fake-gamekey-0105\": {\n\t\t\"gamekey\": \"fake-gamekey-0105\",\n\t\t\"keys\": [\n\t\t\t{\n\t\t\t\t\"gamekey\": \"fake-gamekey-0105\",\n\t\t\t\t\"machineName\": \"fake_game_5_gog\",\n\t\t\t\t\"state\": \"UNREVEALED\",\n\t\t\t\t\"title\": \"Fake Game 5\",\n\t\t\t\t\"platform\": \"gog\",\n\t\t\t\t\"expiration\": null,\n\t\t\t\t\"origin\": \"Fake Bundle 5\",\n\t\t\t\t\"ownedElsewhere\": false,\n\t\t\t\t\"matchConfidence\": \"none\",\n\t\t\t\t\"keyindex\": \"gog\"\n\t\t\t}\n\t\t],\n\t\t\"allTerminal\": false,\n\t\t\"freezeEligible\": false\n\t},\n\t\"fake-gamekey-0106\": {\n\t\t\"gamekey\": \"fake-gamekey-0106\",\n\t\t\"keys\": [\n\t\t\t{\n\t\t\t\t\"gamekey\": \"fake-gamekey-0106\",\n\t\t\t\t\"machineName\": \"fake_game_6_gog\",\n\t\t\t\t\"state\": \"UNREVEALED\",\n\t\t\t\t\"title\": \"Fake Game 6\",\n\t\t\t\t\"platform\": \"gog\",\n\t\t\t\t\"expiration\": null,\n\t\t\t\t\"origin\": \"Fake Bundle 6\",\n\t\t\t\t\"ownedElsewhere\": false,\n\t\t\t\t\"matchConfidence\": \"none\",\n\t\t\t\t\"keyindex\": \"gog\"\n\t\t\t}\n\t\t],\n\t\t\"allTerminal\": false,\n\t\t\"freezeEligible\": false\n\t},\n\t\"fake-gamekey-0107\": {\n\t\t\"gamekey\": \"fake-gamekey-0107\",\n\t\t\"keys\": [\n\t\t\t{\n\t\t\t\t\"gamekey\": \"fake-gamekey-0107\",\n\t\t\t\t\"machineName\": \"fake_game_7_gog\",\n\t\t\t\t\"state\": \"UNREVEALED\",\n\t\t\t\t\"title\": \"Fake Game 7\",\n\t\t\t\t\"platform\": \"gog\",\n\t\t\t\t\"expiration\": null,\n\t\t\t\t\"origin\": \"Fake Bundle 7\",\n\t\t\t\t\"ownedElsewhere\": false,\n\t\t\t\t\"matchConfidence\": \"none\",\n\t\t\t\t\"keyindex\": \"gog\"\n\t\t\t}\n\t\t],\n\t\t\"allTerminal\": false,\n\t\t\"freezeEligible\": false\n\t},\n\t\"fake-gamekey-0108\": {\n\t\t\"gamekey\": \"fake-gamekey-0108\",\n\t\t\"keys\": [\n\t\t\t{\n\t\t\t\t\"gamekey\": \"fake-gamekey-0108\",\n\t\t\t\t\"machineName\": \"fake_game_8_gog\",\n\t\t\t\t\"state\": \"UNREVEALED\",\n\t\t\t\t\"title\": \"Fake Game 8\",\n\t\t\t\t\"platform\": \"gog\",\n\t\t\t\t\"expiration\": null,\n\t\t\t\t\"origin\": \"Fake Bundle 8\",\n\t\t\t\t\"ownedElsewhere\": false,\n\t\t\t\t\"matchConfidence\": \"none\",\n\t\t\t\t\"keyindex\": \"gog\"\n\t\t\t}\n\t\t],\n\t\t\"allTerminal\": false,\n\t\t\"freezeEligible\": false\n\t},\n\t\"fake-gamekey-0109\": {\n\t\t\"gamekey\": \"fake-gamekey-0109\",\n\t\t\"keys\": [\n\t\t\t{\n\t\t\t\t\"gamekey\": \"fake-gamekey-0109\",\n\t\t\t\t\"machineName\": \"fake_game_9_gog\",\n\t\t\t\t\"state\": \"UNREVEALED\",\n\t\t\t\t\"title\": \"Fake Game 9\",\n\t\t\t\t\"platform\": \"gog\",\n\t\t\t\t\"expiration\": null,\n\t\t\t\t\"origin\": \"Fake Bundle 9\",\n\t\t\t\t\"ownedElsewhere\": false,\n\t\t\t\t\"matchConfidence\": \"none\",\n\t\t\t\t\"keyindex\": \"gog\"\n\t\t\t}\n\t\t],\n\t\t\"allTerminal\": false,\n\t\t\"freezeEligible\": false\n\t},\n\t\"fake-gamekey-0110\": {\n\t\t\"gamekey\": \"fake-gamekey-0110\",\n\t\t\"keys\": [\n\t\t\t{\n\t\t\t\t\"gamekey\": \"fake-gamekey-0110\",\n\t\t\t\t\"machineName\": \"fake_game_10_gog\",\n\t\t\t\t\"state\": \"UNREVEALED\",\n\t\t\t\t\"title\": \"Fake Game 10\",\n\t\t\t\t\"platform\": \"gog\",\n\t\t\t\t\"expiration\": null,\n\t\t\t\t\"origin\": \"Fake Bundle 10\",\n\t\t\t\t\"ownedElsewhere\": false,\n\t\t\t\t\"matchConfidence\": \"none\",\n\t\t\t\t\"keyindex\": \"gog\"\n\t\t\t}\n\t\t],\n\t\t\"allTerminal\": false,\n\t\t\"freezeEligible\": false\n\t},\n\t\"fake-gamekey-0111\": {\n\t\t\"gamekey\": \"fake-gamekey-0111\",\n\t\t\"keys\": [\n\t\t\t{\n\t\t\t\t\"gamekey\": \"fake-gamekey-0111\",\n\t\t\t\t\"machineName\": \"fake_game_11_gog\",\n\t\t\t\t\"state\": \"UNREVEALED\",\n\t\t\t\t\"title\": \"Fake Game 11\",\n\t\t\t\t\"platform\": \"gog\",\n\t\t\t\t\"expiration\": null,\n\t\t\t\t\"origin\": \"Fake Bundle 11\",\n\t\t\t\t\"ownedElsewhere\": false,\n\t\t\t\t\"matchConfidence\": \"none\",\n\t\t\t\t\"keyindex\": \"gog\"\n\t\t\t}\n\t\t],\n\t\t\"allTerminal\": false,\n\t\t\"freezeEligible\": false\n\t},\n\t\"fake-gamekey-0112\": {\n\t\t\"gamekey\": \"fake-gamekey-0112\",\n\t\t\"keys\": [\n\t\t\t{\n\t\t\t\t\"gamekey\": \"fake-gamekey-0112\",\n\t\t\t\t\"machineName\": \"fake_game_12_gog\",\n\t\t\t\t\"state\": \"UNREVEALED\",\n\t\t\t\t\"title\": \"Fake Game 12\",\n\t\t\t\t\"platform\": \"gog\",\n\t\t\t\t\"expiration\": null,\n\t\t\t\t\"origin\": \"Fake Bundle 12\",\n\t\t\t\t\"ownedElsewhere\": false,\n\t\t\t\t\"matchConfidence\": \"none\",\n\t\t\t\t\"keyindex\": \"gog\"\n\t\t\t}\n\t\t],\n\t\t\"allTerminal\": false,\n\t\t\"freezeEligible\": false\n\t}\n}"
+    },
+    "store_cache/humble_sync.json": {
+      "utf8": "{\n\t\"state\": {\n\t\t\"syncedAt\": 1795521600000,\n\t\t\"syncError\": \"none\",\n\t\t\"classifierVersion\": 7\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"state\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t}\n}"
+    }
+  }
+}

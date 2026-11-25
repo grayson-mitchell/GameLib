@@ -1,0 +1,51 @@
+{
+  "fn": "classifyOrder",
+  "input": {
+    "order": {
+      "gamekey": "order-undatable",
+      "product": {
+        "category": "bundle",
+        "human_name": "Undatable Bundle"
+      },
+      "tpkd_dict": {
+        "all_tpks": [
+          {
+            "machine_name": "undatablegame_steam",
+            "gamekey": "order-undatable",
+            "key_type": "steam",
+            "human_name": "Undatable Game",
+            "is_expired": false,
+            "some_unknown_date_field": "2027-01-01T00:00:00Z"
+          }
+        ]
+      }
+    },
+    "revealed": {
+      "all": false
+    },
+    "redeemed": {
+      "all": false
+    },
+    "now": "2099-06-01T00:00:00.000Z"
+  },
+  "output": {
+    "gamekey": "order-undatable",
+    "keys": [
+      {
+        "gamekey": "order-undatable",
+        "machineName": "undatablegame_steam",
+        "state": "UNREVEALED",
+        "title": "Undatable Game",
+        "platform": "steam",
+        "expiration": null,
+        "origin": "Undatable Bundle",
+        "ownedElsewhere": false,
+        "matchConfidence": "none"
+      }
+    ],
+    "allTerminal": false,
+    "freezeEligible": false,
+    "keyIndexByComposite": {},
+    "revealedKeyValueByComposite": {}
+  }
+}

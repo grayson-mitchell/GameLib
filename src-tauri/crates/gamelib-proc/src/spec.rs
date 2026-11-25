@@ -20,6 +20,22 @@ use std::time::Duration;
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWriteExt};
 use tokio_util::sync::CancellationToken;
 
+/// The Windows `CREATE_NO_WINDOW` process creation flag: the child gets no console window.
+#[cfg_attr(not(windows), allow(dead_code))]
+const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+
+/// The Windows creation flags of a spec's child: `base` (what the runner already sets, none today)
+/// plus `CREATE_NO_WINDOW` when the spec asks to hide its window (Pitfall 12, the TS `windowsHide`).
+/// Pure, so every OS tests the arithmetic; only the Windows spawn arm applies it.
+#[cfg_attr(not(windows), allow(dead_code))]
+fn creation_flags(base: u32, hide_window: bool) -> u32 {
+    if hide_window {
+        base | CREATE_NO_WINDOW
+    } else {
+        base
+    }
+}
+
 /// How long the readers get, after the child has exited, to drain what is still in the pipes. A
 /// descendant that inherited the pipe (a wineserver, a daemonised helper) keeps it open long after
 /// the child is gone, and the run must not wait for it.
@@ -277,6 +293,11 @@ async fn run_spec(spec: ProcSpec, feed: Feed, shutdown: CancellationToken) -> Sp
     })
     .stdout(Stdio::piped())
     .stderr(Stdio::piped());
+    // A spec that does not ask for a hidden window keeps exactly the flags it had (none).
+    #[cfg(windows)]
+    if spec.hide_window {
+        cmd.creation_flags(creation_flags(0, true));
+    }
     // The guard lives in this future, so the pid is unregistered when the child is gone.
     let (mut child, _guard) = match spawn_helper_tokio(&mut cmd, spec.label) {
         Ok(spawned) => spawned,
@@ -367,6 +388,46 @@ async fn stop(child: &mut tokio::process::Child) {
     }
     let _ = child.start_kill();
     let _ = tokio::time::timeout(REAP_LIMIT, child.wait()).await;
+}
+
+#[cfg(test)]
+mod creation_flag_tests {
+    use super::*;
+
+    #[test]
+    fn hiding_the_window_adds_create_no_window_to_the_base_flags() {
+        assert_eq!(creation_flags(0, true), 0x0800_0000);
+        assert_eq!(creation_flags(0x0000_0200, true), 0x0800_0200);
+    }
+
+    #[test]
+    fn not_hiding_the_window_leaves_the_base_flags_exactly() {
+        assert_eq!(creation_flags(0, false), 0);
+        assert_eq!(creation_flags(0x0000_0200, false), 0x0000_0200);
+    }
+
+    #[test]
+    fn hiding_twice_is_idempotent() {
+        assert_eq!(
+            creation_flags(CREATE_NO_WINDOW, true),
+            creation_flags(0, true)
+        );
+    }
+}
+
+#[cfg(all(test, windows))]
+mod windows_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn a_hidden_window_spec_runs_through_the_runner_and_exits_zero() {
+        let mut spec = ProcSpec::new("spec-test-hidden", "cmd.exe");
+        spec.argv = vec!["/c".into(), "exit".into(), "0".into()];
+        spec.hide_window = true;
+        let out = run_spec(spec, Feed::None, CancellationToken::new()).await;
+        assert_eq!(out.code, Some(0), "{out:?}");
+        assert!(!out.cancelled && !out.timed_out);
+    }
 }
 
 #[cfg(all(test, unix))]

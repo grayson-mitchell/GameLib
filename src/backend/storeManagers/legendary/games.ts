@@ -29,10 +29,10 @@ import {
 } from 'backend/logger'
 import {
   addShortcuts as addShortcutsUtil,
-  removeShortcuts as removeShortcutsUtil
-} from '../../shortcuts/shortcuts/shortcuts'
+  removeShortcuts as removeShortcutsUtil,
+  removeNonSteamGame
+} from 'backend/humbleshortcuts/shortcuts'
 import { join } from 'path'
-import { removeNonSteamGame } from '../../shortcuts/nonesteamgame/nonesteamgame'
 import shlex from 'shlex'
 import { legendaryLaunchArgumentFields } from '../runnerLaunchArgv'
 import { readKnownFixLaunchOverrides } from 'backend/launchrust/knownFixes'
@@ -561,7 +561,7 @@ export default class LegendaryGame implements Game {
    * @public
    */
   async addShortcuts(fromMenu?: boolean) {
-    return addShortcutsUtil(this.deps, this, fromMenu)
+    await addShortcutsUtil(this.deps, this, fromMenu)
   }
 
   /**
@@ -570,7 +570,7 @@ export default class LegendaryGame implements Game {
    * @public
    */
   async removeShortcuts() {
-    return removeShortcutsUtil(this.deps, this)
+    await removeShortcutsUtil(this.deps, this)
   }
 
   /**

@@ -35,10 +35,10 @@ import {
 } from 'backend/utils'
 import {
   addShortcuts as addShortcutsUtil,
-  removeShortcuts as removeShortcutsUtil
-} from '../../shortcuts/shortcuts/shortcuts'
-import { removeNonSteamGame } from 'backend/shortcuts/nonesteamgame/nonesteamgame'
-import type { ShortcutsDeps } from 'backend/shortcuts/utils'
+  removeShortcuts as removeShortcutsUtil,
+  removeNonSteamGame,
+  type ShortcutResolverDeps
+} from 'backend/humbleshortcuts/shortcuts'
 import setup from './setup'
 import { resolveLaunchUmuId } from 'backend/storeManagers/storeManagerCommon/umuGameId'
 import { isWindows } from 'backend/constants/environment'
@@ -54,7 +54,7 @@ export default class NileGameManager implements Game {
 
   constructor(
     id: string,
-    private readonly deps: ShortcutsDeps &
+    private readonly deps: ShortcutResolverDeps &
       Pick<
         ManagerDeps,
         | 'libraryManagers'
@@ -330,7 +330,7 @@ export default class NileGameManager implements Game {
    * @public
    */
   async addShortcuts(fromMenu?: boolean) {
-    return addShortcutsUtil(this.deps, this, fromMenu)
+    await addShortcutsUtil(this.deps, this, fromMenu)
   }
 
   /**
@@ -339,7 +339,7 @@ export default class NileGameManager implements Game {
    * @public
    */
   async removeShortcuts() {
-    return removeShortcutsUtil(this.deps, this)
+    await removeShortcutsUtil(this.deps, this)
   }
 
   async launch(

@@ -27,7 +27,7 @@ import type { RunnerAuthSync, RunnerAuthAsync } from './runnerAuth'
 import type { RunnerMiscAsync } from './runnerMisc'
 import type { SettingsSync, SettingsAsync } from './settings'
 import type { ShellFilesSync, ShellFilesAsync } from './shellFiles'
-import type { ShortcutsSync, ShortcutsAsync } from './shortcuts'
+import type { ShortcutsAsync } from './shortcuts'
 import type { SteamAsync, SteamFrontendMessages } from './steam'
 import type { SteamAuthSync, SteamAuthAsync } from './steamAuth'
 import type { StoreEmbedSync, StoreEmbedAsync } from './storeEmbed'
@@ -48,7 +48,6 @@ export type SyncIPCFunctions = AppShellSync &
   RunnerAuthSync &
   SettingsSync &
   ShellFilesSync &
-  ShortcutsSync &
   SteamAuthSync &
   StoreEmbedSync &
   TestStubsSync &

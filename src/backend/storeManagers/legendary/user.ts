@@ -17,8 +17,8 @@ import {
   classifyCookieRead,
   type CookieReadVerdict,
   type LoginWindowSeamSlot
-} from '../../humble/loginWindowSeam'
-import { standardBrowserUserAgent } from '../../humble/userAgent'
+} from '../../login/loginWindowSeam'
+import { standardBrowserUserAgent } from '../../login/userAgent'
 import type { AppInfo } from 'backend/process/context'
 
 // The real Epic login page. `clearEpicStorage` MUST load it: localStorage,

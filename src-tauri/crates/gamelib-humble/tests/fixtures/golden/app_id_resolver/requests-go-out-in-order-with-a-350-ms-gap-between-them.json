@@ -1,0 +1,181 @@
+{
+  "input": {
+    "about": "Three titles: the request order is the title order and a 350 ms sleep sits between requests (none before the first), the clock moving by it",
+    "seed": {}
+  },
+  "trace": [
+    {
+      "seq": 0,
+      "atMs": 0,
+      "kind": "request",
+      "params": {
+        "term": "Fake Game Alpha",
+        "l": "english",
+        "cc": "US"
+      },
+      "timeoutMs": 8000,
+      "userAgent": "GameLib"
+    },
+    {
+      "seq": 1,
+      "atMs": 0,
+      "kind": "sleep",
+      "ms": 350
+    },
+    {
+      "seq": 2,
+      "atMs": 350,
+      "kind": "request",
+      "params": {
+        "term": "Fake Game Beta",
+        "l": "english",
+        "cc": "US"
+      },
+      "timeoutMs": 8000,
+      "userAgent": "GameLib"
+    },
+    {
+      "seq": 3,
+      "atMs": 350,
+      "kind": "sleep",
+      "ms": 350
+    },
+    {
+      "seq": 4,
+      "atMs": 700,
+      "kind": "request",
+      "params": {
+        "term": "Fake Game Gamma",
+        "l": "english",
+        "cc": "US"
+      },
+      "timeoutMs": 8000,
+      "userAgent": "GameLib"
+    }
+  ],
+  "runs": [
+    {
+      "titles": [
+        "Fake Game Alpha",
+        "Fake Game Beta",
+        "Fake Game Gamma"
+      ],
+      "summary": {
+        "requested": 3,
+        "resolved": 2,
+        "cached": 0,
+        "misses": 1,
+        "errors": 0,
+        "deferred": 0
+      },
+      "lookups": [
+        {
+          "title": "Fake Game Alpha",
+          "cached": "11"
+        },
+        {
+          "title": "Fake Game Beta",
+          "cached": null
+        },
+        {
+          "title": "Fake Game Gamma",
+          "cached": "13"
+        }
+      ]
+    }
+  ],
+  "requests": [
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Fake+Game+Alpha&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Fake+Game+Beta&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Fake+Game+Gamma&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    }
+  ],
+  "logs": [
+    {
+      "seq": 5,
+      "atMs": 700,
+      "level": "info",
+      "message": "Humble: resolved 2/3 Steam app ids (0 cached, 1 misses, 0 errors, 0 deferred)"
+    }
+  ],
+  "stateBefore": {},
+  "stateAfter": {
+    "store_cache/humble_steam_appid.json": {
+      "utf8": "{\n\t\"fake game alpha\": {\n\t\t\"appId\": \"11\",\n\t\t\"checkedAt\": 1795521600000,\n\t\t\"termVersion\": 2\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"fake game alpha\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake game beta\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake game gamma\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t},\n\t\"fake game beta\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521600350,\n\t\t\"termVersion\": 2\n\t},\n\t\"fake game gamma\": {\n\t\t\"appId\": \"13\",\n\t\t\"checkedAt\": 1795521600700,\n\t\t\"termVersion\": 2\n\t}\n}"
+    }
+  }
+}

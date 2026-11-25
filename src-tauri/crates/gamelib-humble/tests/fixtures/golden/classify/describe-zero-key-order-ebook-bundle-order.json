@@ -1,0 +1,32 @@
+{
+  "fn": "describeZeroKeyOrder",
+  "input": {
+    "order": {
+      "gamekey": "order-ebooks",
+      "product": {
+        "category": "bundle",
+        "human_name": "Book Bundle"
+      },
+      "tpkd_dict": {
+        "all_tpks": [
+          {
+            "machine_name": "cookbook_pdf",
+            "gamekey": "order-ebooks",
+            "human_name": "Cook Book (PDF)",
+            "visible": true
+          },
+          {
+            "machine_name": "novel_epub",
+            "gamekey": "order-ebooks",
+            "human_name": "Novel (EPUB)",
+            "visible": true
+          }
+        ]
+      }
+    }
+  },
+  "output": {
+    "anomalous": false,
+    "detail": "tpkd_dict.all_tpks=array(2) skipped=[[0]:no-key_type(fields=[machine_name,gamekey,human_name,visible]) [1]:no-key_type(fields=[machine_name,gamekey,human_name,visible])]"
+  }
+}

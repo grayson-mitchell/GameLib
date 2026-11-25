@@ -1,0 +1,19 @@
+{
+  "family": "icon",
+  "input": {
+    "title": "Dir",
+    "installDirectory": "Dir",
+    "files": {
+      "weird.exe/": 0,
+      "Real.exe": 10
+    },
+    "storeExecutable": "weird.exe",
+    "shell": "file",
+    "injectedEntriesBeforeTheRealOnes": 0
+  },
+  "answer": {
+    "icon": "<HOME>\\Games\\Dir\\Real.exe",
+    "iconIndex": 0,
+    "source": "install-dir"
+  }
+}

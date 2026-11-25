@@ -1,0 +1,26 @@
+{
+  "fn": "describeMissingExpirationTpks",
+  "input": {
+    "order": {
+      "gamekey": "order-unknown-platform",
+      "product": {
+        "category": "bundle",
+        "human_name": "Indie Store Bundle"
+      },
+      "tpkd_dict": {
+        "all_tpks": [
+          {
+            "machine_name": "indiegame_weirdstore",
+            "gamekey": "order-unknown-platform",
+            "key_type": "weirdstore",
+            "key_type_human_name": "Weird Store",
+            "human_name": "Indie Game",
+            "is_expired": false
+          }
+        ]
+      }
+    },
+    "now": "2026-11-24T12:00:00.000Z"
+  },
+  "output": "tpksMissingExpiration=1 candidateFields=[machine_name,gamekey,key_type,key_type_human_name,human_name,is_expired]"
+}

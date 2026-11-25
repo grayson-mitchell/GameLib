@@ -1,8 +1,5 @@
 import { eosOverlayAsyncArgs } from 'common/types/ipc/eosOverlay'
-import {
-  shortcutsAsyncArgs,
-  shortcutsSyncArgs
-} from 'common/types/ipc/shortcuts'
+import { shortcutsAsyncArgs } from 'common/types/ipc/shortcuts'
 import {
   expectFixtureCoverage,
   runFixtureTable,
@@ -20,13 +17,6 @@ const eosTable: FixtureTable<typeof eosOverlayAsyncArgs> = {
   isEosOverlayEnabled: {
     valid: [[], ['Fortnite'], [undefined], [null]],
     invalid: [[''], [5], ['a', 'b']]
-  }
-}
-
-const shortcutsSyncTable: FixtureTable<typeof shortcutsSyncArgs> = {
-  processShortcut: {
-    valid: [['ctrl+r'], ['ctrl+shift+i']],
-    invalid: [[''], [5], []]
   }
 }
 
@@ -62,10 +52,8 @@ const shortcutsAsyncTable: FixtureTable<typeof shortcutsAsyncArgs> = {
 describe('eosOverlay and shortcuts IPC schemas', () => {
   it('has a fixture for every channel', () => {
     expectFixtureCoverage(eosOverlayAsyncArgs, eosTable)
-    expectFixtureCoverage(shortcutsSyncArgs, shortcutsSyncTable)
     expectFixtureCoverage(shortcutsAsyncArgs, shortcutsAsyncTable)
   })
   runFixtureTable(eosOverlayAsyncArgs, eosTable)
-  runFixtureTable(shortcutsSyncArgs, shortcutsSyncTable)
   runFixtureTable(shortcutsAsyncArgs, shortcutsAsyncTable)
 })

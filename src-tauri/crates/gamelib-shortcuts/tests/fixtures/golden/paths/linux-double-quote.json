@@ -1,0 +1,26 @@
+{
+  "platform": "linux",
+  "windowsRegistry": null,
+  "input": {
+    "title": "\"Quoted\" Title",
+    "units": [
+      34,
+      81,
+      117,
+      111,
+      116,
+      101,
+      100,
+      34,
+      32,
+      84,
+      105,
+      116,
+      108,
+      101
+    ]
+  },
+  "sanitized": "Quoted Title",
+  "desktop": "<DESKTOP>/Quoted Title.desktop",
+  "menu": "<HOME>/.local/share/applications/Quoted Title.desktop"
+}

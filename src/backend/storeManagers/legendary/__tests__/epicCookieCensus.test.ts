@@ -48,7 +48,7 @@
  * logout (see 35-23-SUMMARY.md).
  *
  * Mock boundaries mirror `epicLogoutDomains.test.ts`'s exactly — see that
- * file's header for why each one is needed. `../../../humble/loginWindowSeam`
+ * file's header for why each one is needed. `../../../login/loginWindowSeam`
  * is deliberately NOT mocked: it is a plain module-scoped holder + pure
  * classifier, driven here the same way production drives it.
  */
@@ -120,7 +120,7 @@ const deps = {
   }
 } as unknown as import('../user').LegendaryUserDeps
 
-jest.mock('../../../humble/userAgent', () => ({
+jest.mock('../../../login/userAgent', () => ({
   standardBrowserUserAgent: () =>
     'Mozilla/5.0 (Test) Chrome/100.0 Safari/537.36'
 }))
@@ -160,7 +160,7 @@ import {
   createLoginWindowSeamSlot,
   type LoginWindowSeam,
   type LoginWindowCookieRead
-} from '../../../humble/loginWindowSeam'
+} from '../../../login/loginWindowSeam'
 
 // The boot's one login-window seam slot, per test file (66.3-17): the user modules read it through deps.
 const seamSlot = createLoginWindowSeamSlot()

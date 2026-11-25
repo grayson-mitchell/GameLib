@@ -1,0 +1,49 @@
+{
+  "fn": "classifyOrder",
+  "input": {
+    "order": {
+      "gamekey": "order-resync",
+      "human_name": "Resync Bundle",
+      "tpkd_dict": {
+        "all_tpks": [
+          {
+            "machine_name": "resyncgame_steam",
+            "human_name": "Resync Game",
+            "key_type": "steam",
+            "redeemed_key_value": null,
+            "expiration": null
+          }
+        ]
+      }
+    },
+    "revealed": {
+      "only": [
+        "resyncgame_steam"
+      ]
+    },
+    "redeemed": {
+      "all": false
+    },
+    "now": "2026-11-24T12:00:00.000Z"
+  },
+  "output": {
+    "gamekey": "order-resync",
+    "keys": [
+      {
+        "gamekey": "order-resync",
+        "machineName": "resyncgame_steam",
+        "state": "REVEALED",
+        "title": "Resync Game",
+        "platform": "steam",
+        "expiration": null,
+        "origin": "Resync Bundle",
+        "ownedElsewhere": false,
+        "matchConfidence": "none"
+      }
+    ],
+    "allTerminal": false,
+    "freezeEligible": false,
+    "keyIndexByComposite": {},
+    "revealedKeyValueByComposite": {}
+  }
+}

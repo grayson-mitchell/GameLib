@@ -1,0 +1,43 @@
+{
+  "fn": "getSessionStatus",
+  "input": {
+    "cookie": "ory_session_fake=REDACTED"
+  },
+  "requests": [
+    {
+      "method": "GET",
+      "target": "/api/auth/session-status",
+      "headers": [
+        [
+          "Accept",
+          "application/json"
+        ],
+        [
+          "Cookie",
+          "ory_session_fake=REDACTED"
+        ],
+        [
+          "User-Agent",
+          "axios/1.20.0"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "www.humblebundle.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    }
+  ],
+  "result": "anonymous",
+  "actionIds": {
+    "library": null,
+    "redeem": null
+  }
+}

@@ -234,6 +234,12 @@ export interface NativeAsync {
     appName: string,
     runner: Runner
   ) => Promise<GamelibFixStatus | null>
+  // Phase 94 (94-13, D-16): the Humble Spares view's gifted-at map (machine name -> the time the user
+  // confirmed the gift action, ms) and the ownership-override map (machine name -> the time of the "not the
+  // same game" correction, ms), answered by `humble_get_gifted_at` and `humble_get_ownership_overrides` from
+  // the Humble stores through the StoreHost. Each takes no argument.
+  humbleGetGiftedAt: () => Promise<Record<string, number>>
+  humbleGetOwnershipOverrides: () => Promise<Record<string, number>>
 }
 
 export interface NativeSync {

@@ -1,0 +1,52 @@
+{
+  "fn": "classifyOrder",
+  "input": {
+    "order": {
+      "gamekey": "order-past-expiry",
+      "product": {
+        "category": "bundle",
+        "human_name": "Lapsed Bundle"
+      },
+      "tpkd_dict": {
+        "all_tpks": [
+          {
+            "machine_name": "lapsedgame_steam",
+            "gamekey": "order-past-expiry",
+            "key_type": "steam",
+            "human_name": "Lapsed Game",
+            "expiry_date": "2020-01-01T00:00:00Z"
+          }
+        ]
+      }
+    },
+    "revealed": {
+      "only": [
+        "lapsedgame_steam"
+      ]
+    },
+    "redeemed": {
+      "all": false
+    },
+    "now": "2026-11-24T12:00:00.000Z"
+  },
+  "output": {
+    "gamekey": "order-past-expiry",
+    "keys": [
+      {
+        "gamekey": "order-past-expiry",
+        "machineName": "lapsedgame_steam",
+        "state": "UNREDEEMABLE",
+        "title": "Lapsed Game",
+        "platform": "steam",
+        "expiration": "2020-01-01T00:00:00.000Z",
+        "origin": "Lapsed Bundle",
+        "ownedElsewhere": false,
+        "matchConfidence": "none"
+      }
+    ],
+    "allTerminal": true,
+    "freezeEligible": true,
+    "keyIndexByComposite": {},
+    "revealedKeyValueByComposite": {}
+  }
+}

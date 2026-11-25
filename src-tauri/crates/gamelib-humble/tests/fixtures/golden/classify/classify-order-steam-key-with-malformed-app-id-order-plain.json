@@ -1,0 +1,54 @@
+{
+  "fn": "classifyOrder",
+  "input": {
+    "order": {
+      "gamekey": "order-steam-appid-malformed",
+      "product": {
+        "category": "bundle",
+        "human_name": "Malformed AppID Bundle"
+      },
+      "tpkd_dict": {
+        "all_tpks": [
+          {
+            "machine_name": "weirdgame_steam",
+            "gamekey": "order-steam-appid-malformed",
+            "key_type": "steam",
+            "key_type_human_name": "Steam",
+            "human_name": "Weird Game",
+            "is_expired": false,
+            "steam_app_id": {
+              "nested": "object"
+            }
+          }
+        ]
+      }
+    },
+    "revealed": {
+      "all": false
+    },
+    "redeemed": {
+      "all": false
+    },
+    "now": "2026-11-24T12:00:00.000Z"
+  },
+  "output": {
+    "gamekey": "order-steam-appid-malformed",
+    "keys": [
+      {
+        "gamekey": "order-steam-appid-malformed",
+        "machineName": "weirdgame_steam",
+        "state": "UNREVEALED",
+        "title": "Weird Game",
+        "platform": "steam",
+        "expiration": null,
+        "origin": "Malformed AppID Bundle",
+        "ownedElsewhere": false,
+        "matchConfidence": "none"
+      }
+    ],
+    "allTerminal": false,
+    "freezeEligible": false,
+    "keyIndexByComposite": {},
+    "revealedKeyValueByComposite": {}
+  }
+}

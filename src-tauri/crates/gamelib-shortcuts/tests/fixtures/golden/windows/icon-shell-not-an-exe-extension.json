@@ -1,0 +1,12 @@
+{
+  "family": "icon",
+  "input": {
+    "title": "Zeta",
+    "installDirectory": "Zeta",
+    "files": {},
+    "storeExecutable": null,
+    "shell": "not-exe",
+    "injectedEntriesBeforeTheRealOnes": 0
+  },
+  "answer": null
+}

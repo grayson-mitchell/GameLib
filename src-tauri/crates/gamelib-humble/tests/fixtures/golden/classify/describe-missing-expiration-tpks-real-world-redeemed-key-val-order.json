@@ -1,0 +1,28 @@
+{
+  "fn": "describeMissingExpirationTpks",
+  "input": {
+    "order": {
+      "gamekey": "order-real-redeemed",
+      "product": {
+        "category": "bundle",
+        "human_name": "Real Bundle"
+      },
+      "tpkd_dict": {
+        "all_tpks": [
+          {
+            "machine_name": "realredeemed_steam",
+            "gamekey": "order-real-redeemed",
+            "key_type": "steam",
+            "key_type_human_name": "Steam",
+            "human_name": "Real Redeemed Game",
+            "steam_app_id": "54321",
+            "is_expired": false,
+            "redeemed_key_val": "REDACTED"
+          }
+        ]
+      }
+    },
+    "now": "2026-11-24T12:00:00.000Z"
+  },
+  "output": "tpksMissingExpiration=1 candidateFields=[machine_name,gamekey,key_type,key_type_human_name,human_name,steam_app_id,is_expired,redeemed_key_val]"
+}

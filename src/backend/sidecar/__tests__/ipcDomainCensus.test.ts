@@ -78,6 +78,16 @@ const NO_REGISTRATION_OWNER: Record<string, string> = {
   // Phase 87 Plan 52 (D-23): `getEngineState` is a scheduled resolver (`engineWineResolvers.ts`); `engineFlowRegistration.ts`
   // is gone (87-53).
   'Async:getEngineState': 'engine',
+  // Phase 94 Plan 11 (86 D-24): `shortcutsExists` is a scheduled resolver (`shortcutsResolvers.ts`), answered by Rust,
+  // not a `*FlowRegistration.ts` handle.
+  'Async:shortcutsExists': 'shortcuts',
+  // Phase 94 Plan 22 (86 D-24): `addShortcut`, `removeShortcut`, `addToSteam`, `removeFromSteam` and `isAddedToSteam` are
+  // scheduled resolvers (`humbleshortcuts/shortcuts.ts`), answered by Rust.
+  'Async:addShortcut': 'shortcuts',
+  'Async:removeShortcut': 'shortcuts',
+  'Async:addToSteam': 'shortcuts',
+  'Async:removeFromSteam': 'shortcuts',
+  'Async:isAddedToSteam': 'shortcuts',
   'Async:gamepadAction': 'testStubs',
   'Async:get-connectivity-status': 'mainProcess',
   'Async:getSignInProbeOutcomes': 'mainProcess',
@@ -223,8 +233,13 @@ function ownerlessChannels(
  * `engineFlowRegistration.ts` (a measured file, not a parse miss): `getEngineState`, its last handle, became a
  * scheduled resolver in 87-52. The scan reads 19 `*FlowRegistration.ts` files, the same count as the on-disk
  * listing. The declaration total is unchanged.
+ *
+ * Phase 94 Plan 22 (2026-11-24): FILES_FLOOR 19 -> 18. The drop is the deliberate deletion of
+ * `shortcutsFlowRegistration.ts` (a measured file, not a parse miss): its five invoke channels are scheduled
+ * resolvers (`humbleshortcuts/shortcuts.ts`) and its hotkey channel moved to `appShellFlowRegistration.ts`. The scan
+ * reads 18 `*FlowRegistration.ts` files, the same count as the on-disk listing. The declaration total is unchanged.
  */
-const FILES_FLOOR = 19
+const FILES_FLOOR = 18
 
 const DECLARATIONS_FLOOR = 284
 
@@ -255,7 +270,7 @@ describe('ipc per-domain declarations (D-09/D-10/D-11)', () => {
   it('(a) every channel a FlowRegistration registers is declared in its paired ipc/<domain>.ts', () => {
     const files = registrationFiles()
     assertAtOrAboveFloor('ipcDomainCensus files', files.length, FILES_FLOOR)
-    expect(files.length).toBe(19) // 22 before 84-06 deleted loggerFlowRegistration.ts, 21 before 87-36 deleted wineToolsFlowRegistration.ts, 20 before 87-53 deleted engineFlowRegistration.ts
+    expect(files.length).toBe(18) // 22 before 84-06 deleted loggerFlowRegistration.ts, 21 before 87-36 deleted wineToolsFlowRegistration.ts, 20 before 87-53 deleted engineFlowRegistration.ts, 19 before 94-22 deleted shortcutsFlowRegistration.ts
     for (const f of files) {
       const domain = f.replace('FlowRegistration.ts', '')
       expect(Object.keys(domains)).toContain(domain)
@@ -373,7 +388,10 @@ describe('ipc per-domain declarations (D-09/D-10/D-11)', () => {
     // resolvers); owner-less allowlist 64 -> 67. winetricksQueueState and winetricksCancelRemaining became native channels.
     // Phase 87 Plan 36 (D-23): +3 Async (runWineCommandForGame, runWineCommand, callTool, now scheduled resolvers); 67 -> 70.
     // Phase 87 Plan 52 (D-23): +1 Async (getEngineState, now a scheduled resolver); 70 -> 71.
-    expect(Object.keys(NO_REGISTRATION_OWNER)).toHaveLength(71)
+    // Phase 94 Plan 11 (86 D-24): +1 Async (shortcutsExists, now a scheduled resolver); 71 -> 72.
+    // Phase 94 Plan 22 (86 D-24): +5 Async (addShortcut, removeShortcut, addToSteam, removeFromSteam, isAddedToSteam, now
+    // scheduled resolvers); 72 -> 77.
+    expect(Object.keys(NO_REGISTRATION_OWNER)).toHaveLength(77)
   })
 
   it('(d) near-miss: a manifest-owned channel leaves the computed owner-less set', () => {

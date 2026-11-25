@@ -1,0 +1,12 @@
+{
+  "platform": "linux",
+  "windowsRegistry": null,
+  "input": {
+    "title": "Game $(touch pwned)",
+    "desktop": "file",
+    "menu": "none"
+  },
+  "exists": true,
+  "macDesktopShortcutPresent": false,
+  "macDesktopShortcutWanted": false
+}

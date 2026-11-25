@@ -1,0 +1,2 @@
+0:{"a":"$@1","f":"","b":"x"}
+1:{"results":[{"id":"fake-gamekey-0111","title":"Fake Bundle 11","entitlements":{"keys":[{"id":"fake_game_11_gog","title":"Fake Game 11","keyIntegrationId":"gog","gameKey":null,"redeemedAt":null,"expired":false}],"downloads":[]}},{"id":"fake-gamekey-0112","title":"Fake Bundle 12","entitlements":{"keys":[{"id":"fake_game_12_gog","title":"Fake Game 12","keyIntegrationId":"gog","gameKey":null,"redeemedAt":null,"expired":false}],"downloads":[]}}],"bundlesCount":0,"pagination":{"page":3,"totalPages":3,"totalDocs":12},"success":true}

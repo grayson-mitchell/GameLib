@@ -1,0 +1,35 @@
+{
+  "platform": "linux",
+  "input": {
+    "title": "100% #1 ?q=1",
+    "appName": "a%20b#c?d=e",
+    "runner": "legendary",
+    "settings": {
+      "addDesktopShortcuts": true,
+      "addStartMenuShortcuts": true,
+      "addSteamShortcuts": false
+    },
+    "fromMenu": false,
+    "withIcon": false
+  },
+  "outcome": "resolved",
+  "tree": {
+    "Applications": [],
+    "Desktop": [
+      {
+        "path": "100% #1 q=1.desktop",
+        "kind": "file",
+        "mode": "0777",
+        "utf8": "[Desktop Entry]\nName=100% #1 ?q=1\nExec=xdg-open gamelib://launch?appName=a%20b#c?d=e&runner=legendary\nTerminal=false\nType=Application\nCategories=Game;\n"
+      }
+    ],
+    ".local/share/applications": [
+      {
+        "path": "100% #1 q=1.desktop",
+        "kind": "file",
+        "mode": null,
+        "utf8": "[Desktop Entry]\nName=100% #1 ?q=1\nExec=xdg-open gamelib://launch?appName=a%20b#c?d=e&runner=legendary\nTerminal=false\nType=Application\nCategories=Game;\n"
+      }
+    ]
+  }
+}

@@ -1,0 +1,142 @@
+{
+  "input": {
+    "about": "An HTML captive-portal page and a JSON object with no items are both errors (kept out of the 7-day miss cache)",
+    "seed": {}
+  },
+  "trace": [
+    {
+      "seq": 0,
+      "atMs": 0,
+      "kind": "request",
+      "params": {
+        "term": "Fake Portal Page",
+        "l": "english",
+        "cc": "US"
+      },
+      "timeoutMs": 8000,
+      "userAgent": "GameLib"
+    },
+    {
+      "seq": 2,
+      "atMs": 0,
+      "kind": "request",
+      "params": {
+        "term": "Fake No Items",
+        "l": "english",
+        "cc": "US"
+      },
+      "timeoutMs": 8000,
+      "userAgent": "GameLib"
+    }
+  ],
+  "runs": [
+    {
+      "titles": [
+        "Fake Portal Page"
+      ],
+      "summary": {
+        "requested": 1,
+        "resolved": 0,
+        "cached": 0,
+        "misses": 0,
+        "errors": 1,
+        "deferred": 1
+      },
+      "lookups": [
+        {
+          "title": "Fake Portal Page",
+          "cached": null
+        }
+      ]
+    },
+    {
+      "titles": [
+        "Fake No Items"
+      ],
+      "summary": {
+        "requested": 1,
+        "resolved": 0,
+        "cached": 0,
+        "misses": 0,
+        "errors": 1,
+        "deferred": 1
+      },
+      "lookups": [
+        {
+          "title": "Fake No Items",
+          "cached": null
+        }
+      ]
+    }
+  ],
+  "requests": [
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Fake+Portal+Page&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Fake+No+Items&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    }
+  ],
+  "logs": [
+    {
+      "seq": 1,
+      "atMs": 0,
+      "level": "info",
+      "message": "Humble: resolved 0/1 Steam app ids (0 cached, 0 misses, 1 errors, 1 deferred)"
+    },
+    {
+      "seq": 3,
+      "atMs": 0,
+      "level": "info",
+      "message": "Humble: resolved 0/1 Steam app ids (0 cached, 0 misses, 1 errors, 1 deferred)"
+    }
+  ],
+  "stateBefore": {},
+  "stateAfter": {}
+}

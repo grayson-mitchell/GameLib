@@ -1,0 +1,36 @@
+{
+  "fn": "describeMissingExpirationTpks",
+  "input": {
+    "order": {
+      "gamekey": "order-direct-redeem-ent",
+      "product": {
+        "category": "bundle",
+        "human_name": "PDF Book Bundle"
+      },
+      "tpkd_dict": {
+        "all_tpks": [
+          {
+            "machine_name": "bigbook_pdf_download",
+            "gamekey": "order-direct-redeem-ent",
+            "key_type": "download",
+            "key_type_human_name": "Download",
+            "human_name": "Big Book (PDF)",
+            "is_expired": false,
+            "direct_redeem": true,
+            "custom_instructions_html": "<p>Your download is available in your Humble library.</p>",
+            "show_custom_instructions_in_user_libraries": true,
+            "visible": true,
+            "sold_out": false,
+            "display_separately": false,
+            "exclusive_countries": [],
+            "disallowed_countries": [],
+            "keyindex": 0,
+            "redeemed_key_val": "REDACTED"
+          }
+        ]
+      }
+    },
+    "now": "2026-11-24T12:00:00.000Z"
+  },
+  "output": null
+}

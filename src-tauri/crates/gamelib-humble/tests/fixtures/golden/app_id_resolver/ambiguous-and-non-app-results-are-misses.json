@@ -1,0 +1,181 @@
+{
+  "input": {
+    "about": "Two apps with the same normalised name, a DLC item and a near-miss name are all misses, never a guess",
+    "seed": {}
+  },
+  "trace": [
+    {
+      "seq": 0,
+      "atMs": 0,
+      "kind": "request",
+      "params": {
+        "term": "Twin Game",
+        "l": "english",
+        "cc": "US"
+      },
+      "timeoutMs": 8000,
+      "userAgent": "GameLib"
+    },
+    {
+      "seq": 1,
+      "atMs": 0,
+      "kind": "sleep",
+      "ms": 350
+    },
+    {
+      "seq": 2,
+      "atMs": 350,
+      "kind": "request",
+      "params": {
+        "term": "Dlc Only Game",
+        "l": "english",
+        "cc": "US"
+      },
+      "timeoutMs": 8000,
+      "userAgent": "GameLib"
+    },
+    {
+      "seq": 3,
+      "atMs": 350,
+      "kind": "sleep",
+      "ms": 350
+    },
+    {
+      "seq": 4,
+      "atMs": 700,
+      "kind": "request",
+      "params": {
+        "term": "Deluxe Near Miss",
+        "l": "english",
+        "cc": "US"
+      },
+      "timeoutMs": 8000,
+      "userAgent": "GameLib"
+    }
+  ],
+  "runs": [
+    {
+      "titles": [
+        "Twin Game",
+        "Dlc Only Game",
+        "Deluxe Near Miss"
+      ],
+      "summary": {
+        "requested": 3,
+        "resolved": 0,
+        "cached": 0,
+        "misses": 3,
+        "errors": 0,
+        "deferred": 0
+      },
+      "lookups": [
+        {
+          "title": "Twin Game",
+          "cached": null
+        },
+        {
+          "title": "Dlc Only Game",
+          "cached": null
+        },
+        {
+          "title": "Deluxe Near Miss",
+          "cached": null
+        }
+      ]
+    }
+  ],
+  "requests": [
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Twin+Game&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Dlc+Only+Game&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Deluxe+Near+Miss&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    }
+  ],
+  "logs": [
+    {
+      "seq": 5,
+      "atMs": 700,
+      "level": "info",
+      "message": "Humble: resolved 0/3 Steam app ids (0 cached, 3 misses, 0 errors, 0 deferred)"
+    }
+  ],
+  "stateBefore": {},
+  "stateAfter": {
+    "store_cache/humble_steam_appid.json": {
+      "utf8": "{\n\t\"twin game\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521600000,\n\t\t\"termVersion\": 2\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"twin game\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"dlc only game\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"deluxe near miss\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t},\n\t\"dlc only game\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521600350,\n\t\t\"termVersion\": 2\n\t},\n\t\"deluxe near miss\": {\n\t\t\"appId\": null,\n\t\t\"checkedAt\": 1795521600700,\n\t\t\"termVersion\": 2\n\t}\n}"
+    }
+  }
+}

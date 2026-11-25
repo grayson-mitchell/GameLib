@@ -1,0 +1,11 @@
+{
+  "platform": "linux",
+  "windowsRegistry": null,
+  "input": {
+    "title": "",
+    "units": []
+  },
+  "sanitized": "",
+  "desktop": "<DESKTOP>/.desktop",
+  "menu": "<HOME>/.local/share/applications/.desktop"
+}

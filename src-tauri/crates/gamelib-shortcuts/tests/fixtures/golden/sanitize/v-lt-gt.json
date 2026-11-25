@@ -1,0 +1,21 @@
+{
+  "input": {
+    "text": "a<b>c",
+    "units": [
+      97,
+      60,
+      98,
+      62,
+      99
+    ]
+  },
+  "output": {
+    "text": "abc",
+    "units": [
+      97,
+      98,
+      99
+    ],
+    "utf8Bytes": 3
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "platform": "win32",
+  "windowsRegistry": true,
+  "input": {
+    "title": "Ünïcödé 日本語 Ωmega",
+    "desktop": "file",
+    "menu": "none"
+  },
+  "exists": true,
+  "macDesktopShortcutPresent": false,
+  "macDesktopShortcutWanted": false
+}

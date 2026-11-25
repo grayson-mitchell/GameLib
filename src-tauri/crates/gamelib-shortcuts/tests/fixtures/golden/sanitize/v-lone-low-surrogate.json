@@ -1,0 +1,19 @@
+{
+  "input": {
+    "text": "a\udf6eb",
+    "units": [
+      97,
+      57198,
+      98
+    ]
+  },
+  "output": {
+    "text": "a\udf6eb",
+    "units": [
+      97,
+      57198,
+      98
+    ],
+    "utf8Bytes": 5
+  }
+}

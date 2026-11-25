@@ -499,6 +499,27 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 88 P16 | 50 min | 2 tasks | 43 files |
 | Phase 88 P17 | 3h30m | 3 tasks | 9 files |
 | Phase 87 P69 | 9h40m | 3 tasks | 3 files |
+| Phase 94 P01 | 15min | 3 tasks | 5 files |
+| Phase 94 P02 | 25min | 2 tasks | 15 files |
+| Phase 94 P03 | 25min | 2 tasks | 3 files |
+| Phase 94 P04 | 55min | 2 tasks | 45 files |
+| Phase 94 P05 | 90min | 2 tasks | 365 files |
+| Phase 94 P06 | 95min | 3 tasks | 22 files |
+| Phase 94 P08 | 190min | 3 tasks | 14 files |
+| Phase 94 P09 | 45min | 3 tasks | 314 files |
+| Phase 94 P12 | 75min | 2 tasks | 7 files |
+| Phase 94 P11 | 37min | 2 tasks | 32 files |
+| Phase 94 P13 | 95min | 2 tasks | 22 files |
+| Phase 94 P14 | 100min | 3 tasks | 9 files |
+| Phase 94 P15 | 150min | 2 tasks | 14 files |
+| Phase 94 P16 | 105min | 3 tasks | 12 files |
+| Phase 94 P17 | 60min | 2 tasks | 6 files |
+| Phase 94 P18 | 170min | 3 tasks | 13 files |
+| Phase 94 P19 | 75min | 2 tasks | 3 files |
+| Phase 94 P20 | 150min | 3 tasks | 14 files |
+| Phase 94 P21 | 95min | 3 tasks | 15 files |
+| Phase 94 P22 | 190min | 3 tasks | 57 files |
+| Phase 94 P24 | 95min | 2 tasks | 55 files |
 
 ## Accumulated Context
 
@@ -549,16 +570,6 @@ Entries for phases before 44 live in STATE-HISTORY.md § Roadmap Evolution archi
 - Phase 66.2 inserted after Phase 66: Split from Phase 66 at plan time (2026-11-10): ~50 plans at full depth; see ROADMAP § Phase 66
 - Phase 66.3 inserted after Phase 66: Split from Phase 66 at plan time (2026-11-10): ~50 plans at full depth; see ROADMAP § Phase 66
 - Phase 66.4 inserted after Phase 66.3: Split from Phase 66.3 at plan time (2026-11-11, D-66.3-04): long tail, census-to-test flip, poller revive, live macOS smoke + Windows UAT
-- Phase 91 edited: edited fields: depends_on 90.2 -> 88 (Lane B); v0.11 lane map added 2026-11-24
-- Phase 93 edited: edited fields: depends_on 92 -> 90.1, 92; v0.11 lane map added 2026-11-24
-- Phase 94 edited: edited fields: depends_on 93 -> 86 (Lane C); v0.11 lane map added 2026-11-24
-- Phase 95 edited: edited fields: research note: runs in Lane A beside 91-93; v0.11 lane map added 2026-11-24
-- Phase 98 edited: edited fields: depends_on 94, 97 -> 93, 94, 97; v0.11 lane map added 2026-11-24
-- Phase 88 split at plan time (2026-11-25, 88-CONTEXT D-30): 88 renamed "Launch scaffolding and known fixes" (SVC-03 part 1 of 4)
-- Phase 88.1 inserted after Phase 88: Launch builders and prepare steps (D-30, SVC-03 part 2 of 4)
-- Phase 88.2 inserted after Phase 88.1: Command runner and game processes (D-30, SVC-03 part 3 of 4)
-- Phase 88.3 inserted after Phase 88.2: Launch funnel, re-adoption and the live gate (D-30, SVC-03 part 4 of 4)
-- Phases 89 and 91 edited: depends_on 88 -> 88.3; Lane A and Lane B lane map updated (2026-11-25)
 
 ### Decisions
 
@@ -1102,6 +1113,60 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 88]: 88-17: sub-phase 88 closes on goldens plus three-OS CI (rust-test.yml green on windows, macos, ubuntu at c5ae345ae, run 45533129411); the operator chose push with CI-only follow-up fixes allowed; release-tauri.yml has the same Windows long-path checkout exposure and was left alone
 - [Phase 87]: 87-69: re-run gate on signed 0.13.1 scored 3 pass (2, 4, 6), 2 issue (1, 7), 2 blocked (3, 5); SVC-02's live half is NOT fully proven on macOS; F1 does not reproduce (verdict=blocked:crossover-missing, dialog reads '(offline)')
 - [Phase 87]: 87-69: new findings for a further gap cycle: RF1 CrossOver launches from GameLib exit in 1-2 s (blocks Stop), RF2 launch state not ended after the offline refusal, RF3 uninstall-dialog Cancel removed the Steam shortcut, RF4 is-protected-root pre-flight on the stored shared prefix runs before the 87-70 bottle route (uninstaller.ts:385-409), RF5 redundant offline warning, RF6 in-use/unsafe-name render as bad-reply
+- [Phase 94]: 94-01: humbleConfigStore TS mirror deletion moves 94 -> 92 and timestampStore 94 -> 88 (D-24); item 3 needs the Desktop-shortcut setting on; item 4 runs with Mac Steam closed
+- [Phase 94]: 94-02: test-only ops chained into dispatch under cfg(test), never in a release OPS; hide_window applied via pure creation_flags in the Windows arm only; jiff declared in gamelib-humble only
+- [Phase 94]: 94-03: schedule starts with one relocated row (createRustLoginWindowSeam at humbleLoginFlowRegistration.ts, deletedBy 92) because the tree already held RUST_HUMBLE_LOGIN_* calls; relocated rows cover the calls inside the export they name; 94-04 repoints the row
+- [Phase 94]: 94-04: registerLoginWindowSeam takes appInfo as a third argument (the smoke hook needs the browser user agent); the login seam slot is BootServices.loginWindowSeam only, built in the humble-services step
+- [Phase 94]: 94-05: shortcut goldens record the file mode the TS requested (writeFile mode option, chmodSync), not the on-disk mode, so they are identical on NTFS and POSIX hosts
+- [Phase 94]: 94-05: shortcut oracle case ids are checked for case-insensitive collisions (NTFS and default macOS fold them)
+- [Phase 94]: 94-06: Humble wire replay matches by method+target, compares the whole recorded request (multipart fields with redacted values, boundary and content-length normalised) and fails on a recording never requested; close() throws so a swallowed 599 still fails
+- [Phase 94]: 94-06: zone-dependent classify goldens are recorded in UTC, America/Phoenix and Asia/Kolkata via the real process TZ (vm.runInThisContext), host faults never recorded; title-match vectors carry similarity and pin three exact-0.85 matches
+- [Phase 94]: 94-08: synthetic key values are the literal REDACTED (the recorder redacts a key field and the scan requires it), so a replayed response equals the one the golden saw
+- [Phase 94]: 94-08: D-07 state bytes come from the in-process disk sink (the shell's writer in miniature); timestamps are second-resolution Date() zone strings, and JSON key order is part of the bytes (the app-id pass reorders a library entry on the next sync)
+- [Phase 94]: 94-09: the user oracle drives the real SidecarHumbleSecretStore over a fake keyring (not a recording fake) so invalidate-before-delete is the real slot store's order; a closure map is the only secret storage, T-94-16
+- [Phase 94]: 94-09: the digest date is pinned to en-US in the golden (the TS renders the host default locale) and i18next escapes its slashes (1&#x2F;2&#x2F;2027) in the OS notification: the Rust digest must choose to replicate or fix
+- [Phase 94]: 94-09: a dead cookie API (zero cookies from the first read) aborts the watch with error on the first tick; the 10-minute deadline is reached only by a live jar with no candidate or a window that never opens
+- [Phase 94]: 94-09: Catalog::t_unescaped is for the one dialog row the TS renders with escapeValue false, flagged per row in rendered.json; plural suffixes stay unported because the en count keys equal the base key
+- [Phase 94]: 94-14: user decision: run 94-14 although the 94-07 icon_geometry goldens are not recorded (they need a Mac); the golden comparison is an explicit #[ignore] with a guard that fails once the goldens exist while it is still ignored; no geometry value is hand-typed
+- [Phase 94]: 94-14: the 94-05 quoting defect (run.sh apostrophe, unencoded Linux Exec=) is reproduced byte for byte, not fixed, because the goldens pin the bytes; the fix stays with its todo
+- [Phase 94]: 94-14: the Desktop clear is a std::fs delete guarded by proof.rs (a symlink to exactly the Applications bundle, or a bundle with run.sh marker, gamelib://launch and a plist naming run.sh); anything else is left and reported Unproven, matching the 94-07 deltas
+- [Phase 94]: 94-15: host zone: HumbleCtx carries a HostZone seam (the UTC offset at an instant) and local_zone_at; the shell answers it from the system zone (gamelib_log::SystemTz); the library port classifies with the offset now, one hour off for a zone-less or date-only expiry across a daylight-saving change; the exact form (classify taking a zone lookup) stays in the todo
+- [Phase 94]: 94-15: fuzzy match ratio is 1.0 - d as f64 / max_len as f64 over ASCII-normalised titles compared with >=, the guards measure raw length in UTF-16 units with the first argument shorter on a tie; the 101 shared vectors (three at exactly 0.85) are the one source for both languages
+- [Phase 94]: 94-15: no Humble request follows a redirect (Policy::none client, follow_redirects false by default); the Steam store search opts in as axios did because it carries no credential
+- [Phase 94]: 94-15: Replay pins decoded query pairs, nine request headers and the multipart field order against the 94-06 recordings; REDACTED matches any non-empty live value; the url crate encodes an apostrophe as %27 where axios did not (pinned by a test)
+- [Phase 94]: 94-15: a resolver pass holds one humble-appid shutdown registrant and races the token on every gap and on the request in flight (the plan named only the gaps); the real-capture header check is #[ignore]d pending 94-10
+- [Phase 94]: 94-12: classifier time values are i64 ms with a caller-supplied fixed-offset LocalZone (jiff::Timestamp cannot hold V8's range); host-zone source is for 94-15
+- [Phase 94]: 94-12: classify reads an order-preserving JsValue because Object.keys order is asserted and serde_json preserve_order is forbidden
+- [Phase 94]: 94-11: shortcutsExists is answered by Rust through resolveShortcutsExists; the TS handle is deleted in the same commit and the oracle now drives the exported shortcutsExistOnDisk, so the exists goldens still compare against the TS predicate until 94-22
+- [Phase 94]: 94-11: the Linux Desktop folder and the Windows %VAR% environment are snapshotted at shell install (the TS re-read user-dirs.dirs per call); a title with a lone UTF-16 surrogate cannot cross JSON and answers shortcuts_exist:bad-args
+- [Phase 94]: 94-11: the registry Desktop read copies the TS expansion of REG_SZ and the U+FFFD refusal; three todos filed (percent pairs in REG_SZ, path outside the console code page, a title that sanitizes to nothing)
+- [Phase 94]: 94-13: humbleGetGiftedAt and humbleGetOwnershipOverrides are native humble channels answered by Rust from the StoreHost; the TS handles and zod entries are deleted in the same commit and Rust only reads, so each file keeps one writer until 94-29
+- [Phase 94]: 94-13: HumbleCtx takes the user-data folder as a constructor argument and the Humble catalog loads from the steampoll locales folder (public in dev, build packaged), not info_dispatch::bundled_public_dir, which hard-codes public
+- [Phase 94]: 94-13: the Humble log is fixed text; guarded writes only an op name and a category for a panic or a shutdown stop, and a test feeds a URL, a cookie and a key as arguments and asserts none reaches a line
+- [Phase 94]: 94-16: the Windows .lnk script is a compile-time constant replayed byte for byte in 90 recorded spawns; the system root travels as its own argument beside the base environment, both derived by the shell from its one Windows environment snapshot
+- [Phase 94]: 94-16: get_icon takes the GOG product API's raw images.icon as an input and exports gog_local_icon; the caller must resolve the API lazily (only when no local goggame ico or support icon exists), as the TS did, or an installed game would gain an API call and an API failure would fail the add
+- [Phase 94]: 94-16: icon downloads are atomic (.part renamed), capped at 32 MiB, refuse a non-2xx status or an empty body, hold a shortcuts-icon registrant and abort on shutdown; an app name that is not a plain file name gets no icon (T-94-30)
+- [Phase 94]: 94-16: the regex dependency of gamelib-shortcuts gains unicode-gencat for the icon scan's [^\p{L}\p{N}] name normalisation; gamelib-proc is a dev-dependency for the real PowerShell .lnk test
+- [Phase 94]: 94-17: the digest text keeps i18next's HTML escaping (1&#x2F;2&#x2F;2027, Tom &amp; Jerry) through the escaping Catalog::t because the plan demands every alerts golden replay (T-94-31); the visible defect is the todo 2026-11-24-humble-digest-text-is-html-escaped (fix is Catalog::t_unescaped plus a deliberate golden re-record)
+- [Phase 94]: 94-17: the digest date is pinned to the en-US M/D/YYYY, read as the calendar day in the host zone at the expiry instant (a zone-less string in the offset now, local_zone_at(now)); the locale policy for other process locales or UI languages is the todo 2026-11-24-humble-digest-date-is-en-us-only
+- [Phase 94]: 94-17: detect_and_notify_expiration_transitions takes an AlertOptions {suppress_notifications, notify_humble_expirations, steam_deck_game_mode} beside (ctx, keys) because the crate reads neither settings nor environment; a key whose dedupe record cannot be written is excluded from the digest and an unopenable store shows nothing, where the TS no-ops on a read-only store and re-fires every sync; 94-25 supplies the options
+- [Phase 94]: 94-18: every shortcut delete is gated on a creation proof (macOS bundle with the run.sh marker, a Desktop link to exactly the Applications bundle, a Linux .desktop with the Exec=xdg-open gamelib://launch? line, a Windows .lnk holding the UTF-16LE gamelib://launch?appName=) and goes through gamelib-safety remove_tree with the folder the item lives in as its trust root; an item the proof cannot read or attribute is refused and reported, replaying the 94-07 deltas
+- [Phase 94]: 94-18: the Linux proof also needs a [Desktop Entry] line and both file proofs refuse a file over 64 KiB; a macOS add writes no bundle when the shell executable is unknown; shortcuts_add answers bad-args for an empty title, an empty app name or an unknown runner while add_with_desktop (the golden seam, registry answer injected) accepts the title-less goldens
+- [Phase 94]: 94-18: caller contract for 94-22: the TS resolver resolves gogProductIcon lazily (only when the install has no goggame ico or support icon; an API failure is null, never a failed add) and passes notify true for the renderer and false for the store managers; steam_registration_wanted is the predicate 94-20 joins to the add
+- [Phase 94]: 94-18: shortcuts_dispatch::install takes the AppHandle and loads the locales catalog; ShellShortcutsUi raises the OS notification and the showDialog frame (no ack id); rpc_shortcuts_add and rpc_shortcuts_remove are not created until 94-22 registers the channels
+- [Phase 94]: 94-19: a corrupt Humble file is StoreRead::Unreadable (reads) and WriteError::Unreadable (writes) when the host opened it read-only because it could not read it, which is every user-state and account file: the file is left as it was and the host's aside copy holds the original bytes; the two rebuildable caches (humble_sync, humble_steam_appid) follow the host's cache rule (copy aside, restart empty, writable) because refusing every write would leave the sync timestamp unwritable for good
+- [Phase 94]: 94-19: clear_on_disconnect clears config, library and sync in the TS order with Op::Clear and returns a ClearReport instead of stopping at the first failure, so an unreadable library is reported and kept while the config and sync are still cleared; the seven user-state files and the Steam app-id cache are never cleared (82-STATE-OWNERSHIP rows 69-76), proved by bytes against the 94-09 golden
+- [Phase 94]: 94-19: a Humble record update is {...existing, ...fields} (Entry::with, JS spread semantics) followed by the __timestamp.<key> stamp, so a field this crate does not know keeps its place; the sync state patches over the {syncedAt: null, syncError: none} default; the audit trail refuses an existing non-array value instead of replacing it
+- [Phase 94]: 94-20: the crate reaches Steam shortcuts.vdf only through the SteamShortcutsFile trait, which the shell implements over gamelib_steamfiles::dispatch (the steamfiles_shortcuts_read and _apply channels own code, one atomic temp-and-rename write per edit); the crate depends on neither gamelib-steamfiles nor gamelib-info (cargo tree 0, dev-dependencies included), and the Steam id comes through the WikiLookup trait over info_wiki_get
+- [Phase 94]: 94-20: an unparseable lastPlayed means now (the TS sent LastPlayTime null, which the real steamfiles write rejects, so it failed the whole add); LaunchOptions keeps the app name and runner unencoded as the golden requires and removal is by title with no creation proof as the goldens require; both are filed as todos (D-20), not changed
+- [Phase 94]: 94-20: caller contract for 94-22: the resolver passes game {appName, runner, title, isDlc, artSquare, artCover, artLogo, canAddSteamShortcut, installPath, gogProductIcon} and settings with defaultSteamPath to shortcuts_add and the three shortcuts_steam_* ops (no rpc channel exists yet); the shell passes FLATPAK_ID as read (the TS wrote the constant com.heroicgameslauncher.hgl); result notifications HTML-escape the game title as i18next does, the error dialog does not
+- [Phase 94]: 94-21: the Humble secret owner is Rust over the unchanged humble-session and humble-csrf slots, through the shared account-keyed Keychain core in info_secrets.rs (same service, accounts via keyring_account, one bounded read), and a dev-vault source over the shared vault file with one process-wide read-modify-write mutex; it replays all 23 TS secrets goldens driven by the goldens' own recorded keyring calls, answers and call times, and the real Keychain is only provable at the 94-32 signed live gate
+- [Phase 94]: 94-21: the plaintext migration is Rust boot work (a humble-migration registrant, 10 s bound, one outcome word) and the TS boot no longer migrates; a dev-vault run never migrates (the TS vault arm was exclusive), and the TS migration survives only as the oracle's reference copy (humble/__tests__/oracle/legacyMigration.ts) so the 94-09 goldens still regenerate, deleted with the oracle by 94-30
+- [Phase 94]: 94-22: a resolver cannot project existsAfter or reject itself (the 86 shape rule allows only const declarations and one returned call), so the registered renderer handle answers existsAfter and shortcuts_add with notify false answers a partial failure with an Err carrying the TS's own Could not write shortcuts message; notify true still resolves the outcome and raises the notice
+- [Phase 94]: 94-22: the GOG product icon is resolved lazily in the one input helper (only for an op that draws an icon, only when the install holds neither goggame ico nor support icon png, an API failure is no icon); a GOG store executable is read only for the Windows desktop add and a missing one sends none
+- [Phase 94]: 94-22: shortcutsExistOnDisk moved to src/backend/shortcuts/shortcuts/shortcuts.ts for the 94-05 oracle until 94-24; processShortcut moved unchanged to appShellFlowRegistration.ts as registerProcessShortcut with its IPC declaration moved to the app-shell domain; shortcutsFlowRegistration.ts and shortcutsFlows.test.ts are deleted with every guard following by exactly its own contribution
+- [Phase 94]: 94-24: the TS shortcuts tree and oracle were deleted behind describe('shortcutsPortComplete') (red then green); the macOS icon_geometry oracle survives cut down in src/backend/testUtils/shortcutsIconGeometry as a relocated schedule row (writeOrCompareIconGeometryGolden, callers none, deletedBy 99) so the four Mac goldens stay recordable; its todo carries the new command and a step to delete it with the recording commit
+- [Phase 94]: 94-24: getWikiGameInfo and its infoShimSchedule row are deleted (the Rust shortcuts crate reaches the wiki lookup in-process); the steamfiles TS validity replay (shortcutsReplay.test.ts) is retired with its subject and the upstream test_data copy in the crate is now the only copy; @shockpkg/icon-encoder, sanitize-filename, tmp and @types/tmp dropped, fastest-levenshtein kept
 
 ### Pending Todos
 

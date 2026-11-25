@@ -1,0 +1,21 @@
+{
+  "fn": "describeSkippedEntitlements",
+  "input": {
+    "order": {
+      "gamekey": "order-revealed",
+      "human_name": "Another Bundle",
+      "tpkd_dict": {
+        "all_tpks": [
+          {
+            "machine_name": "anothergame_steam",
+            "human_name": "Another Game",
+            "key_type": "steam",
+            "redeemed_key_value": null,
+            "expiration": null
+          }
+        ]
+      }
+    }
+  },
+  "output": null
+}

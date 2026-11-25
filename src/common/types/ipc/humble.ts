@@ -30,6 +30,9 @@ export const humbleSyncArgs = {
   humbleDisconnect: noArgs
 }
 
+// Phase 94 (94-13, D-16): `humbleGetGiftedAt` and `humbleGetOwnershipOverrides` are native `humble` channels
+// (nativeChannels.json, typed in native.ts); the Rust shell answers them from the Humble stores, so neither has
+// a zod schema or a sidecar handler here.
 export const humbleAsyncArgs = {
   humbleGetUserInfo: noArgs,
   humbleCheckHealth: noArgs,
@@ -44,12 +47,8 @@ export const humbleAsyncArgs = {
   // D-42: "Not the same game" override for a fuzzy-matched row; the backend re-validates.
   humbleSetOwnershipOverride: z.tuple([machineName]),
   humbleClearOwnershipOverride: z.tuple([machineName]),
-  // WR-04: machineName -> overriddenAt (ms) for every recorded override.
-  humbleGetOwnershipOverrides: noArgs,
   // D-59/D-57: confirms the "Open Humble" gift action; no gift-link value crosses the channel.
   humbleRecordGiftLinkOpened: z.tuple([machineName]),
-  // machineName -> giftedAt (ms) so the Spares view can label an already-gifted key.
-  humbleGetGiftedAt: noArgs,
   // HCLAIM-04, D-77: marks a key locally redeemed; the backend re-validates eligibility.
   humbleMarkRedeemed: z.tuple([keyIdentity]),
   // Reverses a local-only "Mark as redeemed"; never applicable to a server-confirmed redeem.
@@ -69,9 +68,7 @@ interface HumbleAsyncReturns {
   humbleGetSyncState: Promise<HumbleSyncState>
   humbleSetOwnershipOverride: Promise<void>
   humbleClearOwnershipOverride: Promise<void>
-  humbleGetOwnershipOverrides: Promise<Record<string, number>>
   humbleRecordGiftLinkOpened: Promise<void>
-  humbleGetGiftedAt: Promise<Record<string, number>>
   humbleMarkRedeemed: Promise<RedeemOutcome>
   humbleUndoRedeemed: Promise<void>
   humbleGetRevealedKeyValue: Promise<string | null>

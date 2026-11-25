@@ -1,0 +1,19 @@
+{
+  "family": "icon",
+  "input": {
+    "title": "The Dig!",
+    "installDirectory": "The Dig!",
+    "files": {
+      "THE_dig.exe": 10,
+      "Larger.exe": 900
+    },
+    "storeExecutable": null,
+    "shell": "file",
+    "injectedEntriesBeforeTheRealOnes": 0
+  },
+  "answer": {
+    "icon": "<HOME>\\Games\\The Dig!\\THE_dig.exe",
+    "iconIndex": 0,
+    "source": "install-dir"
+  }
+}

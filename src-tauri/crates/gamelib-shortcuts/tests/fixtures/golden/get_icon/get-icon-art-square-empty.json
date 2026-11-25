@@ -1,0 +1,23 @@
+{
+  "input": {
+    "runner": "legendary",
+    "appName": "icon-app",
+    "artSquare": "",
+    "installPathGiven": true,
+    "installFiles": [],
+    "productApi": {
+      "kind": "null"
+    },
+    "presentIcons": [],
+    "download": "ok",
+    "iconsFolderExistedBefore": false
+  },
+  "outcome": {
+    "result": "resolved",
+    "icon": null
+  },
+  "productApiCalls": [],
+  "aborts": [],
+  "downloads": [],
+  "iconsFolder": []
+}

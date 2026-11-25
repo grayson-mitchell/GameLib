@@ -1,0 +1,12 @@
+{
+  "platform": "linux",
+  "windowsRegistry": null,
+  "input": {
+    "title": "Plain Game",
+    "desktop": "none",
+    "menu": "present"
+  },
+  "exists": true,
+  "macDesktopShortcutPresent": false,
+  "macDesktopShortcutWanted": false
+}

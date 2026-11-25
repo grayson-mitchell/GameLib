@@ -1,0 +1,2 @@
+0:{"a":"$@1","f":"","b":"x"}
+1:{"results":[{"id":"fake-gamekey-0009","title":"Fake Bundle Legacy","entitlements":{"keys":[{"id":"legacy_gog","title":"Fake Legacy Game","keyIntegrationId":"gog","gameKey":null,"redeemedAt":null,"expired":false,"redemptionExpiryDate":"$D2027-05-06T00:00:00.000Z"}],"downloads":[]}}],"bundlesCount":0,"pagination":{"page":1,"totalPages":1,"totalDocs":1},"success":true}

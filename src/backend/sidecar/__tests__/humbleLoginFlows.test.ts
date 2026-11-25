@@ -27,7 +27,7 @@
  *
  * `../../humble/user` and `../../humble/library` are automocked (their own logic is covered by
  * `src/backend/humble/__tests__/`); this suite proves *registration and transport*, not Humble
- * logic. `../../humble/userAgent` is factory-mocked to a fixed, assertable value.
+ * logic. `../../login/userAgent` is factory-mocked to a fixed, assertable value.
  */
 
 // ── electron / electron-store — route Jest's own module resolution at the REAL sidecar shims
@@ -65,7 +65,7 @@ jest.mock('backend/constants/environment', () => ({
 // implementation reads `app.userAgentFallback`, which platformApi does not populate. ──────────
 const FAKE_USER_AGENT =
   'Mozilla/5.0 (Test) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/999.0.0.0 Safari/537.36'
-jest.mock('../../humble/userAgent', () => ({
+jest.mock('../../login/userAgent', () => ({
   standardBrowserUserAgent: jest.fn(() => FAKE_USER_AGENT)
 }))
 
@@ -75,10 +75,11 @@ import { PassThrough } from 'node:stream'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 
+import { registerHumbleLoginFlows } from '../humbleLoginFlowRegistration'
 import {
-  registerHumbleLoginFlows,
+  registerLoginWindowSeam,
   createRustLoginWindowSeam
-} from '../humbleLoginFlowRegistration'
+} from '../loginSeamRegistration'
 import { createIpcRegistry } from '../ipcRegistry'
 import { createTestHumbleServices } from 'backend/testUtils/testHumble'
 import { createTestStores } from 'backend/testUtils/testServices'
@@ -95,7 +96,11 @@ import {
   RUST_HUMBLE_LOGIN_CLEAR_COOKIES,
   RUST_HUMBLE_LOGIN_CLEAR_STORAGE
 } from 'common/types/sidecarTransport'
-import { classifyCookieRead } from '../../humble/loginWindowSeam'
+import {
+  classifyCookieRead,
+  createLoginWindowSeamSlot
+} from '../../login/loginWindowSeam'
+import { TEST_APP_INFO } from 'backend/testUtils/testContext'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 
 type Frame = Record<string, unknown>
@@ -155,7 +160,6 @@ const ipc = createIpcRegistry()
 // The Humble services are the boot-style instance from createTestHumbleServices; the user and
 // library inside it are lazy, so this suite never loads them (it wires, it does not re-test).
 registerHumbleLoginFlows({
-  requestRustInvoke,
   ipc,
   humble: createTestHumbleServices({ stores: createTestStores() })
 })
@@ -183,6 +187,33 @@ describe('registration kind — the 4 channels are registered with the correct k
       expect(ipc.handlerMap().has(channel)).toBe(false)
     }
   )
+})
+
+// ── Describe 1b: the seam install (94-04, D-03) ───────────────────────────────────────────────
+// The install moved out of the Humble registration into `registerLoginWindowSeam`; an OAuth login
+// reads the slot, so this proves the slot it is handed reaches the Rust login window.
+describe('registerLoginWindowSeam — installs the rustInvoke-backed seam into the boot slot', () => {
+  it('leaves the slot empty before the call and a seam that drives the Rust login window after it', async () => {
+    const { input, frames } = startTransport()
+    const slot = createLoginWindowSeamSlot()
+    expect(slot.get()).toBeNull()
+
+    registerLoginWindowSeam(slot, requestRustInvoke, TEST_APP_INFO)
+    expect(slot.get()).not.toBeNull()
+
+    const promise = slot.getOrThrow().open('https://accounts.example.test/', {
+      visible: true,
+      userAgent: FAKE_USER_AGENT
+    })
+    await flush()
+    const frame = frames.find((f) => f.channel === RUST_HUMBLE_LOGIN_OPEN)
+    expect(frame?.kind).toBe('rustInvoke')
+    input.write(
+      `${JSON.stringify({ id: frame?.id, ok: true, result: 'login-oauth-1' })}
+`
+    )
+    await expect(promise).resolves.toBe('login-oauth-1')
+  })
 })
 
 // ── Describe 2: rustInvoke frame shape ─────────────────────────────────────────────────────────
@@ -698,7 +729,7 @@ describe('classifyCookieRead truth table (REQ-34.4.1-13)', () => {
 
   it('REQ-34.4.1-13: classifyCookieRead has no platform branch — a structural, source-text proof', () => {
     const source = readFileSync(
-      join(__dirname, '..', '..', 'humble', 'loginWindowSeam.ts'),
+      join(__dirname, '..', '..', 'login', 'loginWindowSeam.ts'),
       'utf-8'
     )
     const stripped = stripSourceComments(source)

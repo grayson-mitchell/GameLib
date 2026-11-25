@@ -1,0 +1,30 @@
+{
+  "input": {
+    "runner": "legendary",
+    "appName": "icon-app",
+    "artSquare": "https://art.example.test/square.{ext}",
+    "installPathGiven": true,
+    "installFiles": [],
+    "productApi": {
+      "kind": "null"
+    },
+    "presentIcons": [],
+    "download": "writes-nothing",
+    "iconsFolderExistedBefore": false
+  },
+  "outcome": {
+    "result": "resolved",
+    "icon": null
+  },
+  "productApiCalls": [],
+  "aborts": [
+    "https://art.example.test/square.jpg"
+  ],
+  "downloads": [
+    {
+      "url": "https://art.example.test/square.jpg",
+      "dest": "<ICONS>/icon-app.jpg"
+    }
+  ],
+  "iconsFolder": []
+}

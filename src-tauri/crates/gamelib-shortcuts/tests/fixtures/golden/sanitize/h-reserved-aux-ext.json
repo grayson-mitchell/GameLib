@@ -1,0 +1,19 @@
+{
+  "input": {
+    "text": "aux.txt",
+    "units": [
+      97,
+      117,
+      120,
+      46,
+      116,
+      120,
+      116
+    ]
+  },
+  "output": {
+    "text": "",
+    "units": [],
+    "utf8Bytes": 0
+  }
+}

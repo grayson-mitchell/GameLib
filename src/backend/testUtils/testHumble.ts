@@ -1,6 +1,6 @@
 /**
  * A fresh, isolated set of Humble services for consumer tests (D-66.3-17). Plain objects, no
- * jest APIs. Two calls never share a sync fence, a login-window seam slot, an action-id owner or a secret store.
+ * jest APIs. Two calls never share a sync fence, an action-id owner or a secret store, and share a login-window seam slot only when the caller hands one in (the boot owns it, 94-04).
  *
  * The user and the library pull the adapter, the logger and the IPC layer in; they are built
  * lazily, on first read, so a suite that mocks one of those modules is not broken by merely
@@ -8,7 +8,7 @@
  */
 import type { HumbleServices, HumbleServicesDeps } from '../humble'
 import { createHumbleSyncFence } from '../humble/syncFence'
-import { createLoginWindowSeamSlot } from '../humble/loginWindowSeam'
+import { createLoginWindowSeamSlot } from '../login/loginWindowSeam'
 import { createHumbleActionIdCache } from '../humble/actionIdCache'
 import type { HumbleSecretKey, HumbleSecretStore } from '../humble/secretStore'
 import { TEST_APP_INFO } from './testContext'
@@ -40,7 +40,7 @@ export function createTestHumbleServices(
   }
 ): HumbleServices {
   const syncFence = createHumbleSyncFence()
-  const loginWindowSeam = createLoginWindowSeamSlot()
+  const loginWindowSeam = opts.loginWindowSeam ?? createLoginWindowSeamSlot()
   const actionIds = createHumbleActionIdCache()
   const secretStore = opts.secretStore ?? createTestHumbleSecretStore()
   const appInfo = opts.appInfo ?? TEST_APP_INFO
@@ -95,7 +95,6 @@ export function createTestHumbleServices(
       return library as HumbleServices['library']
     },
     syncFence,
-    loginWindowSeam,
     actionIds,
     secretStore,
     appInfo

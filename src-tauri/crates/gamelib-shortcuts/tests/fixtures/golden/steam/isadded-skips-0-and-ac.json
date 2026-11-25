@@ -1,0 +1,69 @@
+{
+  "platform": "linux",
+  "environment": {
+    "flatpak": false,
+    "appImage": false,
+    "portable": false
+  },
+  "input": {
+    "op": "isAdded",
+    "title": "Discord",
+    "appName": "oracle-app",
+    "runner": "legendary",
+    "art": {
+      "square": "https://art.example.test/square 1.{ext}",
+      "cover": "https://art.example.test/cover.jpg"
+    },
+    "users": {
+      "0": {
+        "vdf": {
+          "file": "shortcuts_valid.vdf"
+        }
+      },
+      "1001": {},
+      "ac": {
+        "vdf": {
+          "file": "shortcuts_valid.vdf"
+        }
+      }
+    },
+    "userdataExists": true,
+    "strayFile": false,
+    "quotedSteamPath": false,
+    "lastPlayed": {
+      "present": true,
+      "value": "2023-11-14T22:13:20.000Z"
+    },
+    "wiki": {
+      "value": null
+    },
+    "apply": "ok",
+    "download": "ok",
+    "iconExists": false,
+    "seedRemovedGrid": [],
+    "frozenNow": "2024-02-03T04:05:06.000Z"
+  },
+  "returned": false,
+  "wiki": [],
+  "steamfiles": [],
+  "aborts": [],
+  "downloads": [],
+  "dataUrlConversions": [],
+  "i18n": [],
+  "dialogs": [],
+  "raisedMainWindow": 0,
+  "notifications": [],
+  "tree": {
+    "steam": [
+      {
+        "path": "userdata/0/config/shortcuts.vdf",
+        "size": 348
+      },
+      {
+        "path": "userdata/ac/config/shortcuts.vdf",
+        "size": 348
+      }
+    ],
+    "icons": []
+  }
+}

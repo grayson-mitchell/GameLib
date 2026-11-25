@@ -1,0 +1,2 @@
+0:{"a":"$@1","f":"","b":"x"}
+1:{"results":[{"id":"fake-gamekey-0046","title":"Fake Bundle 46","entitlements":{"keys":[{"id":"fake_game_46_steam","title":"Fake Game 46","keyIntegrationId":"steam","gameKey":null,"redeemedAt":null,"expired":false}],"downloads":[]}}],"bundlesCount":0,"pagination":{"page":46,"totalPages":100000,"totalDocs":100000},"success":true}

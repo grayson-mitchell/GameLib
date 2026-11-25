@@ -1,0 +1,2 @@
+0:{"a":"$@1","f":"","b":"x"}
+1:{"results":[{"id":"fake-gamekey-0002","title":"Fake Bundle Cactus","entitlements":{"keys":[{"id":"cactus_steam","title":"Assault Android Cactus+","keyIntegrationId":"steam","gameKey":null,"redeemedAt":null,"expired":false}],"downloads":[]}},{"id":"fake-gamekey-0003","title":"Fake Bundle Other","entitlements":{"keys":[{"id":"other_steam","title":"Fake Unowned Game","keyIntegrationId":"steam","gameKey":null,"redeemedAt":null,"expired":false}],"downloads":[]}}],"bundlesCount":0,"pagination":{"page":1,"totalPages":1,"totalDocs":2},"success":true}

@@ -18,7 +18,7 @@ import { deriveNilePaths } from './constants'
 import type { AppPaths } from 'backend/process/context'
 import type { NileRuntime } from './nileRuntime'
 import { isMac } from 'backend/constants/environment'
-import type { LoginWindowSeamSlot } from '../../humble/loginWindowSeam'
+import type { LoginWindowSeamSlot } from '../../login/loginWindowSeam'
 import type { SignInNoteDeps } from 'backend/signInProbe/outcomes'
 
 /** What the CLI-driven NileUser methods need: the nile manager and the stores clearCache wipes. */

@@ -18,6 +18,7 @@
 //! `bootErrorSurface` never paints a native rejection as a fatal boot error.
 
 use crate::engine_dispatch;
+use crate::humble_dispatch;
 use crate::info_dispatch;
 use crate::ipc_contract::{IPC_INVALID_ARGS, IPC_INVALID_ARGS_MARKER};
 use crate::knownfix_dispatch;
@@ -372,6 +373,12 @@ pub(crate) const ENGINE_SLICE: &str = "engine";
 #[cfg_attr(not(test), allow(dead_code))]
 pub(crate) const KNOWNFIX_SLICE: &str = "knownfix";
 
+/// The slice that owns the Humble channels in `nativeChannels.json` (Phase 94): invoke channels only, so
+/// it has no send queue; the handler runs the `gamelib-humble` op on the blocking pool. Named here, with
+/// the other slices, for the manifest-slice test.
+#[cfg_attr(not(test), allow(dead_code))]
+pub(crate) const HUMBLE_SLICE: &str = "humble";
+
 /// Run one queued send on its slice worker: the channel picks the handler.
 fn run_send_job(ctx: &Arc<NativeCtx>, job: NativeSendJob) -> Result<(), String> {
     match (job.channel, job.payload) {
@@ -554,6 +561,14 @@ impl NativeRouter {
         invoke.insert(
             "getGamelibFixStatus",
             knownfix_dispatch::get_gamelib_fix_status,
+        );
+        // Phase 94 (94-13, D-16): the Humble Spares view's gifted-at map and the ownership-override map, run by
+        // the `humble` slice over the crate's store reads. The sidecar no longer registers either (one owner,
+        // D-06).
+        invoke.insert("humbleGetGiftedAt", humble_dispatch::get_gifted_at);
+        invoke.insert(
+            "humbleGetOwnershipOverrides",
+            humble_dispatch::get_ownership_overrides,
         );
         invoke.insert("getLogContent", log_dispatch::get_log_content);
         invoke.insert("uploadLogFile", log_upload::upload_log_file);
@@ -1013,6 +1028,32 @@ mod tests {
             );
         }
         assert!(!router.queues.contains_key(KNOWNFIX_SLICE));
+    }
+
+    #[test]
+    fn native_manifest_humble_channels_are_registered_in_the_humble_slice() {
+        let m = manifest();
+        let channels = m["channels"].as_object().expect("channels object");
+        let router = router();
+        let humble: Vec<&str> = channels
+            .iter()
+            .filter(|(_, spec)| spec["slice"] == HUMBLE_SLICE)
+            .map(|(name, _)| name.as_str())
+            .collect();
+        assert!(humble.contains(&"humbleGetGiftedAt"), "{humble:?}");
+        assert!(
+            humble.contains(&"humbleGetOwnershipOverrides"),
+            "{humble:?}"
+        );
+        for name in humble {
+            // The humble slice is invoke-only: no send queue exists for it.
+            assert_eq!(m["channels"][name]["kind"], "invoke", "{name}");
+            assert!(
+                router.invoke_handler(name).is_some(),
+                "{name} has no handler"
+            );
+        }
+        assert!(!router.queues.contains_key(HUMBLE_SLICE));
     }
 
     #[test]

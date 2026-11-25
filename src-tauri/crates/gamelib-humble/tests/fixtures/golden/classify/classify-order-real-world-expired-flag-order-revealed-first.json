@@ -1,0 +1,55 @@
+{
+  "fn": "classifyOrder",
+  "input": {
+    "order": {
+      "gamekey": "order-real-expired",
+      "product": {
+        "category": "bundle",
+        "human_name": "Expired Real Bundle"
+      },
+      "tpkd_dict": {
+        "all_tpks": [
+          {
+            "machine_name": "realexpired_steam",
+            "gamekey": "order-real-expired",
+            "key_type": "steam",
+            "human_name": "Real Expired Game",
+            "is_expired": true,
+            "redeemed_key_val": "REDACTED"
+          }
+        ]
+      }
+    },
+    "revealed": {
+      "only": [
+        "realexpired_steam"
+      ]
+    },
+    "redeemed": {
+      "all": false
+    },
+    "now": "2026-11-24T12:00:00.000Z"
+  },
+  "output": {
+    "gamekey": "order-real-expired",
+    "keys": [
+      {
+        "gamekey": "order-real-expired",
+        "machineName": "realexpired_steam",
+        "state": "UNREDEEMABLE",
+        "title": "Real Expired Game",
+        "platform": "steam",
+        "expiration": null,
+        "origin": "Expired Real Bundle",
+        "ownedElsewhere": false,
+        "matchConfidence": "none"
+      }
+    ],
+    "allTerminal": true,
+    "freezeEligible": true,
+    "keyIndexByComposite": {},
+    "revealedKeyValueByComposite": {
+      "order-real-expired:realexpired_steam": "REDACTED"
+    }
+  }
+}

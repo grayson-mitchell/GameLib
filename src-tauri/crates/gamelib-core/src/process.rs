@@ -56,6 +56,10 @@ pub struct ProcSpec {
     pub cancel: Option<CancellationToken>,
     /// The child's name in the registry of spawned helpers (shown when one needs the hard kill).
     pub label: &'static str,
+    /// Windows only: start the child without a console window, the `windowsHide: true` of the TS
+    /// spawns (a GUI process that runs PowerShell or `reg.exe` would otherwise flash a console for
+    /// each one; Phase 94, Pitfall 12). Ignored on unix. `false` for every spec that does not ask.
+    pub hide_window: bool,
 }
 
 impl ProcSpec {
@@ -73,6 +77,7 @@ impl ProcSpec {
             max_buffer: DEFAULT_MAX_BUFFER,
             cancel: None,
             label,
+            hide_window: false,
         }
     }
 }
@@ -137,5 +142,15 @@ pub trait SpecRunner: Send + Sync + 'static {
             }
             output
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_new_spec_does_not_hide_its_window() {
+        assert!(!ProcSpec::new("process-test", "program").hide_window);
     }
 }

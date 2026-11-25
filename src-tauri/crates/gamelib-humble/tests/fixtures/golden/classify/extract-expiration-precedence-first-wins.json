@@ -1,0 +1,12 @@
+{
+  "fn": "extractExpiration",
+  "input": {
+    "tpk": {
+      "expiry_date": "2026-08-03T00:00:00Z",
+      "expiration": "2027-01-01T00:00:00Z"
+    },
+    "now": "2026-07-06T00:00:00.000Z",
+    "tz": "UTC"
+  },
+  "output": "2026-08-03T00:00:00.000Z"
+}

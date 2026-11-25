@@ -1091,54 +1091,54 @@ Plans:
   1. Humble keys sync, can be claimed and redeemed as before, with secrets still read through the keyring dispatch and no new Keychain prompt
   2. Shortcuts are created and removed as before on macOS, Windows and Linux
   3. The Humble and shortcut test oracles are ported as Rust tests or recorded fixtures
-  4. The Humble and shortcuts TypeScript and their sidecar registrations are deleted in this phase
+  4. The Humble and shortcuts TypeScript and their sidecar registrations are deleted in this phase, except scheduled survivors listed in the schedule test (D-03, D-04, D-24, D-27)
 
-**Plans:** 32 plans in 18 waves; planned 2026-11-24 (runs in `.claude/worktrees/phase-94`, rebased onto main before each wave, D-02)
+**Plans:** 22/32 plans executed (94-07 partial and 94-14 partial, awaiting macOS icon_geometry goldens) in 18 waves; planned 2026-11-24 (runs in `.claude/worktrees/phase-94`, rebased onto main before each wave, D-02)
 
 Plans:
 **Wave 1**
-- [ ] 94-01-PLAN.md — Live macOS gate contract 94-HUMAN-UAT.md (five D-09 items, D-10 signed upgrade), the 82 amendment (humbleConfigStore 94 -> 92, timestampStore 94 -> 88, D-24) and the SC4 wording
-- [ ] 94-02-PLAN.md — gamelib-humble and gamelib-shortcuts crates with their full dependency set, CI wiring, and `ProcSpec::hide_window`
-- [ ] 94-03-PLAN.md — Delete-gate machinery: humblePortComplete, shortcutsPortComplete (no flag, D-15) and the survivor schedule with the `relocated` shape
+- [x] 94-01-PLAN.md — Live macOS gate contract 94-HUMAN-UAT.md (five D-09 items, D-10 signed upgrade), the 82 amendment (humbleConfigStore 94 -> 92, timestampStore 94 -> 88, D-24) and the SC4 wording
+- [x] 94-02-PLAN.md — gamelib-humble and gamelib-shortcuts crates with their full dependency set, CI wiring, and `ProcSpec::hide_window`
+- [x] 94-03-PLAN.md — Delete-gate machinery: humblePortComplete, shortcutsPortComplete (no flag, D-15) and the survivor schedule with the `relocated` shape
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 94-04-PLAN.md — Login-window seam and user agent relocated to src/backend/login/ unchanged, with the slot install moved out (D-03)
-- [ ] 94-05-PLAN.md — Shortcuts TS oracle; byte-exact text goldens with hostile names, sanitize vectors, paths and exists (D-14)
-- [ ] 94-06-PLAN.md — Humble TS oracle: the wire-level recorder, redaction scan, classify/dedup vectors and the shared title-match vectors
+- [x] 94-04-PLAN.md — Login-window seam and user agent relocated to src/backend/login/ unchanged, with the slot install moved out (D-03)
+- [x] 94-05-PLAN.md — Shortcuts TS oracle; byte-exact text goldens with hostile names, sanitize vectors, paths and exists (D-14)
+- [x] 94-06-PLAN.md — Humble TS oracle: the wire-level recorder, redaction scan, classify/dedup vectors and the shared title-match vectors
 
 **Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 94-07-PLAN.md — Shortcut goldens: Windows `.lnk` spawn, registry and icon chain, Add to Steam, removal with the D-29 deltas, the sips icon geometry, getIcon
-- [ ] 94-08-PLAN.md — Humble goldens: adapter request pinning on the wire, every library and reveal flow, the D-07 byte set
-- [ ] 94-09-PLAN.md — Humble goldens: login watch, disconnect, probe and verdict, secrets and migration, digest, resolver, user agent; i18n cases and `t_unescaped`
+- [x] 94-08-PLAN.md — Humble goldens: adapter request pinning on the wire, every library and reveal flow, the D-07 byte set
+- [x] 94-09-PLAN.md — Humble goldens: login watch, disconnect, probe and verdict, secrets and migration, digest, resolver, user agent; i18n cases and `t_unescaped`
 - [ ] 94-10-PLAN.md — One redacted real Humble capture from the operator's account and the pinned real request shape (D-05)
-- [ ] 94-12-PLAN.md — Classifier in Rust with JS regex and date parity, classify.test.ts as named Rust tests
+- [x] 94-12-PLAN.md — Classifier in Rust with JS regex and date parity, classify.test.ts as named Rust tests
 
 **Wave 4** *(blocked on Wave 3 completion)*
-- [ ] 94-11-PLAN.md — Tracer: `shortcutsExists` end to end (sanitize, paths, hidden reg.exe, shell dispatch, one TS resolver)
+- [x] 94-11-PLAN.md — Tracer: `shortcutsExists` end to end (sanitize, paths, hidden reg.exe, shell dispatch, one TS resolver)
 
 **Wave 5** *(blocked on Wave 4 completion)*
-- [ ] 94-13-PLAN.md — Tracer: native `humble` slice with two StoreHost reads; the Humble context seams
-- [ ] 94-14-PLAN.md — macOS `.app` (run.sh, Info.plist, centred-crop icns, proof-guarded Desktop link) and Linux `.desktop` writers, byte-identical
+- [x] 94-13-PLAN.md — Tracer: native `humble` slice with two StoreHost reads; the Humble context seams
+- [x] 94-14-PLAN.md — macOS `.app` (run.sh, Info.plist, centred-crop icns, proof-guarded Desktop link) and Linux `.desktop` writers, byte-identical (icon_geometry pending Mac goldens)
 
 **Wave 6** *(blocked on Wave 5 completion)*
-- [ ] 94-15-PLAN.md — Humble HTTP seam (no redirects, multipart, request pinning); app-id resolver, title match and dedup
-- [ ] 94-16-PLAN.md — Windows `.lnk` through PowerShell via gamelib-proc, the icon chain and getIcon
+- [x] 94-15-PLAN.md — Humble HTTP seam (no redirects, multipart, request pinning); app-id resolver, title match and dedup
+- [x] 94-16-PLAN.md — Windows `.lnk` through PowerShell via gamelib-proc, the icon chain and getIcon
 
 **Wave 7** *(blocked on Wave 6 completion)*
-- [ ] 94-17-PLAN.md — Expiry digest with i18next-identical text and the backfill; the user-agent twin
-- [ ] 94-18-PLAN.md — Removal with the creation proof on every OS (D-29) and the add op with renderer notifications
+- [x] 94-17-PLAN.md — Expiry digest with i18next-identical text and the backfill; the user-agent twin
+- [x] 94-18-PLAN.md — Removal with the creation proof on every OS (D-29) and the add op with renderer notifications
 
 **Wave 8** *(blocked on Wave 7 completion)*
-- [ ] 94-19-PLAN.md — The eleven Humble files round-trip byte for byte through the StoreHost (D-07); corrupt copy-aside; disconnect clear set
-- [ ] 94-20-PLAN.md — Add to Steam, Remove from Steam and isAddedToSteam behind the steamfiles and wiki seams
+- [x] 94-19-PLAN.md — The eleven Humble files round-trip byte for byte through the StoreHost (D-07); corrupt copy-aside; disconnect clear set
+- [x] 94-20-PLAN.md — Add to Steam, Remove from Steam and isAddedToSteam behind the steamfiles and wiki seams
 
 **Wave 9** *(blocked on Wave 8 completion)*
-- [ ] 94-21-PLAN.md — Humble secrets owner over the unchanged keyring slots and dev vault; the boot migration moved to Rust in one commit (D-18)
-- [ ] 94-22-PLAN.md — Every shortcut caller switched to Rust through resolvers; `processShortcut` relocated (D-27); shortcutsFlowRegistration deleted
+- [x] 94-21-PLAN.md — Humble secrets owner over the unchanged keyring slots and dev vault; the boot migration moved to Rust in one commit (D-18)
+- [x] 94-22-PLAN.md — Every shortcut caller switched to Rust through resolvers; `processShortcut` relocated (D-27); shortcutsFlowRegistration deleted
 
 **Wave 10** *(blocked on Wave 9 completion)*
 - [ ] 94-23-PLAN.md — Humble server-action adapter in Rust, pinned on the wire to the TS and the real capture
-- [ ] 94-24-PLAN.md — Shortcuts TS deleted behind its delete gate; wiki resolver retired; dependencies pruned; quirk todos
+- [x] 94-24-PLAN.md — Shortcuts TS deleted behind its delete gate; wiki resolver retired; dependencies pruned; quirk todos
 
 **Wave 11** *(blocked on Wave 10 completion)*
 - [ ] 94-25-PLAN.md — Library sync, ownership recompute and key reads in Rust; the sync-level D-07 round trip

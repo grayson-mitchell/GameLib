@@ -31,6 +31,8 @@ import {
 const noArgs = z.tuple([])
 
 export const appShellSyncArgs = {
+  // The ctrl+q/k/j/l hotkey. Moved here from the shortcuts domain with its handler (Phase 94 Plan 22, D-27).
+  processShortcut: z.tuple([nonEmptyString(1024)]),
   // BCP-47-ish tag; the handler maps it onto a shipped language.
   changeLanguage: z.tuple([nonEmptyString(35)]),
   notify: z.tuple([

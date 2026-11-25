@@ -1,0 +1,19 @@
+{
+  "family": "icon",
+  "input": {
+    "title": "Game",
+    "installDirectory": "Game",
+    "files": {
+      "redist/Game2.exe": 900,
+      "Plain.exe": 10
+    },
+    "storeExecutable": null,
+    "shell": "file",
+    "injectedEntriesBeforeTheRealOnes": 0
+  },
+  "answer": {
+    "icon": "<HOME>\\Games\\Game\\Plain.exe",
+    "iconIndex": 0,
+    "source": "install-dir"
+  }
+}

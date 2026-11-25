@@ -53,15 +53,15 @@ import { GOGUser } from './user'
 import type { GOGManagerDeps } from './library'
 import {
   addShortcuts as addShortcutsUtil,
-  removeShortcuts as removeShortcutsUtil
-} from '../../shortcuts/shortcuts/shortcuts'
+  removeShortcuts as removeShortcutsUtil,
+  removeNonSteamGame
+} from 'backend/humbleshortcuts/shortcuts'
 import setup from './setup'
 import {
   gogUninstallerSwitches,
   gogUninstallStep,
   runElevatedSteps
 } from './windowsElevation'
-import { removeNonSteamGame } from '../../shortcuts/nonesteamgame/nonesteamgame'
 import shlex from 'shlex'
 import {
   GOGCloudSavesLocation,
@@ -602,11 +602,11 @@ export default class GOGGame implements Game {
   }
 
   async addShortcuts(fromMenu?: boolean) {
-    return addShortcutsUtil(this.deps, this, fromMenu)
+    await addShortcutsUtil(this.deps, this, fromMenu)
   }
 
   async removeShortcuts() {
-    return removeShortcutsUtil(this.deps, this)
+    await removeShortcutsUtil(this.deps, this)
   }
 
   async launch(

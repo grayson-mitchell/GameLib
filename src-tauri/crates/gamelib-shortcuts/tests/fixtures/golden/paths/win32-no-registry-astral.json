@@ -1,0 +1,28 @@
+{
+  "platform": "win32",
+  "windowsRegistry": false,
+  "input": {
+    "title": "Emoji 🎮 Game 𝒳",
+    "units": [
+      69,
+      109,
+      111,
+      106,
+      105,
+      32,
+      55356,
+      57262,
+      32,
+      71,
+      97,
+      109,
+      101,
+      32,
+      55349,
+      56499
+    ]
+  },
+  "sanitized": "Emoji 🎮 Game 𝒳",
+  "desktop": null,
+  "menu": "<APPDATA>\\Microsoft\\Windows\\Start Menu\\Programs\\Emoji 🎮 Game 𝒳.lnk"
+}

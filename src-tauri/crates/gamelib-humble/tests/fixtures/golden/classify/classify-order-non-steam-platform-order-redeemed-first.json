@@ -1,0 +1,49 @@
+{
+  "fn": "classifyOrder",
+  "input": {
+    "order": {
+      "gamekey": "order-gog",
+      "human_name": "GOG Bundle",
+      "tpkd_dict": {
+        "all_tpks": [
+          {
+            "machine_name": "goggame_gog",
+            "human_name": "GOG Game",
+            "key_type": "gog",
+            "redeemed_key_value": null,
+            "expiration": null
+          }
+        ]
+      }
+    },
+    "revealed": {
+      "all": false
+    },
+    "redeemed": {
+      "only": [
+        "order-gog:goggame_gog"
+      ]
+    },
+    "now": "2026-11-24T12:00:00.000Z"
+  },
+  "output": {
+    "gamekey": "order-gog",
+    "keys": [
+      {
+        "gamekey": "order-gog",
+        "machineName": "goggame_gog",
+        "state": "REDEEMED",
+        "title": "GOG Game",
+        "platform": "gog",
+        "expiration": null,
+        "origin": "GOG Bundle",
+        "ownedElsewhere": false,
+        "matchConfidence": "none"
+      }
+    ],
+    "allTerminal": true,
+    "freezeEligible": true,
+    "keyIndexByComposite": {},
+    "revealedKeyValueByComposite": {}
+  }
+}

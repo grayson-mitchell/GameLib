@@ -1,0 +1,7 @@
+{
+  "about": "An empty fallback yields an empty string and does not throw",
+  "input": {
+    "userAgentFallback": ""
+  },
+  "output": ""
+}

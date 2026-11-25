@@ -1,0 +1,37 @@
+{
+  "fn": "libraryItemToOrderDetail",
+  "input": {
+    "id": "fake-gamekey-0001",
+    "title": "Fake Bundle",
+    "entitlements": {
+      "keys": [
+        {
+          "id": "k",
+          "keyIntegrationId": "steam",
+          "title": "Fake (Steam)",
+          "gameKey": null,
+          "redeemedAt": null,
+          "expired": false,
+          "redemptionExpiryDate": "$D2030-01-02T00:00:00.000Z"
+        }
+      ],
+      "downloads": []
+    }
+  },
+  "output": {
+    "gamekey": "fake-gamekey-0001",
+    "tpkd_dict": {
+      "all_tpks": [
+        {
+          "is_expired": false,
+          "key_type": "steam",
+          "human_name": "Fake (Steam)",
+          "machine_name": "k",
+          "keyindex": "steam",
+          "expiry_date": "2030-01-02T00:00:00.000Z"
+        }
+      ]
+    },
+    "human_name": "Fake Bundle"
+  }
+}

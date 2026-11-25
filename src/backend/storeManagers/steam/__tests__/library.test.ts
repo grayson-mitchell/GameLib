@@ -87,7 +87,7 @@ const resetSteamAuthTrigger = () =>
 // ── Logger mock (factory form — prevents transitive fs-extra native crash) ───
 // steam/games.ts imports the shared shortcuts module, whose import graph does not load under
 // this file's mocks (quick 261026-c7r).
-jest.mock('../../../shortcuts/shortcuts/shortcuts', () => ({
+jest.mock('../../../humbleshortcuts/shortcuts', () => ({
   addShortcuts: jest.fn(),
   removeShortcuts: jest.fn(),
   shortcutFiles: jest.fn()

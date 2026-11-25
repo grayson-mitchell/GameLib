@@ -1,0 +1,12 @@
+{
+  "platform": "win32",
+  "windowsRegistry": true,
+  "input": {
+    "title": "Plain Game",
+    "desktop": "file",
+    "menu": "present"
+  },
+  "exists": true,
+  "macDesktopShortcutPresent": false,
+  "macDesktopShortcutWanted": false
+}

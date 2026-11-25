@@ -326,7 +326,7 @@ fn bridge_helper_path_for(
 }
 
 /// The app root and asset dir the sidecar's `appPaths.ts` uses (`public` in dev, `build` packaged).
-fn app_root_and_asset_dir(app: &AppHandle) -> (PathBuf, &'static str) {
+pub(crate) fn app_root_and_asset_dir(app: &AppHandle) -> (PathBuf, &'static str) {
     if cfg!(debug_assertions) {
         (PathBuf::from(resolve_dev_app_root()), "public")
     } else {

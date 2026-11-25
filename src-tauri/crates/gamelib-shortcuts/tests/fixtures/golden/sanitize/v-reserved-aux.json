@@ -1,0 +1,15 @@
+{
+  "input": {
+    "text": "AUX",
+    "units": [
+      65,
+      85,
+      88
+    ]
+  },
+  "output": {
+    "text": "",
+    "units": [],
+    "utf8Bytes": 0
+  }
+}

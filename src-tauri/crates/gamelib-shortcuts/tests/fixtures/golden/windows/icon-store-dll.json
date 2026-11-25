@@ -1,0 +1,19 @@
+{
+  "family": "icon",
+  "input": {
+    "title": "Store Game",
+    "installDirectory": "Store Game",
+    "files": {
+      "res.dll": 10,
+      "Game.exe": 900
+    },
+    "storeExecutable": "res.dll",
+    "shell": "file",
+    "injectedEntriesBeforeTheRealOnes": 0
+  },
+  "answer": {
+    "icon": "<HOME>\\Games\\Store Game\\res.dll",
+    "iconIndex": 0,
+    "source": "store-executable"
+  }
+}

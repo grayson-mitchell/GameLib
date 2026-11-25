@@ -133,7 +133,7 @@ import {
 import {
   createLoginWindowSeamSlot,
   type LoginWindowSeam
-} from '../loginWindowSeam'
+} from '../../login/loginWindowSeam'
 import type { HumbleSecretKey, HumbleSecretStore } from '../secretStore'
 import {
   HUMBLE_TOKEN_PREFIX,

@@ -1,0 +1,35 @@
+{
+  "platform": "linux",
+  "input": {
+    "title": "Tom & Jerry && echo hi",
+    "appName": "a&b&&c",
+    "runner": "legendary",
+    "settings": {
+      "addDesktopShortcuts": true,
+      "addStartMenuShortcuts": true,
+      "addSteamShortcuts": false
+    },
+    "fromMenu": false,
+    "withIcon": true
+  },
+  "outcome": "resolved",
+  "tree": {
+    "Applications": [],
+    "Desktop": [
+      {
+        "path": "Tom & Jerry && echo hi.desktop",
+        "kind": "file",
+        "mode": "0777",
+        "utf8": "[Desktop Entry]\nName=Tom & Jerry && echo hi\nExec=xdg-open gamelib://launch?appName=a&b&&c&runner=legendary\nTerminal=false\nType=Application\nIcon=<ICONS>/a&b&&c.jpg\nCategories=Game;\n"
+      }
+    ],
+    ".local/share/applications": [
+      {
+        "path": "Tom & Jerry && echo hi.desktop",
+        "kind": "file",
+        "mode": null,
+        "utf8": "[Desktop Entry]\nName=Tom & Jerry && echo hi\nExec=xdg-open gamelib://launch?appName=a&b&&c&runner=legendary\nTerminal=false\nType=Application\nIcon=<ICONS>/a&b&&c.jpg\nCategories=Game;\n"
+      }
+    ]
+  }
+}

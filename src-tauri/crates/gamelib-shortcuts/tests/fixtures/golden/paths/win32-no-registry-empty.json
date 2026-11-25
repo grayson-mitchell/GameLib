@@ -1,0 +1,11 @@
+{
+  "platform": "win32",
+  "windowsRegistry": false,
+  "input": {
+    "title": "",
+    "units": []
+  },
+  "sanitized": "",
+  "desktop": null,
+  "menu": "<APPDATA>\\Microsoft\\Windows\\Start Menu\\Programs\\.lnk"
+}

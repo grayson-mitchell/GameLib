@@ -1,0 +1,128 @@
+{
+  "input": {
+    "about": "stopLogin() lands while session-status is in flight: the late authenticated answer stores nothing",
+    "keyringInitial": {},
+    "seed": {}
+  },
+  "steps": [
+    {
+      "seq": 3,
+      "atMs": 1500,
+      "kind": "session-status request",
+      "data": {
+        "call": 0
+      }
+    },
+    {
+      "seq": 5,
+      "atMs": 1500,
+      "kind": "startLogin settled",
+      "data": {
+        "status": "waiting"
+      }
+    }
+  ],
+  "seamCalls": [
+    {
+      "seq": 0,
+      "atMs": 0,
+      "op": "open",
+      "args": [
+        "https://auth.humblebundle.com/login",
+        {
+          "visible": true,
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.7444.52 Safari/537.36"
+        }
+      ],
+      "result": "login-humble-0"
+    },
+    {
+      "seq": 1,
+      "atMs": 1500,
+      "op": "takeEvents",
+      "args": [
+        "login-humble-0"
+      ],
+      "result": []
+    },
+    {
+      "seq": 2,
+      "atMs": 1500,
+      "op": "cookies",
+      "args": [
+        "login-humble-0",
+        "www.humblebundle.com",
+        []
+      ],
+      "result": {
+        "total": 32,
+        "matched": [
+          {
+            "name": "ory_session_fake",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          },
+          {
+            "name": "csrf_cookie",
+            "domain": ".humblebundle.com",
+            "value": "REDACTED"
+          }
+        ]
+      }
+    },
+    {
+      "seq": 4,
+      "atMs": 1500,
+      "op": "close",
+      "args": [
+        "login-humble-0"
+      ],
+      "result": true
+    }
+  ],
+  "requests": [
+    {
+      "method": "GET",
+      "target": "/api/auth/session-status",
+      "headers": [
+        [
+          "Accept",
+          "application/json"
+        ],
+        [
+          "Cookie",
+          "ory_session_fake=REDACTED"
+        ],
+        [
+          "User-Agent",
+          "axios/1.20.0"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "www.humblebundle.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    }
+  ],
+  "secretOps": [],
+  "outcomeNotes": [],
+  "outcomePushes": [],
+  "outcomesAfter": {},
+  "pushes": [],
+  "fenceCalls": [],
+  "logs": [],
+  "result": {
+    "status": "waiting"
+  },
+  "stateBefore": {},
+  "stateAfter": {},
+  "keyringAfter": {}
+}

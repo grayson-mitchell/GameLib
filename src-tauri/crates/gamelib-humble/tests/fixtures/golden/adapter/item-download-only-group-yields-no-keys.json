@@ -1,0 +1,21 @@
+{
+  "fn": "libraryItemToOrderDetail",
+  "input": {
+    "id": "d",
+    "itemType": "entitlement-group",
+    "entitlements": {
+      "keys": [],
+      "downloads": [
+        {
+          "id": "x"
+        }
+      ]
+    }
+  },
+  "output": {
+    "gamekey": "d",
+    "tpkd_dict": {
+      "all_tpks": []
+    }
+  }
+}

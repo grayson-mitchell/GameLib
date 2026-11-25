@@ -1,0 +1,18 @@
+{
+  "family": "icon",
+  "input": {
+    "title": "Store Game",
+    "installDirectory": "Store Game",
+    "files": {
+      "GAME.EXE": 10
+    },
+    "storeExecutable": "GAME.EXE",
+    "shell": "file",
+    "injectedEntriesBeforeTheRealOnes": 0
+  },
+  "answer": {
+    "icon": "<HOME>\\Games\\Store Game\\GAME.EXE",
+    "iconIndex": 0,
+    "source": "store-executable"
+  }
+}

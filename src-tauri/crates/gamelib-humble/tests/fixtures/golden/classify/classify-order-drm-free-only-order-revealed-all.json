@@ -1,0 +1,29 @@
+{
+  "fn": "classifyOrder",
+  "input": {
+    "order": {
+      "gamekey": "order-drm-free",
+      "human_name": "DRM Free Bundle",
+      "tpkd_dict": {},
+      "product": {
+        "category": "bundle",
+        "human_name": "DRM Free Bundle"
+      }
+    },
+    "revealed": {
+      "all": true
+    },
+    "redeemed": {
+      "all": false
+    },
+    "now": "2026-11-24T12:00:00.000Z"
+  },
+  "output": {
+    "gamekey": "order-drm-free",
+    "keys": [],
+    "allTerminal": false,
+    "freezeEligible": false,
+    "keyIndexByComposite": {},
+    "revealedKeyValueByComposite": {}
+  }
+}

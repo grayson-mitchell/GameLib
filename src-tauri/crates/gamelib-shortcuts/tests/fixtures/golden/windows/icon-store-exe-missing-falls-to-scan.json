@@ -1,0 +1,18 @@
+{
+  "family": "icon",
+  "input": {
+    "title": "Missing",
+    "installDirectory": "Missing",
+    "files": {
+      "Real.exe": 10
+    },
+    "storeExecutable": "Gone.exe",
+    "shell": "file",
+    "injectedEntriesBeforeTheRealOnes": 0
+  },
+  "answer": {
+    "icon": "<HOME>\\Games\\Missing\\Real.exe",
+    "iconIndex": 0,
+    "source": "install-dir"
+  }
+}

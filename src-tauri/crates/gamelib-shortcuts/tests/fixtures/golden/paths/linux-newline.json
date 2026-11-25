@@ -1,0 +1,23 @@
+{
+  "platform": "linux",
+  "windowsRegistry": null,
+  "input": {
+    "title": "Line1\nLine2",
+    "units": [
+      76,
+      105,
+      110,
+      101,
+      49,
+      10,
+      76,
+      105,
+      110,
+      101,
+      50
+    ]
+  },
+  "sanitized": "Line1Line2",
+  "desktop": "<DESKTOP>/Line1Line2.desktop",
+  "menu": "<HOME>/.local/share/applications/Line1Line2.desktop"
+}

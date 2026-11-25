@@ -1,0 +1,83 @@
+{
+  "input": {
+    "about": "access_denied is a backoff signal, never a re-login trigger",
+    "keyringInitial": {
+      "humble-session": "ory_session_fake=REDACTED"
+    },
+    "seed": {}
+  },
+  "steps": [
+    {
+      "seq": 1,
+      "atMs": 0,
+      "kind": "session-status request",
+      "data": {
+        "call": 0
+      }
+    }
+  ],
+  "seamCalls": [],
+  "requests": [
+    {
+      "method": "GET",
+      "target": "/api/auth/session-status",
+      "headers": [
+        [
+          "Accept",
+          "application/json"
+        ],
+        [
+          "Cookie",
+          "ory_session_fake=REDACTED"
+        ],
+        [
+          "User-Agent",
+          "axios/1.20.0"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "www.humblebundle.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    }
+  ],
+  "secretOps": [
+    {
+      "op": "keyring_get",
+      "slot": "humble-session",
+      "seq": 0,
+      "atMs": 0,
+      "answered": "ory_session_fake=REDACTED"
+    }
+  ],
+  "outcomeNotes": [],
+  "outcomePushes": [],
+  "outcomesAfter": {},
+  "pushes": [],
+  "fenceCalls": [],
+  "logs": [],
+  "result": {
+    "outcome": "unknown"
+  },
+  "stateBefore": {
+    "humble_store/config.json": {
+      "utf8": "{\n\t\"isLoggedIn\": true,\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t}\n}"
+    }
+  },
+  "stateAfter": {
+    "humble_store/config.json": {
+      "utf8": "{\n\t\"isLoggedIn\": true,\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t}\n}"
+    }
+  },
+  "keyringAfter": {
+    "humble-session": "ory_session_fake=REDACTED"
+  }
+}

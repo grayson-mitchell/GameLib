@@ -1,13 +1,13 @@
 /**
  * Anti-rot gate for the F-34.5-G6-08 / U-34.5-15 invoke-return-value sweep (Phase 34.5 gap cycle
- * 6, plan 34.5-45, Task 3). Reads the four `*FlowRegistration.ts` modules this slice owns
+ * 6, plan 34.5-45, Task 3). Reads the `*FlowRegistration.ts` modules this slice owns
  * (`runnerAuthFlowRegistration.ts`, `wineToolsFlowRegistration.ts` until Phase 87 Plan 36,
- * `shortcutsFlowRegistration.ts`, `runnerMiscFlowRegistration.ts`) OFF DISK, extracts every
+ * `shortcutsFlowRegistration.ts` until Phase 94 Plan 22, `runnerMiscFlowRegistration.ts`) OFF DISK, extracts every
  * `ipcMain.handle` channel with a pattern that tolerates the multi-line registration form (14 of
  * the 40 put the channel name on the following line — a single-line-only regex finds fewer),
  * and asserts:
  *
- *   1. The extracted channel count is exactly 27, with the exact per-module tally 10/6/11.
+ *   1. The extracted channel count is exactly 21, with the exact per-module tally 10/11.
  *   2. Every channel classified RETURNS (declared non-void in `AsyncIPCFunctions`, NOT on the
  *      explicit VOID-PARITY allow-list below) has a `return` statement inside its own handler
  *      body -- so a future edit that silently drops a `return` is caught here, not live.
@@ -36,13 +36,10 @@ const MODULES: ModuleSpec[] = [
   },
   // Phase 87 Plan 36 (D-23): the `wineTools` module (`wineToolsFlowRegistration.ts`) is deleted: its last channel,
   // `runWineCommand`, is a scheduled resolver (`engineWineResolvers.ts`), like every channel of the wine tools cluster.
-  {
-    name: 'shortcuts',
-    // Quick 261012-ca6 (2026-10-12): 4 -> 6. `addShortcut` and `removeShortcut` moved from
-    // send-kind to invoke-kind and now resolve whether shortcuts exist on disk.
-    path: join(__dirname, '../shortcutsFlowRegistration.ts'),
-    expectedCount: 6
-  },
+  // Phase 94 Plan 22 (D-27, SC4): the `shortcuts` module (`shortcutsFlowRegistration.ts`) is deleted. Its five
+  // invoke channels (`addShortcut`, `removeShortcut`, `addToSteam`, `removeFromSteam`, `isAddedToSteam`) are
+  // scheduled resolvers (`humbleshortcuts/shortcuts.ts`, registered by `registerShortcutsResolvers`) answered by
+  // Rust, as `shortcutsExists` already was (94-11); its one send channel moved to `appShellFlowRegistration.ts`.
   {
     name: 'runnerMisc',
     // Phase 34.6 Plan 10 (2026-08-24): 11 -> 14. Three INVOKE-kind late-discovered channels
@@ -65,9 +62,9 @@ const VOID_PARITY_CHANNELS: Record<string, string> = {
   logoutLegendary:
     'declared Promise<void>; delegates to LegendaryUser.logout() (a void-resolving promise)',
   logoutAmazon:
-    'declared Promise<void>; delegates to NileUser.logout() (a void-resolving promise)',
-  removeFromSteam:
-    'declared Promise<void>; awaits removeNonSteamGame(game) and returns nothing'
+    'declared Promise<void>; delegates to NileUser.logout() (a void-resolving promise)'
+  // `removeFromSteam` left with the deleted shortcuts module (Phase 94 Plan 22): its resolver is not an extracted
+  // `ipc.handle` of this sweep and the handle awaits Rust and resolves nothing.
 }
 
 /** Multi-line-capable: tolerates the channel name landing on the line after `ipcMain.handle(`. */
@@ -175,8 +172,12 @@ describe('invoke-return-value sweep anti-rot gate (F-34.5-G6-08 / U-34.5-15)', (
   // Phase 87 Plan 34 (D-23): 38 -> 35, the three DXVK toggles are scheduled resolvers, not the modules' handles.
   // Phase 87 Plan 35 (D-23, D-14): 35 -> 30, the five Winetricks channels are resolvers or native channels.
   // Phase 87 Plan 36 (D-23): 30 -> 27, `runWineCommandForGame`, `runWineCommand` and `callTool` are scheduled resolvers.
-  it('extracts exactly 27 channels total', () => {
-    expect(allChannels).toHaveLength(27)
+  // Phase 94 Plan 11: 27 -> 26, the -1 recorded on the `shortcuts` module spec above (`shortcutsExists` is a
+  // scheduled resolver).
+  // Phase 94 Plan 22: 26 -> 21, the `shortcuts` module spec above is gone (its five remaining channels are
+  // scheduled resolvers).
+  it('extracts exactly 21 channels total', () => {
+    expect(allChannels).toHaveLength(21)
   })
 
   it.each(MODULES)('$name has exactly $expectedCount channels', (spec) => {
@@ -195,10 +196,8 @@ describe('invoke-return-value sweep anti-rot gate (F-34.5-G6-08 / U-34.5-15)', (
     expect(missing).toEqual([])
   })
 
-  it('the VOID_PARITY_CHANNELS allow-list itself matches exactly the 3 channels the sweep classified VOID-PARITY', () => {
+  it('the VOID_PARITY_CHANNELS allow-list itself matches exactly the 2 channels the sweep classified VOID-PARITY', () => {
     const allowListed = Object.keys(VOID_PARITY_CHANNELS).sort()
-    expect(allowListed).toEqual(
-      ['logoutLegendary', 'logoutAmazon', 'removeFromSteam'].sort()
-    )
+    expect(allowListed).toEqual(['logoutLegendary', 'logoutAmazon'].sort())
   })
 })

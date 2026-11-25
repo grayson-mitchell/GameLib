@@ -1,0 +1,561 @@
+[
+  {
+    "id": 1,
+    "request": {
+      "method": "GET",
+      "target": "/api/auth/session-status",
+      "headers": [
+        [
+          "Accept",
+          "application/json"
+        ],
+        [
+          "Cookie",
+          "ory_session_fake=REDACTED"
+        ],
+        [
+          "User-Agent",
+          "axios/1.20.0"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "www.humblebundle.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    "response": {
+      "status": 200,
+      "headers": [
+        [
+          "content-type",
+          "application/json"
+        ]
+      ],
+      "bodyFile": "body-1.json"
+    }
+  },
+  {
+    "id": 2,
+    "request": {
+      "method": "GET",
+      "target": "/api/auth/session-status",
+      "headers": [
+        [
+          "Accept",
+          "application/json"
+        ],
+        [
+          "Cookie",
+          "ory_session_fake=REDACTED"
+        ],
+        [
+          "User-Agent",
+          "axios/1.20.0"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "www.humblebundle.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    "response": {
+      "status": 200,
+      "headers": [
+        [
+          "content-type",
+          "application/json"
+        ]
+      ],
+      "bodyFile": "body-2.json"
+    }
+  },
+  {
+    "id": 3,
+    "request": {
+      "method": "GET",
+      "target": "/api/auth/session-status",
+      "headers": [
+        [
+          "Accept",
+          "application/json"
+        ],
+        [
+          "Cookie",
+          "ory_session_fake=REDACTED"
+        ],
+        [
+          "User-Agent",
+          "axios/1.20.0"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "www.humblebundle.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    "response": {
+      "status": 200,
+      "headers": [
+        [
+          "content-type",
+          "application/json"
+        ]
+      ],
+      "bodyFile": "body-3.json"
+    }
+  },
+  {
+    "id": 4,
+    "request": {
+      "method": "GET",
+      "target": "/api/auth/session-status",
+      "headers": [
+        [
+          "Accept",
+          "application/json"
+        ],
+        [
+          "Cookie",
+          "ory_session_fake=REDACTED"
+        ],
+        [
+          "User-Agent",
+          "axios/1.20.0"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "www.humblebundle.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    "response": {
+      "status": 200,
+      "headers": [
+        [
+          "content-type",
+          "application/json"
+        ]
+      ],
+      "bodyFile": "body-4.json"
+    }
+  },
+  {
+    "id": 5,
+    "request": {
+      "method": "GET",
+      "target": "/api/auth/session-status",
+      "headers": [
+        [
+          "Accept",
+          "application/json"
+        ],
+        [
+          "Cookie",
+          "ory_session_fake=REDACTED"
+        ],
+        [
+          "User-Agent",
+          "axios/1.20.0"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "www.humblebundle.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    "response": {
+      "status": 200,
+      "headers": [
+        [
+          "content-type",
+          "application/json"
+        ]
+      ],
+      "bodyFile": "body-5.json"
+    }
+  },
+  {
+    "id": 6,
+    "request": {
+      "method": "GET",
+      "target": "/api/auth/session-status",
+      "headers": [
+        [
+          "Accept",
+          "application/json"
+        ],
+        [
+          "Cookie",
+          "ory_session_fake=REDACTED"
+        ],
+        [
+          "User-Agent",
+          "axios/1.20.0"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "www.humblebundle.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    "response": {
+      "status": 200,
+      "headers": [
+        [
+          "content-type",
+          "application/json"
+        ]
+      ],
+      "bodyFile": "body-6.json"
+    }
+  },
+  {
+    "id": 7,
+    "request": {
+      "method": "GET",
+      "target": "/api/auth/session-status",
+      "headers": [
+        [
+          "Accept",
+          "application/json"
+        ],
+        [
+          "Cookie",
+          "ory_session_fake=REDACTED"
+        ],
+        [
+          "User-Agent",
+          "axios/1.20.0"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "www.humblebundle.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    "response": {
+      "status": 200,
+      "headers": [
+        [
+          "content-type",
+          "application/json"
+        ]
+      ],
+      "bodyFile": "body-7.json"
+    }
+  },
+  {
+    "id": 8,
+    "request": {
+      "method": "GET",
+      "target": "/api/auth/session-status",
+      "headers": [
+        [
+          "Accept",
+          "application/json"
+        ],
+        [
+          "Cookie",
+          "ory_session_fake=REDACTED"
+        ],
+        [
+          "User-Agent",
+          "axios/1.20.0"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "www.humblebundle.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    "response": {
+      "status": 200,
+      "headers": [
+        [
+          "content-type",
+          "application/json"
+        ]
+      ],
+      "bodyFile": "body-8.json"
+    }
+  },
+  {
+    "id": 9,
+    "request": {
+      "method": "GET",
+      "target": "/api/auth/session-status",
+      "headers": [
+        [
+          "Accept",
+          "application/json"
+        ],
+        [
+          "Cookie",
+          "ory_session_fake=REDACTED"
+        ],
+        [
+          "User-Agent",
+          "axios/1.20.0"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "www.humblebundle.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    "response": {
+      "status": 200,
+      "headers": [
+        [
+          "content-type",
+          "application/json"
+        ]
+      ],
+      "bodyFile": "body-9.json"
+    }
+  },
+  {
+    "id": 10,
+    "request": {
+      "method": "GET",
+      "target": "/api/auth/session-status",
+      "headers": [
+        [
+          "Accept",
+          "application/json"
+        ],
+        [
+          "Cookie",
+          "ory_session_fake=REDACTED"
+        ],
+        [
+          "User-Agent",
+          "axios/1.20.0"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "www.humblebundle.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    "response": {
+      "status": 200,
+      "headers": [
+        [
+          "content-type",
+          "application/json"
+        ]
+      ],
+      "bodyFile": "body-10.json"
+    }
+  },
+  {
+    "id": 11,
+    "request": {
+      "method": "GET",
+      "target": "/api/auth/session-status",
+      "headers": [
+        [
+          "Accept",
+          "application/json"
+        ],
+        [
+          "Cookie",
+          "ory_session_fake=REDACTED"
+        ],
+        [
+          "User-Agent",
+          "axios/1.20.0"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "www.humblebundle.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    "response": {
+      "status": 200,
+      "headers": [
+        [
+          "content-type",
+          "application/json"
+        ]
+      ],
+      "bodyFile": "body-11.json"
+    }
+  },
+  {
+    "id": 12,
+    "request": {
+      "method": "GET",
+      "target": "/api/auth/session-status",
+      "headers": [
+        [
+          "Accept",
+          "application/json"
+        ],
+        [
+          "Cookie",
+          "ory_session_fake=REDACTED"
+        ],
+        [
+          "User-Agent",
+          "axios/1.20.0"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "www.humblebundle.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    "response": {
+      "status": 200,
+      "headers": [
+        [
+          "content-type",
+          "application/json"
+        ]
+      ],
+      "bodyFile": "body-12.json"
+    }
+  },
+  {
+    "id": 13,
+    "request": {
+      "method": "GET",
+      "target": "/api/auth/session-status",
+      "headers": [
+        [
+          "Accept",
+          "application/json"
+        ],
+        [
+          "Cookie",
+          "ory_session_fake=REDACTED"
+        ],
+        [
+          "User-Agent",
+          "axios/1.20.0"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "www.humblebundle.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    "response": {
+      "status": 200,
+      "headers": [
+        [
+          "content-type",
+          "application/json"
+        ]
+      ],
+      "bodyFile": "body-13.json"
+    }
+  }
+]

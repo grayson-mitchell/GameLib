@@ -6,12 +6,13 @@
  * `../sidecarRpc`) is mocked with an in-memory per-channel program + call log, so each test can
  * script a resolve/reject outcome and assert on exactly what was sent. The store is a boot-built
  * instance (66.3-17): there is no registry to swap, so the create/start tests prove construction
- * does no I/O and that start() logs the receipt line and fires the migration.
+ * does no I/O and that start() logs the receipt line and nothing else.
  *
- * Task 2 adds the one-time plaintext-migration tests below. `../../humble/stores` IS
- * mocked with an in-memory backing object (never `requireActual` — `tests-clobbering-real-steam-store`
- * documents that an unmocked electron-store reaches the REAL app-support dir and `afterAll` is
- * not a safety net).
+ * Phase 94 (D-18, 94-21): the one-time plaintext-to-keyring migration moved to Rust
+ * (`gamelib_humble::secrets::migrate_plaintext`, started by `humble_secrets::start_humble_migration`),
+ * so this suite asserts the TS boot no longer migrates. The config store is an in-memory backing object
+ * (never the real electron-store: `tests-clobbering-real-steam-store` documents that an unmocked one
+ * reaches the REAL app-support dir and `afterAll` is not a safety net).
  *
  * 34.4.1 gap cycle 2 plan 26 (F-9's read-count half, user-approved scope widening) added a
  * process-lifetime read cache to `SidecarKeyringSlotStore`. Since 66.3-17 each
@@ -44,7 +45,7 @@ jest.mock('../../logger', () => ({
   }
 }))
 
-// ── stores mock — in-memory map standing in for configStore (Task 2 migration) ─────────
+// ── stores mock — in-memory map standing in for configStore (the boot must never touch it) ─────────
 let backingStore: Record<string, unknown> = {}
 const mockConfigStore = {
   get_nodefault: jest.fn((key: string) => backingStore[key]),
@@ -56,10 +57,6 @@ const mockConfigStore = {
   })
 }
 const requestRustInvoke = jest.fn()
-const migrationDeps = {
-  stores: { humble: { configStore: mockConfigStore } } as never,
-  requestRustInvoke
-}
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
 import {
@@ -70,9 +67,7 @@ import {
 import {
   SidecarHumbleSecretStore,
   createSidecarHumbleSecretStore,
-  startSidecarHumbleSecretStore,
-  migrateOneSecret,
-  migrateHumbleSecrets
+  startSidecarHumbleSecretStore
 } from '../humbleSecretStore'
 
 type ProgrammedOutcome =
@@ -302,12 +297,12 @@ describe('SidecarHumbleSecretStore', () => {
     }
   })
 
-  describe('createSidecarHumbleSecretStore() / startSidecarHumbleSecretStore(store, deps)', () => {
+  describe('createSidecarHumbleSecretStore() / startSidecarHumbleSecretStore()', () => {
     it('builds a SidecarHumbleSecretStore, and start logs a keyring-backed confirmation line', () => {
       const store = createSidecarHumbleSecretStore(requestRustInvoke)
       expect(store).toBeInstanceOf(SidecarHumbleSecretStore)
 
-      startSidecarHumbleSecretStore(store, migrationDeps)
+      startSidecarHumbleSecretStore()
 
       expect(mockLogInfo).toHaveBeenCalledWith(
         expect.stringContaining(
@@ -317,30 +312,50 @@ describe('SidecarHumbleSecretStore', () => {
       )
     })
 
-    it('construction does no I/O: nothing is sent to the keyring until start() runs the migration', () => {
+    it('construction does no I/O: nothing is sent to the keyring by creating the store or by start()', async () => {
       createSidecarHumbleSecretStore(requestRustInvoke)
+      startSidecarHumbleSecretStore()
+      await new Promise((resolve) => setImmediate(resolve))
 
       expect(callLog).toEqual([])
     })
 
-    it('fires the migration without blocking (returns before any keyring call settles)', async () => {
-      // A never-resolving keyring_set proves start() itself did not await migration.
-      mockRequestRustInvoke.mockImplementation(
-        (channel: string, args: unknown[]) => {
-          callLog.push({ channel, args })
-          return new Promise(() => {
-            /* never settles */
-          })
-        }
-      )
+    // D-18 (94-21): Rust owns the one-time plaintext migration, so there is one migrator at every
+    // commit. A plaintext secret in the config store must be left exactly where it is by the TS boot,
+    // whatever the keyring would have answered: no keyring write, no config delete, no flag write.
+    it('the TS boot no longer migrates: a plaintext secret stays put and no keyring write is issued', async () => {
+      programChannel('keyring_set', { type: 'resolve', value: true })
+      programChannel('keyring_get', {
+        type: 'resolve',
+        value: 'plaintext-cookie'
+      })
       backingStore['sessionCookie'] = 'plaintext-cookie'
+      backingStore['csrfToken'] = 'plaintext-csrf'
+      backingStore['encryptionDegraded'] = true
 
-      expect(() =>
-        startSidecarHumbleSecretStore(
-          createSidecarHumbleSecretStore(requestRustInvoke),
-          migrationDeps
-        )
-      ).not.toThrow()
+      startSidecarHumbleSecretStore()
+      await new Promise((resolve) => setImmediate(resolve))
+      await new Promise((resolve) => setImmediate(resolve))
+
+      expect(callLog).toEqual([])
+      expect(mockConfigStore.get_nodefault).not.toHaveBeenCalled()
+      expect(mockConfigStore.set).not.toHaveBeenCalled()
+      expect(mockConfigStore.delete).not.toHaveBeenCalled()
+      expect(backingStore).toEqual({
+        sessionCookie: 'plaintext-cookie',
+        csrfToken: 'plaintext-csrf',
+        encryptionDegraded: true
+      })
+    })
+
+    it('the module no longer exports a migration (one migrator, and it is Rust)', () => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const exported = Object.keys(require('../humbleSecretStore'))
+      expect(exported.sort()).toEqual([
+        'SidecarHumbleSecretStore',
+        'createSidecarHumbleSecretStore',
+        'startSidecarHumbleSecretStore'
+      ])
     })
 
     it('two instances do not share a read cache', async () => {
@@ -352,221 +367,6 @@ describe('SidecarHumbleSecretStore', () => {
       programChannel('keyring_get', { type: 'resolve', value: 'second' })
 
       await expect(b.getSecret('sessionCookie')).resolves.toBe('second')
-    })
-  })
-
-  // ── One-time plaintext migration (Task 2, D-GAP-01/T-34.4.1-57) ────────────────────────────────
-
-  describe('migrateOneSecret (one-time plaintext-to-keyring migration)', () => {
-    it('given a working keyring, writes the plaintext to the keyring, reads it back, THEN deletes the configStore key and clears encryptionDegraded', async () => {
-      backingStore['sessionCookie'] = 'plaintext-cookie-value'
-      programChannel('keyring_set', { type: 'resolve', value: true })
-      programChannel('keyring_get', {
-        type: 'resolve',
-        value: 'plaintext-cookie-value'
-      })
-
-      await migrateOneSecret(
-        new SidecarHumbleSecretStore(requestRustInvoke),
-        migrationDeps,
-        'sessionCookie'
-      )
-
-      expect(callLog).toEqual([
-        {
-          channel: 'keyring_set',
-          args: ['plaintext-cookie-value', KEYRING_SLOT_HUMBLE_SESSION]
-        },
-        { channel: 'keyring_get', args: [KEYRING_SLOT_HUMBLE_SESSION] }
-      ])
-      expect(backingStore['sessionCookie']).toBeUndefined()
-      expect(backingStore['encryptionDegraded']).toBe(false)
-    })
-
-    it('a rejecting keyring write LEAVES the plaintext in place, does not touch encryptionDegraded, and logs exactly one warning', async () => {
-      backingStore['sessionCookie'] = 'plaintext-cookie-value'
-      programChannel('keyring_set', {
-        type: 'reject',
-        error: new Error('keyring:unavailable:PlatformFailure')
-      })
-
-      await migrateOneSecret(
-        new SidecarHumbleSecretStore(requestRustInvoke),
-        migrationDeps,
-        'sessionCookie'
-      )
-
-      expect(backingStore['sessionCookie']).toBe('plaintext-cookie-value')
-      expect(backingStore['encryptionDegraded']).toBeUndefined()
-      expect(mockLogWarning).toHaveBeenCalledTimes(1)
-      // keyring_get must never have been attempted -- a failed write skips the readback entirely.
-      expect(callLog.some((c) => c.channel === 'keyring_get')).toBe(false)
-    })
-
-    it('a rejecting keyring readback LEAVES the plaintext in place and logs exactly one warning', async () => {
-      backingStore['sessionCookie'] = 'plaintext-cookie-value'
-      programChannel('keyring_set', { type: 'resolve', value: true })
-      programChannel('keyring_get', {
-        type: 'reject',
-        error: new Error('keyring:unavailable:PlatformFailure')
-      })
-
-      await migrateOneSecret(
-        new SidecarHumbleSecretStore(requestRustInvoke),
-        migrationDeps,
-        'sessionCookie'
-      )
-
-      expect(backingStore['sessionCookie']).toBe('plaintext-cookie-value')
-      expect(backingStore['encryptionDegraded']).toBeUndefined()
-      expect(mockLogWarning).toHaveBeenCalledTimes(1)
-    })
-
-    it('a MISMATCHED readback LEAVES the plaintext in place -- never rounded up to success', async () => {
-      backingStore['sessionCookie'] = 'plaintext-cookie-value'
-      programChannel('keyring_set', { type: 'resolve', value: true })
-      programChannel('keyring_get', {
-        type: 'resolve',
-        value: 'a-completely-different-value'
-      })
-
-      await migrateOneSecret(
-        new SidecarHumbleSecretStore(requestRustInvoke),
-        migrationDeps,
-        'sessionCookie'
-      )
-
-      expect(backingStore['sessionCookie']).toBe('plaintext-cookie-value')
-      expect(backingStore['encryptionDegraded']).toBeUndefined()
-      expect(mockLogWarning).toHaveBeenCalledTimes(1)
-    })
-
-    it('with the configStore key already absent, performs NO keyring write (runs at most once per successful move)', async () => {
-      // backingStore starts empty (beforeEach) -- sessionCookie was never stored, or a prior
-      // migration already ran.
-      await migrateOneSecret(
-        new SidecarHumbleSecretStore(requestRustInvoke),
-        migrationDeps,
-        'sessionCookie'
-      )
-
-      expect(callLog).toEqual([])
-      expect(mockLogWarning).not.toHaveBeenCalled()
-    })
-
-    it("migrates csrfToken independently onto the humble-csrf slot, distinct from the session's humble-session slot", async () => {
-      backingStore['csrfToken'] = 'plaintext-csrf-value'
-      programChannel('keyring_set', { type: 'resolve', value: true })
-      programChannel('keyring_get', {
-        type: 'resolve',
-        value: 'plaintext-csrf-value'
-      })
-
-      await migrateOneSecret(
-        new SidecarHumbleSecretStore(requestRustInvoke),
-        migrationDeps,
-        'csrfToken'
-      )
-
-      expect(callLog).toEqual([
-        {
-          channel: 'keyring_set',
-          args: ['plaintext-csrf-value', KEYRING_SLOT_HUMBLE_CSRF]
-        },
-        { channel: 'keyring_get', args: [KEYRING_SLOT_HUMBLE_CSRF] }
-      ])
-      expect(backingStore['csrfToken']).toBeUndefined()
-    })
-
-    it('never logs the plaintext secret value on any migration failure path', async () => {
-      const SECRET = 'super-secret-migration-value-xyz'
-      backingStore['sessionCookie'] = SECRET
-      programChannel('keyring_set', { type: 'resolve', value: true })
-      programChannel('keyring_get', {
-        type: 'resolve',
-        value: 'mismatched-value'
-      })
-
-      await migrateOneSecret(
-        new SidecarHumbleSecretStore(requestRustInvoke),
-        migrationDeps,
-        'sessionCookie'
-      )
-
-      for (const call of mockLogWarning.mock.calls) {
-        expect(JSON.stringify(call)).not.toContain(SECRET)
-      }
-    })
-  })
-
-  describe('migrateHumbleSecrets (both secrets, independently)', () => {
-    it('a failed csrfToken migration does not roll back a successful sessionCookie migration', async () => {
-      backingStore['sessionCookie'] = 'session-plaintext'
-      backingStore['csrfToken'] = 'csrf-plaintext'
-      mockRequestRustInvoke.mockImplementation(
-        (channel: string, args: unknown[]) => {
-          callLog.push({ channel, args })
-          const slot = channel === 'keyring_set' ? args[1] : args[0]
-          if (slot === KEYRING_SLOT_HUMBLE_SESSION) {
-            if (channel === 'keyring_set') return Promise.resolve(true)
-            if (channel === 'keyring_get')
-              return Promise.resolve('session-plaintext')
-          }
-          if (slot === KEYRING_SLOT_HUMBLE_CSRF && channel === 'keyring_set') {
-            return Promise.reject(
-              new Error('keyring:unavailable:PlatformFailure')
-            )
-          }
-          return Promise.reject(
-            new Error(`unexpected channel/slot: ${channel}/${String(slot)}`)
-          )
-        }
-      )
-
-      await migrateHumbleSecrets(
-        new SidecarHumbleSecretStore(requestRustInvoke),
-        migrationDeps
-      )
-
-      // sessionCookie migrated successfully...
-      expect(backingStore['sessionCookie']).toBeUndefined()
-      expect(backingStore['encryptionDegraded']).toBe(false)
-      // ...while csrfToken's failed migration left its plaintext untouched.
-      expect(backingStore['csrfToken']).toBe('csrf-plaintext')
-    })
-
-    it('after a successful migration, getSecret() resolves the same value it would have resolved via a live keyring, proving the move is lossless', async () => {
-      // A stateful fake Keychain (keyed by slot) rather than a fixed scripted value -- this is
-      // what makes the "before" read meaningfully distinct from the "after" read: BEFORE
-      // migration runs, the keyring genuinely holds nothing for this slot (getSecret resolves
-      // '' -- no entry yet, the honest pre-migration state); only AFTER migrateHumbleSecrets()
-      // writes it does a live getSecret() read return the migrated value.
-      const keyringState = new Map<string, string>()
-      mockRequestRustInvoke.mockImplementation(
-        (channel: string, args: unknown[]) => {
-          callLog.push({ channel, args })
-          if (channel === 'keyring_set') {
-            const [value, slot] = args as [string, string]
-            keyringState.set(slot, value)
-            return Promise.resolve(true)
-          }
-          if (channel === 'keyring_get') {
-            const [slot] = args as [string]
-            return Promise.resolve(keyringState.get(slot) ?? null)
-          }
-          return Promise.reject(new Error(`unexpected channel: ${channel}`))
-        }
-      )
-      backingStore['sessionCookie'] = 'round-trip-value'
-
-      const store = new SidecarHumbleSecretStore(requestRustInvoke)
-      const before = await store.getSecret('sessionCookie')
-      await migrateHumbleSecrets(store, migrationDeps)
-      const after = await store.getSecret('sessionCookie')
-
-      expect(before).toBe('') // honest pre-migration state: nothing in the keyring yet
-      expect(after).toBe('round-trip-value')
-      expect(backingStore['sessionCookie']).toBeUndefined()
     })
   })
 
@@ -694,10 +494,7 @@ describe('SidecarHumbleSecretStore', () => {
   })
 
   // Structural proof: no reference to the Steam slot's literal string, outside comments -- the
-  // exact clobber D-GAP-01 exists to prevent. (Task 1's sibling "no configStore/stores
-  // reference" structural check was valid only before Task 2's migration logic legitimately
-  // added a read/delete of configStore for the one-time plaintext migration below -- superseded
-  // by the migration-specific structural/behavioral tests in this file's own describe block.)
+  // exact clobber D-GAP-01 exists to prevent.
   it('source (excluding comments) contains no reference to the literal steam-refresh-token slot name', () => {
     const src = readFileSync(
       join(__dirname, '../humbleSecretStore.ts'),

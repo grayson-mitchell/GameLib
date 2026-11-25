@@ -1,0 +1,31 @@
+{
+  "platform": "darwin",
+  "windowsRegistry": null,
+  "input": {
+    "title": "Game $(touch pwned)",
+    "units": [
+      71,
+      97,
+      109,
+      101,
+      32,
+      36,
+      40,
+      116,
+      111,
+      117,
+      99,
+      104,
+      32,
+      112,
+      119,
+      110,
+      101,
+      100,
+      41
+    ]
+  },
+  "sanitized": "Game $(touch pwned)",
+  "desktop": "<DESKTOP>/Game $(touch pwned).app",
+  "menu": "<HOME>/Applications/Game $(touch pwned).app"
+}

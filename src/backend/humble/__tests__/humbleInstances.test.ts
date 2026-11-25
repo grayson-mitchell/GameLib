@@ -16,7 +16,7 @@ import { createHumbleActionIdCache } from '../actionIdCache'
 import {
   createLoginWindowSeamSlot,
   type LoginWindowSeam
-} from '../loginWindowSeam'
+} from '../../login/loginWindowSeam'
 
 const fakeSeam = {} as LoginWindowSeam
 
@@ -88,7 +88,7 @@ describe('createLoginWindowSeamSlot', () => {
 
     expect(slot.get()).toBeNull()
     expect(() => slot.getOrThrow()).toThrow(/no login-window seam is installed/)
-    expect(() => slot.getOrThrow()).toThrow(/registerHumbleLoginFlows/)
+    expect(() => slot.getOrThrow()).toThrow(/registerLoginWindowSeam/)
   })
 
   it('install(seam) makes get() and getOrThrow() return it; install(null) clears it', () => {
@@ -119,7 +119,7 @@ describe('the Humble owners reach zero module state (source shape)', () => {
     'library.ts',
     'classify.ts',
     'syncFence.ts',
-    'loginWindowSeam.ts',
+    '../login/loginWindowSeam.ts',
     'secretStore.ts',
     'index.ts',
     'adapter.ts',

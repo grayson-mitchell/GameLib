@@ -41,6 +41,7 @@ import {
   createHumbleActionIdCache,
   type HumbleActionIdCache
 } from '../actionIdCache'
+import { libraryFlightPage } from './oracle/flight'
 beforeEach(() => {
   jest.clearAllMocks()
   mockIsAxiosError.mockImplementation(
@@ -189,24 +190,23 @@ describe('getLibraryOrders', () => {
   const mockFetch = jest.fn()
   const realFetch = global.fetch
 
+  // The flight builder moved to the 94-08 oracle's flight.ts, the one source for both.
   const flight = (
     page: number,
     totalPages: number,
     ids: string[],
     totalDocs: number = ids.length
   ) =>
-    `0:{"a":"$@1","f":"","b":"x"}\n1:${JSON.stringify({
-      results: ids.map((id) => ({
+    libraryFlightPage({
+      page,
+      totalPages,
+      totalDocs,
+      items: ids.map((id) => ({
         id,
         title: `T ${id}`,
-        entitlements: {
-          keys: [{ id: `${id}-k`, keyIntegrationId: 'steam', gameKey: null }]
-        }
-      })),
-      bundlesCount: 0,
-      pagination: { page, totalPages, totalDocs },
-      success: true
-    })}\n`
+        keys: [{ id: `${id}-k`, keyIntegrationId: 'steam' }]
+      }))
+    })
 
   const actionResponse = (
     body: string,

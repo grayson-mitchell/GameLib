@@ -2082,6 +2082,22 @@
         ["1234", null],
         [{ "appName": "1234", "runner": "gog" }]
       ]
+    },
+    "humbleGetGiftedAt": {
+      "kind": "invoke",
+      "slice": "humble",
+      "args": [],
+      "returns": "{ [machineName]: number }",
+      "valid": [[]],
+      "invalid": [[1], ["x"]]
+    },
+    "humbleGetOwnershipOverrides": {
+      "kind": "invoke",
+      "slice": "humble",
+      "args": [],
+      "returns": "{ [machineName]: number }",
+      "valid": [[]],
+      "invalid": [[1], ["x"]]
     }
   }
 }

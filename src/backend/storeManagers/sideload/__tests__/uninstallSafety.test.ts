@@ -309,8 +309,16 @@ describe('SideloadGame.uninstall delete-files guard (82-07, D-22)', () => {
     const res = await h.game.uninstall({ shouldRemovePrefix: true })
 
     expect(res).toEqual({ stderr: '', stdout: '' })
-    // The only Rust call is the recent-games bookkeeping (86-09), never a safety check or delete.
-    expect(calls.map((c) => c.channel)).toEqual(['info_recent_remove'])
+    // No safety check or delete is asked: the Rust calls are the recent-games bookkeeping (86-09) and, since Phase 94
+    // Plan 22, the two shortcut removals (`shortcuts_remove`, `shortcuts_steam_remove`; the fake rejects them and the
+    // uninstall logs and carries on).
+    expect(calls.map((c) => c.channel).sort()).toEqual(
+      [
+        'info_recent_remove',
+        'shortcuts_remove',
+        'shortcuts_steam_remove'
+      ].sort()
+    )
     expect(existsSync(executable)).toBe(true)
     expect(h.librarySet).toEqual([[]])
   })

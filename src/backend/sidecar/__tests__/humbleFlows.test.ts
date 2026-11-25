@@ -81,7 +81,7 @@ import { createIpcRegistry } from '../ipcRegistry'
 import { UNPORTED_CHANNEL_MARKER } from 'common/types/sidecarTransport'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import { createStoreRegistry } from 'backend/stores/storeRegistry'
-import { createLoginWindowSeamSlot } from '../../humble/loginWindowSeam'
+import { createLoginWindowSeamSlot } from '../../login/loginWindowSeam'
 import type { HumbleUser as HumbleUserType } from '../../humble/user'
 import type { HumbleLibrary as HumbleLibraryType } from '../../humble/library'
 
@@ -279,26 +279,10 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
       expect(HumbleLibrary.getSyncState).toHaveBeenCalledTimes(1)
     })
 
-    it('REQ-34.4-07 humbleGetGiftedAt invoke round-trips a real map, not the unported marker', async () => {
-      const fakeGiftedAt = { 'mn-1': 999 }
-      jest
-        .mocked(HumbleLibrary.getAllGiftedAt)
-        .mockReturnValue(
-          fakeGiftedAt as ReturnType<typeof HumbleLibrary.getAllGiftedAt>
-        )
-
-      const { input, frames } = boot()
-      writeInvoke(input, 'gifted-at-1', 'humbleGetGiftedAt', [])
-      await flush()
-
-      const response = frames.find((frame) => frame.id === 'gifted-at-1')
-      expect(response).toMatchObject({
-        id: 'gifted-at-1',
-        ok: true,
-        result: fakeGiftedAt
-      })
-      expect(response?.result).not.toBe(UNPORTED_CHANNEL_MARKER)
-      expect(HumbleLibrary.getAllGiftedAt).toHaveBeenCalledTimes(1)
+    it('94-13 D-16 humbleGetGiftedAt is a native channel: the sidecar registers no handler and the library is never asked', () => {
+      boot()
+      expect(isolationHandlerRegistry.has('humbleGetGiftedAt')).toBe(false)
+      expect(HumbleLibrary.getAllGiftedAt).not.toHaveBeenCalled()
     })
 
     it('REQ-34.4-07 humbleGetClaimAnnotations invoke round-trips a real map, not the unported marker', async () => {
@@ -407,8 +391,8 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
   })
 
   // ── Kind assertion, per channel (requirement 3) ────────────────────────────
-  describe('kind assertion — all 10 channels are reachable only as an invoke', () => {
-    it('REQ-34.4-07 every one of the 10 channels resolves a response frame for its own id when driven as an invoke', async () => {
+  describe('kind assertion — all 9 channels are reachable only as an invoke', () => {
+    it('REQ-34.4-07 every one of the 9 channels resolves a response frame for its own id when driven as an invoke', async () => {
       jest.mocked(HumbleUser.getUserDetails).mockReturnValue(undefined)
       jest
         .mocked(HumbleUser.checkHealthAndFlagExpiry)
@@ -422,9 +406,6 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
       jest
         .mocked(HumbleLibrary.getSyncState)
         .mockReturnValue({} as ReturnType<typeof HumbleLibrary.getSyncState>)
-      jest
-        .mocked(HumbleLibrary.getAllGiftedAt)
-        .mockReturnValue({} as ReturnType<typeof HumbleLibrary.getAllGiftedAt>)
       jest
         .mocked(HumbleLibrary.markRedeemed)
         .mockResolvedValue({ status: 'ok' })
@@ -443,20 +424,19 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
         { id: 'kind-3', args: [] }, // humbleSync
         { id: 'kind-4', args: [] }, // humbleGetKeys
         { id: 'kind-5', args: [] }, // humbleGetSyncState
-        { id: 'kind-6', args: [] }, // humbleGetGiftedAt
         {
-          id: 'kind-7',
+          id: 'kind-6',
           args: [{ gamekey: 'gk', machineName: 'mn' }]
         }, // humbleMarkRedeemed
         {
-          id: 'kind-8',
+          id: 'kind-7',
           args: [{ gamekey: 'gk', machineName: 'mn' }]
         }, // humbleUndoRedeemed
         {
-          id: 'kind-9',
+          id: 'kind-8',
           args: [{ gamekey: 'gk', machineName: 'mn' }]
         }, // humbleGetRevealedKeyValue
-        { id: 'kind-10', args: [] } // humbleGetClaimAnnotations
+        { id: 'kind-9', args: [] } // humbleGetClaimAnnotations
       ]
       const channels = [
         'humbleGetUserInfo',
@@ -464,7 +444,6 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
         'humbleSync',
         'humbleGetKeys',
         'humbleGetSyncState',
-        'humbleGetGiftedAt',
         'humbleMarkRedeemed',
         'humbleUndoRedeemed',
         'humbleGetRevealedKeyValue',
@@ -529,7 +508,7 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
       }
     })
 
-    it('REQ-34.4-07/08/09 registerHumbleFlows() has registered all 16 Humble channels this slice owns: 15 as ipcMain.handle (incl. humbleRunValidation, dev signal), 1 (humbleDisconnect) as ipcMain.on exactly once', () => {
+    it('REQ-34.4-07/08/09 registerHumbleFlows() has registered all 14 Humble channels this slice owns: 13 as ipcMain.handle (incl. humbleRunValidation, dev signal), 1 (humbleDisconnect) as ipcMain.on exactly once', () => {
       boot() // registration is the 'register-handlers' boot step (D-08), not an import effect
       const HANDLE_CHANNELS = [
         'humbleGetUserInfo',
@@ -537,14 +516,12 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
         'humbleSync',
         'humbleGetKeys',
         'humbleGetSyncState',
-        'humbleGetGiftedAt',
         'humbleMarkRedeemed',
         'humbleUndoRedeemed',
         'humbleGetRevealedKeyValue',
         'humbleGetClaimAnnotations',
         'humbleSetOwnershipOverride',
         'humbleClearOwnershipOverride',
-        'humbleGetOwnershipOverrides',
         'humbleRecordGiftLinkOpened',
         // Under jest (plain node, never a packaged SEA build),
         // isPackagedSidecar() resolves false, so humbleRunValidation IS
@@ -552,13 +529,20 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
         // below (REQ-34.4-08).
         'humbleRunValidation'
       ]
-      expect(HANDLE_CHANNELS).toHaveLength(15)
+      expect(HANDLE_CHANNELS).toHaveLength(13)
       for (const channel of HANDLE_CHANNELS) {
         expect(isolationHandlerRegistry.has(channel)).toBe(true)
       }
       expect(
         (isolationListenerRegistry.get('humbleDisconnect') ?? []).length
       ).toBe(1)
+      // 94-13 D-16: the two read-only maps are native `humble` channels, owned by Rust alone.
+      for (const channel of [
+        'humbleGetGiftedAt',
+        'humbleGetOwnershipOverrides'
+      ]) {
+        expect(isolationHandlerRegistry.has(channel)).toBe(false)
+      }
     })
 
     it('REQ-34.4.1-04 SEAM.md Invariant B, UPDATED (Plan 02): humbleRevealKey is a real registered channel — malformed/missing args are rejected at the IPC boundary (Phase 67) without reaching the handler, and the RPC loop keeps serving', async () => {
@@ -767,7 +751,7 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
       })
     })
 
-    describe('humbleClearOwnershipOverride / humbleGetOwnershipOverrides — plain delegates', () => {
+    describe('humbleClearOwnershipOverride — plain delegate (humbleGetOwnershipOverrides is native, 94-13)', () => {
       it('REQ-34.4-07 humbleClearOwnershipOverride delegates the machineName verbatim', async () => {
         jest
           .mocked(HumbleLibrary.clearOwnershipOverride)
@@ -786,23 +770,12 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
         )
       })
 
-      it('REQ-34.4-07 humbleGetOwnershipOverrides round-trips a real map, not the unported marker', async () => {
-        const fakeOverrides = { 'mn-1': 12345 }
-        jest
-          .mocked(HumbleLibrary.getAllOwnershipOverrides)
-          .mockReturnValue(fakeOverrides)
-
-        const { input, frames } = boot()
-        writeInvoke(input, 'get-overrides-1', 'humbleGetOwnershipOverrides', [])
-        await flush()
-
-        const response = frames.find((frame) => frame.id === 'get-overrides-1')
-        expect(response).toMatchObject({
-          id: 'get-overrides-1',
-          ok: true,
-          result: fakeOverrides
-        })
-        expect(response?.result).not.toBe(UNPORTED_CHANNEL_MARKER)
+      it('94-13 D-16 humbleGetOwnershipOverrides is a native channel: the sidecar registers no handler and the library is never asked', () => {
+        boot()
+        expect(
+          isolationHandlerRegistry.has('humbleGetOwnershipOverrides')
+        ).toBe(false)
+        expect(HumbleLibrary.getAllOwnershipOverrides).not.toHaveBeenCalled()
       })
     })
 
@@ -1135,9 +1108,9 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
         require('../../humble/user') as typeof import('../../humble/user')
       const {
         createLoginWindowSeamSlot: createFreshSeamSlot
-      }: typeof import('../../humble/loginWindowSeam') =
+      }: typeof import('../../login/loginWindowSeam') =
         // eslint-disable-next-line @typescript-eslint/no-require-imports
-        require('../../humble/loginWindowSeam')
+        require('../../login/loginWindowSeam')
       const seamSlot = createFreshSeamSlot()
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const realStores = require('../../humble/stores').createHumbleStores({

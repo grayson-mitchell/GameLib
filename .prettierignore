@@ -54,3 +54,6 @@ src-tauri/crates/gamelib-wine/tests/fixtures
 # Byte-exact fixtures written by the 88 TS oracles (golden and recorded exchanges for the known-fix and launch crates); prettier must never reformat them.
 src-tauri/crates/gamelib-knownfix/tests/fixtures
 src-tauri/crates/gamelib-launch/tests/fixtures
+# Byte-exact fixtures written by the 94 TS oracles (Humble Bundle and shortcut goldens and recorded exchanges); prettier must never reformat them.
+src-tauri/crates/gamelib-humble/tests/fixtures
+src-tauri/crates/gamelib-shortcuts/tests/fixtures

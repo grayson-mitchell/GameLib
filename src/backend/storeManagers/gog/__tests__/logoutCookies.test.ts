@@ -81,7 +81,7 @@ const deps = {
 import {
   createLoginWindowSeamSlot,
   type LoginWindowSeam
-} from '../../../humble/loginWindowSeam'
+} from '../../../login/loginWindowSeam'
 
 // The boot's one login-window seam slot, per test file (66.3-17): the user modules read it through deps.
 const seamSlot = createLoginWindowSeamSlot()

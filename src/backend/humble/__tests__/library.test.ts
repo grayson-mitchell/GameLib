@@ -312,7 +312,7 @@ import {
 } from '../actionIdCache'
 import { createSteamAppIdResolver } from '../steamAppIdResolver'
 import type { HumbleSteamAppIdCacheEntry } from '../steamAppIdResolver'
-import { createLoginWindowSeamSlot } from '../loginWindowSeam'
+import { createLoginWindowSeamSlot } from '../../login/loginWindowSeam'
 import {
   HUMBLE_SYNC_CONCURRENCY,
   HUMBLE_CLASSIFIER_VERSION

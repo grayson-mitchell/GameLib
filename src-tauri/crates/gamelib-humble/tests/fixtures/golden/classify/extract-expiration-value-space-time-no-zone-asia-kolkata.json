@@ -1,0 +1,11 @@
+{
+  "fn": "extractExpiration",
+  "input": {
+    "tpk": {
+      "expiry_date": "2026-08-01 12:34"
+    },
+    "now": "2026-07-06T00:00:00.000Z",
+    "tz": "Asia/Kolkata"
+  },
+  "output": "2026-08-01T07:04:00.000Z"
+}

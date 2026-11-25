@@ -1,0 +1,30 @@
+{
+  "fn": "describeMissingExpirationTpks",
+  "input": {
+    "order": {
+      "gamekey": "order-ebooks",
+      "product": {
+        "category": "bundle",
+        "human_name": "Book Bundle"
+      },
+      "tpkd_dict": {
+        "all_tpks": [
+          {
+            "machine_name": "cookbook_pdf",
+            "gamekey": "order-ebooks",
+            "human_name": "Cook Book (PDF)",
+            "visible": true
+          },
+          {
+            "machine_name": "novel_epub",
+            "gamekey": "order-ebooks",
+            "human_name": "Novel (EPUB)",
+            "visible": true
+          }
+        ]
+      }
+    },
+    "now": "2026-11-24T12:00:00.000Z"
+  },
+  "output": null
+}

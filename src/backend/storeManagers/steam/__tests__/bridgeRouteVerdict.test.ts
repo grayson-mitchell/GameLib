@@ -48,7 +48,7 @@ jest.mock('backend/logger', () => ({
   LogPrefix: { Steam: 'Steam', Backend: 'Backend' }
 }))
 jest.mock('axios')
-jest.mock('../../../shortcuts/shortcuts/shortcuts', () => ({
+jest.mock('../../../humbleshortcuts/shortcuts', () => ({
   addShortcuts: jest.fn(),
   removeShortcuts: jest.fn(),
   shortcutFiles: jest.fn()

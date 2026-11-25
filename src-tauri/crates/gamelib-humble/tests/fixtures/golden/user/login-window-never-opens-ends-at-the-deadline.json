@@ -1,0 +1,60 @@
+{
+  "input": {
+    "about": "open() never resolves: every tick returns before a read, the deadline settles waiting without closing anything; the late open is closed on arrival",
+    "keyringInitial": {},
+    "seed": {}
+  },
+  "steps": [
+    {
+      "seq": 1,
+      "atMs": 600000,
+      "kind": "startLogin settled",
+      "data": {
+        "status": "waiting"
+      }
+    },
+    {
+      "seq": 2,
+      "atMs": 600000,
+      "kind": "the deadline has passed; open() resolves afterwards"
+    }
+  ],
+  "seamCalls": [
+    {
+      "seq": 0,
+      "atMs": 0,
+      "op": "open",
+      "args": [
+        "https://auth.humblebundle.com/login",
+        {
+          "visible": true,
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.7444.52 Safari/537.36"
+        }
+      ],
+      "result": "login-humble-late"
+    },
+    {
+      "seq": 3,
+      "atMs": 606000,
+      "op": "close",
+      "args": [
+        "login-humble-late"
+      ],
+      "result": true
+    }
+  ],
+  "requests": [],
+  "secretOps": [],
+  "outcomeNotes": [],
+  "outcomePushes": [],
+  "outcomesAfter": {},
+  "pushes": [],
+  "fenceCalls": [],
+  "logs": [],
+  "result": {
+    "status": "waiting"
+  },
+  "stateBefore": {},
+  "stateAfter": {},
+  "keyringAfter": {}
+}

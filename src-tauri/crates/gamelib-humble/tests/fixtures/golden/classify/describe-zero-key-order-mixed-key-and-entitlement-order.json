@@ -1,0 +1,38 @@
+{
+  "fn": "describeZeroKeyOrder",
+  "input": {
+    "order": {
+      "gamekey": "order-mixed",
+      "product": {
+        "category": "bundle",
+        "human_name": "Mixed Bundle"
+      },
+      "tpkd_dict": {
+        "all_tpks": [
+          {
+            "machine_name": "actualgame_steam",
+            "gamekey": "order-mixed",
+            "key_type": "steam",
+            "key_type_human_name": "Steam",
+            "human_name": "Actual Game",
+            "is_expired": false
+          },
+          {
+            "machine_name": "artbook_pdf",
+            "gamekey": "order-mixed",
+            "human_name": "Art Book (PDF)"
+          },
+          {
+            "machine_name": "soundtrack_flac",
+            "gamekey": "order-mixed",
+            "human_name": "Soundtrack (FLAC)"
+          }
+        ]
+      }
+    }
+  },
+  "output": {
+    "anomalous": true,
+    "detail": "tpkd_dict.all_tpks=array(3) skipped=[[0]:object-skipped-by-defensive-catch fields=[machine_name,gamekey,key_type,key_type_human_name,human_name,is_expired] [1]:no-key_type(fields=[machine_name,gamekey,human_name]) [2]:no-key_type(fields=[machine_name,gamekey,human_name])]"
+  }
+}

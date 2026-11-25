@@ -1,0 +1,80 @@
+[
+  {
+    "id": 1,
+    "request": {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Fake+Portal+Page&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    "response": {
+      "status": 200,
+      "headers": [
+        [
+          "content-type",
+          "text/html"
+        ]
+      ],
+      "bodyFile": "body-1.html"
+    }
+  },
+  {
+    "id": 2,
+    "request": {
+      "method": "GET",
+      "target": "/api/storesearch/?term=Fake+No+Items&l=english&cc=US",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "GameLib"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "store.steampowered.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    "response": {
+      "status": 200,
+      "headers": [
+        [
+          "content-type",
+          "application/json"
+        ]
+      ],
+      "bodyFile": "body-2.json"
+    }
+  }
+]

@@ -1,0 +1,282 @@
+{
+  "input": {
+    "cookie": "fake",
+    "steam": null,
+    "seed": {}
+  },
+  "calls": [
+    {
+      "name": "humbleSync",
+      "args": [],
+      "result": {
+        "status": "ok"
+      },
+      "events": [
+        {
+          "channel": "humbleSyncProgress",
+          "payload": {
+            "done": 0,
+            "total": 1
+          }
+        },
+        {
+          "channel": "humbleSyncProgress",
+          "payload": {
+            "done": 1,
+            "total": 1
+          }
+        },
+        {
+          "channel": "humbleKeysUpdated",
+          "payload": [
+            {
+              "gamekey": "fake-gamekey-0003",
+              "machineName": "other_steam",
+              "state": "UNREVEALED",
+              "title": "Fake Unowned Game",
+              "platform": "steam",
+              "expiration": null,
+              "origin": "Fake Bundle Other",
+              "ownedElsewhere": false,
+              "matchConfidence": "none"
+            }
+          ]
+        },
+        {
+          "channel": "humbleSyncStateChanged",
+          "payload": {
+            "syncedAt": 1795521600000,
+            "syncError": "none",
+            "classifierVersion": 7
+          }
+        }
+      ],
+      "warnings": [],
+      "expiryDigest": [
+        {
+          "keyCount": 1,
+          "suppressNotifications": true
+        }
+      ],
+      "notifications": []
+    },
+    {
+      "name": "humbleRecordGiftLinkOpened",
+      "args": [
+        "no_such_key"
+      ],
+      "result": null,
+      "events": [],
+      "warnings": [
+        "[humbleFlowRegistration] rejected humbleRecordGiftLinkOpened for ineligible machineName: no_such_key"
+      ],
+      "expiryDigest": [],
+      "notifications": []
+    },
+    {
+      "name": "humbleGetGiftedAt",
+      "args": [],
+      "result": {},
+      "events": [],
+      "warnings": [],
+      "expiryDigest": [],
+      "notifications": []
+    }
+  ],
+  "requests": [
+    {
+      "method": "GET",
+      "target": "/home/library",
+      "headers": [
+        [
+          "Accept",
+          "text/html"
+        ],
+        [
+          "Cookie",
+          "ory_session_fake=REDACTED"
+        ],
+        [
+          "User-Agent",
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "www.humblebundle.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/_next/static/chunks/aaa.js",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "www.humblebundle.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "target": "/_next/static/chunks/bbb.js",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "www.humblebundle.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    {
+      "method": "POST",
+      "target": "/home/library",
+      "headers": [
+        [
+          "host",
+          "www.humblebundle.com"
+        ],
+        [
+          "connection",
+          "keep-alive"
+        ],
+        [
+          "Cookie",
+          "ory_session_fake=REDACTED"
+        ],
+        [
+          "User-Agent",
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+        ],
+        [
+          "Accept",
+          "text/x-component"
+        ],
+        [
+          "Next-Action",
+          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        ],
+        [
+          "Next-Router-State-Tree",
+          "%5B%22%22%2C%7B%22children%22%3A%5B%22(default)%22%2C%7B%22children%22%3A%5B%22(account)%22%2C%7B%22children%22%3A%5B%22home%22%2C%7B%22children%22%3A%5B%22library%22%2C%7B%22children%22%3A%5B%22__PAGE__%22%2C%7B%7D%2Cnull%2Cnull%2C0%5D%7D%2Cnull%2Cnull%2C4%5D%7D%2Cnull%2Cnull%2C8%5D%7D%2Cnull%2Cnull%2C8%5D%7D%2Cnull%2Cnull%2C8%5D%7D%2Cnull%2Cnull%2C24%5D"
+        ],
+        [
+          "Origin",
+          "https://www.humblebundle.com"
+        ],
+        [
+          "Referer",
+          "https://www.humblebundle.com/home/library"
+        ],
+        [
+          "content-type",
+          "multipart/form-data; boundary=<BOUNDARY>"
+        ],
+        [
+          "accept-language",
+          "*"
+        ],
+        [
+          "sec-fetch-mode",
+          "cors"
+        ],
+        [
+          "accept-encoding",
+          "gzip, deflate"
+        ],
+        [
+          "content-length",
+          "<LENGTH>"
+        ]
+      ],
+      "multipart": [
+        {
+          "name": "_1_requestId",
+          "value": "1"
+        },
+        {
+          "name": "_1_query",
+          "value": ""
+        },
+        {
+          "name": "_1_sort",
+          "value": "mostRecent"
+        },
+        {
+          "name": "_1_cursor",
+          "value": "5"
+        },
+        {
+          "name": "_1_page",
+          "value": "1"
+        },
+        {
+          "name": "_1_limit",
+          "value": "5"
+        },
+        {
+          "name": "_1_hideRevealed",
+          "value": "false"
+        },
+        {
+          "name": "_1_hideExpired",
+          "value": "false"
+        },
+        {
+          "name": "_1_dateExpires",
+          "value": ""
+        },
+        {
+          "name": "0",
+          "value": "[{\"results\":[],\"pagination\":{\"page\":1,\"totalPages\":1,\"totalDocs\":0},\"success\":true},\"$K1\"]"
+        }
+      ]
+    }
+  ],
+  "stateAfter": {
+    "store_cache/humble_library.json": {
+      "utf8": "{\n\t\"fake-gamekey-0003\": {\n\t\t\"gamekey\": \"fake-gamekey-0003\",\n\t\t\"keys\": [\n\t\t\t{\n\t\t\t\t\"gamekey\": \"fake-gamekey-0003\",\n\t\t\t\t\"machineName\": \"other_steam\",\n\t\t\t\t\"state\": \"UNREVEALED\",\n\t\t\t\t\"title\": \"Fake Unowned Game\",\n\t\t\t\t\"platform\": \"steam\",\n\t\t\t\t\"expiration\": null,\n\t\t\t\t\"origin\": \"Fake Bundle Other\",\n\t\t\t\t\"ownedElsewhere\": false,\n\t\t\t\t\"matchConfidence\": \"none\",\n\t\t\t\t\"keyindex\": \"steam\"\n\t\t\t}\n\t\t],\n\t\t\"allTerminal\": false,\n\t\t\"freezeEligible\": false\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"fake-gamekey-0003\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t}\n}"
+    },
+    "store_cache/humble_sync.json": {
+      "utf8": "{\n\t\"state\": {\n\t\t\"syncedAt\": 1795521600000,\n\t\t\"syncError\": \"none\",\n\t\t\"classifierVersion\": 7\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"state\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t}\n}"
+    }
+  }
+}

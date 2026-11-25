@@ -1687,6 +1687,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "gamelib-humble"
+version = "0.1.0"
+dependencies = [
+ "gamelib-core",
+ "gamelib-humble",
+ "gamelib-i18n",
+ "gamelib-store",
+ "gamelib-testutil",
+ "jiff",
+ "percent-encoding",
+ "regex",
+ "reqwest",
+ "rustls",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "unicode-normalization",
+ "url",
+]
+
+[[package]]
 name = "gamelib-i18n"
 version = "0.1.0"
 dependencies = [
@@ -1861,6 +1883,7 @@ dependencies = [
  "gamelib-core",
  "gamelib-depot",
  "gamelib-engine",
+ "gamelib-humble",
  "gamelib-i18n",
  "gamelib-info",
  "gamelib-knownfix",
@@ -1869,6 +1892,7 @@ dependencies = [
  "gamelib-proc",
  "gamelib-safety",
  "gamelib-scan",
+ "gamelib-shortcuts",
  "gamelib-steamcm",
  "gamelib-steamfiles",
  "gamelib-steampoll",
@@ -1903,6 +1927,31 @@ dependencies = [
  "windows",
  "windows-sys 0.60.2",
  "x11rb",
+]
+
+[[package]]
+name = "gamelib-shortcuts"
+version = "0.1.0"
+dependencies = [
+ "crc32fast",
+ "gamelib-core",
+ "gamelib-i18n",
+ "gamelib-proc",
+ "gamelib-safety",
+ "gamelib-shortcuts",
+ "gamelib-store",
+ "gamelib-testutil",
+ "icns",
+ "image",
+ "percent-encoding",
+ "regex",
+ "reqwest",
+ "rustls",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "url",
 ]
 
 [[package]]
@@ -2619,6 +2668,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "icns"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f55019ac1db606ff01afed8a9d18d91b83e6463da421084f767c89026467b619"
+dependencies = [
+ "byteorder",
+]
+
+[[package]]
 name = "ico"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2749,6 +2807,8 @@ dependencies = [
  "num-traits",
  "png 0.18.1",
  "tiff",
+ "zune-core",
+ "zune-jpeg",
 ]
 
 [[package]]

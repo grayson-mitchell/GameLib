@@ -31,7 +31,7 @@
  * value.
  */
 
-import type { LoginWindowSeamSlot } from '../humble/loginWindowSeam'
+import type { LoginWindowSeamSlot } from '../login/loginWindowSeam'
 import { logInfo, logWarning, LogPrefix } from '../logger'
 import { isMac } from '../constants/environment'
 // Defined in common/types/ (not here) so common/types/ipc.ts's AsyncIPCFunctions.

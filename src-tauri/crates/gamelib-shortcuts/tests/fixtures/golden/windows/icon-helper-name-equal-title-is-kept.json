@@ -1,0 +1,19 @@
+{
+  "family": "icon",
+  "input": {
+    "title": "Crash Bandicoot",
+    "installDirectory": "Crash Bandicoot",
+    "files": {
+      "Crash Bandicoot.exe": 10,
+      "Other.exe": 900
+    },
+    "storeExecutable": null,
+    "shell": "file",
+    "injectedEntriesBeforeTheRealOnes": 0
+  },
+  "answer": {
+    "icon": "<HOME>\\Games\\Crash Bandicoot\\Crash Bandicoot.exe",
+    "iconIndex": 0,
+    "source": "install-dir"
+  }
+}

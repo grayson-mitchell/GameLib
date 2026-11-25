@@ -1,0 +1,51 @@
+{
+  "fn": "classifyOrder",
+  "input": {
+    "order": {
+      "gamekey": "order-redeemed",
+      "human_name": "Redeemed Bundle",
+      "tpkd_dict": {
+        "all_tpks": [
+          {
+            "machine_name": "redeemedgame_steam",
+            "human_name": "Redeemed Game",
+            "key_type": "steam",
+            "redeemed_key_value": "REDACTED",
+            "expiration": null
+          }
+        ]
+      }
+    },
+    "revealed": {
+      "all": false
+    },
+    "redeemed": {
+      "only": [
+        "order-redeemed:redeemedgame_steam"
+      ]
+    },
+    "now": "2026-11-24T12:00:00.000Z"
+  },
+  "output": {
+    "gamekey": "order-redeemed",
+    "keys": [
+      {
+        "gamekey": "order-redeemed",
+        "machineName": "redeemedgame_steam",
+        "state": "REDEEMED",
+        "title": "Redeemed Game",
+        "platform": "steam",
+        "expiration": null,
+        "origin": "Redeemed Bundle",
+        "ownedElsewhere": false,
+        "matchConfidence": "none"
+      }
+    ],
+    "allTerminal": true,
+    "freezeEligible": true,
+    "keyIndexByComposite": {},
+    "revealedKeyValueByComposite": {
+      "order-redeemed:redeemedgame_steam": "REDACTED"
+    }
+  }
+}

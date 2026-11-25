@@ -1,0 +1,42 @@
+{
+  "fn": "classifyOrder",
+  "input": {
+    "order": {
+      "gamekey": "order-minimal",
+      "tpkd_dict": {
+        "all_tpks": [
+          {
+            "key_type": "steam"
+          }
+        ]
+      }
+    },
+    "revealed": {
+      "all": false
+    },
+    "redeemed": {
+      "all": false
+    },
+    "now": "2099-06-01T00:00:00.000Z"
+  },
+  "output": {
+    "gamekey": "order-minimal",
+    "keys": [
+      {
+        "gamekey": "order-minimal",
+        "machineName": "order-minimal:0",
+        "state": "UNREVEALED",
+        "title": "order-minimal",
+        "platform": "steam",
+        "expiration": null,
+        "origin": "order-minimal",
+        "ownedElsewhere": false,
+        "matchConfidence": "none"
+      }
+    ],
+    "allTerminal": false,
+    "freezeEligible": false,
+    "keyIndexByComposite": {},
+    "revealedKeyValueByComposite": {}
+  }
+}

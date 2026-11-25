@@ -4,13 +4,11 @@ import {
   nonEmptyString,
   optionalArg,
   runnerArg,
-  type InvokeFns,
-  type SendFns
+  type InvokeFns
 } from './schemaTypes'
 
-export const shortcutsSyncArgs = {
-  processShortcut: z.tuple([nonEmptyString(1024)])
-}
+// `processShortcut` (ctrl+q/k/j/l) was this domain's one send channel. Phase 94 Plan 22 (D-27) moved its handler
+// UNCHANGED to `appShellFlowRegistration.ts`, so its declaration moved to `appShell.ts` (`appShellSyncArgs`) with it.
 
 export const shortcutsAsyncArgs = {
   shortcutsExists: z.tuple([nonEmptyString(), runnerArg()]),
@@ -38,7 +36,6 @@ interface ShortcutsAsyncReturns {
   isAddedToSteam: Promise<boolean>
 }
 
-export type ShortcutsSync = SendFns<typeof shortcutsSyncArgs>
 export type ShortcutsAsync = InvokeFns<
   typeof shortcutsAsyncArgs,
   ShortcutsAsyncReturns

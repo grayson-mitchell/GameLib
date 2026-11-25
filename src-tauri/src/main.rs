@@ -122,6 +122,8 @@ mod depot_dispatch;
 mod dialogs;
 mod engine_dispatch;
 mod engine_log;
+mod humble_dispatch;
+mod humble_secrets;
 mod info_dispatch;
 mod info_secrets;
 mod ipc_contract;
@@ -139,6 +141,7 @@ mod safety_dispatch;
 mod scan_dispatch;
 mod shell_open;
 mod shell_state;
+mod shortcuts_dispatch;
 mod sidecar;
 mod single_instance;
 mod steam_window;
@@ -1942,6 +1945,19 @@ fn run_setup(
         // `<public>/fixes` layer. Nothing here reads a file or spawns; a channel before this answers not ready.
         knownfix_dispatch::install(info_dispatch::bundled_public_dir(app.handle()));
     }
+    // Phase 94 (SVC-05, D-20): the one shortcuts context, built right after the host opened. Nothing here
+    // spawns a process or waits; an op before this answers not-ready.
+    if let Some(paths) = log_paths.as_ref() {
+        shortcuts_dispatch::install(app.handle(), std::path::Path::new(&paths.user_data));
+    }
+    // Phase 94 (SVC-04, D-20): the one Humble context, built right after the host opened. Nothing here
+    // spawns a process or waits; an op before this answers not-ready.
+    if let Some(paths) = log_paths.as_ref() {
+        humble_dispatch::install(app.handle(), std::path::Path::new(&paths.user_data));
+        // Phase 94 (D-18): the one-time plaintext-to-Keychain move of the Humble secrets, bounded boot work
+        // holding a `humble-migration` shutdown registrant. The sidecar no longer migrates.
+        humble_secrets::start_humble_migration();
+    }
     // Where the sidecar's store frames are resolved: the directory this boot opened.
     if let Some(paths) = log_paths.as_ref() {
         store_dispatch::configure(std::path::PathBuf::from(&paths.user_data));
@@ -2426,6 +2442,8 @@ mod tests {
         "dialogs.rs",
         "engine_dispatch.rs",
         "engine_log.rs",
+        "humble_dispatch.rs",
+        "humble_secrets.rs",
         "info_dispatch.rs",
         "info_secrets.rs",
         "ipc_contract.rs",
@@ -2463,6 +2481,7 @@ mod tests {
         "steam_window.rs",
         "shell_state.rs",
         "shell_open.rs",
+        "shortcuts_dispatch.rs",
         "sidecar.rs",
         "single_instance.rs",
         "single_instance/windows_pipe.rs",
@@ -2491,6 +2510,8 @@ mod tests {
         include_str!("dialogs.rs"),
         include_str!("engine_dispatch.rs"),
         include_str!("engine_log.rs"),
+        include_str!("humble_dispatch.rs"),
+        include_str!("humble_secrets.rs"),
         include_str!("info_dispatch.rs"),
         include_str!("info_secrets.rs"),
         include_str!("ipc_contract.rs"),
@@ -2528,6 +2549,7 @@ mod tests {
         include_str!("steam_window.rs"),
         include_str!("shell_state.rs"),
         include_str!("shell_open.rs"),
+        include_str!("shortcuts_dispatch.rs"),
         include_str!("sidecar.rs"),
         include_str!("single_instance.rs"),
         include_str!("single_instance/windows_pipe.rs"),

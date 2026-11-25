@@ -1,0 +1,12 @@
+{
+  "platform": "win32",
+  "windowsRegistry": true,
+  "input": {
+    "title": "A/B\\C:D*E?F\"G<H>I|J",
+    "desktop": "none",
+    "menu": "present"
+  },
+  "exists": true,
+  "macDesktopShortcutPresent": false,
+  "macDesktopShortcutWanted": false
+}

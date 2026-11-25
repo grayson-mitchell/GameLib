@@ -1,0 +1,29 @@
+{
+  "platform": "win32",
+  "windowsRegistry": true,
+  "input": {
+    "title": "Ünïcödé 日本語 Ωmega",
+    "units": [
+      220,
+      110,
+      239,
+      99,
+      246,
+      100,
+      233,
+      32,
+      26085,
+      26412,
+      35486,
+      32,
+      937,
+      109,
+      101,
+      103,
+      97
+    ]
+  },
+  "sanitized": "Ünïcödé 日本語 Ωmega",
+  "desktop": "Z:\\GameLibOracle\\Desktop\\Ünïcödé 日本語 Ωmega.lnk",
+  "menu": "<APPDATA>\\Microsoft\\Windows\\Start Menu\\Programs\\Ünïcödé 日本語 Ωmega.lnk"
+}

@@ -1,0 +1,60 @@
+{
+  "fn": "recomputeOwnership",
+  "input": {
+    "keys": [
+      {
+        "gamekey": "order-1",
+        "machineName": "somegame_steam",
+        "state": "UNREVEALED",
+        "title": "Portal 2",
+        "platform": "steam",
+        "expiration": null,
+        "origin": "Some Bundle",
+        "ownedElsewhere": false,
+        "matchConfidence": "none"
+      },
+      {
+        "gamekey": "order-1",
+        "machineName": "x",
+        "state": "UNREVEALED",
+        "title": "Batman Arkham Knight",
+        "platform": "steam",
+        "expiration": null,
+        "origin": "Some Bundle",
+        "ownedElsewhere": false,
+        "matchConfidence": "none"
+      }
+    ],
+    "steamGames": [
+      {
+        "app_name": "900001",
+        "title": "Game X"
+      }
+    ],
+    "overridden": []
+  },
+  "output": [
+    {
+      "gamekey": "order-1",
+      "machineName": "somegame_steam",
+      "state": "UNREVEALED",
+      "title": "Portal 2",
+      "platform": "steam",
+      "expiration": null,
+      "origin": "Some Bundle",
+      "ownedElsewhere": false,
+      "matchConfidence": "none"
+    },
+    {
+      "gamekey": "order-1",
+      "machineName": "x",
+      "state": "UNREVEALED",
+      "title": "Batman Arkham Knight",
+      "platform": "steam",
+      "expiration": null,
+      "origin": "Some Bundle",
+      "ownedElsewhere": false,
+      "matchConfidence": "none"
+    }
+  ]
+}

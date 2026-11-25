@@ -1,0 +1,157 @@
+[
+  {
+    "id": 1,
+    "request": {
+      "method": "GET",
+      "target": "/home/library/REDACTED",
+      "headers": [
+        [
+          "Accept",
+          "text/html"
+        ],
+        [
+          "Cookie",
+          "ory_session_fake=REDACTED"
+        ],
+        [
+          "User-Agent",
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "www.humblebundle.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    "response": {
+      "status": 200,
+      "headers": [
+        [
+          "content-type",
+          "text/html"
+        ]
+      ],
+      "bodyFile": "body-1.html"
+    }
+  },
+  {
+    "id": 2,
+    "request": {
+      "method": "GET",
+      "target": "/_next/static/chunks/aaa.js",
+      "headers": [
+        [
+          "Accept",
+          "application/json, text/plain, */*"
+        ],
+        [
+          "User-Agent",
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+        ],
+        [
+          "Accept-Encoding",
+          "gzip, compress, deflate, br"
+        ],
+        [
+          "Host",
+          "www.humblebundle.com"
+        ],
+        [
+          "Connection",
+          "keep-alive"
+        ]
+      ]
+    },
+    "response": {
+      "status": 200,
+      "headers": [
+        [
+          "content-type",
+          "application/javascript"
+        ]
+      ],
+      "bodyFile": "body-2.js"
+    }
+  },
+  {
+    "id": 3,
+    "request": {
+      "method": "POST",
+      "target": "/home/library/REDACTED",
+      "headers": [
+        [
+          "host",
+          "www.humblebundle.com"
+        ],
+        [
+          "connection",
+          "keep-alive"
+        ],
+        [
+          "Cookie",
+          "ory_session_fake=REDACTED"
+        ],
+        [
+          "User-Agent",
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+        ],
+        [
+          "Accept",
+          "text/x-component"
+        ],
+        [
+          "Content-Type",
+          "text/plain;charset=UTF-8"
+        ],
+        [
+          "Next-Action",
+          "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        ],
+        [
+          "Origin",
+          "https://www.humblebundle.com"
+        ],
+        [
+          "Referer",
+          "https://www.humblebundle.com/home/library/REDACTED"
+        ],
+        [
+          "accept-language",
+          "*"
+        ],
+        [
+          "sec-fetch-mode",
+          "cors"
+        ],
+        [
+          "accept-encoding",
+          "gzip, deflate"
+        ],
+        [
+          "content-length",
+          "<LENGTH>"
+        ]
+      ],
+      "body": {
+        "utf8": "[\"REDACTED\",\"REDACTED\",\"$undefined\"]"
+      }
+    },
+    "response": {
+      "status": 429,
+      "headers": [
+        [
+          "content-type",
+          "text/x-component"
+        ]
+      ]
+    }
+  }
+]

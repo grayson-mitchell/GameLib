@@ -1,0 +1,53 @@
+{
+  "input": {
+    "about": "count 2: the plural title and body",
+    "locale": "en",
+    "dateLocale": "en-US (pinned, the host default is not recorded)",
+    "steamDeckGameMode": false
+  },
+  "runs": [
+    {
+      "keys": [
+        {
+          "gamekey": "fake-gamekey-0001",
+          "machineName": "fake_game_1_steam",
+          "title": "Fake Game One",
+          "expiration": "2027-01-02T00:00:00.000Z"
+        },
+        {
+          "gamekey": "fake-gamekey-0002",
+          "machineName": "fake_game_2_steam",
+          "title": "Fake Game Two",
+          "expiration": "2027-12-31T00:00:00.000Z"
+        }
+      ],
+      "suppressNotifications": false,
+      "notifyHumbleExpirations": true,
+      "i18nCalls": [
+        [
+          "humble.notification.expiringTitlePlural",
+          "Humble keys expiring"
+        ],
+        [
+          "humble.notification.expiringBodyPlural",
+          "{{count}} Humble keys gained expiration dates",
+          {
+            "count": 2
+          }
+        ]
+      ],
+      "notifications": [
+        {
+          "title": "Humble keys expiring",
+          "body": "2 Humble keys gained expiration dates"
+        }
+      ]
+    }
+  ],
+  "stateBefore": {},
+  "stateAfter": {
+    "store_cache/humble_notified_expiration.json": {
+      "utf8": "{\n\t\"fake-gamekey-0001:fake_game_1_steam\": {\n\t\t\"expiration\": \"2027-01-02T00:00:00.000Z\"\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"__timestamp\": {\n\t\t\"fake-gamekey-0001:fake_game_1_steam\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\",\n\t\t\"fake-gamekey-0002:fake_game_2_steam\": \"Tue Nov 24 2026 12:00:00 GMT+0000 (Coordinated Universal Time)\"\n\t},\n\t\"fake-gamekey-0002:fake_game_2_steam\": {\n\t\t\"expiration\": \"2027-12-31T00:00:00.000Z\"\n\t}\n}"
+    }
+  }
+}

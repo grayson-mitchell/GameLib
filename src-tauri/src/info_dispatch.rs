@@ -413,7 +413,7 @@ fn remove_recent_rejected((path, code): Rejection) -> String {
 /// Runs `op` over `args` on the blocking pool. The crate's own async `dispatch` is driven with
 /// `block_on` there (never `dispatch_sync`, which refuses a thread inside a runtime), so a file read
 /// or write stays off the async workers and the op still holds its shutdown registrant.
-async fn run_info_op(
+pub(crate) async fn run_info_op(
     info: Arc<InfoCtx>,
     op: &'static str,
     args: Vec<Value>,

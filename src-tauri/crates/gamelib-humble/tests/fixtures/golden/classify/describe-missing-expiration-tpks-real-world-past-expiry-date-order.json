@@ -1,0 +1,25 @@
+{
+  "fn": "describeMissingExpirationTpks",
+  "input": {
+    "order": {
+      "gamekey": "order-past-expiry",
+      "product": {
+        "category": "bundle",
+        "human_name": "Lapsed Bundle"
+      },
+      "tpkd_dict": {
+        "all_tpks": [
+          {
+            "machine_name": "lapsedgame_steam",
+            "gamekey": "order-past-expiry",
+            "key_type": "steam",
+            "human_name": "Lapsed Game",
+            "expiry_date": "2020-01-01T00:00:00Z"
+          }
+        ]
+      }
+    },
+    "now": "2026-11-24T12:00:00.000Z"
+  },
+  "output": null
+}

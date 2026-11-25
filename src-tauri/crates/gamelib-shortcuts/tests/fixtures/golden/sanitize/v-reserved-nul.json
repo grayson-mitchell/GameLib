@@ -1,0 +1,15 @@
+{
+  "input": {
+    "text": "nul",
+    "units": [
+      110,
+      117,
+      108
+    ]
+  },
+  "output": {
+    "text": "",
+    "units": [],
+    "utf8Bytes": 0
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "platform": "darwin",
+  "windowsRegistry": null,
+  "input": {
+    "title": "Plain Game",
+    "units": [
+      80,
+      108,
+      97,
+      105,
+      110,
+      32,
+      71,
+      97,
+      109,
+      101
+    ]
+  },
+  "sanitized": "Plain Game",
+  "desktop": "<DESKTOP>/Plain Game.app",
+  "menu": "<HOME>/Applications/Plain Game.app"
+}

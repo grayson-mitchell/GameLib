@@ -1,0 +1,19 @@
+{
+  "platform": "win32",
+  "windowsRegistry": false,
+  "input": {
+    "title": "aux.txt",
+    "units": [
+      97,
+      117,
+      120,
+      46,
+      116,
+      120,
+      116
+    ]
+  },
+  "sanitized": "",
+  "desktop": null,
+  "menu": "<APPDATA>\\Microsoft\\Windows\\Start Menu\\Programs\\.lnk"
+}

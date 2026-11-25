@@ -1,0 +1,29 @@
+{
+  "platform": "linux",
+  "windowsRegistry": null,
+  "input": {
+    "title": "Trailing dots... ",
+    "units": [
+      84,
+      114,
+      97,
+      105,
+      108,
+      105,
+      110,
+      103,
+      32,
+      100,
+      111,
+      116,
+      115,
+      46,
+      46,
+      46,
+      32
+    ]
+  },
+  "sanitized": "Trailing dots",
+  "desktop": "<DESKTOP>/Trailing dots.desktop",
+  "menu": "<HOME>/.local/share/applications/Trailing dots.desktop"
+}

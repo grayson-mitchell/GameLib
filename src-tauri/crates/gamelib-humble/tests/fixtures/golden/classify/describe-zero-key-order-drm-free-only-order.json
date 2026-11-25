@@ -1,0 +1,18 @@
+{
+  "fn": "describeZeroKeyOrder",
+  "input": {
+    "order": {
+      "gamekey": "order-drm-free",
+      "human_name": "DRM Free Bundle",
+      "tpkd_dict": {},
+      "product": {
+        "category": "bundle",
+        "human_name": "DRM Free Bundle"
+      }
+    }
+  },
+  "output": {
+    "anomalous": true,
+    "detail": "tpkd_dict.all_tpks=absent tpkd_dict_fields=[]"
+  }
+}

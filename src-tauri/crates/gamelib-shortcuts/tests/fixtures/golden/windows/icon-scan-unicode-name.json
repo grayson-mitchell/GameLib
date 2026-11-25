@@ -1,0 +1,19 @@
+{
+  "family": "icon",
+  "input": {
+    "title": "幻想郷",
+    "installDirectory": "幻想郷",
+    "files": {
+      "幻想郷.exe": 10,
+      "Other.exe": 900
+    },
+    "storeExecutable": null,
+    "shell": "file",
+    "injectedEntriesBeforeTheRealOnes": 0
+  },
+  "answer": {
+    "icon": "<HOME>\\Games\\幻想郷\\幻想郷.exe",
+    "iconIndex": 0,
+    "source": "install-dir"
+  }
+}

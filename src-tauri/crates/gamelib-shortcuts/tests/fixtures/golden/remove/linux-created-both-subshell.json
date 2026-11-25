@@ -1,0 +1,37 @@
+{
+  "family": "remove",
+  "platform": "linux",
+  "input": {
+    "title": "Game $(touch pwned)",
+    "appName": "$(touch pwned)",
+    "createdByTheTypeScript": "both",
+    "desktop": null,
+    "menu": null,
+    "registryDesktop": null,
+    "seededBeforeAdd": false
+  },
+  "createOutcome": {
+    "result": "resolved"
+  },
+  "gameLibWroteEverythingPresent": true,
+  "outcome": {
+    "result": "resolved"
+  },
+  "tree": {
+    "before": [
+      {
+        "path": ".local/share/applications/Game $(touch pwned).desktop",
+        "kind": "file",
+        "mode": null,
+        "utf8": "[Desktop Entry]\nName=Game $(touch pwned)\nExec=xdg-open gamelib://launch?appName=$(touch pwned)&runner=legendary\nTerminal=false\nType=Application\nCategories=Game;\n"
+      },
+      {
+        "path": "Desktop/Game $(touch pwned).desktop",
+        "kind": "file",
+        "mode": "0777",
+        "utf8": "[Desktop Entry]\nName=Game $(touch pwned)\nExec=xdg-open gamelib://launch?appName=$(touch pwned)&runner=legendary\nTerminal=false\nType=Application\nCategories=Game;\n"
+      }
+    ],
+    "after": []
+  }
+}
