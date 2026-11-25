@@ -190,7 +190,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 86: Pure leaf services** — 27/27 plans in 21 waves (26 + 1 gap closure); completed 2026-11-23
 - [ ] **Phase 87: Engine, Wine and tools** — 59 plans in 38 waves; planned 2026-11-23 (executes after Phase 86 closes)
 - [x] **Phase 88: Launch scaffolding and known fixes** — 17/17 plans in 14 waves; completed 2026-11-25 (SVC-03 part 1 of 4; split 2026-11-25, 88-CONTEXT D-30)
-- [ ] **Phase 88.1: Launch builders and prepare steps** — not planned
+- [ ] **Phase 88.1: Launch builders and prepare steps** — 20 plans in 15 waves; planned 2026-11-25 (SVC-03 part 2 of 4; D-30)
 - [ ] **Phase 88.2: Command runner and game processes** — not planned
 - [ ] **Phase 88.3: Launch funnel, re-adoption and the live gate** — not planned (runs the Phase 88 live gate)
 - [ ] **Phase 89: Steam library state** — not planned
@@ -922,10 +922,62 @@ Plans:
   2. Anti-cheat at launch, `check_wine_before_launch`, `download_default_wine` (D-28), `isMacSonomaOrHigher`, `isEpicServiceOffline`, `removeQuoteIfNecessary` and system info behave as before
   3. The builder TS, `gamescopeCommand.ts`, `utils/systeminfo` and the replaced `utils.ts` rows are deleted; closes on goldens, three-OS CI and a Linux stub-gamescope smoke
 
-**Plans:** 0 plans
+**Plans:** 20 plans in 15 waves; planned 2026-11-25 (goldens are recorded from the TS before each Rust slice, D-25)
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 88.1 to break down)
+**Wave 1**
+- [ ] 88.1-01-PLAN.md — launchOracle fake launcher deps and probes; goldens: builders (wrappers with shlex parity, wrapper env, known-fix env, removeQuoteIfNecessary, isMacSonomaOrHigher) and gamescope
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 88.1-02-PLAN.md — Goldens: prepare_launch traces (pairwise per OS and runner) and isEpicServiceOffline
+- [ ] 88.1-03-PLAN.md — Goldens: prepare_wine traces split at the store-setup point
+- [ ] 88.1-04-PLAN.md — Goldens: checkWineBeforeLaunch and downloadDefaultWine (D-28)
+- [ ] 88.1-05-PLAN.md — Goldens: system information and the pci.ids caches (gamelib-info)
+- [ ] 88.1-06-PLAN.md — Rust builders and gamescope in gamelib-launch, golden_builders, the Linux stub-gamescope smoke
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 88.1-07-PLAN.md — launch_dispatch.rs, builder channels and shims; the managers' async ripple
+- [ ] 88.1-09-PLAN.md — Rust system-information probes and pci caches in gamelib-info (operator decides the pci.ids TXT lookup)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 88.1-08-PLAN.md — Wine env and prefix-check shims; the command runner's wine binding, save_sync and setup awaited
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [ ] 88.1-10-PLAN.md — Runner versions, format and single-flight cache; native getSystemInfo and copySystemInfoToClipboard
+
+**Wave 6** *(blocked on Wave 5 completion)*
+- [ ] 88.1-11-PLAN.md — Rust isEpicServiceOffline and prepare_launch (anti-cheat and system info in-process)
+
+**Wave 7** *(blocked on Wave 6 completion)*
+- [ ] 88.1-12-PLAN.md — Rust prepare_wine_begin (validity, bottle check, prefix, installed_games)
+
+**Wave 8** *(blocked on Wave 7 completion)*
+- [ ] 88.1-13-PLAN.md — Rust prepare_wine_finish (installFixes, known-fix registry and overlays, GOG dummy, DXVK, runtimes, env, deadline arm)
+
+**Wave 9** *(blocked on Wave 8 completion)*
+- [ ] 88.1-14-PLAN.md — Rust check_wine_before_launch and download_default_wine with the answered-dialog seam
+
+**Wave 10** *(blocked on Wave 9 completion)*
+- [ ] 88.1-15-PLAN.md — prepareLaunch and prepareWineLaunch on Rust through shims and interim adapters; the old prepare shims retired
+
+**Wave 11** *(blocked on Wave 10 completion)*
+- [ ] 88.1-16-PLAN.md — checkWineBeforeLaunch and isEpicServiceOffline callers on Rust
+
+**Wave 12** *(blocked on Wave 11 completion)*
+- [ ] 88.1-17-PLAN.md — Sync with main; delete the builder TypeScript, gamescopeCommand.ts and the replaced utils rows behind the RED-first buildersPortComplete gate
+
+**Wave 13** *(blocked on Wave 12 completion)*
+- [ ] 88.1-18-PLAN.md — Delete utils/systeminfo and the TS pci mirrors behind the RED-first systemInfoPortComplete gate (D-24)
+
+**Wave 14** *(blocked on Wave 13 completion)*
+- [ ] 88.1-19-PLAN.md — Retire the dead rustInvoke channels; the survivor check; the Discord package and the dead-code ratchet
+
+**Wave 15** *(blocked on Wave 14 completion)*
+- [ ] 88.1-20-PLAN.md — Clean-worktree proof, push checkpoint and three-OS CI with the Linux stub-gamescope smoke (D-30: no signed build)
+
+**Cross-cutting constraints:** <!-- gsd:generated -->
+- Flagged assumption (spec-less edge probe): SVC-03's edge-coverage row is `unclassified` and unresolved; the D-14 matrix stands in for edge coverage and is not claimed as a verified edge
+- D-20: a recorded behaviour that looks wrong is kept and filed as a todo with the three triage keys
 
 ### Phase 88.2: Command runner and game processes (INSERTED)
 

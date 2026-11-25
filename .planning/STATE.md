@@ -2,18 +2,18 @@
 gsd_state_version: "1.0"
 milestone: v0.11
 milestone_name: Node Sidecar Retirement
-current_phase: 88
-current_phase_name: Launch scaffolding and known fixes
-status: verifying
+current_phase: "88.1"
+current_phase_name: Launch builders and prepare steps
+status: executing
 stopped_at: Completed 88-17-PLAN.md
-last_updated: "2026-11-25T04:06:43.998Z"
+last_updated: "2026-11-25T06:17:11.224Z"
 last_activity: 2026-11-25
 last_activity_desc: Phase 88 execution started
-state_head: c8a670b4ae67766fe464140471b27dfd699d224e
+state_head: 0a6ac61c9d582b74d536de5cefc029c99dcc0cb2
 progress:
   total_phases: 25
   completed_phases: 23
-  total_plans: 237
+  total_plans: 257
   completed_plans: 531
   percent: 92
 ---
@@ -76,11 +76,11 @@ See: .planning/PROJECT.md (updated 2026-11-25)
 
 ## Current Position
 
-Phase: 88.1 (Launch builders and prepare steps) — READY TO PLAN
+Phase: 88.1 (Launch builders and prepare steps) — READY TO EXECUTE
 Plan: Not started
-Status: Ready to plan
+Status: Ready to execute
 Last activity: 2026-11-25 — Phase 88 complete (verification passed 4/4), transitioned to Phase 88.1
-Progress: [█████████████████░░░] 204/237 plans (86%)
+Progress: [████████████████░░░░] 204/257 plans (79%)
 
 ## Native-Install Arc Phase Map (21–25)
 
