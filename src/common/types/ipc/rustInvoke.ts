@@ -9,6 +9,9 @@ import {
   RUST_DIALOG_MESSAGE,
   RUST_DIALOG_OPEN,
   RUST_DIALOG_SAVE,
+  RUST_HUMBLE_ACTION_CLOSE,
+  RUST_HUMBLE_ACTION_OPEN,
+  RUST_HUMBLE_ACTION_POST,
   RUST_HUMBLE_LOGIN_CLEAR_COOKIES,
   RUST_HUMBLE_LOGIN_CLEAR_STORAGE,
   RUST_HUMBLE_LOGIN_CLOSE,
@@ -339,6 +342,10 @@ const safetyRequestArg = z.tuple([
 ])
 const exePath = z.tuple([z.object({ exePath: z.string() })])
 const empty = z.tuple([])
+/** One header or one multipart part of a Humble server-action POST: an ordered `{ name, value }`. */
+const humbleActionPair = z
+  .object({ name: z.string(), value: z.string() })
+  .strict()
 const reasonArg = z.tuple([z.object({ reason: z.string() }).strict()])
 const flowArg = z.tuple([z.object({ flowId: z.string() }).strict()])
 
@@ -508,6 +515,35 @@ export const rustInvokeArgs = {
     z.string().meta({ title: 'origin_url' }),
     z.string().meta({ title: 'user_agent' })
   ]),
+  // ---- Humble server-action session (debug humble-library-cloudflare-403): the Rust shell
+  // re-validates every field (https + humblebundle host, same-origin path, header allowlist,
+  // size bounds); this schema is only the wire shape. The POST arg is a plain object tuple, not
+  // `x-field-errors`: that mode takes scalar and array-of-scalar properties only, and `headers`
+  // and `parts` are arrays of `{ name, value }`.
+  [RUST_HUMBLE_ACTION_OPEN]: z
+    .tuple([
+      z
+        .object({ pageUrl: z.string(), userAgent: z.string().nullish() })
+        .strict()
+    ])
+    .meta({ 'x-field-errors': true }),
+  [RUST_HUMBLE_ACTION_POST]: z.tuple([
+    z
+      .object({
+        sessionId: z.string(),
+        path: z.string(),
+        headers: z.array(humbleActionPair),
+        bodyKind: z.enum(['multipart', 'text']),
+        text: z.string().nullish(),
+        parts: z.array(humbleActionPair).nullish(),
+        referrer: z.string().nullish(),
+        redirect: z.enum(['follow', 'manual']).nullish()
+      })
+      .strict()
+  ]),
+  [RUST_HUMBLE_ACTION_CLOSE]: z
+    .tuple([z.object({ sessionId: z.string() }).strict()])
+    .meta({ 'x-field-errors': true }),
   // ---- Store embed
   [RUST_STORE_EMBED_OPEN]: z
     .tuple([

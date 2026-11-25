@@ -50,6 +50,9 @@ pub(crate) enum RustInvokeChannel {
     HumbleLoginClearCookies,
     HumbleRevealPost,
     HumbleLoginClearStorage,
+    HumbleActionOpen,
+    HumbleActionPost,
+    HumbleActionClose,
     StoreEmbedOpen,
     StoreEmbedSetBounds,
     StoreEmbedHide,
@@ -256,6 +259,9 @@ impl RustInvokeChannel {
         RustInvokeChannel::HumbleLoginClearCookies,
         RustInvokeChannel::HumbleRevealPost,
         RustInvokeChannel::HumbleLoginClearStorage,
+        RustInvokeChannel::HumbleActionOpen,
+        RustInvokeChannel::HumbleActionPost,
+        RustInvokeChannel::HumbleActionClose,
         RustInvokeChannel::StoreEmbedOpen,
         RustInvokeChannel::StoreEmbedSetBounds,
         RustInvokeChannel::StoreEmbedHide,
@@ -462,6 +468,9 @@ impl RustInvokeChannel {
             "humble_login_clear_cookies" => Some(RustInvokeChannel::HumbleLoginClearCookies),
             "humble_reveal_post" => Some(RustInvokeChannel::HumbleRevealPost),
             "humble_login_clear_storage" => Some(RustInvokeChannel::HumbleLoginClearStorage),
+            "humble_action_open" => Some(RustInvokeChannel::HumbleActionOpen),
+            "humble_action_post" => Some(RustInvokeChannel::HumbleActionPost),
+            "humble_action_close" => Some(RustInvokeChannel::HumbleActionClose),
             "store_embed_open" => Some(RustInvokeChannel::StoreEmbedOpen),
             "store_embed_set_bounds" => Some(RustInvokeChannel::StoreEmbedSetBounds),
             "store_embed_hide" => Some(RustInvokeChannel::StoreEmbedHide),
@@ -670,6 +679,9 @@ impl RustInvokeChannel {
             RustInvokeChannel::HumbleLoginClearCookies => "humble_login_clear_cookies",
             RustInvokeChannel::HumbleRevealPost => "humble_reveal_post",
             RustInvokeChannel::HumbleLoginClearStorage => "humble_login_clear_storage",
+            RustInvokeChannel::HumbleActionOpen => "humble_action_open",
+            RustInvokeChannel::HumbleActionPost => "humble_action_post",
+            RustInvokeChannel::HumbleActionClose => "humble_action_close",
             RustInvokeChannel::StoreEmbedOpen => "store_embed_open",
             RustInvokeChannel::StoreEmbedSetBounds => "store_embed_set_bounds",
             RustInvokeChannel::StoreEmbedHide => "store_embed_hide",
@@ -1544,6 +1556,91 @@ impl HumbleLoginClearStorageArgs {
         let origin_url = serde_json::from_value(args.first().ok_or_else(|| "humble_login_clear_storage:bad-args".to_string())?.clone()).map_err(|_| "humble_login_clear_storage:bad-args".to_string())?;
         let user_agent = serde_json::from_value(args.get(1).ok_or_else(|| "humble_login_clear_storage:bad-args".to_string())?.clone()).map_err(|_| "humble_login_clear_storage:bad-args".to_string())?;
         Ok(Self { origin_url, user_agent })
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct HumbleActionOpenArgs {
+    #[serde(rename = "pageUrl")]
+    pub(crate) page_url: String,
+    #[serde(rename = "userAgent")]
+    #[serde(default)]
+    pub(crate) user_agent: Option<String>,
+}
+
+impl HumbleActionOpenArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let obj = args.first().and_then(Value::as_object).ok_or_else(|| "humble_action_open:bad-args".to_string())?;
+        let page_url: String = serde_json::from_value(obj.get("pageUrl").cloned().unwrap_or(Value::Null)).map_err(|_| "humble_action_open:bad-args:pageUrl".to_string())?;
+        let user_agent: Option<String> = serde_json::from_value(obj.get("userAgent").cloned().unwrap_or(Value::Null)).map_err(|_| "humble_action_open:bad-args:userAgent".to_string())?;
+        Ok(Self { page_url, user_agent })
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct HumbleActionPostArgs {
+    #[serde(rename = "sessionId")]
+    pub(crate) session_id: String,
+    pub(crate) path: String,
+    pub(crate) headers: Vec<HumbleActionPostArgsHeadersItem>,
+    #[serde(rename = "bodyKind")]
+    pub(crate) body_kind: HumbleActionPostArgsBodyKind,
+    #[serde(default)]
+    pub(crate) text: Option<String>,
+    #[serde(default)]
+    pub(crate) parts: Option<Vec<HumbleActionPostArgsPartsItem>>,
+    #[serde(default)]
+    pub(crate) referrer: Option<String>,
+    #[serde(default)]
+    pub(crate) redirect: Option<HumbleActionPostArgsRedirect>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct HumbleActionPostArgsHeadersItem {
+    pub(crate) name: String,
+    pub(crate) value: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+pub(crate) enum HumbleActionPostArgsBodyKind {
+    #[serde(rename = "multipart")]
+    Multipart,
+    #[serde(rename = "text")]
+    Text,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct HumbleActionPostArgsPartsItem {
+    pub(crate) name: String,
+    pub(crate) value: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+pub(crate) enum HumbleActionPostArgsRedirect {
+    #[serde(rename = "follow")]
+    Follow,
+    #[serde(rename = "manual")]
+    Manual,
+}
+
+impl HumbleActionPostArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "humble_action_post:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "humble_action_post:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct HumbleActionCloseArgs {
+    #[serde(rename = "sessionId")]
+    pub(crate) session_id: String,
+}
+
+impl HumbleActionCloseArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let obj = args.first().and_then(Value::as_object).ok_or_else(|| "humble_action_close:bad-args".to_string())?;
+        let session_id: String = serde_json::from_value(obj.get("sessionId").cloned().unwrap_or(Value::Null)).map_err(|_| "humble_action_close:bad-args:sessionId".to_string())?;
+        Ok(Self { session_id })
     }
 }
 

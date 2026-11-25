@@ -63,6 +63,11 @@ pub(crate) fn dispatch_rust_channel(
         RustInvokeChannel::HumbleLoginClearCookies => rpc_humble_login_clear_cookies(args, app),
         RustInvokeChannel::HumbleRevealPost => rpc_humble_reveal_post(args, app),
         RustInvokeChannel::HumbleLoginClearStorage => rpc_humble_login_clear_storage(args, app),
+        // Humble server-action session (debug humble-library-cloudflare-403): one hidden window,
+        // in-page fetch() POSTs, because Cloudflare blocks Next-Action POSTs from non-browser clients.
+        RustInvokeChannel::HumbleActionOpen => rpc_humble_action_open(args, app),
+        RustInvokeChannel::HumbleActionPost => rpc_humble_action_post(args),
+        RustInvokeChannel::HumbleActionClose => rpc_humble_action_close(args),
         RustInvokeChannel::HumbleLoginCookiesForDomain => {
             rpc_humble_login_cookies_for_domain(args, app)
         }

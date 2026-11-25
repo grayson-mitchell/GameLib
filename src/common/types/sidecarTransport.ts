@@ -1664,6 +1664,46 @@ export const RUST_HUMBLE_LOGIN_CLEAR_STORAGE =
   'humble_login_clear_storage' as const
 
 /**
+ * Rust-side channels for Humble's Next.js server-action POSTs from a real browser network
+ * stack (debug `humble-library-cloudflare-403`, 2026-11-25). Cloudflare in front of
+ * www.humblebundle.com blocks any POST carrying a `Next-Action` header from a non-browser
+ * client (Node undici, curl and reqwest/rustls all get the WAF block page; Chrome and WKWebView
+ * pass), so the `filterUserLibrary` library pages and the `redeemEntitlementAction` reveal must
+ * be posted from inside a webview. These three channels are that op; GETs stay on the normal
+ * HTTP client. They are a SESSION, not a one-shot like `RUST_HUMBLE_REVEAL_POST`: one hidden
+ * window serves a whole sync, so the page load is paid once.
+ *
+ * `humble_action_open`: `[{ pageUrl, userAgent? }]`. Opens ONE hidden window on `pageUrl` (https,
+ * a humblebundle.com host) and resolves `{ sessionId, landedUrl }` once the main frame has
+ * finished loading and the page has been quiet for 1.5 s (an unauthenticated `/home/library`
+ * finishes on www and redirects to `auth.humblebundle.com/login` about 0.7 s later, so the first
+ * finished event is not the final page). A page that ends on another origin REJECTS with
+ * `humble_action_open:redirected:<host>` (host only, never a path or query): a sign-in redirect
+ * means the session is gone. `landedUrl` is the page that settled, on the requested origin. The
+ * session closes on `humble_action_close`, after 120 s without a post, and when GameLib exits.
+ *
+ * `humble_action_post`: `[{ sessionId, path, headers, bodyKind, text?, parts?, referrer?, redirect? }]`.
+ * Runs one in-page `fetch()` POST and resolves `{ status, body, contentType, url, redirected,
+ * type }`. A non-2xx `status` (including Cloudflare's 403) is a normal outcome, not a rejection;
+ * only a structural failure (bad args, no session, a script error, a timeout, exit) rejects.
+ * `headers` is `[{ name, value }]`, restricted to an allowlist (accept, content-type, next-action,
+ * next-router-state-tree, next-url); the browser owns Cookie, Origin, Referer, User-Agent and
+ * the multipart boundary. `bodyKind` is `'multipart'` (`parts` is an ordered `[{ name, value }]`
+ * appended to an in-page `FormData` in exactly that order, so a caller keeps the root part `0`
+ * last) or `'text'` (`text` is the raw body, `content-type` header optional). Posts on one session
+ * are serialised.
+ *
+ * `humble_action_close`: `[{ sessionId }]`. Resolves `Bool(existed)`; a missing session is a
+ * healthy already-closed state, never an error.
+ *
+ * Never carries or logs the session cookie: the cookie lives in the webview's own jar and is sent
+ * by the engine.
+ */
+export const RUST_HUMBLE_ACTION_OPEN = 'humble_action_open' as const
+export const RUST_HUMBLE_ACTION_POST = 'humble_action_post' as const
+export const RUST_HUMBLE_ACTION_CLOSE = 'humble_action_close' as const
+
+/**
  * Rust-side channel names for the in-app store embed (Phase 40 Plan 02 shipped the first five;
  * Plan 05, D-01/D-03/D-17/D-18/D-21/D-22/D-25/D-29, defines the full set here — including the
  * four navigation arms plan `40-07` implements — so that plan never has to edit this file and
@@ -1767,6 +1807,9 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_HUMBLE_LOGIN_CLEAR_COOKIES,
   RUST_HUMBLE_REVEAL_POST,
   RUST_HUMBLE_LOGIN_CLEAR_STORAGE,
+  RUST_HUMBLE_ACTION_OPEN,
+  RUST_HUMBLE_ACTION_POST,
+  RUST_HUMBLE_ACTION_CLOSE,
   RUST_STORE_EMBED_OPEN,
   RUST_STORE_EMBED_SET_BOUNDS,
   RUST_STORE_EMBED_HIDE,

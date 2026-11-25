@@ -9,6 +9,9 @@ import { join } from 'path'
 import { z } from 'zod'
 import { rustInvokeArgs } from 'common/types/ipc/rustInvoke'
 import {
+  RUST_HUMBLE_ACTION_CLOSE,
+  RUST_HUMBLE_ACTION_OPEN,
+  RUST_HUMBLE_ACTION_POST,
   RUST_INFO_WIKI_CACHE_CLEAR,
   RUST_INFO_WIKI_GET,
   RUST_INVOKE_CHANNELS,
@@ -65,7 +68,8 @@ describe('rustInvokeArgs', () => {
     // Phase 88 plan 15: 195 -> 196, knownfix_report_detected.
     // Phase 94 plan 11: 189 -> 190, shortcuts_exist.
     // Phase 94 plan 22: 190 -> 195, shortcuts_add, shortcuts_remove and the three shortcuts_steam_* ops.
-    expect(RUST_INVOKE_CHANNELS).toHaveLength(202)
+    // Debug humble-library-cloudflare-403: 202 -> 205, humble_action_open, _post and _close.
+    expect(RUST_INVOKE_CHANNELS).toHaveLength(205)
   })
 
   it('parses the store-embed wire fixtures', () => {
@@ -86,6 +90,78 @@ describe('rustInvokeArgs', () => {
       .tray_set_icon as Record<string, unknown>
     for (const payload of Object.values(wire)) {
       expect(rustInvokeArgs.tray_set_icon.safeParse(payload).success).toBe(true)
+    }
+  })
+
+  it('accepts the Humble server-action session args and rejects drift (debug humble-library-cloudflare-403)', () => {
+    const open = rustInvokeArgs[RUST_HUMBLE_ACTION_OPEN]
+    const page = { pageUrl: 'https://www.humblebundle.com/home/library' }
+    expect(open.safeParse([page]).success).toBe(true)
+    expect(
+      open.safeParse([{ ...page, userAgent: 'Mozilla/5.0' }]).success
+    ).toBe(true)
+    expect(open.safeParse([{ ...page, userAgent: null }]).success).toBe(true)
+    for (const bad of [
+      [],
+      [{}],
+      [{ pageUrl: 7 }],
+      [{ ...page, userAgent: 7 }],
+      [{ ...page, extra: 1 }]
+    ]) {
+      expect(open.safeParse(bad).success).toBe(false)
+    }
+
+    const post = rustInvokeArgs[RUST_HUMBLE_ACTION_POST]
+    const pair = (name: string, value: string) => ({ name, value })
+    const multipart = {
+      sessionId: 'loginwin-1',
+      path: '/home/library?page=2',
+      headers: [
+        pair('Accept', 'text/x-component'),
+        pair('Next-Action', '40ab')
+      ],
+      bodyKind: 'multipart',
+      parts: [pair('_1_page', '2'), pair('0', '[{},"$K1"]')],
+      referrer: '/home/library?page=2',
+      redirect: 'follow'
+    }
+    const text = {
+      sessionId: 'loginwin-1',
+      path: '/home/library/abc',
+      headers: [pair('Content-Type', 'text/plain;charset=UTF-8')],
+      bodyKind: 'text',
+      text: '["k","i","$undefined"]'
+    }
+    expect(post.safeParse([multipart]).success).toBe(true)
+    expect(post.safeParse([text]).success).toBe(true)
+    // Order is part of the contract: the root part `0` the caller put last stays last.
+    const parsed = post.safeParse([multipart])
+    expect(parsed.success && parsed.data[0].parts?.map((p) => p.name)).toEqual([
+      '_1_page',
+      '0'
+    ])
+    for (const bad of [
+      [],
+      [{ ...text, bodyKind: 'json' }],
+      [{ ...text, redirect: 'error' }],
+      [{ ...text, headers: [{ name: 'Accept' }] }],
+      [{ ...text, headers: 'Accept: x' }],
+      [{ ...text, parts: [{ name: 'a', value: 1 }] }],
+      [{ ...text, extra: 1 }],
+      [{ ...text, sessionId: undefined }]
+    ]) {
+      expect(post.safeParse(bad).success).toBe(false)
+    }
+
+    const close = rustInvokeArgs[RUST_HUMBLE_ACTION_CLOSE]
+    expect(close.safeParse([{ sessionId: 'loginwin-1' }]).success).toBe(true)
+    for (const bad of [
+      [],
+      [{}],
+      [{ sessionId: 1 }],
+      [{ sessionId: 'a', x: 1 }]
+    ]) {
+      expect(close.safeParse(bad).success).toBe(false)
     }
   })
 

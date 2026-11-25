@@ -513,7 +513,8 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     // Phase 88 plan 15: 195 -> 196, knownfix_report_detected.
     // Phase 94 plan 11: 189 -> 190, shortcuts_exist.
     // Phase 94 plan 22: 190 -> 195, shortcuts_add, shortcuts_remove and the three shortcuts_steam_* ops.
-    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(202)
+    // Debug humble-library-cloudflare-403: 202 -> 205, humble_action_open, _post and _close.
+    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(205)
     expect(router).not.toContain('_ =>')
   })
 
@@ -574,6 +575,19 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       // escaping/await-ordering); this gate only pins that no OTHER, undeclared arm has crept
       // in since.
       'humble_login_clear_storage',
+      // Debug humble-library-cloudflare-403 (2026-11-25) legitimately added exactly these three
+      // server-action session arms: Cloudflare blocks `Next-Action` POSTs from non-browser
+      // clients, so Humble's library and reveal POSTs run as in-page `fetch()` from one hidden
+      // webview. `login_window/humble_action.rs`'s own #[cfg(test)] mod is the behavioral proof
+      // for their pure logic (arg validation, the script's fixed head + one JSON value, the
+      // base64url return channel, the bounded cancellable wait, the idle-TTL session table).
+      // PROOF STATUS: the window build, the page-load wait and the in-page POST need a live
+      // engine and an authenticated session, so they are proven only by the Phase 94 live gate
+      // (macOS, then WebKitGTK and WebView2, unverified). This gate only pins that no OTHER,
+      // undeclared arm has crept in since.
+      'humble_action_open',
+      'humble_action_post',
+      'humble_action_close',
       // Phase 34.4.1 Plan 22 (F-6 Defect A, REQ-34.4.1-GAP-07) legitimately added exactly this
       // one correctly-directed domain-scoped cookie-read arm -- main.rs's own #[cfg(test)] mod
       // (the humble_login_cookies_for_domain_* cases) is the behavioral proof for its

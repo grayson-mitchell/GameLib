@@ -4,6 +4,8 @@ mod humble_cookies;
 pub(crate) use humble_cookies::*;
 mod humble_reveal;
 pub(crate) use humble_reveal::*;
+mod humble_action;
+pub(crate) use humble_action::*;
 mod humble_open;
 pub(crate) use humble_open::*;
 mod devtools;
