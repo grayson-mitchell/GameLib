@@ -85,6 +85,14 @@ jobs:
       matrix:
         os: [windows-latest, macos-latest, ubuntu-latest]
     steps:
+      # Phase 88 (88-17): the gamelib-knownfix golden case folders are named after the test titles that
+      # recorded them, so a few tracked paths run past 260 characters once the runner's checkout prefix
+      # (D:\a\GameLib\GameLib\) is added, and git on Windows stops the checkout ("unable to create
+      # file") without core.longpaths. Rust's std opens such paths through the \\?\ prefix on its own.
+      - name: Allow long paths in git (Windows leg only, Phase 88 golden case folders)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: git config --system core.longpaths true
       - uses: actions/checkout@v6
       # Phase 72 D-14: webkit/appindicator/rsvg dev packages so src-tauri compiles on the Linux leg (same list as release-tauri.yml).
       - name: Install Linux system dependencies (Linux leg only, Phase 72 D-14)
