@@ -1007,7 +1007,7 @@ pub(crate) fn wine_run_host() -> Value {
 /// last answer, which the sidecar reports through `engine_set_online`. Built here, never taken from the
 /// sidecar, so a path or an online claim it sent cannot reach a tool (T-87-34). Before the engine context
 /// exists the app counts as online, which is the crate's own default.
-fn tools_host_value() -> Value {
+pub(crate) fn tools_host_value() -> Value {
     let mut host = Map::new();
     if let Some(dir) = PUBLIC_DIR.get().and_then(|dir| dir.as_deref()) {
         if let Some(dir) = dir.to_str() {

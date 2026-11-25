@@ -22,12 +22,14 @@ pub use tokio_util::sync::CancellationToken;
 use builders::{env, known_fix_env, wrappers};
 use ctx::LaunchCtx;
 use gamelib_knownfix::types::Runner;
+use gamelib_wine::tools::ToolsHost;
 use gamelib_wine::wine_cmd::env::GameSettingsView;
 use gamelib_wine::wine_cmd::WineHost;
 use prepare::deps::CtxPrepareDeps;
 use prepare::epic;
 use prepare::launch::{PrepareHost, PrepareLaunchArgs};
 use prepare::wine_begin::PrepareWineBeginArgs;
+use prepare::wine_finish::PrepareWineFinishArgs;
 use serde::Deserialize;
 use serde_json::Value;
 use std::future::Future;
@@ -43,6 +45,7 @@ pub const OPS: &[&str] = &[
     "launch_known_fix_env",
     "launch_prepare",
     "launch_prepare_wine_begin",
+    "launch_prepare_wine_finish",
     "launch_setup_env_vars",
     "launch_setup_wine_env_vars",
     "launch_setup_wrapper_env_vars",
@@ -110,6 +113,25 @@ async fn route(op: &str, args: &[Value], ctx: &LaunchCtx) -> Result<Value, Strin
             let host = host_arg(host).ok_or_else(bad)?;
             let deps = CtxPrepareDeps::new(ctx, &host);
             let reply = prepare::wine_begin::prepare_wine_begin(ctx, &deps, begin, &host)
+                .await
+                .map_err(|reason| format!("{op}:{reason}"))?;
+            result_of(serde_json::to_value(reply))
+        }
+        // `prepareWineLaunch` from the store-setup point on (88.1-13). Arguments `[args, host]`: the game, the
+        // settings the begin step returned and the begin step's `prefixUpdated` (`PrepareWineFinishArgs`), and
+        // the tool facts the shell built (the wine host, the bundled `public` directory, the online answer).
+        // Answers `{ success, envVars, knownFixEnv, log }`. It may install a winetricks verb, a DXVK tool, a
+        // runtime or an overlay, which can outlast the sidecar's 60 s bound, so its shim lists the channel as
+        // unbounded.
+        "launch_prepare_wine_finish" => {
+            let [finish @ Value::Object(_), host] = args else {
+                return Err(bad());
+            };
+            let finish: PrepareWineFinishArgs =
+                serde_json::from_value(finish.clone()).map_err(|_| bad())?;
+            let host = tools_host_arg(host).ok_or_else(bad)?;
+            let deps = CtxPrepareDeps::new(ctx, &host.wine).with_tools(&host);
+            let reply = prepare::wine_finish::prepare_wine_finish(ctx, &deps, finish, &host)
                 .await
                 .map_err(|reason| format!("{op}:{reason}"))?;
             result_of(serde_json::to_value(reply))
@@ -199,6 +221,16 @@ async fn route(op: &str, args: &[Value], ctx: &LaunchCtx) -> Result<Value, Strin
 fn host_arg(host: &Value) -> Option<WineHost> {
     match host {
         Value::Null => Some(WineHost::default()),
+        Value::Object(_) => serde_json::from_value(host.clone()).ok(),
+        _ => None,
+    }
+}
+
+/// The tool facts argument of the finish step: `null` is none, an object is the facts (the wine host, the
+/// `public` directory, the online answer), anything else (or an unknown fact) is `None`.
+fn tools_host_arg(host: &Value) -> Option<ToolsHost> {
+    match host {
+        Value::Null => Some(ToolsHost::default()),
         Value::Object(_) => serde_json::from_value(host.clone()).ok(),
         _ => None,
     }
@@ -456,8 +488,8 @@ mod tests {
     }
 
     #[test]
-    fn the_nine_launch_ops_are_in_the_table() {
-        assert_eq!(OPS.len(), 9);
+    fn the_ten_launch_ops_are_in_the_table() {
+        assert_eq!(OPS.len(), 10);
         assert!(OPS.iter().all(|op| op.starts_with("launch_")));
     }
 
@@ -831,6 +863,56 @@ mod tests {
                 .await
                 .unwrap_err();
             assert_eq!(err, "launch_prepare_wine_begin:bad-args", "{args:?}");
+            assert!(!err.contains(secret));
+        }
+    }
+
+    fn wine_finish_args(extra: Value) -> Value {
+        let mut args = json!({
+            "runner": "gog",
+            "appName": "app1",
+            "title": "A Game",
+            "settings": {"winePrefix": "/nonexistent/prefix"},
+            "storedSettings": {"winePrefix": "/nonexistent/prefix"},
+            "prefixUpdated": false,
+            "mergesTier1Env": true,
+            "isGog": false,
+        });
+        if let (Some(base), Value::Object(extra)) = (args.as_object_mut(), extra) {
+            base.extend(extra);
+        }
+        args
+    }
+
+    #[tokio::test]
+    async fn the_wine_finish_op_decodes_strictly_and_never_echoes_what_it_was_sent() {
+        let home = FakeHome::new("launch-lib-");
+        let ctx = ctx(&home);
+        let secret = "/Users/someone/secret-profile-path";
+        for args in [
+            vec![],
+            vec![wine_finish_args(json!({}))],
+            vec![wine_finish_args(json!({})), json!(secret)],
+            vec![wine_finish_args(json!({})), json!({"unknownFact": secret})],
+            vec![wine_finish_args(json!({})), json!({}), json!({})],
+            vec![wine_finish_args(json!({"runner": "epic"})), json!({})],
+            vec![wine_finish_args(json!({"extra": secret})), json!({})],
+            vec![
+                wine_finish_args(json!({"prefixUpdated": secret})),
+                json!({}),
+            ],
+            // Settings that are not an object, and an object that is not game settings (no wine).
+            vec![wine_finish_args(json!({"settings": secret})), json!({})],
+            vec![wine_finish_args(json!({"settings": {}})), json!({})],
+            vec![
+                wine_finish_args(json!({"storedSettings": secret})),
+                json!({}),
+            ],
+        ] {
+            let err = dispatch("launch_prepare_wine_finish", &args, &ctx)
+                .await
+                .unwrap_err();
+            assert_eq!(err, "launch_prepare_wine_finish:bad-args", "{args:?}");
             assert!(!err.contains(secret));
         }
     }

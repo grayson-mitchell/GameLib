@@ -382,6 +382,43 @@ pub(crate) fn rpc_launch_prepare_wine_begin(args: &[Value]) -> Result<Value, Str
     prepare_wine_begin_over(launch_ctx(), args, wine_dispatch::wine_run_host)
 }
 
+/// The body of the `launch_prepare_wine_finish` arm over a given context and host: the generated decode (one object
+/// of the facts only the TS has), an object check on the two settings and an arity check first, so a bad call is
+/// rejected the same fixed `<op>:bad-args` literal before and after the install and never echoes the sidecar's
+/// value, then the crate over `[args, host]` (which decodes strictly again). `host` is the shell's own tool facts
+/// (T-88.1-14), taken only once the context is there.
+fn prepare_wine_finish_over(
+    ctx: Option<&Arc<LaunchCtx>>,
+    args: &[Value],
+    host: impl FnOnce() -> Value,
+) -> Result<Value, String> {
+    let decoded = LaunchPrepareWineFinishArgs::from_args(args)?;
+    if args.len() != 1 {
+        return Err("launch_prepare_wine_finish:bad-args".to_string());
+    }
+    settings_object(decoded.settings, "launch_prepare_wine_finish")?;
+    settings_object(decoded.stored_settings, "launch_prepare_wine_finish")?;
+    let ctx = ctx.ok_or_else(|| "launch_prepare_wine_finish:not-ready".to_string())?;
+    rpc_launch_op(
+        Some(ctx),
+        "launch_prepare_wine_finish",
+        &[args[0].clone(), host()],
+    )
+}
+
+/// The `launch_prepare_wine_finish` `rustInvoke` arm (88.1-13, D-19, D-26, D-30): the second half of
+/// `prepareWineLaunch`, from the store-setup point to the returned env. It installs the known fix's winetricks
+/// verbs and programs when this launch added the game to its prefix, applies the tier-2 registry, resolves the
+/// overlay env, puts the GOG dummy service and the DXVK family in the prefix, downloads the EAC and BattlEye
+/// runtimes, builds the wine env and arms the launch deadline, and answers `{ success, envVars, knownFixEnv, log }`.
+/// The shell appends [`wine_dispatch::tools_host_value`] (the wine host facts, the bundled `public` directory and the
+/// online monitor's answer). A winetricks verb, a DXVK download, a runtime or an overlay can outlast the sidecar's
+/// 60 s `RUST_INVOKE_TIMEOUT_MS`, so the shim that calls it (88.1-15) lists the channel as unbounded; the wine
+/// core's Helper spawns and the shutdown token end it at exit (T-88.1-30).
+pub(crate) fn rpc_launch_prepare_wine_finish(args: &[Value]) -> Result<Value, String> {
+    prepare_wine_finish_over(launch_ctx(), args, wine_dispatch::tools_host_value)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -794,6 +831,85 @@ mod tests {
         assert!(!err.contains(secret));
     }
 
+    fn wine_finish_args(settings: Value) -> Value {
+        json!({
+            "runner": "gog",
+            "appName": "1234",
+            "title": "A Game",
+            "settings": settings,
+            "storedSettings": settings,
+            "prefixUpdated": false,
+            "mergesTier1Env": true,
+            "isGog": false,
+        })
+    }
+
+    #[test]
+    fn the_wine_finish_arm_is_not_ready_before_the_install_and_answers_the_reply_after() {
+        let home = FakeHome::new("launch-shell-");
+        let ctx = ctx_over(&home);
+        let settings = json!({
+            "winePrefix": "/nonexistent/prefix",
+            "wineVersion": {"bin": "/nonexistent/wine", "name": "W", "type": "proton"},
+        });
+        let args = vec![wine_finish_args(settings)];
+        assert_eq!(
+            prepare_wine_finish_over(None, &args, host),
+            Err("launch_prepare_wine_finish:not-ready".to_string())
+        );
+        // A proton game with nothing to fix: the env is the wine env, the overlay env is empty and the
+        // deadline arms nothing (no engine selection), so the reply is a success with an empty log.
+        let got = prepare_wine_finish_over(Some(&ctx), &args, || json!({})).unwrap();
+        assert_eq!(got["success"], json!(true));
+        assert_eq!(got["knownFixEnv"], json!({}));
+        assert_eq!(got["log"], json!([]));
+        assert!(got["envVars"].is_object());
+    }
+
+    #[test]
+    fn the_wine_finish_arm_rejects_a_wrong_call_with_its_fixed_bad_args_before_and_after_the_install(
+    ) {
+        let home = FakeHome::new("launch-shell-");
+        let ctx = ctx_over(&home);
+        let secret = "/Users/someone/secret-profile-path";
+        let wrong: Vec<Vec<Value>> = vec![
+            vec![wine_finish_args(json!(secret))],
+            vec![wine_finish_args(json!({})), json!({})],
+            // Stored settings that are not an object.
+            vec![{
+                let mut args = wine_finish_args(json!({}));
+                args["storedSettings"] = json!(secret);
+                args
+            }],
+            vec![json!({
+                "runner": "epic", "appName": "1", "title": secret, "settings": {},
+                "storedSettings": {}, "prefixUpdated": false, "mergesTier1Env": true, "isGog": false,
+            })],
+            vec![json!({
+                "runner": "gog", "appName": 1, "title": "t", "settings": {},
+                "storedSettings": {}, "prefixUpdated": false, "mergesTier1Env": true, "isGog": false,
+            })],
+        ];
+        for args in &wrong {
+            for ctx in [None, Some(&ctx)] {
+                let err = prepare_wine_finish_over(ctx, args, host).unwrap_err();
+                assert_eq!(err, "launch_prepare_wine_finish:bad-args", "{args:?}");
+                assert!(!err.contains(secret));
+            }
+        }
+        // An unknown key passes the generated decode and is the crate's to refuse; so is a settings object that is
+        // not game settings.
+        let mut extra = wine_finish_args(json!({}));
+        extra["extra"] = json!(secret);
+        let err = prepare_wine_finish_over(Some(&ctx), &[extra], || json!({})).unwrap_err();
+        assert_eq!(err, "launch_prepare_wine_finish:bad-args");
+        assert!(!err.contains(secret));
+        let err =
+            prepare_wine_finish_over(Some(&ctx), &[wine_finish_args(json!({}))], || json!({}))
+                .unwrap_err();
+        assert_eq!(err, "launch_prepare_wine_finish:bad-args");
+    }
+
     #[test]
     fn the_prepare_host_reads_the_deck_and_flatpak_facts_the_way_the_ts_constants_do() {
         let env_of = |pairs: &'static [(&'static str, &'static str)]| {
@@ -862,7 +978,7 @@ mod tests {
         let ctx = ctx_over(&home);
         let secret = "/Users/someone/secret-profile-path";
         type Arm = fn(Option<&Arc<LaunchCtx>>, &[Value]) -> Result<Value, String>;
-        let arms: [(&str, Arm); 6] = [
+        let arms: [(&str, Arm); 7] = [
             ("launch_setup_env_vars", |c, a| {
                 setup_env_vars_over(c, a, host)
             }),
@@ -876,6 +992,9 @@ mod tests {
             }),
             ("launch_prepare_wine_begin", |c, a| {
                 prepare_wine_begin_over(c, a, host)
+            }),
+            ("launch_prepare_wine_finish", |c, a| {
+                prepare_wine_finish_over(c, a, host)
             }),
         ];
         let wrong: Vec<Vec<Value>> = vec![

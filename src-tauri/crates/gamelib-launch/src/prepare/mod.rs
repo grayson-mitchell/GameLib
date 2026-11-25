@@ -6,7 +6,8 @@
 //!   its log prints and [`crossover`] reads a CrossOver bottle's folder (88.1-11).
 //!
 //! - [`wine_begin`]: the first half of `prepareWineLaunch`, up to the store-setup point (88.1-12); the
-//!   `installed_games` file it keeps is [`installed_games`]. 88.1-13 adds the second half.
+//!   `installed_games` file it keeps is [`installed_games`].
+//! - [`wine_finish`]: the second half, from the store-setup point to the returned env (88.1-13).
 
 pub mod crossover;
 pub mod deps;
@@ -15,3 +16,4 @@ pub mod installed_games;
 pub mod launch;
 pub mod settings_log;
 pub mod wine_begin;
+pub mod wine_finish;

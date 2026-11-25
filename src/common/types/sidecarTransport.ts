@@ -1617,6 +1617,19 @@ export const RUST_LAUNCH_PREPARE = 'launch_prepare' as const
  */
 export const RUST_LAUNCH_PREPARE_WINE_BEGIN =
   'launch_prepare_wine_begin' as const
+/**
+ * Phase 88.1 (SVC-03, 88.1-13, D-01, D-19, D-26, D-30): the second half of `prepareWineLaunch`, from the store-setup point
+ * to the returned env. `launch_prepare_wine_finish` takes `[args]` (the runner, app name, title, install path and folder
+ * name, the launch `settings` and `prefixUpdated` the begin step answered, the game's own `storedSettings`, whether the
+ * store merges its own tier-1 env, whether the game is a GOG one and the `cometSupport` flag; the shell appends the wine
+ * host facts, the bundled `public` directory and the online answer itself) and answers `{ success, envVars, knownFixEnv,
+ * log }`: the wine env with the known-fix env merged over it, the overlay env alone, and the per-game log lines as
+ * `{ level, parts }` for the adapter's `LogWriter` to write. It may install a winetricks verb, a DXVK tool, a runtime or a
+ * known-fix overlay, which can outlast the 60 s `RUST_INVOKE_TIMEOUT_MS`; the shim that calls it (88.1-15) lists the
+ * channel in the unbounded set, the app shutdown still ends it.
+ */
+export const RUST_LAUNCH_PREPARE_WINE_FINISH =
+  'launch_prepare_wine_finish' as const
 export const RUST_ENGINE_STATE_RECORD_DECISION =
   'engine_state_record_decision' as const
 export const RUST_ENGINE_STATE_PUBLISH_OVERLAY_NOTICE =
@@ -2070,6 +2083,7 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_LAUNCH_EPIC_SERVICE_OFFLINE,
   RUST_LAUNCH_PREPARE,
   RUST_LAUNCH_PREPARE_WINE_BEGIN,
+  RUST_LAUNCH_PREPARE_WINE_FINISH,
   RUST_SHORTCUTS_EXIST,
   RUST_SHORTCUTS_ADD,
   RUST_SHORTCUTS_REMOVE,

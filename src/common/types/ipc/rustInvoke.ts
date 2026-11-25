@@ -166,6 +166,7 @@ import {
   RUST_LAUNCH_KNOWN_FIX_ENV,
   RUST_LAUNCH_PREPARE,
   RUST_LAUNCH_PREPARE_WINE_BEGIN,
+  RUST_LAUNCH_PREPARE_WINE_FINISH,
   RUST_LAUNCH_SETUP_ENV_VARS,
   RUST_LAUNCH_SETUP_WINE_ENV_VARS,
   RUST_LAUNCH_SETUP_WRAPPER_ENV_VARS,
@@ -1322,6 +1323,27 @@ export const rustInvokeArgs = {
         canRunOffline: z.boolean(),
         folderName: z.string().optional(),
         storedSettings: knownFixGameSettings
+      })
+      .strict()
+  ]),
+  // Phase 88.1 (SVC-03, 88.1-13, D-19, D-26, D-30): the second half of `prepareWineLaunch`. One strict object with the facts
+  // only the TS has; `settings` (the launch settings the begin step answered) and `storedSettings` (the game's own) are
+  // opaque to the generated decode (`x-rust-value`) and checked as JSON objects by the crate. The shell appends the tool
+  // facts itself (the wine host, the bundled `public` directory, the online answer; T-88.1-14).
+  [RUST_LAUNCH_PREPARE_WINE_FINISH]: z.tuple([
+    z
+      .object({
+        runner: z.enum(['gog', 'legendary', 'nile', 'sideload', 'steam']),
+        appName: z.string(),
+        title: z.string(),
+        installPath: z.string().optional(),
+        folderName: z.string().optional(),
+        settings: knownFixGameSettings,
+        storedSettings: knownFixGameSettings,
+        prefixUpdated: z.boolean(),
+        mergesTier1Env: z.boolean(),
+        isGog: z.boolean(),
+        cometSupport: z.boolean().optional()
       })
       .strict()
   ])

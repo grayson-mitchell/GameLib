@@ -52,7 +52,9 @@ use gamelib_core::process::{BoxFuture, LineSink, ProcSpec, SpecOutput, SpecRunne
 use gamelib_core::shutdown::Shutdown;
 use gamelib_engine::ctx::{EngineCtx, EnginePaths, Platform};
 use gamelib_engine::fetch::Replay;
-use gamelib_engine::testing::{RecordingLog, RecordingUi, ScriptedSpecRunner, UiEvent};
+use gamelib_engine::testing::{
+    RecordingEmitter, RecordingLog, RecordingUi, ScriptedSpecRunner, UiEvent,
+};
 use gamelib_info::ctx::{InfoCtx, InfoPaths, Platform as InfoPlatform};
 use gamelib_info::http::ReqwestHttp;
 use gamelib_knownfix::ctx::KnownFixCtx;
@@ -236,6 +238,7 @@ struct Rig {
     ctx: LaunchCtx,
     log: Arc<RecordingLog>,
     ui: Arc<RecordingUi>,
+    emitter: Arc<RecordingEmitter>,
     runner: Arc<ScriptedSpecRunner>,
     replay: Arc<Replay>,
     _exchanges: tempfile::TempDir,
@@ -288,6 +291,7 @@ impl Rig {
         let replay = Arc::new(Replay::from_case(exchanges.path()).unwrap());
         let log = Arc::new(RecordingLog::new());
         let ui = Arc::new(RecordingUi::new());
+        let emitter = Arc::new(RecordingEmitter::new());
         let engine = EngineCtx::new(
             Arc::new(StoreHost::new()),
             Arc::new(SystemClock),
@@ -307,6 +311,7 @@ impl Rig {
         .with_proc(proc)
         .with_fetch(replay.clone())
         .with_ui(ui.clone())
+        .with_emitter(emitter.clone())
         .with_log(log.clone())
         .with_i18n(Arc::new(gamelib_i18n::Catalog::load(&locales_dir(), "en")))
         .with_app_version(ORACLE_VERSION)
@@ -343,6 +348,7 @@ impl Rig {
             _home: home,
             log,
             ui,
+            emitter,
             runner,
             replay,
             _exchanges: exchanges,
@@ -882,7 +888,7 @@ fn the_prepare_launch_replay_is_unix_only() {
 }
 
 // =============================================================================================
-// golden/prepare_wine, the begin half (88.1-12)
+// golden/prepare_wine, the begin half (88.1-12) and the finish half (88.1-13)
 // =============================================================================================
 //
 // `prepare_wine_begin` replays the `begin.json` half of every `golden/prepare_wine` case: the ordered trace of
@@ -921,6 +927,38 @@ fn the_prepare_launch_replay_is_unix_only() {
 // Rig facts (not differences): the TS oracle put `<HOME>/bin/umu-run` on the PATH through its executable seam
 // and left `PATH` itself pinned, while Rust finds umu on the host's `PATH`; the replay prepends `<HOME>/bin` to
 // the host `PATH` of a umu case and removes it again from the recorded spawn's `PATH` before comparing.
+//
+// The finish half (88.1-13) runs in the same rig as the begin half, right after it, over the tree the begin half
+// left, with the settings and `prefixUpdated` the begin step answered: `prepare_wine_finish` replays the
+// `finish.json` half, so the two together are the whole `prepareWineLaunch`. A finish case compares:
+//
+// - the reply (`result.json`): success, `envVars` (the wine env with the known-fix env merged over it) and
+//   `knownFixEnv`, and the per-game log lines (the known-fix env line);
+// - the in-process calls that stand for the TS's `rustInvoke` requests, in order and with their whole arguments:
+//   the known-fix registry and overlay env, the winetricks verbs, the tool-settings resolver and the wine
+//   command on the game of each `runInPrefix` program, the DXVK family, the runtime checks and downloads and the
+//   deadline arm;
+// - the `gameStatusUpdate` pushes through the engine context's emitter, with the TS names and shapes;
+// - the spawns of the GOG dummy (`winepath`, `sc create`) and of any prefix check the wine command runs, with the
+//   whole environment, time limit, class and result;
+// - the app's own log lines, and the tree afterwards, now the whole run's (the GOG dummy included).
+//
+// Documented differences of the finish half (each must be used by at least one case, or the replay fails):
+// - `game-status-bus-emit`: the TS sent each `gameStatusUpdate` to the renderer and also emitted it on an
+//   in-process bus; nothing listens there (D-23), so only the renderer push is made. The replay requires each
+//   bus emit to follow its renderer push, and compares the pushes.
+// - `online-monitor-observation`: the TS's `online-monitor` entries are how often it asked the monitor; the
+//   step reads the one answer the shell passes, and the downloads it gates are compared through the calls.
+// - `winepath-error-line-fixed-text`: the TS logged `Couldn't get wine path for <path>.\n<stderr>`; Rust logs the
+//   fixed `Couldn't get wine path` (the path and winepath's own output can name the profile).
+// - `dummy-failure-line-fixed-text`: the TS appended the error (`: Error: ENOENT ...`, which names paths) to the
+//   `Failed to install GalaxyCommunication dummy into the prefix` line; Rust logs the fixed text.
+// - `settle-warning-fixed-text`: the TS's registry, overlay env and deadline warnings carried the rejection's
+//   `Error: ...` text; Rust's carry none.
+// - `tier1-env-line-key-order`: the known-fix env line lists the tier-1 variables in the order the fix file
+//   holds them in the TS (a JavaScript object keeps insertion order); the reader's maps are ordered by key, so
+//   Rust lists them sorted. The line is a log; the environment itself is a map and is compared whole. The
+//   replay compares the two lines with their tier-1 items sorted.
 
 #[cfg(unix)]
 mod wine_begin_replay {
@@ -928,8 +966,12 @@ mod wine_begin_replay {
     use std::os::unix::fs::PermissionsExt;
 
     use gamelib_engine::testing::RecordedSpawn;
+    use gamelib_engine::tool_settings::ToolSettingsResult;
     use gamelib_launch::prepare::wine_begin::{prepare_wine_begin, PrepareWineBeginArgs};
+    use gamelib_launch::prepare::wine_finish::{prepare_wine_finish, PrepareWineFinishArgs};
+    use gamelib_wine::tools::ToolsHost;
     use gamelib_wine::wine_cmd::{WineHost, WineInstallation};
+    use serde::Deserialize;
     use sha2::{Digest, Sha256};
 
     use super::*;
@@ -937,12 +979,17 @@ mod wine_begin_replay {
     /// `golden/prepare_wine` holds 391 cases, the MANIFEST floor; a later edit may raise this, never lower it.
     const PREPARE_WINE_FLOOR: usize = 391;
 
-    const DELTAS: [&str; 5] = [
+    /// The finish halves the tracer's slice replays (the begin-only early exits are not counted).
+    const FINISH_HALVES_FLOOR: usize = 122;
+
+    const DELTAS: [&str; 7] = [
         "in-process-wine-valid",
         "eos-overlay-slot",
         "adapter-writes-prefix-line",
         "wine-spawn-failure-line",
         "dialog-without-ack-id",
+        "settle-warning-fixed-text",
+        "tier1-env-line-key-order",
     ];
 
     fn wine_dir() -> PathBuf {
@@ -958,6 +1005,9 @@ mod wine_begin_replay {
         inner: Arc<ScriptedSpecRunner>,
         prefix: PathBuf,
         kind: String,
+        /// Where `winepath` says the GOG dummy lives, when a case has it installed already: the oracle's
+        /// scripted `winepath` left that file behind once the prefix existed.
+        installed_dummy: Option<PathBuf>,
     }
 
     impl PrefixMakingRunner {
@@ -1001,6 +1051,12 @@ mod wine_begin_replay {
                 .any(|arg| arg == "wineboot" || arg == "createprefix")
             {
                 self.make();
+            }
+            if let Some(dest) = &self.installed_dummy {
+                if spec.argv.iter().any(|arg| arg == "winepath") {
+                    std::fs::create_dir_all(dest.parent().unwrap()).unwrap();
+                    std::fs::write(dest, "MZ already installed").unwrap();
+                }
             }
             self.inner.run(spec, on_line)
         }
@@ -1141,11 +1197,20 @@ mod wine_begin_replay {
         runner
     }
 
-    /// The call site a Rust spawn of this half belongs to: the bottle query is the `whoami`, everything else
-    /// is the prefix creation (wineboot, umu's createprefix, the wineserver wait).
+    /// The call site a Rust spawn belongs to: the bottle query is the `whoami`, the GOG dummy's two commands are
+    /// the `winepath` and the `sc create`, everything else is the prefix creation (wineboot, umu's createprefix,
+    /// the wineserver wait).
     fn site_of(spawn: &RecordedSpawn) -> &'static str {
         if spawn.argv.iter().any(|arg| arg == "whoami") {
             "prepare_wine.crossover_bottle_folder"
+        } else if spawn.argv.iter().any(|arg| arg == "winepath") {
+            "prepare_wine.galaxy_winepath"
+        } else if spawn
+            .argv
+            .windows(2)
+            .any(|pair| pair[0] == "sc" && pair[1] == "create")
+        {
+            "prepare_wine.galaxy_sc_create"
         } else {
             "prepare_wine.verify_prefix"
         }
@@ -1274,6 +1339,195 @@ mod wine_begin_replay {
         Ok(want)
     }
 
+    /// `profile.expand` of a string value, or `null` for anything else.
+    fn profile_expand_opt(profile: &Profile, value: &Value) -> Value {
+        value
+            .as_str()
+            .map_or(Value::Null, |text| json!(profile.expand(text)))
+    }
+
+    /// A known-fix env line with its tier-1 items sorted (`tier1-env-line-key-order`); any other text is
+    /// returned unchanged. The line is `[<label>: ]known-fix env applied: K=v (tier-1); ...; K=v (overlay)`.
+    fn sorted_tier1(text: &str) -> String {
+        const MARK: &str = "known-fix env applied: ";
+        let Some(at) = text.find(MARK) else {
+            return text.to_string();
+        };
+        let (head, items) = text.split_at(at + MARK.len());
+        let (mut tier1, rest): (Vec<&str>, Vec<&str>) = items
+            .split("; ")
+            .partition(|item| item.ends_with(" (tier-1)"));
+        tier1.sort_unstable();
+        let joined: Vec<&str> = tier1.into_iter().chain(rest).collect();
+        format!("{head}{}", joined.join("; "))
+    }
+
+    /// Whether this finish half is the tracer's slice (88.1-13 Task 1): the registry, the overlay env, the env
+    /// line, the wine env and the deadline arm, with no installFixes, GOG dummy, tool or runtime step in it. The
+    /// other halves are counted, and replayed by Task 2.
+    fn tracer_scope(finish_trace: &[Value]) -> bool {
+        finish_trace
+            .iter()
+            .all(|entry| match entry["kind"].as_str() {
+                Some("hook" | "log") => true,
+                Some("rust") => matches!(
+                    entry["channel"].as_str(),
+                    Some(
+                        "knownfix_apply_profile_registry"
+                            | "knownfix_profile_overlay_env"
+                            | "engine_launch_arm_deadline"
+                            | "wine_valid"
+                    )
+                ),
+                Some("backend-log") => {
+                    let text = entry["text"].as_str().unwrap_or_default();
+                    !text.contains("GalaxyCommunication") && !text.contains("wine path")
+                }
+                _ => false,
+            })
+    }
+
+    /// What the finish half's golden trace holds, in the replay's own vocabulary.
+    struct FinishExpected {
+        calls: Vec<Value>,
+        status: Vec<Value>,
+        spawns: Vec<Value>,
+        app_lines: Vec<(String, String)>,
+        log: Vec<Value>,
+    }
+
+    /// The fixed-text twin of a TS app-log line: the line Rust writes where the TS wrote one that carried a
+    /// path, the transport's own output or a rejection's `Error: ...` text (T-88.1-12), and the delta that names
+    /// the difference. `None` for a line that is the same on both sides.
+    fn fixed_text_twin(text: &str) -> Option<(&'static str, String)> {
+        if text.starts_with("Couldn't get wine path for ") {
+            return Some((
+                "winepath-error-line-fixed-text",
+                "Couldn't get wine path".to_string(),
+            ));
+        }
+        const DUMMY: &str = "Failed to install GalaxyCommunication dummy into the prefix";
+        if text.starts_with(&format!("{DUMMY}: ")) {
+            return Some(("dummy-failure-line-fixed-text", DUMMY.to_string()));
+        }
+        // `<label>: known-fix registry step failed: Error: <text>; launching without it` and the overlay's.
+        if text.contains(": Error: ") && text.ends_with("; launching without it") {
+            let cut = text.find(": Error: ").unwrap();
+            return Some((
+                "settle-warning-fixed-text",
+                format!("{}; launching without it", &text[..cut]),
+            ));
+        }
+        if let Some(rest) =
+            text.strip_prefix("Engine: the launch deadline could not be armed: Error: ")
+        {
+            let _ = rest;
+            return Some((
+                "settle-warning-fixed-text",
+                "Engine: the launch deadline could not be armed".to_string(),
+            ));
+        }
+        None
+    }
+
+    /// The finish half's expected effects. `reply` is the begin step's answer (the hook of the store setup is
+    /// the adapter's, and runs exactly when the prefix was updated).
+    fn finish_expected_of(
+        finish: &Value,
+        reply: &gamelib_launch::prepare::wine_begin::PrepareWineBeginReply,
+        used: &mut Used,
+    ) -> Result<FinishExpected, String> {
+        let mut want = FinishExpected {
+            calls: Vec::new(),
+            status: Vec::new(),
+            spawns: Vec::new(),
+            app_lines: Vec::new(),
+            log: Vec::new(),
+        };
+        let (mut sent, mut emitted) = (0usize, 0usize);
+        let mut hooks = 0usize;
+        for entry in finish["trace"].as_array().unwrap() {
+            match entry["kind"].as_str().unwrap() {
+                "hook" => {
+                    if entry["member"] != "prepareLaunch" {
+                        return Err(format!("a hook this half does not call: {entry}"));
+                    }
+                    hooks += 1;
+                }
+                "frontend" => {
+                    if entry["channel"] != "gameStatusUpdate" {
+                        return Err(format!("a frontend push this half does not make: {entry}"));
+                    }
+                    match entry["via"].as_str() {
+                        Some("send") => {
+                            sent += 1;
+                            want.status.push(entry["args"][0].clone());
+                        }
+                        Some("emit") => {
+                            emitted += 1;
+                            used.0.insert("game-status-bus-emit");
+                        }
+                        other => return Err(format!("a push via {other:?}")),
+                    }
+                }
+                "rust" => {
+                    if entry["channel"] == "wine_valid" {
+                        used.0.insert("in-process-wine-valid");
+                    } else {
+                        want.calls.push(json!({
+                            "kind": "rust",
+                            "channel": entry["channel"],
+                            "args": entry["args"],
+                        }));
+                    }
+                }
+                "online-monitor" => {
+                    used.0.insert("online-monitor-observation");
+                }
+                "spawn" => want.spawns.push(golden_wine_spawn(entry)),
+                "backend-log" => {
+                    let text = entry["text"].as_str().unwrap();
+                    let text = match fixed_text_twin(text) {
+                        Some((delta, twin)) => {
+                            used.0.insert(delta);
+                            twin
+                        }
+                        None => text.to_string(),
+                    };
+                    let sorted = sorted_tier1(&text);
+                    if sorted != text {
+                        used.0.insert("tier1-env-line-key-order");
+                    }
+                    want.app_lines
+                        .push((entry["level"].as_str().unwrap().to_string(), sorted));
+                }
+                "log" => want.log.push(json!({
+                    "level": entry["level"],
+                    "parts": entry["parts"].as_array().unwrap().iter().map(|part| {
+                        json!(sorted_tier1(part.as_str().unwrap()))
+                    }).collect::<Vec<_>>(),
+                })),
+                other => {
+                    return Err(format!(
+                        "a trace entry kind this replay does not handle: {other}"
+                    ))
+                }
+            }
+        }
+        if sent != emitted {
+            return Err(format!("{sent} status pushes but {emitted} bus emits"));
+        }
+        // The store-setup hook runs between the halves exactly when the prefix was updated, unless the runner
+        // defines none (a sideload game has no hook): the replay proves the adapter's cue is right.
+        if hooks > 1 || (hooks == 1 && !reply.prefix_updated) {
+            return Err(format!(
+                "{hooks} store-setup hooks with prefixUpdated {}",
+                reply.prefix_updated
+            ));
+        }
+        Ok(want)
+    }
+
     fn replay_wine_case(case: &Value, used: &mut Used) -> Result<(), String> {
         let id = case["id"].as_str().unwrap();
         let dir = wine_dir().join("expected").join(id);
@@ -1308,7 +1562,17 @@ mod wine_begin_replay {
             lay_out_wine(&profile, wine, valid, &mut laid_out);
         }
 
-        let spawns: Vec<&Value> = trace.iter().filter(|e| e["kind"] == "spawn").collect();
+        let finish = if begin["split"] == "none" {
+            Value::Null
+        } else {
+            read_json(&dir.join("finish.json"))
+        };
+        let finish_trace: Vec<Value> = finish["trace"].as_array().cloned().unwrap_or_default();
+        let spawns: Vec<&Value> = trace
+            .iter()
+            .chain(finish_trace.iter())
+            .filter(|e| e["kind"] == "spawn")
+            .collect();
         let scripted_runner = Arc::new(scripted(&profile, &spawns));
         let proc = Arc::new(PrefixMakingRunner {
             inner: scripted_runner.clone(),
@@ -1317,6 +1581,9 @@ mod wine_begin_replay {
                 .as_str()
                 .unwrap_or_default()
                 .to_string(),
+            installed_dummy: (case["spec"]["dummy"] == "present").then(|| {
+                PathBuf::from(profile.expand(input["spawns"]["dummyDest"].as_str().unwrap()))
+            }),
         });
         let rig = Rig::with_proc(
             home,
@@ -1369,6 +1636,67 @@ mod wine_begin_replay {
                     .collect()
             })
             .unwrap_or_default();
+        // What the TS scripted for the finish half's requests, answered in order.
+        for entry in &finish_trace {
+            let rejection = entry["rejects"].as_str().map(str::to_string);
+            let reply = rig.profile.expand_value(&entry["reply"]);
+            match entry["channel"].as_str() {
+                Some("knownfix_apply_profile_registry") => {
+                    deps.registry_reply = rejection.map_or(Ok(()), Err);
+                }
+                Some("knownfix_profile_overlay_env") => {
+                    deps.overlay_reply = match rejection {
+                        Some(reason) => Err(reason),
+                        None => Ok(reply
+                            .as_object()
+                            .unwrap()
+                            .iter()
+                            .map(|(key, value)| (key.clone(), value.as_str().unwrap().to_string()))
+                            .collect()),
+                    };
+                }
+                Some("wine_dxvk_install_remove") => {
+                    deps.dxvk_reply = match rejection {
+                        Some(reason) => Err(reason),
+                        None => Ok(reply.as_bool().unwrap()),
+                    };
+                }
+                Some("wine_winetricks_install") => deps.winetricks_replies.push(
+                    reply
+                        .as_array()
+                        .unwrap()
+                        .iter()
+                        .map(|outcome| outcome.as_str().unwrap().to_string())
+                        .collect(),
+                ),
+                Some("engine_resolve_tool_settings") => {
+                    deps.tool_settings_replies
+                        .push(match reply["kind"].as_str() {
+                            Some("stored") => ToolSettingsResult::Stored {
+                                settings: reply["settings"].clone(),
+                            },
+                            Some("engine") => ToolSettingsResult::Engine {
+                                key: reply["key"].as_str().unwrap_or_default().to_string(),
+                                settings: reply["settings"].clone(),
+                            },
+                            other => panic!("{id}: a tool-settings answer of kind {other:?}"),
+                        });
+                }
+                Some("engine_launch_arm_deadline") => {
+                    deps.deadline_reply = rejection.map_or(Ok(()), Err);
+                }
+                Some("wine_runtime_is_installed") => {
+                    deps.runtimes_installed.insert(
+                        entry["args"][0].as_str().unwrap().to_string(),
+                        reply.as_bool().unwrap(),
+                    );
+                }
+                Some("wine_runtime_download") => {
+                    deps.download_answer = reply.as_bool().unwrap();
+                }
+                _ => {}
+            }
+        }
 
         let info = &input["gameInfo"];
         let args: PrepareWineBeginArgs = serde_json::from_value(json!({
@@ -1531,8 +1859,142 @@ mod wine_begin_replay {
             ));
         }
 
-        // The tree: this half's work, so the finish half's GOG dummy (`drive_c/ProgramData/...`, and the
-        // `drive_c` folder it made under a Proton prefix that has none yet) is left out of the golden's.
+        // The finish half, over the tree the begin half left (the early exits end inside the begin half).
+        let begin_calls = deps.calls().len();
+        let begin_spawns = scripted_runner.spawns().len();
+        let begin_lines = got_lines.len();
+        let in_scope = begin["split"] == "none" || tracer_scope(&finish_trace);
+        if begin["split"] != "none" && in_scope {
+            let finish_args = PrepareWineFinishArgs::deserialize(json!({
+                "runner": input["runner"],
+                "appName": input["appName"],
+                "title": info["title"],
+                "installPath": profile_expand_opt(&rig.profile, &info["install"]["install_path"]),
+                "folderName": info["folder_name"],
+                "settings": reply.settings,
+                "storedSettings": stored,
+                "prefixUpdated": reply.prefix_updated,
+                "mergesTier1Env": input["opts"]["mergesTier1Env"],
+                "isGog": input["runner"] == "gog",
+                "cometSupport": input["experimentalFeatures"]["cometSupport"],
+            }))
+            .map_err(|e| format!("{id}: the finish arguments: {e}"))?;
+            let tools = ToolsHost {
+                public_dir: Some(rig.profile.root.join("public")),
+                online: input["online"].as_bool().unwrap(),
+                wine: host.clone(),
+            };
+            let result = read_json(&dir.join("result.json"));
+            let want =
+                finish_expected_of(&finish, &reply, used).map_err(|e| format!("{id}: {e}"))?;
+            let done = runtime()
+                .block_on(prepare_wine_finish(&rig.ctx, &deps, finish_args, &tools))
+                .map_err(|e| format!("{id}: the finish step failed: {e}"))?;
+
+            if !done.success
+                || rig.profile.normalise(&json!(done.env_vars)) != result["envVars"]
+                || rig.profile.normalise(&json!(done.known_fix_env)) != result["knownFixEnv"]
+            {
+                return Err(format!(
+                    "{id}: finish reply want {result} got envVars {} knownFixEnv {}",
+                    rig.profile.normalise(&json!(done.env_vars)),
+                    rig.profile.normalise(&json!(done.known_fix_env))
+                ));
+            }
+            let mut got_log = rig
+                .profile
+                .normalise(&serde_json::to_value(&done.log).unwrap());
+            for line in got_log.as_array_mut().unwrap() {
+                let part = sorted_tier1(line["parts"][0].as_str().unwrap());
+                line["parts"][0] = json!(part);
+            }
+            if Value::Array(want.log.clone()) != got_log {
+                return Err(format!(
+                    "{id}: finish log want {} got {got_log}",
+                    Value::Array(want.log)
+                ));
+            }
+            let got_calls: Vec<Value> = deps.calls()[begin_calls..]
+                .iter()
+                .map(|call| rig.profile.normalise(&call.to_request()))
+                .collect();
+            if want.calls != got_calls {
+                return Err(format!(
+                    "{id}: finish calls want {}\n got {}",
+                    Value::Array(want.calls),
+                    Value::Array(got_calls)
+                ));
+            }
+            let got_status: Vec<Value> = rig
+                .emitter
+                .pushed()
+                .into_iter()
+                .map(|(channel, args)| {
+                    assert_eq!(channel, "gameStatusUpdate", "{id}: a push on {channel}");
+                    rig.profile.normalise(&args[0])
+                })
+                .collect();
+            if want.status != got_status {
+                return Err(format!(
+                    "{id}: status pushes want {} got {}",
+                    Value::Array(want.status),
+                    Value::Array(got_status)
+                ));
+            }
+            let got_spawns: Vec<Value> = scripted_runner.spawns()[begin_spawns..]
+                .iter()
+                .map(|spawn| {
+                    let mut value = rig
+                        .profile
+                        .normalise(&spawn_value_at(spawn, site_of(spawn)));
+                    if umu {
+                        if let Some(path) = value["envDiff"]["set"]["PATH"].as_str() {
+                            if let Some(rest) = path.strip_prefix("<HOME>/bin:") {
+                                value["envDiff"]["set"]["PATH"] = json!(rest);
+                            }
+                        }
+                    }
+                    value
+                })
+                .collect();
+            if want.spawns != got_spawns {
+                return Err(format!(
+                    "{id}: finish spawns want {}\n got {}",
+                    Value::Array(want.spawns),
+                    Value::Array(got_spawns)
+                ));
+            }
+            if !scripted_runner.unscripted().is_empty() {
+                return Err(format!(
+                    "{id}: an unscripted spawn: {:?}",
+                    scripted_runner.unscripted()
+                ));
+            }
+            let got_lines: Vec<(String, String)> = rig
+                .log
+                .lines()
+                .into_iter()
+                .skip(begin_lines)
+                .map(|(level, text)| {
+                    let level = if level == "warn" { "warning" } else { level };
+                    (
+                        level.to_string(),
+                        sorted_tier1(&rig.profile.normalise_text(&text)),
+                    )
+                })
+                .collect();
+            if want.app_lines != got_lines {
+                return Err(format!(
+                    "{id}: finish app log want {:?} got {got_lines:?}",
+                    want.app_lines
+                ));
+            }
+            used.0.insert("finish-half-replayed");
+        }
+
+        // The tree afterwards: the whole run's, or for a finish half this step does not replay yet, the begin
+        // half's (the GOG dummy under `drive_c/ProgramData`, and the `drive_c` folder it made under a Proton
+        // prefix that has none yet, are left out of the golden's).
         let got_tree = tree_of(&rig.profile, &laid_out);
         let got_paths: BTreeSet<&str> = got_tree
             .iter()
@@ -1546,11 +2008,12 @@ mod wine_begin_replay {
             .filter(|path| path.contains("/drive_c/ProgramData"))
             .collect();
         let finish_owned = |path: &str| {
-            finish_made.contains(&path)
-                || (!got_paths.contains(path)
-                    && finish_made
-                        .iter()
-                        .any(|made| made.starts_with(&format!("{path}/"))))
+            !in_scope
+                && (finish_made.contains(&path)
+                    || (!got_paths.contains(path)
+                        && finish_made
+                            .iter()
+                            .any(|made| made.starts_with(&format!("{path}/")))))
         };
         let want_tree: Vec<Value> = golden_tree
             .iter()
@@ -1581,7 +2044,7 @@ mod wine_begin_replay {
     }
 
     #[test]
-    fn every_golden_prepare_wine_begin_half_replays() {
+    fn every_golden_prepare_wine_case_replays_both_halves() {
         let cases = read_json(&wine_dir().join("cases.json"));
         let cases = cases.as_array().expect("cases.json is an array");
         check_floor("golden prepare_wine", cases.len(), PREPARE_WINE_FLOOR).unwrap();
@@ -1601,24 +2064,36 @@ mod wine_begin_replay {
         let mut compared = 0usize;
         let mut linux = 0usize;
         let mut mac = 0usize;
+        let mut finish_halves = 0usize;
+        let mut beyond_the_tracer = 0usize;
         for case in cases {
-            let os = read_json(
-                &wine_dir()
-                    .join("expected")
-                    .join(case["id"].as_str().unwrap())
-                    .join("input.json"),
-            )["os"]
-                .clone();
+            let case_dir = wine_dir()
+                .join("expected")
+                .join(case["id"].as_str().unwrap());
+            let os = read_json(&case_dir.join("input.json"))["os"].clone();
             linux += usize::from(os == "linux");
             mac += usize::from(os == "mac");
+            // An early exit (neither wine valid, the bottle missing) ends inside the begin half.
+            let begin = read_json(&case_dir.join("begin.json"));
+            let finish_trace = read_json(&case_dir.join("finish.json"))["trace"]
+                .as_array()
+                .cloned()
+                .unwrap_or_default();
+            let runs_past_begin = begin["split"] != "none";
+            finish_halves += usize::from(runs_past_begin && tracer_scope(&finish_trace));
+            beyond_the_tracer += usize::from(runs_past_begin && !tracer_scope(&finish_trace));
             compared += 1;
             if let Err(problem) = replay_wine_case(case, &mut used) {
                 failures.push(problem);
             }
         }
         println!(
-            "golden prepare_wine: compared {compared} (linux {linux}, mac {mac}) of {} floor {PREPARE_WINE_FLOOR}",
+            "golden prepare_wine: compared {compared} (linux {linux}, mac {mac}) of {} floor {PREPARE_WINE_FLOOR}; both halves replayed in {finish_halves} (floor {FINISH_HALVES_FLOOR}), {beyond_the_tracer} finish halves left for Task 2",
             cases.len()
+        );
+        assert!(
+            finish_halves >= FINISH_HALVES_FLOOR,
+            "{finish_halves} finish halves are below the floor {FINISH_HALVES_FLOOR}"
         );
         assert!(
             failures.is_empty(),
@@ -1645,6 +2120,10 @@ mod wine_begin_replay {
         assert!(
             used.0.contains("named-bottle-missing-case"),
             "the missing-CrossOver-bottle case was not replayed"
+        );
+        assert!(
+            used.0.contains("finish-half-replayed"),
+            "no finish half was replayed"
         );
     }
 

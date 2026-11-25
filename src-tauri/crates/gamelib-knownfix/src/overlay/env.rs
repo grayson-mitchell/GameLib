@@ -57,8 +57,9 @@ pub struct EnvLine {
     pub source: String,
 }
 
-/// The value a variable has before an overlay's directory is appended to it (the TS `baseValue`).
-pub trait BaseValues {
+/// The value a variable has before an overlay's directory is appended to it (the TS `baseValue`). `Sync`, so a
+/// resolver future that holds one can be sent to another thread (the launch prepare step's, 88.1-13).
+pub trait BaseValues: Sync {
     fn base_value(&self, key: &str) -> Option<String>;
 }
 
@@ -68,7 +69,7 @@ impl BaseValues for BTreeMap<String, String> {
     }
 }
 
-impl<F: Fn(&str) -> Option<String>> BaseValues for F {
+impl<F: Fn(&str) -> Option<String> + Sync> BaseValues for F {
     fn base_value(&self, key: &str) -> Option<String> {
         self(key)
     }
