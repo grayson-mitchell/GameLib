@@ -13,7 +13,11 @@
  *   - a key value field (`redeemed_key_val`, `redeemed_key_value`, `key`, ...) holding a string
  *     that is not `REDACTED`;
  *   - an email address, an account-name field that is not `REDACTED`;
- *   - a macOS, Linux or Windows home path naming an account.
+ *   - a macOS, Linux or Windows home path naming an account;
+ *   - a Cloudflare block page, whose footer names the requester's public IP and a Ray ID (the first
+ *     real capture, `recorded/real/sync/body-37.html`, was one; see `debug/humble-library-
+ *     cloudflare-403`). The rule keys on the page's own markers, never on a dotted quad: Humble's
+ *     public HTML and JS carry SVG path data such as `M10.5.25.75.125` that looks like an address.
  * A failure names the file and the rule, never the value.
  *
  * `recorded/real/` (94-10, T-94-19) is the one directory that holds a capture of the operator's
@@ -176,6 +180,14 @@ const RULES: Rule[] = [
     name: 'Bearer token',
     pattern: /Bearer\s+([^\s"'\\,}]+)/g,
     ok: isRedacted
+  },
+  {
+    // A real Cloudflare block page identifies the requester: `Your IP: <ip>` and `Cloudflare Ray
+    // ID: <id>` in its footer, inside the `cf-error-details` wrapper. A hand-made access-denied
+    // fixture can carry the page title or the words "blocked" without any of these markers.
+    name: 'Cloudflare block page',
+    pattern: /cf-error-details|Cloudflare Ray ID|cf-footer-ip|Your IP\b/g,
+    ok: () => false
   }
 ]
 
@@ -379,6 +391,64 @@ describe('Phase 94 Humble fixture redaction scan', () => {
       expect(
         findViolations('{"email": "REDACTED", "username": "REDACTED"}')
       ).toEqual([])
+    })
+
+    it('a planted Cloudflare block page fails by its markers, and never by a dotted quad or the word alone', () => {
+      const footer =
+        '<span class="cf-footer-item">Your IP: <span id="cf-footer-ip">203.0.113.7</span></span> ' +
+        '<span class="cf-footer-item">Cloudflare Ray ID: <strong>8c1f2e3d4a5b6c7d</strong></span>'
+      expect(findViolations(footer)).toEqual(['Cloudflare block page'])
+      expect(
+        findViolations(
+          '<div id="cf-error-details" class="cf-error-details-wrapper">'
+        )
+      ).toEqual(['Cloudflare block page'])
+      expect(findViolations('Cloudflare Ray ID: abc')).toEqual([
+        'Cloudflare block page'
+      ])
+      // Each marker alone is enough.
+      expect(findViolations('<span id="cf-footer-ip">x</span>')).toEqual([
+        'Cloudflare block page'
+      ])
+      expect(findViolations('Your IP address is blocked')).toEqual([
+        'Cloudflare block page'
+      ])
+      // Not markers: a bare dotted quad, SVG path data that reads like one, the word Cloudflare
+      // in a script, and the page title a synthetic access-denied fixture may carry.
+      expect(findViolations('203.0.113.7')).toEqual([])
+      expect(findViolations('<path d="M10.5.25.75.125 3 4.5.6.7z"/>')).toEqual(
+        []
+      )
+      expect(
+        findViolations('"cdn-cgi/challenge-platform" // Cloudflare')
+      ).toEqual([])
+      expect(
+        findViolations('<title>Attention Required! | Cloudflare</title>')
+      ).toEqual([])
+    })
+
+    it('a planted block page in a walked tree is found and named without its address', () => {
+      const profile = createFakeHomeProfile({ prefix: 'gamelib-redaction-' })
+      try {
+        const root = join(profile.root, 'fixtures')
+        mkdirSync(join(root, 'recorded', 'real', 'sync'), { recursive: true })
+        writeFileSync(
+          join(root, 'recorded', 'real', 'sync', 'body-37.html'),
+          '<title>Attention Required! | Cloudflare</title>Your IP: 203.0.113.7 Cloudflare Ray ID: 8c1f'
+        )
+        writeFileSync(
+          join(root, 'recorded', 'real', 'sync', 'body-1.json'),
+          '{"ok":true}'
+        )
+        const { files, offenders } = scanTree(root)
+        expect(files).toBe(2)
+        expect(offenders).toEqual([
+          'recorded/real/sync/body-37.html: Cloudflare block page'
+        ])
+        expect(offenders.join()).not.toContain('203.0.113.7')
+      } finally {
+        profile.dispose()
+      }
     })
 
     it('a planted /Users/<name> path fails, a placeholder does not', () => {
