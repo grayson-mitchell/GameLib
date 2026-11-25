@@ -566,7 +566,7 @@
     {
       "number": "88.1",
       "name": "Launch builders and prepare steps",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "number": "88.2",
@@ -616,7 +616,7 @@
     {
       "number": "94",
       "name": "Humble Bundle and shortcuts",
-      "status": "in_progress"
+      "status": "pending"
     },
     {
       "number": "95",
@@ -656,8 +656,8 @@
   ],
   "next": {
     "command": "/gsd-progress --next",
-    "label": "Advance to the next step (execute phase 88.1)",
-    "reason": "Phase 88.1 — 20 plans ready to execute"
+    "label": "Advance to the next step",
+    "reason": "Phase 33 of 50 · 92% · executing"
   },
-  "updated_at": "2026-11-25T03:15:00.000Z"
+  "updated_at": "2026-11-25T06:34:42.832Z"
 }

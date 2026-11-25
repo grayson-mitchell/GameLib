@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: "88.1"
 current_phase_name: Launch builders and prepare steps
 status: executing
-stopped_at: Completed 88-17-PLAN.md
-last_updated: "2026-11-25T06:17:11.224Z"
+stopped_at: Completed 88.1-01-PLAN.md
+last_updated: "2026-11-25T06:34:56.132Z"
 last_activity: 2026-11-25
-last_activity_desc: Phase 88 execution started
-state_head: 0a6ac61c9d582b74d536de5cefc029c99dcc0cb2
+last_activity_desc: Phase 88.1 execution started
+state_head: "0bfab6bdf13a85094337d990ad01bfc243fe6878"
 progress:
   total_phases: 25
   completed_phases: 23
@@ -76,11 +76,11 @@ See: .planning/PROJECT.md (updated 2026-11-25)
 
 ## Current Position
 
-Phase: 88.1 (Launch builders and prepare steps) — READY TO EXECUTE
-Plan: Not started
+Phase: 88.1 (Launch builders and prepare steps) — EXECUTING
+Plan: 2 of 20
 Status: Ready to execute
-Last activity: 2026-11-25 — Phase 88 complete (verification passed 4/4), transitioned to Phase 88.1
-Progress: [████████████████░░░░] 204/257 plans (79%)
+Last activity: 2026-11-25 — Phase 88.1 execution started
+Progress: [████████████████░░░░] 204/257 plans ([█████████░] 92%)
 
 ## Native-Install Arc Phase Map (21–25)
 
@@ -520,6 +520,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 94 P21 | 95min | 3 tasks | 15 files |
 | Phase 94 P22 | 190min | 3 tasks | 57 files |
 | Phase 94 P24 | 95min | 2 tasks | 55 files |
+| Phase 88.1 P01 | 40 min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -1167,6 +1168,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 94]: 94-22: shortcutsExistOnDisk moved to src/backend/shortcuts/shortcuts/shortcuts.ts for the 94-05 oracle until 94-24; processShortcut moved unchanged to appShellFlowRegistration.ts as registerProcessShortcut with its IPC declaration moved to the app-shell domain; shortcutsFlowRegistration.ts and shortcutsFlows.test.ts are deleted with every guard following by exactly its own contribution
 - [Phase 94]: 94-24: the TS shortcuts tree and oracle were deleted behind describe('shortcutsPortComplete') (red then green); the macOS icon_geometry oracle survives cut down in src/backend/testUtils/shortcutsIconGeometry as a relocated schedule row (writeOrCompareIconGeometryGolden, callers none, deletedBy 99) so the four Mac goldens stay recordable; its todo carries the new command and a step to delete it with the recording commit
 - [Phase 94]: 94-24: getWikiGameInfo and its infoShimSchedule row are deleted (the Rust shortcuts crate reaches the wiki lookup in-process); the steamfiles TS validity replay (shortcutsReplay.test.ts) is retired with its subject and the upstream test_data copy in the crate is now the only copy; @shockpkg/icon-encoder, sanitize-filename, tmp and @types/tmp dropped, fastest-levenshtein kept
+- [Phase 88.1]: 88.1-01: oracle cases.json is generated from the case tables and compared; gamescope census lists the two source-text gates as not ported per D-15
 
 ### Pending Todos
 
@@ -1451,8 +1453,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-25T03:20:00.000Z
-Stopped at: Phase 88 complete, ready to plan Phase 88.1
+Last session: 2026-11-25T06:34:53.025Z
+Stopped at: Completed 88.1-01-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
