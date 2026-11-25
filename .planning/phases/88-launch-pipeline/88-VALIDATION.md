@@ -47,7 +47,7 @@ Filled in by the planner/executor per task. Requirement-level map; the Sub-phase
 |----------|-----------|----------|-----------|-------------------|-------------|--------|
 | SVC-03 / SC1 | 88.1 | builders match TS vectors (env, wrappers, gamescope, known-fix env, prepare ops) | Rust replay of TS vectors | `cargo test -p gamelib-launch --test golden_builders` | ❌ W0 | ⬜ pending |
 | SVC-03 / SC1 | 88.1 | spawn traces: native, Wine/Proton/CrossOver, gamescope/mangohud, overlay, pre/post (argv, full env, cwd, class, order) | Rust replay of TS traces | `cargo test -p gamelib-launch --test golden_launch` | ❌ W0 | ⬜ pending |
-| SVC-03 / SC1 | 88 | known-fix reader, layering, registry, overlay archive/install, fetch | replay + ported incident tests | `cargo test -p gamelib-knownfix` | ✅ | ✅ green (P `68979200f`, 88-17) |
+| SVC-03 / SC1 | 88 | known-fix reader, layering, registry, overlay archive/install, fetch | replay + ported incident tests | `cargo test -p gamelib-knownfix` | ✅ | ✅ green (P `68979200f`, 88-17; three-OS CI green at P' `c5ae345ae`) |
 | SVC-03 / SC1 | 88.2 | runner command argv/env, redacted log line, streamed line sequence | replay | `cargo test -p gamelib-launch --test golden_runner` | ❌ W0 | ⬜ pending |
 | SVC-03 / SC2 | 88.3 | funnel order, status events, single-flight join, release on failure | funnel oracle replay | `cargo test -p gamelib-launch --test funnel` | ❌ W0 | ⬜ pending |
 | SVC-03 / SC2 | 88.2 | stub game: start, single flight, quit-kill, survives parent SIGKILL (three OS) | CI smoke + orphan harness | `cargo test -p gamelib-proc` ; `cargo test -p gamelib-launch --test stub_game` | partial | ⬜ pending |
@@ -65,7 +65,7 @@ Filled in by the planner/executor per task. Requirement-level map; the Sub-phase
 ## Wave 0 Requirements
 
 - [ ] `src/backend/launchOracle/` harness (record/compare modes, spawn tracer reuse, pairwise generator, classes file) and manifests
-- [ ] `src-tauri/crates/gamelib-launch/` and `gamelib-knownfix/` skeletons, `-p` entries in `.github/workflows/rust-test.yml`
+- [x] `src-tauri/crates/gamelib-launch/` and `gamelib-knownfix/` skeletons, `-p` entries in `.github/workflows/rust-test.yml` (88-17: both crates build and test green on three OSes in run 45533129411)
 - [ ] stub game binary (model on `gamelib-proc/src/bin/standin.rs`) and Windows CommandLine-echo stub
 - [ ] `gamelib-proc` additions with orphan-harness arms (Windows `start_time`, Game job, tree kill)
 - [x] `88-HUMAN-UAT.md`, SC2 amendment, `82-STATE-OWNERSHIP.md` amendment (D-24, D-28) (88-01: the contract and both 82 amendments are written; the D-16 wording was already in ROADMAP 88.3 success criterion 3)
@@ -154,14 +154,74 @@ live run, D-23 funnel events, D-26's full hooks, D-29's single log writer and re
 Flagged assumption (spec-less edge probe): SVC-03's edge-coverage row is `unclassified` and unresolved; the D-14 matrix stands in for edge
 coverage and is not claimed as a verified edge.
 
+## CI proof (88)
+
+Measured by plan 88-17 Task 3, 2026-11-25, after the operator chose `push` in Task 2 (push now; follow-up fix commits for CI-only failures
+allowed without asking again). The open-time check ran immediately before the first push: `git diff --name-only 68979200f HEAD` listed only
+`.planning/phases/88-launch-pipeline/88-VALIDATION.md`. The pre-push hook ran on every push (no `--no-verify`, no force); main was 90 commits ahead
+and 0 behind origin, and stayed 0 behind.
+
+The first push did not go out: the hook's `backend-di-ceilings` step failed on two things 88-12 and 88-14 had left (a new `jest.mock` site and a
+baseline that should have shrunk), so a fix was committed first. The first CI runs then found further CI-only failures (one on Linux, the rest on the Windows leg), each fixed
+in its own commit (listed below). The candidate head the proof below ends on is P' and CI ran every row below at that one head.
+
+P': c5ae345ae7b88c80891c24ee859a5a1556c5c747
+
+| Workflow | Leg | Run id | Conclusion |
+|----------|-----|--------|------------|
+| rust-test.yml | windows-latest | 45533129411 | success |
+| rust-test.yml | macos-latest | 45533129411 | success |
+| rust-test.yml | ubuntu-latest | 45533129411 | success |
+| codecheck.yml | ubuntu-latest | 45533129281 | success |
+| test.yml | ubuntu-latest | 45533129299 | success |
+| lint.yml | ubuntu-latest | 45533129229 | success |
+
+The three rust-test.yml legs are the three jobs of the one run 45533129411 (job ids 138933132124 windows, 138933132166 macos, 138933131853 ubuntu),
+at P'. The multi-crate `cargo test -p ... -p gamelib-knownfix -p gamelib-launch ...` step, `cargo test (Tauri shell crate)` and the per-platform
+`cargo clippy` ratchet are green on all three.
+
+Golden test binaries observed running in each rust-test leg's log (`Running tests/golden_<name>.rs` followed by `test result: ok`, 0 failed). The
+test counts differ by OS because a few tests are `cfg(unix)` (the Windows leg has one fewer in `golden_registry`, `golden_overlay_install` and
+`golden_fetcher`), and the Windows leg replays the non-unix arm of `golden_launch_overrides` (15 cases, the floor's non-unix arm, symlink cases skipped):
+
+| Binary | windows-latest | macos-latest | ubuntu-latest |
+|--------|----------------|--------------|---------------|
+| golden_reader | ok, 6 passed | ok, 6 passed | ok, 6 passed |
+| golden_launch_overrides | ok, 3 passed | ok, 3 passed | ok, 3 passed |
+| golden_registry | ok, 8 passed | ok, 9 passed | ok, 9 passed |
+| golden_overlay_archive | ok, 4 passed | ok, 4 passed | ok, 4 passed |
+| golden_overlay_install | ok, 5 passed | ok, 6 passed | ok, 6 passed |
+| golden_fetcher | ok, 3 passed | ok, 4 passed | ok, 4 passed |
+| golden_report | ok, 9 passed | ok, 9 passed | ok, 9 passed |
+
+Commits between P (`68979200f`) and P', all in this plan and all CI-only (no shipped behaviour changed; `git diff --name-only P P'` lists
+`.planning/`, `.github/workflows/rust-test.yml`, `meta/backendDiCeilings/__tests__.json`, two Jest test files and, in Rust, three test files, one
+`#[cfg_attr]` on one `let` in `overlay/install.rs` and one test expectation in `src-tauri/src/knownfix_dispatch.rs`):
+
+| Commit | What the CI or the hook found | Fix |
+|--------|-------------------------------|-----|
+| 5ff66437b | pre-push `backend-di-ceilings`: `knownFixLaunchReply.test.ts` added a `jestMock` site, `steamBridgeKnownFixes.test.ts` baseline 7 should be 6 | the test spies on `logWarning`; baseline lowered to 6 |
+| c2e88633e | Windows checkout exit 128: golden case folder paths pass 260 characters with the runner prefix | `git config --system core.longpaths true` before checkout, Windows leg only |
+| dc0adf728 | test.yml (Linux Node): 5 `overlay_archive` twin cases, gzip bytes differ from the macOS recording (134 against 127 bytes) | the gzip-only fields are compared where a reference case reproduces; tar bytes, headers, round trips and errors always compared; Rust still compares the gzip bytes on all three OSes |
+| a8b3cfcbe | Windows `golden_launch_overrides`: the ENOENT pin ran symlink cases the replay skips; Windows words a missing file `os error 2` and a missing folder `os error 3` | skip symlink cases in the pin; fold the two accepted not-found texts onto the expected one |
+| 5205d86be, 748c0ab8b | Windows `golden_registry`: `prefixDir` proton answer `\x\pfx` for the recorded `/x/pfx` | fold separators for a path outside the profile root (the first attempt folded before the root swap and broke the bottle path; the second corrected it) |
+| 7f1a76f78 | Windows `cargo test (Tauri shell crate)`: `knownfix_dispatch` expected `bin/game.exe` joined by a slash literal | the expectation joins `bin` then `game.exe` |
+| c5ae345ae | Windows clippy ratchet: a new `unused_mut` (no ceiling) in `overlay/install.rs` | `#[cfg_attr(not(unix), allow(unused_mut))]` on that one `let` |
+
+Not claimed here and not in the plan's list: the `Supply-chain audit` workflow is red on this push (run 45533129405) and was red on the
+push before it (45451702304, at `07b194604`); it is not one of 88-17's required workflows and was not touched. `release-tauri.yml` also
+checks out on `windows-latest` and would hit the same long-path checkout failure that `rust-test.yml` did; it was not changed (outside this
+plan) and is flagged in 88-17-SUMMARY.md. The clean-worktree proof above was measured at P; the CI proof is at P', and the commits between them
+are the table above.
+
 ---
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies (sub-phase 88's plans 88-01..88-17)
 - [ ] Sampling continuity: no 3 consecutive tasks without automated verify
 - [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
+- [x] No watch-mode flags
 - [ ] Feedback latency < 120s
 - [ ] `nyquist_compliant: true` set in frontmatter
 
