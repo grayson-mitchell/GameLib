@@ -10,9 +10,12 @@ import { NAV_TAB_IDS, resolveActiveTab } from './navTabs'
  *   therefore belongs to Games, including one opened from Downloads or the
  *   Redeem dialog. Its Back button returns to the Library whatever opened
  *   it (quick 261125-pmb).
- * - The router state is kept because `GamePage/index.tsx` destructures
- *   `location.state`; a game page without `gameInfo` (the tray/deeplink
- *   shape) is never remembered, so a restore cannot crash it.
+ * - The router state is kept so a restored game page takes the fast path
+ *   with no lookup and no loading state. GamePage no longer needs it (since
+ *   quick 261125-r0j it resolves a stateless entry itself from the library
+ *   store or getGameInfo), but a game page without `gameInfo` is still never
+ *   remembered. That is deliberately unchanged: remembering one is now safe
+ *   but left for later.
  * - `/loginweb` is never remembered: mounting the login WebView starts a
  *   login flow.
  * - The lit tab goes to its root, otherwise the strip would offer no way

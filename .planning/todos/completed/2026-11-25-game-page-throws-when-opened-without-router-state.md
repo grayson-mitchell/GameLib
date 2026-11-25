@@ -44,3 +44,21 @@ comment is unverified. The next entry point added without state will crash the p
 - Add a test that renders GamePage with a stateless navigation and asserts it neither throws nor hits RouteErrorSurface.
 - Once GamePage handles stateless entry, `tabLocationMemory.ts` could remember stateless game pages too, but that is
   optional.
+
+## Resolution (2026-11-25): the game page resolves its own game
+
+GamePage is now a thin outer component around `GamePageGate`, which takes the router state's `gameInfo` when it is present,
+else the runner's library store list, else `getGameInfo(appName, runner)`. It shows the loading spinner while that resolves
+and a "GameLib couldn't find this game." state with a Back to Library link when nothing comes back (null, a rejection, or a
+runner the URL made up), so opening the page without router state no longer reaches the route's error surface. The page body
+seeds from an `initialGameInfo` prop and is keyed by runner/appName, so moving between game pages remounts it.
+
+Tests: the gate is rendered under jsdom with a probe child, and a source gate pins the `index.tsx` wiring; the 830-line body
+itself is not rendered under jest. See `src/frontend/screens/Game/GamePage/__tests__/gamePageGate.test.tsx`.
+
+tabLocationMemory still declines to remember a stateless game page. That is unchanged and is an optional follow-up, now safe
+to take.
+
+Fix commits, by subject because the branch is rebased before merge:
+`fix(quick-261125-r0j): game page loads the game itself when opened without router state` and
+`fix(quick-261125-r0j): catalogue the game page not-found string`.
