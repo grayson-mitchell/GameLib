@@ -22,10 +22,10 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-11-20)
+See: .planning/PROJECT.md (updated 2026-11-25)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 88 — Launch scaffolding and known fixes
+**Current focus:** Phase 88.1 — Launch builders and prepare steps
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -80,7 +80,7 @@ Phase: 88.1 (Launch builders and prepare steps) — READY TO PLAN
 Plan: Not started
 Status: Ready to plan
 Last activity: 2026-11-25 — Phase 88 complete (verification passed 4/4), transitioned to Phase 88.1
-Progress: [█████████░] 92%
+Progress: [█████████████████░░░] 204/237 plans (86%)
 
 ## Native-Install Arc Phase Map (21–25)
 
@@ -563,6 +563,7 @@ Entries for phases before 44 live in STATE-HISTORY.md § Roadmap Evolution archi
 
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
+- [Phase 88] Known-fixes ported to Rust behind TS-recorded goldens; sidecar reaches them through rustInvoke shims with settle helpers (a rejected call never fails a launch); 88.1–88.3 reuse the launchOracle harness and 88-VALIDATION.md
 Decisions for Phase 47 and earlier, pre-October quick tasks and untagged entries live in STATE-HISTORY.md § Decisions archive (2026-10-15).
 Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 2026-10-16) live in STATE-HISTORY.md § Decisions archive, Phases 48–49 (moved 2026-10-18).
 
@@ -1124,6 +1125,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 
 ### Blockers/Concerns
 
+- [Phase 88] Before the next tagged release: `release-tauri.yml` Windows checkout lacks `core.longpaths` for the 248-char golden fixture paths (88-REVIEW CR-02). Also open: CR-01 O(n²) duplicate-key parse on remote fix bodies, WR-08 gzip bytes never independently compared (the 88-17 SUMMARY claim is wrong); see 88-REVIEW-DISPOSITION.md
 - Pre-push hook (`prettier` + `i18n --fail-on-update`) fails on **pre-existing repo debt** unrelated to Phase 7: ~141 files fail `prettier --check .` (likely a Prettier version bump; `pnpm-lock.yaml` already modified) and the locale files have orphaned-key drift. Phase 7 was pushed with `--no-verify` after independently verifying tsc/lint/tests. A separate housekeeping pass (`pnpm prettier --write .` + `pnpm i18n`) would clear it.
 - Phase 23 Plan 05 Task 3 (checkpoint:human-verify, gate=blocking-human): 23-UAT.md Gate 1 real-hardware re-run pending — human must install a multi-depot title (Hogwarts Legacy 990080 or Cyberpunk 2077 1091500) on real macOS hardware after deleting the stale appmanifest_990080.acf, confirm single monotonic progress percent through a pause/resume cycle, and confirm StateFlags=4 completion + launch. Code fix (single-flight guard + reconciliation) is landed and regression-tested (commits cc77a9df/ddde970d/7fccfb2a/f963de8b); this is the only remaining Phase 23 gap before Gates 2/3 can proceed.
 - G-30-01: Steam QR login logon button unresponsive under Tauri (Manage Accounts renders, QR tab never reached) — install/uninstall E2E for Phase 30 unreached as a direct consequence; see 30-HUMAN-UAT.md for reproduction and untested hypothesis
@@ -1379,8 +1381,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-25T02:48:50.928Z
-Stopped at: Completed 88-17-PLAN.md
+Last session: 2026-11-25T03:20:00.000Z
+Stopped at: Phase 88 complete, ready to plan Phase 88.1
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
