@@ -1,0 +1,12 @@
+[
+  {
+    "kind": "backend-log",
+    "level": "error",
+    "prefix": "Backend",
+    "text": "Failed to get epic service status with TypeError: Cannot read properties of null (reading 'components')"
+  },
+  {
+    "kind": "online-monitor",
+    "asked": 1
+  }
+]

@@ -1,0 +1,12 @@
+[
+  {
+    "kind": "backend-log",
+    "level": "error",
+    "prefix": "Backend",
+    "text": "Failed to get epic service status with AxiosError: Request failed with status code 502"
+  },
+  {
+    "kind": "online-monitor",
+    "asked": 1
+  }
+]

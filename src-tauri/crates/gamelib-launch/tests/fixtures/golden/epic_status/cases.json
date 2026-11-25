@@ -1,0 +1,1374 @@
+[
+  {
+    "id": "epic-epic-games-store-status-operational",
+    "call": {
+      "op": "isOffline",
+      "type": "Epic Games Store",
+      "online": true,
+      "reply": {
+        "kind": "components",
+        "components": [
+          {
+            "name": "Website",
+            "status": "operational"
+          },
+          {
+            "name": "Epic Games Store",
+            "status": "operational"
+          },
+          {
+            "name": "Fortnite",
+            "status": "operational"
+          },
+          {
+            "name": "Rocket League",
+            "status": "operational"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "epic-epic-games-store-status-degraded_performance",
+    "call": {
+      "op": "isOffline",
+      "type": "Epic Games Store",
+      "online": true,
+      "reply": {
+        "kind": "components",
+        "components": [
+          {
+            "name": "Website",
+            "status": "operational"
+          },
+          {
+            "name": "Epic Games Store",
+            "status": "degraded_performance"
+          },
+          {
+            "name": "Fortnite",
+            "status": "operational"
+          },
+          {
+            "name": "Rocket League",
+            "status": "operational"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "epic-epic-games-store-status-partial_outage",
+    "call": {
+      "op": "isOffline",
+      "type": "Epic Games Store",
+      "online": true,
+      "reply": {
+        "kind": "components",
+        "components": [
+          {
+            "name": "Website",
+            "status": "operational"
+          },
+          {
+            "name": "Epic Games Store",
+            "status": "partial_outage"
+          },
+          {
+            "name": "Fortnite",
+            "status": "operational"
+          },
+          {
+            "name": "Rocket League",
+            "status": "operational"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "epic-epic-games-store-status-major_outage",
+    "call": {
+      "op": "isOffline",
+      "type": "Epic Games Store",
+      "online": true,
+      "reply": {
+        "kind": "components",
+        "components": [
+          {
+            "name": "Website",
+            "status": "operational"
+          },
+          {
+            "name": "Epic Games Store",
+            "status": "major_outage"
+          },
+          {
+            "name": "Fortnite",
+            "status": "operational"
+          },
+          {
+            "name": "Rocket League",
+            "status": "operational"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "epic-epic-games-store-status-major",
+    "call": {
+      "op": "isOffline",
+      "type": "Epic Games Store",
+      "online": true,
+      "reply": {
+        "kind": "components",
+        "components": [
+          {
+            "name": "Website",
+            "status": "operational"
+          },
+          {
+            "name": "Epic Games Store",
+            "status": "major"
+          },
+          {
+            "name": "Fortnite",
+            "status": "operational"
+          },
+          {
+            "name": "Rocket League",
+            "status": "operational"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "epic-epic-games-store-status-under_maintenance",
+    "call": {
+      "op": "isOffline",
+      "type": "Epic Games Store",
+      "online": true,
+      "reply": {
+        "kind": "components",
+        "components": [
+          {
+            "name": "Website",
+            "status": "operational"
+          },
+          {
+            "name": "Epic Games Store",
+            "status": "under_maintenance"
+          },
+          {
+            "name": "Fortnite",
+            "status": "operational"
+          },
+          {
+            "name": "Rocket League",
+            "status": "operational"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "epic-epic-games-store-component-absent",
+    "call": {
+      "op": "isOffline",
+      "type": "Epic Games Store",
+      "online": true,
+      "reply": {
+        "kind": "components",
+        "components": [
+          {
+            "name": "Website",
+            "status": "operational"
+          },
+          {
+            "name": "Fortnite",
+            "status": "operational"
+          },
+          {
+            "name": "Rocket League",
+            "status": "operational"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "epic-epic-games-store-monitor-offline",
+    "call": {
+      "op": "isOffline",
+      "type": "Epic Games Store",
+      "online": false
+    }
+  },
+  {
+    "id": "epic-fortnite-status-operational",
+    "call": {
+      "op": "isOffline",
+      "type": "Fortnite",
+      "online": true,
+      "reply": {
+        "kind": "components",
+        "components": [
+          {
+            "name": "Website",
+            "status": "operational"
+          },
+          {
+            "name": "Epic Games Store",
+            "status": "operational"
+          },
+          {
+            "name": "Fortnite",
+            "status": "operational"
+          },
+          {
+            "name": "Rocket League",
+            "status": "operational"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "epic-fortnite-status-degraded_performance",
+    "call": {
+      "op": "isOffline",
+      "type": "Fortnite",
+      "online": true,
+      "reply": {
+        "kind": "components",
+        "components": [
+          {
+            "name": "Website",
+            "status": "operational"
+          },
+          {
+            "name": "Epic Games Store",
+            "status": "operational"
+          },
+          {
+            "name": "Fortnite",
+            "status": "degraded_performance"
+          },
+          {
+            "name": "Rocket League",
+            "status": "operational"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "epic-fortnite-status-partial_outage",
+    "call": {
+      "op": "isOffline",
+      "type": "Fortnite",
+      "online": true,
+      "reply": {
+        "kind": "components",
+        "components": [
+          {
+            "name": "Website",
+            "status": "operational"
+          },
+          {
+            "name": "Epic Games Store",
+            "status": "operational"
+          },
+          {
+            "name": "Fortnite",
+            "status": "partial_outage"
+          },
+          {
+            "name": "Rocket League",
+            "status": "operational"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "epic-fortnite-status-major_outage",
+    "call": {
+      "op": "isOffline",
+      "type": "Fortnite",
+      "online": true,
+      "reply": {
+        "kind": "components",
+        "components": [
+          {
+            "name": "Website",
+            "status": "operational"
+          },
+          {
+            "name": "Epic Games Store",
+            "status": "operational"
+          },
+          {
+            "name": "Fortnite",
+            "status": "major_outage"
+          },
+          {
+            "name": "Rocket League",
+            "status": "operational"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "epic-fortnite-status-major",
+    "call": {
+      "op": "isOffline",
+      "type": "Fortnite",
+      "online": true,
+      "reply": {
+        "kind": "components",
+        "components": [
+          {
+            "name": "Website",
+            "status": "operational"
+          },
+          {
+            "name": "Epic Games Store",
+            "status": "operational"
+          },
+          {
+            "name": "Fortnite",
+            "status": "major"
+          },
+          {
+            "name": "Rocket League",
+            "status": "operational"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "epic-fortnite-status-under_maintenance",
+    "call": {
+      "op": "isOffline",
+      "type": "Fortnite",
+      "online": true,
+      "reply": {
+        "kind": "components",
+        "components": [
+          {
+            "name": "Website",
+            "status": "operational"
+          },
+          {
+            "name": "Epic Games Store",
+            "status": "operational"
+          },
+          {
+            "name": "Fortnite",
+            "status": "under_maintenance"
+          },
+          {
+            "name": "Rocket League",
+            "status": "operational"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "epic-fortnite-component-absent",
+    "call": {
+      "op": "isOffline",
+      "type": "Fortnite",
+      "online": true,
+      "reply": {
+        "kind": "components",
+        "components": [
+          {
+            "name": "Website",
+            "status": "operational"
+          },
+          {
+            "name": "Epic Games Store",
+            "status": "operational"
+          },
+          {
+            "name": "Rocket League",
+            "status": "operational"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "epic-fortnite-monitor-offline",
+    "call": {
+      "op": "isOffline",
+      "type": "Fortnite",
+      "online": false
+    }
+  },
+  {
+    "id": "epic-rocket-league-status-operational",
+    "call": {
+      "op": "isOffline",
+      "type": "Rocket League",
+      "online": true,
+      "reply": {
+        "kind": "components",
+        "components": [
+          {
+            "name": "Website",
+            "status": "operational"
+          },
+          {
+            "name": "Epic Games Store",
+            "status": "operational"
+          },
+          {
+            "name": "Fortnite",
+            "status": "operational"
+          },
+          {
+            "name": "Rocket League",
+            "status": "operational"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "epic-rocket-league-status-degraded_performance",
+    "call": {
+      "op": "isOffline",
+      "type": "Rocket League",
+      "online": true,
+      "reply": {
+        "kind": "components",
+        "components": [
+          {
+            "name": "Website",
+            "status": "operational"
+          },
+          {
+            "name": "Epic Games Store",
+            "status": "operational"
+          },
+          {
+            "name": "Fortnite",
+            "status": "operational"
+          },
+          {
+            "name": "Rocket League",
+            "status": "degraded_performance"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "epic-rocket-league-status-partial_outage",
+    "call": {
+      "op": "isOffline",
+      "type": "Rocket League",
+      "online": true,
+      "reply": {
+        "kind": "components",
+        "components": [
+          {
+            "name": "Website",
+            "status": "operational"
+          },
+          {
+            "name": "Epic Games Store",
+            "status": "operational"
+          },
+          {
+            "name": "Fortnite",
+            "status": "operational"
+          },
+          {
+            "name": "Rocket League",
+            "status": "partial_outage"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "epic-rocket-league-status-major_outage",
+    "call": {
+      "op": "isOffline",
+      "type": "Rocket League",
+      "online": true,
+      "reply": {
+        "kind": "components",
+        "components": [
+          {
+            "name": "Website",
+            "status": "operational"
+          },
+          {
+            "name": "Epic Games Store",
+            "status": "operational"
+          },
+          {
+            "name": "Fortnite",
+            "status": "operational"
+          },
+          {
+            "name": "Rocket League",
+            "status": "major_outage"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "epic-rocket-league-status-major",
+    "call": {
+      "op": "isOffline",
+      "type": "Rocket League",
+      "online": true,
+      "reply": {
+        "kind": "components",
+        "components": [
+          {
+            "name": "Website",
+            "status": "operational"
+          },
+          {
+            "name": "Epic Games Store",
+            "status": "operational"
+          },
+          {
+            "name": "Fortnite",
+            "status": "operational"
+          },
+          {
+            "name": "Rocket League",
+            "status": "major"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "epic-rocket-league-status-under_maintenance",
+    "call": {
+      "op": "isOffline",
+      "type": "Rocket League",
+      "online": true,
+      "reply": {
+        "kind": "components",
+        "components": [
+          {
+            "name": "Website",
+            "status": "operational"
+          },
+          {
+            "name": "Epic Games Store",
+            "status": "operational"
+          },
+          {
+            "name": "Fortnite",
+            "status": "operational"
+          },
+          {
+            "name": "Rocket League",
+            "status": "under_maintenance"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "epic-rocket-league-component-absent",
+    "call": {
+      "op": "isOffline",
+      "type": "Rocket League",
+      "online": true,
+      "reply": {
+        "kind": "components",
+        "components": [
+          {
+            "name": "Website",
+            "status": "operational"
+          },
+          {
+            "name": "Epic Games Store",
+            "status": "operational"
+          },
+          {
+            "name": "Fortnite",
+            "status": "operational"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "epic-rocket-league-monitor-offline",
+    "call": {
+      "op": "isOffline",
+      "type": "Rocket League",
+      "online": false
+    }
+  },
+  {
+    "id": "epic-epic-games-store-components-empty",
+    "call": {
+      "op": "isOffline",
+      "type": "Epic Games Store",
+      "online": true,
+      "reply": {
+        "kind": "components",
+        "components": []
+      }
+    }
+  },
+  {
+    "id": "epic-epic-games-store-component-listed-twice-first-wins",
+    "call": {
+      "op": "isOffline",
+      "type": "Epic Games Store",
+      "online": true,
+      "reply": {
+        "kind": "components",
+        "components": [
+          {
+            "name": "Epic Games Store",
+            "status": "operational"
+          },
+          {
+            "name": "Epic Games Store",
+            "status": "major"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "epic-epic-games-store-component-entry-without-name",
+    "call": {
+      "op": "isOffline",
+      "type": "Epic Games Store",
+      "online": true,
+      "reply": {
+        "kind": "components",
+        "components": [
+          {
+            "status": "major"
+          },
+          {
+            "name": "Epic Games Store",
+            "status": "major"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "epic-fortnite-component-without-status",
+    "call": {
+      "op": "isOffline",
+      "type": "Fortnite",
+      "online": true,
+      "reply": {
+        "kind": "components",
+        "components": [
+          {
+            "name": "Fortnite"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "epic-epic-games-store-network-enotfound",
+    "call": {
+      "op": "isOffline",
+      "type": "Epic Games Store",
+      "online": true,
+      "reply": {
+        "kind": "network",
+        "code": "ENOTFOUND"
+      }
+    }
+  },
+  {
+    "id": "epic-epic-games-store-network-eai-again",
+    "call": {
+      "op": "isOffline",
+      "type": "Epic Games Store",
+      "online": true,
+      "reply": {
+        "kind": "network",
+        "code": "EAI_AGAIN"
+      }
+    }
+  },
+  {
+    "id": "epic-epic-games-store-network-econnrefused",
+    "call": {
+      "op": "isOffline",
+      "type": "Epic Games Store",
+      "online": true,
+      "reply": {
+        "kind": "network",
+        "code": "ECONNREFUSED"
+      }
+    }
+  },
+  {
+    "id": "epic-epic-games-store-network-econnreset",
+    "call": {
+      "op": "isOffline",
+      "type": "Epic Games Store",
+      "online": true,
+      "reply": {
+        "kind": "network",
+        "code": "ECONNRESET"
+      }
+    }
+  },
+  {
+    "id": "epic-epic-games-store-network-etimedout",
+    "call": {
+      "op": "isOffline",
+      "type": "Epic Games Store",
+      "online": true,
+      "reply": {
+        "kind": "network",
+        "code": "ETIMEDOUT"
+      }
+    }
+  },
+  {
+    "id": "epic-epic-games-store-network-econnaborted",
+    "call": {
+      "op": "isOffline",
+      "type": "Epic Games Store",
+      "online": true,
+      "reply": {
+        "kind": "network",
+        "code": "ECONNABORTED"
+      }
+    }
+  },
+  {
+    "id": "epic-epic-games-store-network-enetunreach",
+    "call": {
+      "op": "isOffline",
+      "type": "Epic Games Store",
+      "online": true,
+      "reply": {
+        "kind": "network",
+        "code": "ENETUNREACH"
+      }
+    }
+  },
+  {
+    "id": "epic-epic-games-store-network-ehostunreach",
+    "call": {
+      "op": "isOffline",
+      "type": "Epic Games Store",
+      "online": true,
+      "reply": {
+        "kind": "network",
+        "code": "EHOSTUNREACH"
+      }
+    }
+  },
+  {
+    "id": "epic-epic-games-store-network-enetdown",
+    "call": {
+      "op": "isOffline",
+      "type": "Epic Games Store",
+      "online": true,
+      "reply": {
+        "kind": "network",
+        "code": "ENETDOWN"
+      }
+    }
+  },
+  {
+    "id": "epic-epic-games-store-network-ehostdown",
+    "call": {
+      "op": "isOffline",
+      "type": "Epic Games Store",
+      "online": true,
+      "reply": {
+        "kind": "network",
+        "code": "EHOSTDOWN"
+      }
+    }
+  },
+  {
+    "id": "epic-epic-games-store-network-err-network",
+    "call": {
+      "op": "isOffline",
+      "type": "Epic Games Store",
+      "online": true,
+      "reply": {
+        "kind": "network",
+        "code": "ERR_NETWORK"
+      }
+    }
+  },
+  {
+    "id": "epic-epic-games-store-network-eproto",
+    "call": {
+      "op": "isOffline",
+      "type": "Epic Games Store",
+      "online": true,
+      "reply": {
+        "kind": "network",
+        "code": "EPROTO"
+      }
+    }
+  },
+  {
+    "id": "epic-epic-games-store-network-err-canceled",
+    "call": {
+      "op": "isOffline",
+      "type": "Epic Games Store",
+      "online": true,
+      "reply": {
+        "kind": "network",
+        "code": "ERR_CANCELED"
+      }
+    }
+  },
+  {
+    "id": "epic-epic-games-store-http-403",
+    "call": {
+      "op": "isOffline",
+      "type": "Epic Games Store",
+      "online": true,
+      "reply": {
+        "kind": "raw",
+        "status": 403,
+        "contentType": "application/json",
+        "body": "{\"error\": \"upstream\"}\n"
+      }
+    }
+  },
+  {
+    "id": "epic-epic-games-store-http-404",
+    "call": {
+      "op": "isOffline",
+      "type": "Epic Games Store",
+      "online": true,
+      "reply": {
+        "kind": "raw",
+        "status": 404,
+        "contentType": "application/json",
+        "body": "{\"error\": \"upstream\"}\n"
+      }
+    }
+  },
+  {
+    "id": "epic-epic-games-store-http-429",
+    "call": {
+      "op": "isOffline",
+      "type": "Epic Games Store",
+      "online": true,
+      "reply": {
+        "kind": "raw",
+        "status": 429,
+        "contentType": "application/json",
+        "body": "{\"error\": \"upstream\"}\n"
+      }
+    }
+  },
+  {
+    "id": "epic-epic-games-store-http-500",
+    "call": {
+      "op": "isOffline",
+      "type": "Epic Games Store",
+      "online": true,
+      "reply": {
+        "kind": "raw",
+        "status": 500,
+        "contentType": "application/json",
+        "body": "{\"error\": \"upstream\"}\n"
+      }
+    }
+  },
+  {
+    "id": "epic-epic-games-store-http-502",
+    "call": {
+      "op": "isOffline",
+      "type": "Epic Games Store",
+      "online": true,
+      "reply": {
+        "kind": "raw",
+        "status": 502,
+        "contentType": "application/json",
+        "body": "{\"error\": \"upstream\"}\n"
+      }
+    }
+  },
+  {
+    "id": "epic-epic-games-store-http-503",
+    "call": {
+      "op": "isOffline",
+      "type": "Epic Games Store",
+      "online": true,
+      "reply": {
+        "kind": "raw",
+        "status": 503,
+        "contentType": "application/json",
+        "body": "{\"error\": \"upstream\"}\n"
+      }
+    }
+  },
+  {
+    "id": "epic-fortnite-http-503-html-body",
+    "call": {
+      "op": "isOffline",
+      "type": "Fortnite",
+      "online": true,
+      "reply": {
+        "kind": "raw",
+        "status": 503,
+        "contentType": "text/html",
+        "body": "<html>Service Unavailable</html>\n"
+      }
+    }
+  },
+  {
+    "id": "epic-epic-games-store-malformed-html-body",
+    "call": {
+      "op": "isOffline",
+      "type": "Epic Games Store",
+      "online": true,
+      "reply": {
+        "kind": "raw",
+        "status": 200,
+        "contentType": "text/html",
+        "body": "<html><body>maintenance</body></html>\n"
+      }
+    }
+  },
+  {
+    "id": "epic-epic-games-store-malformed-empty-body",
+    "call": {
+      "op": "isOffline",
+      "type": "Epic Games Store",
+      "online": true,
+      "reply": {
+        "kind": "raw",
+        "status": 200,
+        "contentType": "application/json",
+        "body": ""
+      }
+    }
+  },
+  {
+    "id": "epic-epic-games-store-malformed-truncated-json",
+    "call": {
+      "op": "isOffline",
+      "type": "Epic Games Store",
+      "online": true,
+      "reply": {
+        "kind": "raw",
+        "status": 200,
+        "contentType": "application/json",
+        "body": "{\"components\": [{\"name\": \"Epic Games Store\""
+      }
+    }
+  },
+  {
+    "id": "epic-epic-games-store-malformed-json-null",
+    "call": {
+      "op": "isOffline",
+      "type": "Epic Games Store",
+      "online": true,
+      "reply": {
+        "kind": "raw",
+        "status": 200,
+        "contentType": "application/json",
+        "body": "null\n"
+      }
+    }
+  },
+  {
+    "id": "epic-epic-games-store-malformed-json-without-components",
+    "call": {
+      "op": "isOffline",
+      "type": "Epic Games Store",
+      "online": true,
+      "reply": {
+        "kind": "raw",
+        "status": 200,
+        "contentType": "application/json",
+        "body": "{\"page\": {\"name\": \"Epic Games\"}}\n"
+      }
+    }
+  },
+  {
+    "id": "epic-epic-games-store-malformed-components-null",
+    "call": {
+      "op": "isOffline",
+      "type": "Epic Games Store",
+      "online": true,
+      "reply": {
+        "kind": "raw",
+        "status": 200,
+        "contentType": "application/json",
+        "body": "{\"components\": null}\n"
+      }
+    }
+  },
+  {
+    "id": "epic-epic-games-store-malformed-components-object",
+    "call": {
+      "op": "isOffline",
+      "type": "Epic Games Store",
+      "online": true,
+      "reply": {
+        "kind": "raw",
+        "status": 200,
+        "contentType": "application/json",
+        "body": "{\"components\": {\"name\": \"Epic Games Store\", \"status\": \"major\"}}\n"
+      }
+    }
+  },
+  {
+    "id": "epic-epic-games-store-malformed-json-array",
+    "call": {
+      "op": "isOffline",
+      "type": "Epic Games Store",
+      "online": true,
+      "reply": {
+        "kind": "raw",
+        "status": 200,
+        "contentType": "application/json",
+        "body": "[]\n"
+      }
+    }
+  },
+  {
+    "id": "epicServiceStatus--isnetworklevelfailure-is-true-for-an-axioserror-with-a-request-and-no-response-s",
+    "title": "isNetworkLevelFailure > is true for an AxiosError with a request and no response (%s)",
+    "call": {
+      "op": "networkLevel",
+      "inputs": [
+        {
+          "k": "axios-network",
+          "code": "ENOTFOUND"
+        },
+        {
+          "k": "axios-network",
+          "code": "EAI_AGAIN"
+        },
+        {
+          "k": "axios-network",
+          "code": "ECONNREFUSED"
+        },
+        {
+          "k": "axios-network",
+          "code": "ECONNRESET"
+        },
+        {
+          "k": "axios-network",
+          "code": "ETIMEDOUT"
+        },
+        {
+          "k": "axios-network",
+          "code": "ECONNABORTED"
+        },
+        {
+          "k": "axios-network",
+          "code": "ENETUNREACH"
+        },
+        {
+          "k": "axios-network",
+          "code": "EHOSTUNREACH"
+        },
+        {
+          "k": "axios-network",
+          "code": "ERR_NETWORK"
+        },
+        {
+          "k": "axios-network",
+          "code": "EPROTO"
+        }
+      ]
+    }
+  },
+  {
+    "id": "epicServiceStatus--isnetworklevelfailure-is-true-for-a-plain-errno-style-object-with-a-listed-code",
+    "title": "isNetworkLevelFailure > is true for a plain errno-style object with a listed code",
+    "call": {
+      "op": "networkLevel",
+      "inputs": [
+        {
+          "k": "errno-object",
+          "code": "ENOTFOUND"
+        },
+        {
+          "k": "errno-error",
+          "code": "EAI_AGAIN"
+        }
+      ]
+    }
+  },
+  {
+    "id": "epicServiceStatus--isnetworklevelfailure-is-false-for-an-axioserror-that-carries-a-response",
+    "title": "isNetworkLevelFailure > is false for an AxiosError that carries a response",
+    "call": {
+      "op": "networkLevel",
+      "inputs": [
+        {
+          "k": "axios-http",
+          "status": 503,
+          "code": "ERR_BAD_RESPONSE"
+        },
+        {
+          "k": "axios-http",
+          "status": 404,
+          "code": "ERR_BAD_REQUEST"
+        }
+      ]
+    }
+  },
+  {
+    "id": "epicServiceStatus--isnetworklevelfailure-is-false-for-a-cancelled-request",
+    "title": "isNetworkLevelFailure > is false for a cancelled request",
+    "call": {
+      "op": "networkLevel",
+      "inputs": [
+        {
+          "k": "axios-network",
+          "code": "ERR_CANCELED"
+        }
+      ]
+    }
+  },
+  {
+    "id": "epicServiceStatus--isnetworklevelfailure-is-false-for-an-axioserror-with-no-request-config-error",
+    "title": "isNetworkLevelFailure > is false for an AxiosError with no request (config error)",
+    "call": {
+      "op": "networkLevel",
+      "inputs": [
+        {
+          "k": "axios-config"
+        }
+      ]
+    }
+  },
+  {
+    "id": "epicServiceStatus--isnetworklevelfailure-is-false-for-s",
+    "title": "isNetworkLevelFailure > is false for %s",
+    "call": {
+      "op": "networkLevel",
+      "inputs": [
+        {
+          "k": "type-error",
+          "message": "x"
+        },
+        {
+          "k": "undefined"
+        },
+        {
+          "k": "null"
+        },
+        {
+          "k": "string",
+          "value": "ENOTFOUND"
+        }
+      ]
+    }
+  },
+  {
+    "id": "epicServiceStatus--checkepicserviceoffline-treats-a-network-level-failure-as-offline-without-a-notification",
+    "title": "checkEpicServiceOffline > treats a network-level failure as offline without a notification",
+    "call": {
+      "op": "check",
+      "runs": [
+        {
+          "fetch": {
+            "reject": {
+              "k": "axios-network",
+              "code": "ENOTFOUND"
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "epicServiceStatus--checkepicserviceoffline-keeps-an-http-error-response-as-online-and-logs-it",
+    "title": "checkEpicServiceOffline > keeps an HTTP-error response as online and logs it",
+    "call": {
+      "op": "check",
+      "runs": [
+        {
+          "fetch": {
+            "reject": {
+              "k": "axios-http",
+              "status": 503,
+              "code": "ERR_BAD_RESPONSE"
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "epicServiceStatus--checkepicserviceoffline-keeps-a-non-network-error-as-online-and-logs-it",
+    "title": "checkEpicServiceOffline > keeps a non-network error as online and logs it",
+    "call": {
+      "op": "check",
+      "runs": [
+        {
+          "fetch": {
+            "reject": {
+              "k": "type-error",
+              "message": "bad body"
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "epicServiceStatus--checkepicserviceoffline-treats-a-malformed-body-no-components-as-an-error-online",
+    "title": "checkEpicServiceOffline > treats a malformed body (no components) as an error, online",
+    "call": {
+      "op": "check",
+      "runs": [
+        {
+          "fetch": {
+            "resolve": {}
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "epicServiceStatus--checkepicserviceoffline-returns-true-and-notifies-once-when-the-component-is-major",
+    "title": "checkEpicServiceOffline > returns true and notifies once when the component is 'major'",
+    "call": {
+      "op": "check",
+      "runs": [
+        {
+          "fetch": {
+            "resolve": {
+              "components": [
+                {
+                  "name": "Epic Games Store",
+                  "status": "major"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "epicServiceStatus--checkepicserviceoffline-returns-false-without-notifying-when-the-component-is-s",
+    "title": "checkEpicServiceOffline > returns false without notifying when the component is %s",
+    "call": {
+      "op": "check",
+      "runs": [
+        {
+          "fetch": {
+            "resolve": {
+              "components": [
+                {
+                  "name": "Epic Games Store",
+                  "status": "operational"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "fetch": {
+            "resolve": {
+              "components": [
+                {
+                  "name": "Epic Games Store",
+                  "status": "degraded_performance"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "epicServiceStatus--checkepicserviceoffline-notifies-and-returns-false-when-the-component-is-absent",
+    "title": "checkEpicServiceOffline > notifies and returns false when the component is absent",
+    "call": {
+      "op": "check",
+      "runs": [
+        {
+          "fetch": {
+            "resolve": {
+              "components": [
+                {
+                  "name": "Other",
+                  "status": "major"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "epicServiceStatus--checkepicserviceoffline-selects-the-component-by-the-type-argument",
+    "title": "checkEpicServiceOffline > selects the component by the type argument",
+    "call": {
+      "op": "check",
+      "runs": [
+        {
+          "fetch": {
+            "resolve": {
+              "components": [
+                {
+                  "name": "Epic Games Store",
+                  "status": "operational"
+                },
+                {
+                  "name": "Fortnite",
+                  "status": "major"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "type": "Fortnite",
+          "fetch": {
+            "resolve": {
+              "components": [
+                {
+                  "name": "Epic Games Store",
+                  "status": "operational"
+                },
+                {
+                  "name": "Fortnite",
+                  "status": "major"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  }
+]

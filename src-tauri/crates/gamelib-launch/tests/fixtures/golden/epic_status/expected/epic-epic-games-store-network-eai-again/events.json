@@ -1,0 +1,12 @@
+[
+  {
+    "kind": "backend-log",
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "Could not reach the Epic status page ( EAI_AGAIN ), treating Epic as offline for this launch/install check"
+  },
+  {
+    "kind": "online-monitor",
+    "asked": 1
+  }
+]

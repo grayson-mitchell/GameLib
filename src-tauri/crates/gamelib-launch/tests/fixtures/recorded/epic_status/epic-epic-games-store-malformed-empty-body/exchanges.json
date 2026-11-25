@@ -1,0 +1,19 @@
+[
+  {
+    "id": "ex-1",
+    "request": {
+      "method": "GET",
+      "url": "https://status.epicgames.com/api/v2/components.json",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/oracle (+https://github.com/grayson-mitchell/GameLib)"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "content-type": "application/json"
+      }
+    }
+  }
+]

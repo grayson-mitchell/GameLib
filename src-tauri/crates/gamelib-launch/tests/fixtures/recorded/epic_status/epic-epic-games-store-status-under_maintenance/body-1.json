@@ -1,0 +1,20 @@
+{
+  "components": [
+    {
+      "name": "Website",
+      "status": "operational"
+    },
+    {
+      "name": "Epic Games Store",
+      "status": "under_maintenance"
+    },
+    {
+      "name": "Fortnite",
+      "status": "operational"
+    },
+    {
+      "name": "Rocket League",
+      "status": "operational"
+    }
+  ]
+}

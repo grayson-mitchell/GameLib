@@ -1,0 +1,12 @@
+{
+  "components": [
+    {
+      "name": "Epic Games Store",
+      "status": "operational"
+    },
+    {
+      "name": "Epic Games Store",
+      "status": "major"
+    }
+  ]
+}

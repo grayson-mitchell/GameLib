@@ -1,0 +1,3 @@
+{
+  "js-engine-error-text": "The log line for a malformed or non-network failure ends with the JavaScript error the TS raised (\"TypeError: data.components is not iterable\", \"AxiosError: Request failed with status code 500\"). The message text of a TypeError is the JS engine's wording and an AxiosError message is the HTTP client's; the Rust check logs the same line prefix (\"Failed to get epic service status with\") and the failure kind, with its own error text. The result, the notification and the request are the golden's."
+}

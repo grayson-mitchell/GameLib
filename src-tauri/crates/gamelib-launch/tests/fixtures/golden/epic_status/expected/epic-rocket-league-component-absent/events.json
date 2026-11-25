@@ -1,0 +1,11 @@
+[
+  {
+    "kind": "notification",
+    "title": "Rocket League offline",
+    "body": "Online services may not work fully as Epic Games servers are offline!"
+  },
+  {
+    "kind": "online-monitor",
+    "asked": 1
+  }
+]

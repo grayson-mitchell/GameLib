@@ -1,0 +1,3 @@
+[
+  "GET https://status.epicgames.com/api/v2/components.json"
+]
