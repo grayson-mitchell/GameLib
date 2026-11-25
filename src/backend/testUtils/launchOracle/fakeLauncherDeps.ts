@@ -292,8 +292,8 @@ export interface WriterEntry {
 /**
  * A `LogWriter`-compatible recorder (`logDebug|Info|Warning|Error`, `writeString`, `close`).
  * Entries are recorded in CALL order, not settle order: the slot is claimed when the call is made
- * and filled once its promise parts have settled, so a later call whose promise settles first does
- * not overtake an earlier one. `writeString` records `{ level: 'raw', parts: [text] }`.
+ * and filled once its promise parts (and the promises inside an array part) have settled, so a later
+ * call whose promise settles first does not overtake an earlier one. `writeString` records `{ level: 'raw', parts: [text] }`.
  *
  * `entries()` waits for every pending slot, so a case reads the log only after the writer is quiet.
  */
@@ -302,9 +302,16 @@ export function recordingLogWriter(): {
   entries: () => Promise<WriterEntry[]>
 } {
   const slots: Promise<WriterEntry>[] = []
+  // The real writer (`stringifyLogValue`) awaits a promise nested in an array part, so a call such as
+  // `logInfo(['System Info:', promise])` logs the settled text; settle one array level the same way.
+  const settle = (part: unknown): Promise<unknown> =>
+    Array.isArray(part) ? Promise.all(part.map(settle)) : Promise.resolve(part)
   const claim = (level: WriterEntry['level'], parts: unknown[]) => {
     slots.push(
-      Promise.all(parts).then((settled) => ({ level, parts: settled }))
+      Promise.all(parts.map(settle)).then((settled) => ({
+        level,
+        parts: settled
+      }))
     )
     return Promise.resolve()
   }

@@ -1,0 +1,7 @@
+{
+  "success": true,
+  "mangoHudCommand": [],
+  "gameModeBin": "/usr/bin/gamemoderun",
+  "gameScopeCommand": [],
+  "offlineMode": true
+}

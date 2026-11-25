@@ -1,0 +1,37 @@
+[
+  {
+    "callSite": "prepare_launch.crossover_bottle_folder",
+    "program": "<HOME>/crossover/bin/wine",
+    "argv": [
+      "--bottle",
+      "Bottle1",
+      "--verbose",
+      "whoami"
+    ],
+    "timeoutMs": null,
+    "replaceEnv": true,
+    "resolveOn": "close",
+    "timeoutNone": true,
+    "windowsHide": false,
+    "envDiff": {
+      "set": {
+        "CX_BOTTLE": "Bottle1",
+        "LANG": "C.UTF-8",
+        "LD_PRELOAD": "",
+        "PATH": "/usr/bin:/bin",
+        "PROTON_VERB": "run",
+        "USER": "gamelib-oracle",
+        "WINEESYNC": "1",
+        "WINE_FULLSCREEN_FSR": "0"
+      },
+      "unset": []
+    },
+    "cwd": null,
+    "result": {
+      "code": 0,
+      "stdout": "",
+      "stderr": "cx: starting\nWINEPREFIX = \"<HOME>/bottles/Bottle1\""
+    },
+    "class": "helper"
+  }
+]

@@ -1,0 +1,24 @@
+[
+  {
+    "kind": "backend-log",
+    "level": "error",
+    "prefix": "Backend",
+    "text": "Wine command failed to run: Error: spawn ENOENT"
+  },
+  {
+    "kind": "online-monitor",
+    "asked": 2
+  },
+  {
+    "kind": "hook",
+    "runner": "legendary",
+    "member": "resolveOfflineMode",
+    "args": [
+      {
+        "offlineMode": false,
+        "runner": "legendary",
+        "canRunOffline": true
+      }
+    ]
+  }
+]

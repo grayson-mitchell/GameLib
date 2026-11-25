@@ -1,0 +1,4 @@
+{
+  "success": false,
+  "failureReason": "Mangohud is enabled, but `mangohud` executable could not be found on $PATH"
+}

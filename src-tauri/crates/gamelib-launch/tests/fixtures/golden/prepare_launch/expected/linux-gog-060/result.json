@@ -1,0 +1,13 @@
+{
+  "success": true,
+  "mangoHudCommand": [],
+  "gameScopeCommand": [
+    "/usr/bin/gamescope",
+    "-r",
+    "60",
+    "-o",
+    "15",
+    "--"
+  ],
+  "offlineMode": false
+}

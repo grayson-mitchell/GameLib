@@ -1,0 +1,16 @@
+[
+  {
+    "kind": "rust",
+    "channel": "info_anticheat_info",
+    "args": [
+      {}
+    ]
+  },
+  {
+    "kind": "rust",
+    "channel": "wine_runtime_is_installed",
+    "args": [
+      "umu"
+    ]
+  }
+]

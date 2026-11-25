@@ -1,0 +1,24 @@
+[
+  {
+    "kind": "backend-log",
+    "level": "warning",
+    "prefix": "Backend",
+    "text": "Could not reach the Epic status page ( ENOTFOUND ), treating Epic as offline for this launch/install check"
+  },
+  {
+    "kind": "online-monitor",
+    "asked": 2
+  },
+  {
+    "kind": "hook",
+    "runner": "legendary",
+    "member": "resolveOfflineMode",
+    "args": [
+      {
+        "offlineMode": true,
+        "runner": "legendary",
+        "canRunOffline": false
+      }
+    ]
+  }
+]

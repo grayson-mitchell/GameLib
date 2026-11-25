@@ -35,7 +35,7 @@
  * recorder runs in replay mode only, so no case reaches the network. Behaviour that looks wrong is kept
  * as recorded and filed as a todo (D-20); a fix is never mixed into a golden diff.
  */
-import axios, { AxiosError, type AxiosAdapter, type AxiosResponse } from 'axios'
+import { AxiosError, type AxiosResponse } from 'axios'
 import i18next from 'i18next'
 import Backend from 'i18next-fs-backend/cjs'
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'fs'
@@ -55,7 +55,6 @@ import {
 import {
   engineWineOracleMode,
   engineWineRecordedCaseDir,
-  installRecorder,
   redactUrl
 } from 'backend/testUtils/engineWineOracle/recorder'
 import { withPinnedBaseEnv } from 'backend/testUtils/launchOracle/baseEnv'
@@ -65,9 +64,10 @@ import {
   slug,
   tsTestTitles
 } from 'backend/testUtils/launchOracle/census'
+import { replayAxiosClient } from 'backend/testUtils/launchOracle/epicReplay'
 import { withInjected } from 'backend/testUtils/launchOracle/probes'
 import * as logger from 'backend/logger'
-import { axiosClient, isEpicServiceOffline } from 'backend/utils'
+import { isEpicServiceOffline } from 'backend/utils'
 import {
   checkEpicServiceOffline,
   isNetworkLevelFailure
@@ -611,24 +611,6 @@ type Event =
 const asText = (message: unknown): string =>
   Array.isArray(message) ? message.join(' ') : String(message)
 
-/** The adapter the real http adapter's transport failure looks like: an axios error with a request and no response. */
-function withTransportFailures(
-  dispatcher: AxiosAdapter,
-  codeOf: () => string | null
-): AxiosAdapter {
-  return async (config) => {
-    try {
-      return await dispatcher(config)
-    } catch (error) {
-      const code = codeOf()
-      if (code !== null && error instanceof AxiosError && !error.response) {
-        throw new AxiosError(`${code} status.epicgames.com`, code, config, {})
-      }
-      throw error
-    }
-  }
-}
-
 async function recordCase(
   c: EpicCase
 ): Promise<{ result: unknown; events: Event[]; requests: string[] }> {
@@ -700,7 +682,7 @@ async function recordOnProfile(
                 fetchComponents: () =>
                   'resolve' in fetch
                     ? Promise.resolve(fetch.resolve)
-                    : Promise.reject(materialise(fetch.reject)),
+                    : Promise.reject(materialise(fetch.reject) as Error),
                 notify: callback('notify'),
                 onUnreachable: callback('onUnreachable'),
                 onError: callback('onError')
@@ -729,29 +711,25 @@ async function recordOnProfile(
         }
       } as never
     })
-    const recorder = installRecorder({
+    const reply = call.reply
+    const replay = replayAxiosClient({
       crate: CRATE,
       slice: SLICE,
       caseId: c.id,
-      mode: mode === 'write' ? 'write' : 'compare'
+      mode: mode === 'write' ? 'write' : 'compare',
+      transportFailureCode: reply?.kind === 'network' ? reply.code : null
     })
-    const original = axiosClient.defaults.adapter
-    const reply = call.reply
-    axiosClient.defaults.adapter = withTransportFailures(
-      axios.defaults.adapter as AxiosAdapter,
-      () => (reply?.kind === 'network' ? reply.code : null)
-    )
     let answer: boolean
     try {
       answer = await withInjected(restores, () =>
         isEpicServiceOffline(fake.deps, call.type)
       )
-      await recorder.finish()
+      await replay.recorder.finish()
     } finally {
-      axiosClient.defaults.adapter = original
+      replay.restore()
     }
     events.push({ kind: 'online-monitor', asked: fake.onlineAsked() })
-    return { result: answer, events, requests: [...recorder.requested] }
+    return { result: answer, events, requests: [...replay.recorder.requested] }
   })
 }
 

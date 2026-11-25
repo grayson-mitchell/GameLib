@@ -1,0 +1,20 @@
+{
+  "success": true,
+  "mangoHudCommand": [],
+  "gameScopeCommand": [
+    "/usr/bin/gamescope",
+    "-w",
+    "1280",
+    "-h",
+    "720",
+    "-W",
+    "1920",
+    "-H",
+    "1080",
+    "-F",
+    "fsr",
+    "-f",
+    "--"
+  ],
+  "offlineMode": true
+}

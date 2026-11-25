@@ -1,0 +1,18 @@
+[
+  {
+    "kind": "online-monitor",
+    "asked": 3
+  },
+  {
+    "kind": "hook",
+    "runner": "legendary",
+    "member": "resolveOfflineMode",
+    "args": [
+      {
+        "offlineMode": false,
+        "runner": "legendary",
+        "canRunOffline": true
+      }
+    ]
+  }
+]

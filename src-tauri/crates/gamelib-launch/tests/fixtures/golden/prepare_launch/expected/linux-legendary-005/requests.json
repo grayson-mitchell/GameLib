@@ -1,0 +1,16 @@
+[
+  {
+    "kind": "http",
+    "method": "GET",
+    "url": "https://status.epicgames.com/api/v2/components.json"
+  },
+  {
+    "kind": "rust",
+    "channel": "info_anticheat_info",
+    "args": [
+      {
+        "appNamespace": "oracle-namespace"
+      }
+    ]
+  }
+]

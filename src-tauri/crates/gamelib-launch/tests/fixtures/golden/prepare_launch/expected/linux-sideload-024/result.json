@@ -1,0 +1,10 @@
+{
+  "success": true,
+  "mangoHudCommand": [
+    "/usr/bin/mangohud",
+    "--dlsym"
+  ],
+  "gameModeBin": "/usr/bin/gamemoderun",
+  "gameScopeCommand": [],
+  "offlineMode": true
+}

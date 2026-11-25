@@ -1,0 +1,12 @@
+[
+  {
+    "kind": "backend-log",
+    "level": "error",
+    "prefix": "Backend",
+    "text": "Wine command failed to run: Error: spawn ENOENT"
+  },
+  {
+    "kind": "online-monitor",
+    "asked": 0
+  }
+]

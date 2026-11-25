@@ -1,0 +1,9 @@
+[
+  {
+    "kind": "rust",
+    "channel": "info_anticheat_info",
+    "args": [
+      {}
+    ]
+  }
+]

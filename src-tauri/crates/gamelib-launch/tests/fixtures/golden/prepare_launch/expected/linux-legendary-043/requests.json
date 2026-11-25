@@ -1,0 +1,25 @@
+[
+  {
+    "kind": "rust",
+    "channel": "info_anticheat_info",
+    "args": [
+      {
+        "appNamespace": "oracle-namespace"
+      }
+    ]
+  },
+  {
+    "kind": "rust",
+    "channel": "wine_runtime_is_installed",
+    "args": [
+      "umu"
+    ]
+  },
+  {
+    "kind": "rust",
+    "channel": "wine_runtime_download",
+    "args": [
+      "umu"
+    ]
+  }
+]

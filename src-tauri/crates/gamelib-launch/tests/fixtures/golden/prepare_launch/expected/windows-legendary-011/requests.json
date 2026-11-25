@@ -1,0 +1,11 @@
+[
+  {
+    "kind": "rust",
+    "channel": "info_anticheat_info",
+    "args": [
+      {
+        "appNamespace": "oracle-namespace"
+      }
+    ]
+  }
+]

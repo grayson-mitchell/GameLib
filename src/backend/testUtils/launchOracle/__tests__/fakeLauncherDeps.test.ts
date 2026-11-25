@@ -128,6 +128,18 @@ describe('recordingLogWriter', () => {
   })
 })
 
+describe('recordingLogWriter nested promises', () => {
+  it('settles a promise inside an array part, as the real writer does', async () => {
+    const { writer, entries } = recordingLogWriter()
+    void writer.logInfo(['System Info:', Promise.resolve('cpu text'), '\n\n'])
+    void writer.logInfo([Promise.resolve('')])
+    expect(await entries()).toEqual([
+      { level: 'info', parts: [['System Info:', 'cpu text', '\n\n']] },
+      { level: 'info', parts: [['']] }
+    ])
+  })
+})
+
 describe('probes', () => {
   it('injectExecutableOnPath answers from the map, null otherwise, and restores', async () => {
     const restore = injectExecutableOnPath({

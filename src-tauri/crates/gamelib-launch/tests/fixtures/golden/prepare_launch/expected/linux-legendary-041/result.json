@@ -1,0 +1,4 @@
+{
+  "success": false,
+  "failureReason": "GameMode is enabled, but `gamemoderun` executable could not be found on $PATH"
+}

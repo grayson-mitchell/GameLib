@@ -1,0 +1,24 @@
+{
+  "success": true,
+  "mangoHudCommand": [
+    "/usr/bin/mangohud",
+    "--dlsym"
+  ],
+  "gameModeBin": "/usr/bin/gamemoderun",
+  "gameScopeCommand": [
+    "/usr/bin/gamescope",
+    "-w",
+    "1280",
+    "-h",
+    "720",
+    "-W",
+    "1920",
+    "-H",
+    "1080",
+    "-U",
+    "-f",
+    "--mangoapp",
+    "--"
+  ],
+  "offlineMode": true
+}

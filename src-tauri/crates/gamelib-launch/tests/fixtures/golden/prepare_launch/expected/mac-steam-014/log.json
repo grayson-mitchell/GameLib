@@ -1,0 +1,82 @@
+[
+  {
+    "level": "info",
+    "parts": [
+      [
+        "Launching",
+        "\"Oracle steam Game\" (steam)"
+      ]
+    ]
+  },
+  {
+    "level": "info",
+    "parts": [
+      [
+        "Native?",
+        true
+      ]
+    ]
+  },
+  {
+    "level": "info",
+    "parts": [
+      [
+        "Managed by a third-party app:",
+        "EA app",
+        "\n\n"
+      ]
+    ]
+  },
+  {
+    "level": "info",
+    "parts": [
+      [
+        "System Info:",
+        "\nCPU: 8x Oracle CPU @ 3.00GHz\nMemory: 17.18 GB (used: 4.29 GB)\nGPUs:\n  GPU 0:\n    Name: Oracle Oracle GPU\n    IDs: D=0x1234 V=0x5678 SD=0x0001 SV=0x0002\n    Driver: 1.0\nOS: Oracle OS 1.0 (darwin)\n\nThe current system is not a Steam Deck\n\nSoftware Versions:\n  GameLib: 0.0.0-oracle\n  Legendary: 0.0.0\n  gogdl: 0.0.0\n  comet: 0.0.0\n  Nile: 0.0.0\n\n"
+      ]
+    ]
+  },
+  {
+    "level": "info",
+    "parts": [
+      [
+        "Game Settings:",
+        {
+          "autoSyncSaves": false,
+          "DXVKFpsCap": "0",
+          "enableEsync": true,
+          "enableMsync": false,
+          "enviromentOptions": [],
+          "ignoreGameUpdates": false,
+          "language": "",
+          "launcherArgs": "",
+          "offlineMode": false,
+          "preferSystemLibs": false,
+          "showFps": false,
+          "targetExe": "",
+          "wrapperOptions": [],
+          "savesPath": "",
+          "beforeLaunchScriptPath": "",
+          "afterLaunchScriptPath": ""
+        },
+        "\n",
+        "Stored at: <APPFOLDER>/GamesConfig/app-steam.json",
+        "\n\n"
+      ]
+    ]
+  },
+  {
+    "level": "info",
+    "parts": [
+      "Anticheat Status: Broken"
+    ]
+  },
+  {
+    "level": "info",
+    "parts": [
+      [
+        "Anticheats: Easy Anti-Cheat,BattlEye\n\n"
+      ]
+    ]
+  }
+]

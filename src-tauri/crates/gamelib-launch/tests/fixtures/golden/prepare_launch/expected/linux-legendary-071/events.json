@@ -1,0 +1,24 @@
+[
+  {
+    "kind": "backend-log",
+    "level": "warning",
+    "prefix": null,
+    "text": "Gamescope is enabled, but `gamescope` executable could not be found on $PATH"
+  },
+  {
+    "kind": "online-monitor",
+    "asked": 3
+  },
+  {
+    "kind": "hook",
+    "runner": "legendary",
+    "member": "resolveOfflineMode",
+    "args": [
+      {
+        "offlineMode": false,
+        "runner": "legendary",
+        "canRunOffline": true
+      }
+    ]
+  }
+]

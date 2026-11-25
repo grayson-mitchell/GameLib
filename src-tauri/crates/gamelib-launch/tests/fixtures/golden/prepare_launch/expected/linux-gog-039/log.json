@@ -1,0 +1,103 @@
+[
+  {
+    "level": "info",
+    "parts": [
+      [
+        "Launching",
+        "\"Oracle gog Game\" (gog)"
+      ]
+    ]
+  },
+  {
+    "level": "info",
+    "parts": [
+      [
+        "Native?",
+        true
+      ]
+    ]
+  },
+  {
+    "level": "info",
+    "parts": [
+      [
+        "Installed in:",
+        "<HOME>/Games/Prefix"
+      ]
+    ]
+  },
+  {
+    "level": "info",
+    "parts": [
+      [
+        "Managed by a third-party app:",
+        "EA app",
+        "\n\n"
+      ]
+    ]
+  },
+  {
+    "level": "info",
+    "parts": [
+      [
+        "System Info:",
+        "\nCPU: 8x Oracle CPU @ 3.00GHz\nMemory: 17.18 GB (used: 4.29 GB)\nGPUs:\n  GPU 0:\n    Name: Oracle Oracle GPU\n    IDs: D=0x1234 V=0x5678 SD=0x0001 SV=0x0002\n    Driver: 1.0\nOS: Oracle OS 1.0 (linux)\n\nThe current system is not a Steam Deck\nWe are not running inside a Flatpak container\nWe are not running from an AppImage\n\nSoftware Versions:\n  GameLib: 0.0.0-oracle\n  Legendary: 0.0.0\n  gogdl: 0.0.0\n  comet: 0.0.0\n  Nile: 0.0.0\n\n"
+      ]
+    ]
+  },
+  {
+    "level": "info",
+    "parts": [
+      [
+        "Game Settings:",
+        {
+          "autoSyncSaves": false,
+          "DXVKFpsCap": "0",
+          "gamescope": {
+            "enableUpscaling": true,
+            "enableLimiter": false,
+            "enableForceGrabCursor": false,
+            "windowType": "fullscreen",
+            "gameWidth": "1280",
+            "gameHeight": "720",
+            "upscaleWidth": "1920",
+            "upscaleHeight": "1080",
+            "upscaleMethod": "fsr",
+            "additionalOptions": ""
+          },
+          "enviromentOptions": [],
+          "ignoreGameUpdates": false,
+          "language": "",
+          "launcherArgs": "",
+          "nvidiaPrime": false,
+          "offlineMode": true,
+          "preferSystemLibs": false,
+          "showMangohud": false,
+          "targetExe": "",
+          "wrapperOptions": [],
+          "savesPath": "",
+          "beforeLaunchScriptPath": "",
+          "afterLaunchScriptPath": "",
+          "disableUMU": true
+        },
+        "\n",
+        "Stored at: <APPFOLDER>/GamesConfig/app-gog.json",
+        "\n\n"
+      ]
+    ]
+  },
+  {
+    "level": "info",
+    "parts": [
+      ""
+    ]
+  },
+  {
+    "level": "info",
+    "parts": [
+      [
+        ""
+      ]
+    ]
+  }
+]

@@ -1,0 +1,26 @@
+[
+  {
+    "callSite": "prepare_launch.gamescope_help",
+    "program": "/usr/bin/gamescope",
+    "argv": [
+      "--help"
+    ],
+    "timeoutMs": 5000,
+    "replaceEnv": null,
+    "resolveOn": null,
+    "timeoutNone": false,
+    "windowsHide": null,
+    "envDiff": {
+      "set": {},
+      "unset": []
+    },
+    "cwd": null,
+    "result": {
+      "code": null,
+      "stdout": "",
+      "stderr": "usage ... -F, --filter ...",
+      "timedOut": true
+    },
+    "class": "helper"
+  }
+]
