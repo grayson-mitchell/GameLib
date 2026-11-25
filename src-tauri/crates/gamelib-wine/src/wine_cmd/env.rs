@@ -130,7 +130,7 @@ pub struct WineEnv {
 
 /// `removeQuoteIfNecessary`: a value that starts and ends with a double quote loses every leading and
 /// every trailing quote.
-fn remove_quote_if_necessary(value: &str) -> String {
+pub fn remove_quote_if_necessary(value: &str) -> String {
     if value.starts_with('"') && value.ends_with('"') {
         value
             .trim_start_matches('"')

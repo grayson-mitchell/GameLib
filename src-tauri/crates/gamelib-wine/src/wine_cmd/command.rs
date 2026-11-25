@@ -126,7 +126,7 @@ fn required_prefix_files(settings: &GameSettingsView) -> Vec<PathBuf> {
 
 /// The `PATH` scan of `findExecutableOnPath` for a bare name: the first directory of `PATH` holding a
 /// regular file with an execute bit. Only a Linux wine is ever asked (umu is Linux-only).
-fn find_on_path(name: &str, host: &WineHost) -> Option<PathBuf> {
+pub fn find_on_path(name: &str, host: &WineHost) -> Option<PathBuf> {
     let vars = host.env.vars();
     let path = vars.get("PATH").or_else(|| {
         vars.iter()

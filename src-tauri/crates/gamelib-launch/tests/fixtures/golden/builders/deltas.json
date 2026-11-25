@@ -1,1 +1,26 @@
-[]
+[
+  {
+    "id": "known-fix-env-local-malformed-bundled-valid",
+    "file": "events.json",
+    "kind": "parser-message",
+    "reason": "The warning for a malformed fix file is 'Known fixes could not be applied (<layer> layer), ignoring.\\n<message>' and the text after 'ignoring.\\n' is the JSON parser's own message, which differs between V8 (recorded) and serde_json. The replay compares the line up to and including 'ignoring.\\n' and requires a non-empty message after it, as golden/reader of gamelib-knownfix does."
+  },
+  {
+    "id": "known-fix-env-malformed-only",
+    "file": "events.json",
+    "kind": "parser-message",
+    "reason": "The warning for a malformed fix file is 'Known fixes could not be applied (<layer> layer), ignoring.\\n<message>' and the text after 'ignoring.\\n' is the JSON parser's own message, which differs between V8 (recorded) and serde_json. The replay compares the line up to and including 'ignoring.\\n' and requires a non-empty message after it, as golden/reader of gamelib-knownfix does."
+  },
+  {
+    "id": "launcher_wineLibFolders--h3-setupwineenvvars-library-folder-error-linux-wine-with-no-lib-paths-the-error-is-still-logged",
+    "file": "events.json",
+    "kind": "replace",
+    "rust": [
+      {
+        "level": "error",
+        "text": "Couldn't find all library folders of the selected Wine! Falling back to system libraries!"
+      }
+    ],
+    "reason": "The TS line names the wine installation and interpolates the two library paths, which print as the word 'undefined' when unset. The Rust note logs fixed text through the engine log, which never carries a wine name or a path (T-88.1-12), so the line keeps its first and last sentence and drops the name and the 'Missing undefined and/or undefined!' middle. The level (error), the platform it fires on (Linux, never macOS) and the env map are unchanged."
+  }
+]

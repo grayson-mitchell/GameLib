@@ -18,9 +18,11 @@ pub mod ctx;
 /// no `tokio-util` of its own.
 pub use tokio_util::sync::CancellationToken;
 
-use builders::wrappers;
+use builders::{env, known_fix_env, wrappers};
 use ctx::LaunchCtx;
 use gamelib_knownfix::types::Runner;
+use gamelib_wine::wine_cmd::env::GameSettingsView;
+use gamelib_wine::wine_cmd::WineHost;
 use serde::Deserialize;
 use serde_json::Value;
 use std::future::Future;
@@ -31,7 +33,13 @@ use std::task::{Context, Poll};
 use tokio::runtime::{Builder, Handle, Runtime};
 
 /// Ops reachable from the shell and the CLI. Keep sorted; each plan adds its own.
-pub const OPS: &[&str] = &["launch_setup_wrapper_env_vars"];
+pub const OPS: &[&str] = &[
+    "launch_known_fix_env",
+    "launch_setup_env_vars",
+    "launch_setup_wine_env_vars",
+    "launch_setup_wrapper_env_vars",
+    "launch_setup_wrappers",
+];
 
 /// Runs `op` over `args`. `Err` is only an unknown op, bad arguments, a shutdown, a wrong thread or a
 /// panic (`<op>:panic`).
@@ -44,11 +52,42 @@ pub async fn dispatch(op: &str, args: &[Value], ctx: &LaunchCtx) -> Result<Value
 
 /// Each plan adds its arms here, in step with `OPS`. Every arm is a thin wrapper over a function of
 /// [`builders`]; a bad argument is the fixed `<op>:bad-args` and never echoes what was sent.
-async fn route(op: &str, args: &[Value], _ctx: &LaunchCtx) -> Result<Value, String> {
+async fn route(op: &str, args: &[Value], ctx: &LaunchCtx) -> Result<Value, String> {
     let bad = || format!("{op}:bad-args");
     let result_of =
         |value: Result<Value, serde_json::Error>| value.map_err(|_| format!("{op}:bad-result"));
     match op {
+        // The tier-1 `envVariables` of a game, raw (`{}` when none). Arguments `[appName, runner]`.
+        "launch_known_fix_env" => {
+            let [Value::String(app_name), Value::String(runner)] = args else {
+                return Err(bad());
+            };
+            if !bounded_name(app_name) {
+                return Err(bad());
+            }
+            let runner = Runner::parse(runner).ok_or_else(bad)?;
+            Ok(known_fix_env::known_fix_env(ctx, app_name, runner))
+        }
+        // `setupEnvVars`. Arguments `[settings, installPath | null, host]`.
+        "launch_setup_env_vars" => {
+            let (settings, install_path, host) = settings_arg(op, args)?;
+            result_of(serde_json::to_value(env::setup_env_vars(
+                ctx,
+                &settings,
+                install_path.as_deref(),
+                &host,
+            )))
+        }
+        // `setupWineEnvVars`. Arguments `[settings, gameId | null, host]`.
+        "launch_setup_wine_env_vars" => {
+            let (settings, game_id, host) = settings_arg(op, args)?;
+            result_of(serde_json::to_value(env::setup_wine_env_vars(
+                ctx,
+                &settings,
+                game_id.as_deref(),
+                &host,
+            )))
+        }
         // `setupWrapperEnvVars`. The one object argument is `{ appName, appRunner }`.
         "launch_setup_wrapper_env_vars" => {
             let [arg @ Value::Object(_)] = args else {
@@ -61,8 +100,37 @@ async fn route(op: &str, args: &[Value], _ctx: &LaunchCtx) -> Result<Value, Stri
                 runner,
             )))
         }
+        // `setupWrappers`. Arguments `[settings, mangoHudCommand | null, gameModeBin | null,
+        // gameScopeCommand | null]`; `settings` is read for its `wrapperOptions` only.
+        "launch_setup_wrappers" => {
+            let [settings @ Value::Object(_), mango, game_mode, game_scope] = args else {
+                return Err(bad());
+            };
+            let settings: WrapperSettings =
+                serde_json::from_value(settings.clone()).map_err(|_| bad())?;
+            let mango = optional_words(mango).ok_or_else(bad)?;
+            let game_scope = optional_words(game_scope).ok_or_else(bad)?;
+            let game_mode = match game_mode {
+                Value::Null => None,
+                Value::String(bin) => Some(bin.as_str()),
+                _ => return Err(bad()),
+            };
+            let words = wrappers::setup_wrappers(
+                settings.wrapper_options.as_deref(),
+                mango.as_deref(),
+                game_mode,
+                game_scope.as_deref(),
+            )
+            .map_err(|e| format!("{op}:{}", e.message()))?;
+            result_of(serde_json::to_value(words))
+        }
         _ => Err(format!("unknown op: {op}")),
     }
+}
+
+/// An app name, app id or label: 1 to 256 UTF-16 units (the bound the known-fix ops hold names to).
+fn bounded_name(name: &str) -> bool {
+    !name.is_empty() && name.encode_utf16().count() <= 256
 }
 
 /// The object argument of `launch_setup_wrapper_env_vars`.
@@ -71,6 +139,52 @@ async fn route(op: &str, args: &[Value], _ctx: &LaunchCtx) -> Result<Value, Stri
 struct WrapperEnvArgs {
     app_name: String,
     app_runner: String,
+}
+
+/// The one field of `GameSettings` `launch_setup_wrappers` reads. The rest of the settings object is
+/// ignored (the same leniency as [`GameSettingsView`]): the caller passes the whole object.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct WrapperSettings {
+    #[serde(default)]
+    wrapper_options: Option<Vec<wrappers::WrapperVariable>>,
+}
+
+/// `null` is no list; an array of strings is that list; anything else is `None`.
+fn optional_words(value: &Value) -> Option<Option<Vec<String>>> {
+    match value {
+        Value::Null => Some(None),
+        Value::Array(items) => items
+            .iter()
+            .map(|item| item.as_str().map(str::to_string))
+            .collect::<Option<Vec<_>>>()
+            .map(Some),
+        _ => None,
+    }
+}
+
+/// The `[settings, text | null, host]` shape of the two env ops. `host` is the process facts the shell
+/// read (`env`, `darwinRelease`); `null` is none.
+fn settings_arg(
+    op: &str,
+    args: &[Value],
+) -> Result<(GameSettingsView, Option<String>, WineHost), String> {
+    let bad = || format!("{op}:bad-args");
+    let [settings @ Value::Object(_), text, host] = args else {
+        return Err(bad());
+    };
+    let settings = serde_json::from_value(settings.clone()).map_err(|_| bad())?;
+    let text = match text {
+        Value::Null => None,
+        Value::String(text) => Some(text.clone()),
+        _ => return Err(bad()),
+    };
+    let host = match host {
+        Value::Null => WineHost::default(),
+        Value::Object(_) => serde_json::from_value(host.clone()).map_err(|_| bad())?,
+        _ => return Err(bad()),
+    };
+    Ok((settings, text, host))
 }
 
 /// The op wrapper: `work` runs holding a `Shutdown` registrant for exactly its lifetime and is
@@ -248,6 +362,17 @@ mod tests {
             .is_empty());
     }
 
+    fn wine_settings() -> Value {
+        json!({"wineVersion": {"type": "wine", "bin": "/w/wine", "name": "Wine-9", "wineserver": "/w/wineserver"},
+               "winePrefix": "/p"})
+    }
+
+    #[test]
+    fn the_five_builder_ops_are_in_the_table() {
+        assert_eq!(OPS.len(), 5);
+        assert!(OPS.iter().all(|op| op.starts_with("launch_")));
+    }
+
     #[tokio::test]
     async fn every_op_answers_a_fixed_bad_args_and_never_echoes_what_it_was_sent() {
         let home = FakeHome::new("launch-lib-");
@@ -290,6 +415,121 @@ mod tests {
                     .await
                     .unwrap_err(),
                 "launch_setup_wrapper_env_vars:bad-args"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn the_wrappers_op_answers_the_list_and_the_recorded_quote_error() {
+        let home = FakeHome::new("launch-lib-");
+        let ctx = ctx(&home);
+        let got = dispatch(
+            "launch_setup_wrappers",
+            &[
+                json!({"wrapperOptions": [{"exe": "nice", "args": "-n 5"}], "other": true}),
+                Value::Null,
+                json!("/usr/bin/gamemoderun"),
+                json!(["gs", "--"]),
+            ],
+            &ctx,
+        )
+        .await
+        .unwrap();
+        assert_eq!(
+            got,
+            json!(["gs", "--", "nice", "-n", "5", "/usr/bin/gamemoderun"])
+        );
+        let err = dispatch(
+            "launch_setup_wrappers",
+            &[
+                json!({"wrapperOptions": [{"exe": "env", "args": "A=\"b"}]}),
+                Value::Null,
+                Value::Null,
+                Value::Null,
+            ],
+            &ctx,
+        )
+        .await
+        .unwrap_err();
+        assert_eq!(
+            err,
+            "launch_setup_wrappers:Got EOF while in a quoted string"
+        );
+    }
+
+    #[tokio::test]
+    async fn the_env_ops_take_the_host_facts_as_an_argument() {
+        let home = FakeHome::new("launch-lib-");
+        let ctx = ctx(&home);
+        let mut settings = wine_settings();
+        settings["nvidiaPrime"] = json!(true);
+        settings["enviromentOptions"] = json!([{"key": "FOO", "value": "\"bar baz\""}]);
+        let env = dispatch(
+            "launch_setup_env_vars",
+            &[
+                settings.clone(),
+                json!("/games/x"),
+                json!({"env": {"LD_PRELOAD": "x.so"}}),
+            ],
+            &ctx,
+        )
+        .await
+        .unwrap();
+        assert_eq!(env["DRI_PRIME"], "1");
+        assert_eq!(env["FOO"], "bar baz");
+        assert_eq!(env["STEAM_COMPAT_INSTALL_PATH"], "/games/x");
+        // The host's own LD_PRELOAD means no empty one is added.
+        assert!(env.get("LD_PRELOAD").is_none());
+        let bare = dispatch(
+            "launch_setup_env_vars",
+            &[settings, Value::Null, Value::Null],
+            &ctx,
+        )
+        .await
+        .unwrap();
+        assert_eq!(bare["LD_PRELOAD"], "");
+        let wine = dispatch(
+            "launch_setup_wine_env_vars",
+            &[
+                wine_settings(),
+                Value::Null,
+                json!({"env": {}, "darwinRelease": "24.1.0"}),
+            ],
+            &ctx,
+        )
+        .await
+        .unwrap();
+        assert_eq!(wine["WINEPREFIX"], "/p");
+        assert_eq!(
+            dispatch(
+                "launch_setup_wine_env_vars",
+                &[wine_settings(), Value::Null, json!({"unknownFact": 1})],
+                &ctx
+            )
+            .await
+            .unwrap_err(),
+            "launch_setup_wine_env_vars:bad-args"
+        );
+    }
+
+    #[tokio::test]
+    async fn the_known_fix_env_op_answers_an_empty_map_when_no_fix_exists() {
+        let home = FakeHome::new("launch-lib-");
+        let ctx = ctx(&home);
+        let got = dispatch("launch_known_fix_env", &[json!("app1"), json!("gog")], &ctx)
+            .await
+            .unwrap();
+        assert_eq!(got, json!({}));
+        for args in [
+            vec![json!(""), json!("gog")],
+            vec![json!("app1"), json!("epic")],
+            vec![json!("x".repeat(257)), json!("gog")],
+        ] {
+            assert_eq!(
+                dispatch("launch_known_fix_env", &args, &ctx)
+                    .await
+                    .unwrap_err(),
+                "launch_known_fix_env:bad-args"
             );
         }
     }

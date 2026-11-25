@@ -4,15 +4,9 @@
 //!   join vectors, the tier-1 known-fix env over seeded layers, `removeQuoteIfNecessary`,
 //!   `isMacSonomaOrHigher` with its log lines, and the `setupWineEnvVars` library-folder incident cases;
 //!
-//! Stage 1 (the tracer) replays the wrapper env and shlex kinds only; the other kinds are counted but
-//! skipped by kind until the next task adds them.
-//!
 //! A count floor lives in this file next to each replay (equal to the MANIFEST's), so editing the JSON
 //! alone cannot lower the bar, and an empty list fails. The only differences from the TS are the entries
 //! of each slice's `deltas.json`, each with its reason; a delta that no case uses is itself an error.
-
-// Stage 1 only: the helpers the later kinds use are not called yet.
-#![allow(dead_code)]
 
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
@@ -23,6 +17,7 @@ use gamelib_core::shutdown::Shutdown;
 use gamelib_engine::ctx::{EngineCtx, EnginePaths, Platform};
 use gamelib_engine::testing::{RecordingLog, ScriptedSpecRunner};
 use gamelib_knownfix::ctx::KnownFixCtx;
+use gamelib_launch::builders::env::{is_mac_sonoma_or_higher, remove_quote_if_necessary};
 use gamelib_launch::builders::wrappers::{join, split};
 use gamelib_launch::ctx::LaunchCtx;
 use gamelib_launch::dispatch;
@@ -36,7 +31,16 @@ const BUILDERS_FLOOR: usize = 113;
 
 /// Every `call.op` of `golden/builders` this file replays. The test fails when `cases.json` holds a kind
 /// that is not listed, so a new kind cannot be counted without being compared.
-const HANDLED_KINDS: [&str; 3] = ["shlexJoin", "shlexSplit", "wrapperEnvVars"];
+const HANDLED_KINDS: [&str; 8] = [
+    "knownFixEnv",
+    "removeQuote",
+    "shlexJoin",
+    "shlexSplit",
+    "sonoma",
+    "wineEnv",
+    "wrapperEnvVars",
+    "wrappers",
+];
 
 fn fixtures() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/golden")
@@ -336,7 +340,7 @@ fn words(value: &Value) -> Vec<String> {
 }
 
 /// Runs one `golden/builders` case on a fresh fake HOME; returns `(result, events)`.
-fn run_builders_case(case: &Value) -> Option<(Value, Value)> {
+fn run_builders_case(case: &Value) -> (Value, Value) {
     let call = &case["call"];
     let platform = platform_of(case["platform"].as_str().unwrap_or("linux"));
     let rig = Rig::new(platform, None);
@@ -348,6 +352,16 @@ fn run_builders_case(case: &Value) -> Option<(Value, Value)> {
             let args = [json!({ "appName": call["appName"], "appRunner": call["appRunner"] })];
             answer_of(op, rt.block_on(dispatch(op, &args, ctx)))
         }
+        "wrappers" => {
+            let op = "launch_setup_wrappers";
+            let args = [
+                json!({ "wrapperOptions": call["wrapperOptions"] }),
+                call["mangoHud"].clone(),
+                call["gameMode"].clone(),
+                call["gameScope"].clone(),
+            ];
+            answer_of(op, rt.block_on(dispatch(op, &args, ctx)))
+        }
         "shlexSplit" => match split(call["input"].as_str().unwrap()) {
             Ok(parts) => json!(parts),
             Err(e) => json!({ "error": e.message() }),
@@ -356,9 +370,22 @@ fn run_builders_case(case: &Value) -> Option<(Value, Value)> {
             let parts = words(&call["words"]);
             json!(join(parts.iter().map(String::as_str)))
         }
-        _ => return None,
+        "knownFixEnv" => {
+            rig.seed(&call["seed"]);
+            let op = "launch_known_fix_env";
+            let args = [call["appName"].clone(), call["runner"].clone()];
+            answer_of(op, rt.block_on(dispatch(op, &args, ctx)))
+        }
+        "removeQuote" => json!(remove_quote_if_necessary(call["value"].as_str().unwrap())),
+        "sonoma" => json!(is_mac_sonoma_or_higher(ctx, call["release"].as_str())),
+        "wineEnv" => {
+            let op = "launch_setup_wine_env_vars";
+            let args = [call["settings"].clone(), Value::Null, rig.host(None)];
+            answer_of(op, rt.block_on(dispatch(op, &args, ctx)))
+        }
+        other => panic!("{}: unhandled kind {other}", case["id"]),
     };
-    Some((rig.normalise_value(result), rig.events()))
+    (rig.normalise_value(result), rig.events())
 }
 
 impl Rig {
@@ -397,16 +424,21 @@ fn manifest(slice: &str) -> Value {
 fn every_builders_golden_replays() {
     let cases = load_cases("builders");
     check_floor("golden/builders cases", cases.len(), BUILDERS_FLOOR).unwrap();
+    let kinds: BTreeSet<&str> = cases
+        .iter()
+        .map(|c| c["call"]["op"].as_str().unwrap())
+        .collect();
+    let handled: BTreeSet<&str> = HANDLED_KINDS.into_iter().collect();
+    assert_eq!(
+        kinds, handled,
+        "cases.json holds a kind this replay does not handle, or the reverse"
+    );
     let deltas = Deltas::load("builders");
     let mut failures = Vec::new();
     let mut compared = 0usize;
-    let mut skipped = 0usize;
     for case in &cases {
         let id = case["id"].as_str().unwrap();
-        let Some((result, events)) = run_builders_case(case) else {
-            skipped += 1;
-            continue;
-        };
+        let (result, events) = run_builders_case(case);
         failures.extend(deltas.compare(
             id,
             "result.json",
@@ -421,14 +453,15 @@ fn every_builders_golden_replays() {
         ));
         compared += 1;
     }
-    eprintln!("golden builders: compared {compared} skipped {skipped} floor {BUILDERS_FLOOR}");
-    assert!(compared > 0 && compared + skipped == cases.len());
+    deltas.assert_all_used("builders");
+    eprintln!("golden builders: compared {compared} floor {BUILDERS_FLOOR}");
     assert!(
         failures.is_empty(),
         "{} differences over {compared} cases:\n{}",
         failures.len(),
         failures.join("\n")
     );
+    check_floor("golden/builders cases compared", compared, BUILDERS_FLOOR).unwrap();
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -464,4 +497,37 @@ fn the_floors_match_the_manifests_and_an_empty_list_fails() {
         let err = check_floor(slice, 0, floor).unwrap_err();
         assert!(err.contains("below the floor"), "{err}");
     }
+}
+
+// ---------------------------------------------------------------------------------------------
+// Fixed-text assertions the goldens cannot make
+// ---------------------------------------------------------------------------------------------
+
+#[test]
+fn a_remote_tier_1_file_carrying_tier_2_keys_yields_an_env_with_no_tier_2_key() {
+    let case = load_cases("builders")
+        .into_iter()
+        .find(|c| c["id"] == "known-fix-env-remote-file-with-tier-2-keys")
+        .unwrap();
+    let (result, events) = run_builders_case(&case);
+    assert_eq!(result, json!({ "FROM_REMOTE": "1" }));
+    // The warnings name the key and the layer, never a profile path.
+    for event in events.as_array().unwrap() {
+        let text = event["text"].as_str().unwrap();
+        assert!(!text.contains("GameLib/fixes"), "{text}");
+    }
+}
+
+#[test]
+fn the_env_notes_are_fixed_text_with_no_wine_name_or_path() {
+    let case = load_cases("builders")
+        .into_iter()
+        .find(|c| c["platform"] == "linux" && c["call"]["op"] == "wineEnv")
+        .unwrap();
+    let (_, events) = run_builders_case(&case);
+    let text = events[0]["text"].as_str().unwrap();
+    assert_eq!(events[0]["level"], "error");
+    assert!(
+        !text.contains("Wine-Staging") && !text.contains("/pins/") && !text.contains("undefined")
+    );
 }
