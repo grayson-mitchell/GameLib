@@ -1,0 +1,34 @@
+[
+  {
+    "id": "named-tracer-linux-wine-winetricks-fix",
+    "cell": "linux-wine",
+    "about": "a Linux wine launch that writes installed_games and installs a tier-1 winetricks fix, split at the store-setup hook",
+    "spec": {
+      "runner": "gog",
+      "gameWine": "valid",
+      "defaultWine": "valid",
+      "bottle": "present",
+      "prefix": "complete",
+      "installed": "absent",
+      "offline": "off-can",
+      "engine": "none",
+      "eosOverlay": "n/a",
+      "tier1": "winetricks",
+      "tier2": "none",
+      "mergesTier1Env": true,
+      "deadline": "ok",
+      "dxvk": true,
+      "nvapi": false,
+      "vkd3d": true,
+      "comet": "default",
+      "dummy": "present",
+      "online": true,
+      "eac": "off",
+      "battleye": "off",
+      "whoami": "reported",
+      "registry": "ok",
+      "overlay": "ok",
+      "remoteTier2": false
+    }
+  }
+]
