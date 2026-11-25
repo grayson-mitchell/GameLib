@@ -950,7 +950,7 @@ Plans:
   2. Anti-cheat at launch, `check_wine_before_launch`, `download_default_wine` (D-28), `isMacSonomaOrHigher`, `isEpicServiceOffline`, `removeQuoteIfNecessary` and system info behave as before
   3. The builder TS, `gamescopeCommand.ts`, `utils/systeminfo` and the replaced `utils.ts` rows are deleted; closes on goldens, three-OS CI and a Linux stub-gamescope smoke
 
-**Plans:** 12/20 plans executed in 15 waves; planned 2026-11-25 (goldens are recorded from the TS before each Rust slice, D-25)
+**Plans:** 13/20 plans executed in 15 waves; planned 2026-11-25 (goldens are recorded from the TS before each Rust slice, D-25)
 
 Plans:
 **Wave 1**
@@ -980,7 +980,7 @@ Plans:
 - [x] 88.1-12-PLAN.md — Rust prepare_wine_begin (validity, bottle check, prefix, installed_games)
 
 **Wave 8** *(blocked on Wave 7 completion)*
-- [ ] 88.1-13-PLAN.md — Rust prepare_wine_finish (installFixes, known-fix registry and overlays, GOG dummy, DXVK, runtimes, env, deadline arm)
+- [x] 88.1-13-PLAN.md — Rust prepare_wine_finish (installFixes, known-fix registry and overlays, GOG dummy, DXVK, runtimes, env, deadline arm)
 
 **Wave 9** *(blocked on Wave 8 completion)*
 - [ ] 88.1-14-PLAN.md — Rust check_wine_before_launch and download_default_wine with the answered-dialog seam

@@ -6,10 +6,10 @@ current_phase: 87
 current_phase_name: Engine, Wine and tools
 status: executing
 stopped_at: Completed 88.1-05-PLAN.md
-last_updated: "2026-11-25T10:36:49.934Z"
+last_updated: "2026-11-25T11:06:27.337Z"
 last_activity: 2026-11-25
 last_activity_desc: Phase 87 execution started
-state_head: 5feeddb05e030ce6c49a3c8d4bc0867c9174a2ad
+state_head: dab75bcae6e1dd795c0ae1b1f31e401a8018dfc4
 progress:
   total_phases: 25
   completed_phases: 23
@@ -536,6 +536,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 88.1 P10 | ~3h | 3 tasks | 38 files |
 | Phase 88.1 P11 | 110min | 3 tasks | 24 files |
 | Phase 88.1 P12 | 21min | 2 tasks | 15 files |
+| Phase 88.1 P13 | 35min | 2 tasks | 16 files |
 
 ## Accumulated Context
 
@@ -1205,6 +1206,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 88.1]: LaunchCtx carries info: Arc<InfoCtx> (gamelib-info is a leaf dependency); the shell shares info_dispatch's context so system information and the launch log use one single-flight cache
 - [Phase 88.1]: launch_prepare takes [args, host]; the shell builds the host (wine host, Deck, Flatpak facts) itself and the channel joins UNBOUNDED_RUST_CHANNELS with its shim in 88.1-15
 - [Phase 88.1]: 88.1-12: the wine begin step's missing-CrossOver-bottle dialog is raise_main_window plus show_dialog(ERROR, no ack id), not show_engine_dialog (which notifies and shows MESSAGE); the path-bearing 'Created/Updated Wineprefix' line stays the adapter's, written when prefixUpdated is true
+- [Phase 88.1]: 88.1-13: the finish step takes the shell's tool facts (wine host, public dir, online) and the game's stored settings beside the launch settings; a DXVK-family install failure fails the step, a settled registry, overlay, deadline or GOG-dummy failure is one fixed-text line
 
 ### Pending Todos
 
