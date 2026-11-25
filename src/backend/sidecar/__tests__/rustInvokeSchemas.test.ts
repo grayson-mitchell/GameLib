@@ -72,7 +72,8 @@ describe('rustInvokeArgs', () => {
     // Phase 88.1 plan 07: 205 -> 210, launch_setup_wrapper_env_vars, launch_setup_env_vars, launch_setup_wine_env_vars,
     // launch_setup_wrappers and launch_known_fix_env.
     // Phase 88.1 plan 08: 210 -> 211, launch_verify_wine_prefix.
-    expect(RUST_INVOKE_CHANNELS).toHaveLength(211)
+    // Phase 88.1 plan 11: 211 -> 212, launch_epic_service_offline.
+    expect(RUST_INVOKE_CHANNELS).toHaveLength(212)
   })
 
   it('parses the store-embed wire fixtures', () => {

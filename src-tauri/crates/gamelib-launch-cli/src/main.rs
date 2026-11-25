@@ -17,6 +17,8 @@ use std::sync::Arc;
 use gamelib_core::clock::SystemClock;
 use gamelib_core::shutdown::Shutdown;
 use gamelib_engine::ctx::{EngineCtx, EnginePaths, Platform};
+use gamelib_info::ctx::{InfoCtx, InfoPaths, Platform as InfoPlatform};
+use gamelib_info::http::ReqwestHttp;
 use gamelib_knownfix::ctx::KnownFixCtx;
 use gamelib_launch::ctx::LaunchCtx;
 use gamelib_store::host::StoreHost;
@@ -64,6 +66,16 @@ fn platform() -> Platform {
     }
 }
 
+fn info_platform() -> InfoPlatform {
+    if cfg!(target_os = "macos") {
+        InfoPlatform::Mac
+    } else if cfg!(windows) {
+        InfoPlatform::Windows
+    } else {
+        InfoPlatform::Linux
+    }
+}
+
 fn run_op(args: &[String]) {
     let [name, json_args, rest @ ..] = args else {
         usage()
@@ -85,6 +97,22 @@ fn run_op(args: &[String]) {
     let app_version = opt_flag(rest, "--app-version").unwrap_or(env!("CARGO_PKG_VERSION"));
     // Where the wine runtime lives; derived from `--user-data`, never from the real profile.
     let tools_runtime = user_data.join("tools").join("runtimes");
+    // The information context the prepare step reads (anti-cheat, system information), rooted in the same
+    // fake profile; its HTTP client is built on first use, so no op that does not need it opens a socket.
+    let info = Arc::new(InfoCtx::new(
+        Arc::new(StoreHost::new()),
+        Arc::new(SystemClock),
+        info_platform(),
+        InfoPaths {
+            app_folder: user_data.clone(),
+            user_data: user_data.clone(),
+            temp: user_data.join("temp"),
+            public_dir: None,
+        },
+        app_version.to_string(),
+        Shutdown::new(),
+        Arc::new(ReqwestHttp::new()),
+    ));
     let engine = Arc::new(EngineCtx::new(
         Arc::new(StoreHost::new()),
         Arc::new(SystemClock),
@@ -105,7 +133,7 @@ fn run_op(args: &[String]) {
         app_version,
     ));
     let wine = Arc::new(WineCtx::new(engine.clone(), tools_runtime));
-    let ctx = LaunchCtx::new(engine, knownfix, wine);
+    let ctx = LaunchCtx::new(engine, knownfix, wine, info);
     match gamelib_launch::dispatch_sync(name, &op_args, &ctx) {
         Ok(value) => println!("{value}"),
         Err(e) => bad(&e),

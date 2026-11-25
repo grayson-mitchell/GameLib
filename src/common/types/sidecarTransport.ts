@@ -1584,6 +1584,15 @@ export const RUST_LAUNCH_KNOWN_FIX_ENV = 'launch_known_fix_env' as const
  */
 export const RUST_LAUNCH_VERIFY_WINE_PREFIX =
   'launch_verify_wine_prefix' as const
+/**
+ * Phase 88.1 (SVC-03, 88.1-11, D-01, D-19): whether the Epic status page says a service is down, `isEpicServiceOffline`.
+ * `launch_epic_service_offline` takes `[service?]` (`'Epic Games Store'`, `'Fortnite'` or `'Rocket League'`, the first
+ * when absent) and answers a boolean. It makes one JSON GET of the status page through the engine fetch seam (nothing
+ * when the app is not online, which answers `true`), shows the offline notification itself and logs fixed text, so it
+ * stays inside the 60 s `RUST_INVOKE_TIMEOUT_MS`.
+ */
+export const RUST_LAUNCH_EPIC_SERVICE_OFFLINE =
+  'launch_epic_service_offline' as const
 export const RUST_ENGINE_STATE_RECORD_DECISION =
   'engine_state_record_decision' as const
 export const RUST_ENGINE_STATE_PUBLISH_OVERLAY_NOTICE =
@@ -2034,6 +2043,7 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_LAUNCH_SETUP_WRAPPERS,
   RUST_LAUNCH_KNOWN_FIX_ENV,
   RUST_LAUNCH_VERIFY_WINE_PREFIX,
+  RUST_LAUNCH_EPIC_SERVICE_OFFLINE,
   RUST_SHORTCUTS_EXIST,
   RUST_SHORTCUTS_ADD,
   RUST_SHORTCUTS_REMOVE,

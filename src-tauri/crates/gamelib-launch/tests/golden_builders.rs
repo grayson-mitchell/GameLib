@@ -19,6 +19,8 @@ use gamelib_core::process::SpecOutput;
 use gamelib_core::shutdown::Shutdown;
 use gamelib_engine::ctx::{EngineCtx, EnginePaths, Platform};
 use gamelib_engine::testing::{RecordingLog, ScriptedSpecRunner};
+use gamelib_info::ctx::{InfoCtx, InfoPaths, Platform as InfoPlatform};
+use gamelib_info::http::ReqwestHttp;
 use gamelib_knownfix::ctx::KnownFixCtx;
 use gamelib_launch::builders::env::{is_mac_sonoma_or_higher, remove_quote_if_necessary};
 use gamelib_launch::builders::gamescope::{
@@ -130,8 +132,23 @@ impl Rig {
             "0.0.0",
         ));
         let wine = Arc::new(WineCtx::new(engine.clone(), app_folder.join("tools")));
+        // The builders never read it; the prepare step does (88.1-11).
+        let info = Arc::new(InfoCtx::new(
+            Arc::new(StoreHost::new()),
+            Arc::new(SystemClock),
+            InfoPlatform::Linux,
+            InfoPaths {
+                app_folder: app_folder.clone(),
+                user_data: app_folder,
+                temp: root.join("tmp"),
+                public_dir: None,
+            },
+            "0.0.0".to_string(),
+            Shutdown::new(),
+            Arc::new(ReqwestHttp::new()),
+        ));
         Rig {
-            ctx: LaunchCtx::new(engine, knownfix, wine),
+            ctx: LaunchCtx::new(engine, knownfix, wine, info),
             home,
             log,
         }

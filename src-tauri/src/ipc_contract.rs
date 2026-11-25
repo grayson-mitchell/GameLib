@@ -228,6 +228,7 @@ pub(crate) enum RustInvokeChannel {
     LaunchSetupWrappers,
     LaunchKnownFixEnv,
     LaunchVerifyWinePrefix,
+    LaunchEpicServiceOffline,
     ShortcutsExist,
     ShortcutsAdd,
     ShortcutsRemove,
@@ -443,6 +444,7 @@ impl RustInvokeChannel {
         RustInvokeChannel::LaunchSetupWrappers,
         RustInvokeChannel::LaunchKnownFixEnv,
         RustInvokeChannel::LaunchVerifyWinePrefix,
+        RustInvokeChannel::LaunchEpicServiceOffline,
         RustInvokeChannel::ShortcutsExist,
         RustInvokeChannel::ShortcutsAdd,
         RustInvokeChannel::ShortcutsRemove,
@@ -658,6 +660,7 @@ impl RustInvokeChannel {
             "launch_setup_wrappers" => Some(RustInvokeChannel::LaunchSetupWrappers),
             "launch_known_fix_env" => Some(RustInvokeChannel::LaunchKnownFixEnv),
             "launch_verify_wine_prefix" => Some(RustInvokeChannel::LaunchVerifyWinePrefix),
+            "launch_epic_service_offline" => Some(RustInvokeChannel::LaunchEpicServiceOffline),
             "shortcuts_exist" => Some(RustInvokeChannel::ShortcutsExist),
             "shortcuts_add" => Some(RustInvokeChannel::ShortcutsAdd),
             "shortcuts_remove" => Some(RustInvokeChannel::ShortcutsRemove),
@@ -875,6 +878,7 @@ impl RustInvokeChannel {
             RustInvokeChannel::LaunchSetupWrappers => "launch_setup_wrappers",
             RustInvokeChannel::LaunchKnownFixEnv => "launch_known_fix_env",
             RustInvokeChannel::LaunchVerifyWinePrefix => "launch_verify_wine_prefix",
+            RustInvokeChannel::LaunchEpicServiceOffline => "launch_epic_service_offline",
             RustInvokeChannel::ShortcutsExist => "shortcuts_exist",
             RustInvokeChannel::ShortcutsAdd => "shortcuts_add",
             RustInvokeChannel::ShortcutsRemove => "shortcuts_remove",
@@ -4443,6 +4447,28 @@ impl LaunchVerifyWinePrefixArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let game_settings = serde_json::from_value(args.first().ok_or_else(|| "launch_verify_wine_prefix:bad-args".to_string())?.clone()).map_err(|_| "launch_verify_wine_prefix:bad-args".to_string())?;
         Ok(Self { game_settings })
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+pub(crate) enum LaunchEpicServiceOfflineArgsService {
+    #[serde(rename = "Epic Games Store")]
+    EpicGamesStore,
+    #[serde(rename = "Fortnite")]
+    Fortnite,
+    #[serde(rename = "Rocket League")]
+    RocketLeague,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct LaunchEpicServiceOfflineArgs {
+    pub(crate) service: Option<LaunchEpicServiceOfflineArgsService>,
+}
+
+impl LaunchEpicServiceOfflineArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let service = args.first().filter(|v| !v.is_null()).map(|v| serde_json::from_value(v.clone())).transpose().map_err(|_| "launch_epic_service_offline:bad-args".to_string())?;
+        Ok(Self { service })
     }
 }
 

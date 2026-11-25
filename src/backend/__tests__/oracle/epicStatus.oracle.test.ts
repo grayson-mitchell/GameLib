@@ -463,8 +463,8 @@ function epicCases(): EpicCase[] {
 
 /** The documented Rust-side differences (D-19); the file is built from this, never hand-edited. */
 const DELTAS: Readonly<Record<string, string>> = {
-  'js-engine-error-text':
-    'The log line for a malformed or non-network failure ends with the JavaScript error the TS raised ("TypeError: data.components is not iterable", "AxiosError: Request failed with status code 500"). The message text of a TypeError is the JS engine\'s wording and an AxiosError message is the HTTP client\'s; the Rust check logs the same line prefix ("Failed to get epic service status with") and the failure kind, with its own error text. The result, the notification and the request are the golden\'s.'
+  'epic-status-log-fixed-text':
+    'Prohibition 1: a gamelib.log line is fixed text. The TS logged the error object, so its two Epic-status lines end with a JavaScript error text ("Failed to get epic service status with TypeError: data.components is not iterable", "... with AxiosError: Request failed with status code 500") or the transport code ("Could not reach the Epic status page ( ENOTFOUND ), treating Epic as offline for this launch/install check"). A JavaScript error message is worded by the JS engine and the HTTP client, and a transport error can name the status URL. Rust logs the same prefix and the failure CATEGORY instead ("Failed to get epic service status with status(503)", "... with unexpected-response"; "Could not reach the Epic status page, treating Epic as offline for this launch/install check"), never a URL, a query or a transport message. The result, the notification and the request are the same as the golden.'
 }
 
 // ---------------------------------------------------------------------------------------------

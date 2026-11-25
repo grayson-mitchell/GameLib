@@ -16,6 +16,9 @@ gamelib-engine = { path = "../gamelib-engine" }
 gamelib-wine = { path = "../gamelib-wine" }
 gamelib-knownfix = { path = "../gamelib-knownfix" }
 gamelib-core = { path = "../gamelib-core" }
+# The system-information read and the anti-cheat lookup the prepare step logs (88.1-11, D-24), in process.
+# `gamelib-info` is a leaf: it never depends on this crate (proved with `cargo tree -p gamelib-info`).
+gamelib-info = { path = "../gamelib-info" }
 # Same feature set as the wine crate (the shell calls `dispatch_sync` from plain worker threads).
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "sync", "process", "fs", "io-util"] }
 # The `Shutdown` token type; the version gamelib-core already locks.
@@ -33,6 +36,8 @@ gamelib-launch = { path = ".", features = ["testing"] }
 gamelib-store = { path = "../gamelib-store" }
 gamelib-testutil = { path = "../gamelib-testutil" }
 tempfile = "3"
+# The English catalogue the Epic offline notification resolves through (the replay compares its real text).
+gamelib-i18n = { path = "../gamelib-i18n" }
 # The real spawn seam the Linux stub-gamescope smoke probes through.
 gamelib-proc = { path = "../gamelib-proc" }
 # Pitfall 12: the Rust shlex crate disagrees with npm shlex 2.1.2 on recorded vectors (an unterminated

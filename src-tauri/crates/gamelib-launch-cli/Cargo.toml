@@ -12,6 +12,7 @@ path = "src/main.rs"
 [dependencies]
 gamelib-core = { path = "../gamelib-core" }
 gamelib-engine = { path = "../gamelib-engine" }
+gamelib-info = { path = "../gamelib-info" }
 gamelib-knownfix = { path = "../gamelib-knownfix" }
 gamelib-launch = { path = "../gamelib-launch" }
 gamelib-store = { path = "../gamelib-store" }

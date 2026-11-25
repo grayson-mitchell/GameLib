@@ -1,18 +1,19 @@
 //! The launch services (Phase 88, SVC-03): the launch builders, the runner spawn, the funnel and
 //! re-adoption, ported from the TypeScript sidecar by 88.1 to 88.3. This crate owns the dispatch
 //! contract and the op list; [`builders`] holds the pure launch builders (88.1-06), which 91 and 92
-//! also call in process.
+//! also call in process, and [`prepare`] the prepare steps (88.1-11 onward).
 //!
 //! Tauri-free, no environment reads, no `keyring`, and a child process only ever through
 //! `gamelib-proc` (`SpawnClass::Game` for what must outlive GameLib). Every log line goes through
 //! `EngineCtx.log` as fixed text. Every op goes through [`dispatch`], which answers `unknown op: <op>`
 //! for a name not in [`OPS`].
 //!
-//! This crate may depend on `gamelib-engine`, `gamelib-wine` and `gamelib-knownfix`; none of them ever
-//! depends on it (87 D-04, the one-way rule).
+//! This crate may depend on `gamelib-engine`, `gamelib-wine`, `gamelib-knownfix` and `gamelib-info`; none of
+//! them ever depends on it (87 D-04, the one-way rule).
 
 pub mod builders;
 pub mod ctx;
+pub mod prepare;
 
 /// The cancel token a long op takes, re-exported so the shell, which owns the renderer's cancel, needs
 /// no `tokio-util` of its own.
@@ -23,6 +24,7 @@ use ctx::LaunchCtx;
 use gamelib_knownfix::types::Runner;
 use gamelib_wine::wine_cmd::env::GameSettingsView;
 use gamelib_wine::wine_cmd::WineHost;
+use prepare::epic;
 use serde::Deserialize;
 use serde_json::Value;
 use std::future::Future;
@@ -34,6 +36,7 @@ use tokio::runtime::{Builder, Handle, Runtime};
 
 /// Ops reachable from the shell and the CLI. Keep sorted; each plan adds its own.
 pub const OPS: &[&str] = &[
+    "launch_epic_service_offline",
     "launch_known_fix_env",
     "launch_setup_env_vars",
     "launch_setup_wine_env_vars",
@@ -58,6 +61,17 @@ async fn route(op: &str, args: &[Value], ctx: &LaunchCtx) -> Result<Value, Strin
     let result_of =
         |value: Result<Value, serde_json::Error>| value.map_err(|_| format!("{op}:bad-result"));
     match op {
+        // `isEpicServiceOffline`. Arguments `[service | null]`: one of the three service names, or `null` for
+        // the default (`Epic Games Store`). Answers a boolean. One JSON GET inside the sidecar's 60 s bound.
+        "launch_epic_service_offline" => {
+            let [service] = args else {
+                return Err(bad());
+            };
+            let service = epic::service_arg(service).ok_or_else(bad)?;
+            Ok(epic::offline_reply(
+                epic::epic_service_offline(ctx, service).await,
+            ))
+        }
         // The tier-1 `envVariables` of a game, raw (`{}` when none). Arguments `[appName, runner]`.
         "launch_known_fix_env" => {
             let [Value::String(app_name), Value::String(runner)] = args else {
@@ -275,6 +289,8 @@ mod tests {
     use gamelib_core::clock::SystemClock;
     use gamelib_core::shutdown::Shutdown;
     use gamelib_engine::ctx::{EngineCtx, EnginePaths, Platform};
+    use gamelib_info::ctx::{InfoCtx, InfoPaths, Platform as InfoPlatform};
+    use gamelib_info::http::ReqwestHttp;
     use gamelib_knownfix::ctx::KnownFixCtx;
     use gamelib_store::host::StoreHost;
     use gamelib_testutil::FakeHome;
@@ -304,7 +320,21 @@ mod tests {
             "1.2.3",
         ));
         let wine = Arc::new(WineCtx::new(engine.clone(), root.join("runtimes")));
-        LaunchCtx::new(engine, knownfix, wine)
+        let info = Arc::new(InfoCtx::new(
+            Arc::new(StoreHost::new()),
+            Arc::new(SystemClock),
+            InfoPlatform::Linux,
+            InfoPaths {
+                app_folder: root.clone(),
+                user_data: root.clone(),
+                temp: root.join("temp"),
+                public_dir: None,
+            },
+            "0.0.0".to_string(),
+            Shutdown::new(),
+            Arc::new(ReqwestHttp::new()),
+        ));
+        LaunchCtx::new(engine, knownfix, wine, info)
     }
 
     /// A future that panics when polled: the shape of an op that hits a bug.
@@ -384,8 +414,8 @@ mod tests {
     }
 
     #[test]
-    fn the_six_launch_ops_are_in_the_table() {
-        assert_eq!(OPS.len(), 6);
+    fn the_seven_launch_ops_are_in_the_table() {
+        assert_eq!(OPS.len(), 7);
         assert!(OPS.iter().all(|op| op.starts_with("launch_")));
     }
 
@@ -573,6 +603,42 @@ mod tests {
                 .unwrap_err();
             assert_eq!(err, "launch_verify_wine_prefix:bad-args", "{args:?}");
             assert!(!err.contains(secret));
+        }
+    }
+
+    #[tokio::test]
+    async fn the_epic_op_answers_offline_with_no_request_when_the_app_is_not_online() {
+        let home = FakeHome::new("launch-lib-");
+        let ctx = ctx(&home);
+        // The context starts not online (the monitor's first reading), so no request is made.
+        assert!(!ctx.engine.is_online());
+        for args in [
+            vec![Value::Null],
+            vec![json!("Epic Games Store")],
+            vec![json!("Fortnite")],
+            vec![json!("Rocket League")],
+        ] {
+            assert_eq!(
+                dispatch("launch_epic_service_offline", &args, &ctx)
+                    .await
+                    .unwrap(),
+                json!(true),
+                "{args:?}"
+            );
+        }
+        for args in [
+            vec![],
+            vec![json!("fortnite")],
+            vec![json!(1)],
+            vec![Value::Null, Value::Null],
+        ] {
+            assert_eq!(
+                dispatch("launch_epic_service_offline", &args, &ctx)
+                    .await
+                    .unwrap_err(),
+                "launch_epic_service_offline:bad-args",
+                "{args:?}"
+            );
         }
     }
 

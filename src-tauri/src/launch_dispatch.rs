@@ -2,7 +2,9 @@
 //! `launch_*` `rustInvoke` arms over the Tauri-free `gamelib-launch` crate.
 //!
 //! D-20: one `Arc<LaunchCtx>` is built by [`install`] in `run_setup` right after
-//! [`knownfix_dispatch::install`], from the engine, known-fix and wine contexts already installed. Nothing
+//! [`knownfix_dispatch::install`], from the engine, known-fix, wine and information contexts already installed
+//! (the information context is the one `info_dispatch` owns, so the native system-information channel and the
+//! launch log share one single-flight cache, 88.1-11). Nothing
 //! here spawns a process or waits: the builder ops are pure computations or a disk read, so each
 //! `rustInvoke` arm runs the crate's `dispatch_sync` on the dispatcher's worker thread and the sidecar keeps
 //! them inside the 60 s `RUST_INVOKE_TIMEOUT_MS`. Until [`install`] has run, every arm answers
@@ -30,18 +32,24 @@ pub(crate) fn launch_ctx() -> Option<&'static Arc<LaunchCtx>> {
     LAUNCH_CTX.get()
 }
 
-/// Builds the launch context from the engine, known-fix and wine contexts and stores it. A no-op when any
-/// of the three was not installed (no home directory), so every launch channel answers not ready. A second
-/// call is ignored (the first context stays).
+/// Builds the launch context from the engine, known-fix, wine and information contexts and stores it. A no-op
+/// when any of the four was not installed (no home directory), so every launch channel answers not ready. A
+/// second call is ignored (the first context stays).
 pub(crate) fn install() {
-    let (Some(engine), Some(knownfix), Some(wine)) = (
+    let (Some(engine), Some(knownfix), Some(wine), Some(info)) = (
         engine_dispatch::engine_ctx(),
         knownfix_dispatch::knownfix_ctx(),
         wine_dispatch::wine_ctx(),
+        info_dispatch::info_ctx(),
     ) else {
         return;
     };
-    let ctx = LaunchCtx::new(Arc::clone(engine), Arc::clone(knownfix), Arc::clone(wine));
+    let ctx = LaunchCtx::new(
+        Arc::clone(engine),
+        Arc::clone(knownfix),
+        Arc::clone(wine),
+        Arc::clone(info),
+    );
     let _ = LAUNCH_CTX.set(Arc::new(ctx));
 }
 
@@ -233,12 +241,49 @@ pub(crate) fn rpc_launch_verify_wine_prefix(args: &[Value]) -> Result<Value, Str
     verify_wine_prefix_over(launch_ctx(), args, wine_dispatch::wine_run_host)
 }
 
+/// The body of the `launch_epic_service_offline` arm over a given context: the generated decode (`[service?]`, one
+/// of the three service names) and an arity check first, so a bad call is rejected the same fixed `<op>:bad-args`
+/// literal before and after the install and never echoes the sidecar's value, then the crate over exactly one
+/// argument (an absent service is `null`, the default `Epic Games Store`).
+fn epic_service_offline_over(
+    ctx: Option<&Arc<LaunchCtx>>,
+    args: &[Value],
+) -> Result<Value, String> {
+    let decoded = LaunchEpicServiceOfflineArgs::from_args(args)?;
+    if args.len() > 1 {
+        return Err("launch_epic_service_offline:bad-args".to_string());
+    }
+    let service = match decoded.service {
+        None => Value::Null,
+        Some(LaunchEpicServiceOfflineArgsService::EpicGamesStore) => {
+            Value::String("Epic Games Store".to_string())
+        }
+        Some(LaunchEpicServiceOfflineArgsService::Fortnite) => {
+            Value::String("Fortnite".to_string())
+        }
+        Some(LaunchEpicServiceOfflineArgsService::RocketLeague) => {
+            Value::String("Rocket League".to_string())
+        }
+    };
+    rpc_launch_op(ctx, "launch_epic_service_offline", &[service])
+}
+
+/// The `launch_epic_service_offline` `rustInvoke` arm (88.1-11, D-19): whether the Epic status page says a service
+/// is down (`isEpicServiceOffline`). One JSON GET through the engine fetch seam, nothing when the app is not online
+/// (which answers `true`); the offline notification and the log lines are Rust's. A single bounded request, so the
+/// sidecar keeps it inside the 60 s `RUST_INVOKE_TIMEOUT_MS`.
+pub(crate) fn rpc_launch_epic_service_offline(args: &[Value]) -> Result<Value, String> {
+    epic_service_offline_over(launch_ctx(), args)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use gamelib_core::clock::SystemClock;
     use gamelib_core::shutdown::Shutdown;
     use gamelib_engine::ctx::{EngineCtx, EnginePaths, Platform};
+    use gamelib_info::ctx::{InfoCtx, InfoPaths, Platform as InfoPlatform};
+    use gamelib_info::http::ReqwestHttp;
     use gamelib_knownfix::ctx::KnownFixCtx;
     use gamelib_store::host::StoreHost;
     use gamelib_testutil::FakeHome;
@@ -268,7 +313,21 @@ mod tests {
             "1.2.3",
         ));
         let wine = Arc::new(WineCtx::new(Arc::clone(&engine), root.join("runtimes")));
-        Arc::new(LaunchCtx::new(engine, knownfix, wine))
+        let info = Arc::new(InfoCtx::new(
+            Arc::new(StoreHost::new()),
+            Arc::new(SystemClock),
+            InfoPlatform::Linux,
+            InfoPaths {
+                app_folder: root.join("app"),
+                user_data: root.join("app"),
+                temp: root.join("temp"),
+                public_dir: None,
+            },
+            "1.2.3".to_string(),
+            Shutdown::new(),
+            Arc::new(ReqwestHttp::new()),
+        ));
+        Arc::new(LaunchCtx::new(engine, knownfix, wine, info))
     }
 
     #[test]
@@ -457,6 +516,48 @@ mod tests {
             Err("launch_known_fix_env:not-ready".to_string())
         );
         assert_eq!(known_fix_env_over(Some(&ctx), &args), Ok(json!({})));
+    }
+
+    #[test]
+    fn the_epic_arm_answers_not_ready_before_the_install_and_offline_for_an_app_that_is_not_online()
+    {
+        let home = FakeHome::new("launch-shell-");
+        let ctx = ctx_over(&home);
+        assert_eq!(
+            epic_service_offline_over(None, &[]),
+            Err("launch_epic_service_offline:not-ready".to_string())
+        );
+        // The context starts not online, so no request is made and the answer is offline.
+        for args in [
+            vec![],
+            vec![Value::Null],
+            vec![json!("Epic Games Store")],
+            vec![json!("Fortnite")],
+            vec![json!("Rocket League")],
+        ] {
+            assert_eq!(
+                epic_service_offline_over(Some(&ctx), &args),
+                Ok(json!(true)),
+                "{args:?}"
+            );
+        }
+        // Its one argument is optional, so an empty call is valid; anything else is the fixed literal, never
+        // echoing what was sent, before and after the install.
+        let secret = "/Users/someone/secret-profile-path";
+        for args in [
+            vec![json!(secret)],
+            vec![json!("fortnite")],
+            vec![json!(1)],
+            vec![json!({"x": secret})],
+            vec![Value::Null, Value::Null],
+            vec![json!("Fortnite"), json!("Fortnite")],
+        ] {
+            for ctx in [None, Some(&ctx)] {
+                let err = epic_service_offline_over(ctx, &args).unwrap_err();
+                assert_eq!(err, "launch_epic_service_offline:bad-args", "{args:?}");
+                assert!(!err.contains(secret));
+            }
+        }
     }
 
     #[test]

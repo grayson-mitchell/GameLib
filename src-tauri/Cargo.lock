@@ -1793,6 +1793,8 @@ version = "0.1.0"
 dependencies = [
  "gamelib-core",
  "gamelib-engine",
+ "gamelib-i18n",
+ "gamelib-info",
  "gamelib-knownfix",
  "gamelib-launch",
  "gamelib-proc",
@@ -1813,6 +1815,7 @@ version = "0.1.0"
 dependencies = [
  "gamelib-core",
  "gamelib-engine",
+ "gamelib-info",
  "gamelib-knownfix",
  "gamelib-launch",
  "gamelib-store",

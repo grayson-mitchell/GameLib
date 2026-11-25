@@ -162,6 +162,7 @@ import {
   RUST_KNOWNFIX_PROFILE_OVERLAY_ENV,
   RUST_KNOWNFIX_REPORT_DETECTED,
   RUST_KNOWNFIX_RESOLVE_OVERLAY_ENV,
+  RUST_LAUNCH_EPIC_SERVICE_OFFLINE,
   RUST_LAUNCH_KNOWN_FIX_ENV,
   RUST_LAUNCH_SETUP_ENV_VARS,
   RUST_LAUNCH_SETUP_WINE_ENV_VARS,
@@ -1279,7 +1280,15 @@ export const rustInvokeArgs = {
   ]),
   // Phase 88.1 (SVC-03, 88.1-08, D-19): the prefix check. `[gameSettings]`; the shell appends the process environment and
   // the Darwin release itself (T-88.1-14).
-  [RUST_LAUNCH_VERIFY_WINE_PREFIX]: z.tuple([knownFixGameSettings])
+  [RUST_LAUNCH_VERIFY_WINE_PREFIX]: z.tuple([knownFixGameSettings]),
+  // Phase 88.1 (SVC-03, 88.1-11, D-19): the Epic status check. `[service?]`; absent is the Epic Games Store. The crate
+  // answers a boolean.
+  [RUST_LAUNCH_EPIC_SERVICE_OFFLINE]: z.tuple([
+    z
+      .enum(['Epic Games Store', 'Fortnite', 'Rocket League'])
+      .optional()
+      .meta({ title: 'service' })
+  ])
 } satisfies Record<RustInvokeChannel, z.ZodTuple>
 
 /** The positional args a `rustInvoke` call for channel `C` sends (input side of the schema). */
