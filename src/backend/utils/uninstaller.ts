@@ -98,14 +98,22 @@ async function readStoredSettings(
   }
 }
 
-/** The game's configured Wine prefix, or `undefined` when none is set or settings cannot be read. */
-async function readWinePrefix(
+/**
+ * The stored Wine prefix an uninstall may remove, or `undefined` when there is none to remove: the game stores no
+ * prefix, or it stores the shared default prefix, which holds every game that has no prefix of its own and is never
+ * deleted from an uninstall (D-19). The D-14 pre-flight and `removePrefix` both ask this, so they cannot disagree
+ * about which prefix is a target (RF4): a bottle-backed game stores the shared default as its `winePrefix`, and the
+ * pre-flight refusing that protected root stopped the uninstall before its own bottle was reached.
+ */
+function storedPrefixRemovalTarget(
   deps: UninstallerDeps,
-  appName: string,
-  runner: Runner
-): Promise<string | undefined> {
-  const settings = await readStoredSettings(deps, appName, runner)
-  return settings?.winePrefix ? settings.winePrefix : undefined
+  stored: GameSettings | undefined
+): string | undefined {
+  const winePrefix = stored?.winePrefix ? stored.winePrefix : undefined
+  if (!winePrefix) return undefined
+  return winePrefix === deps.config.getSettings().winePrefix
+    ? undefined
+    : winePrefix
 }
 
 /** What `engine_bottle_remove_per_game` answers (87-66): the four outcomes, the reason a closed word. */
@@ -129,8 +137,9 @@ interface PrefixRemoval {
 }
 
 /**
- * A reason the notice can carry. The crate's bottle op also answers `in-use` and `unsafe-name`, which are not in
- * the notice's closed vocabulary; they read as `bad-reply` (the same word an unreadable verdict gets).
+ * A reason the notice can carry. The crate's bottle op answers `in-use` and `unsafe-name` too, and both are in the
+ * vocabulary (`BOTTLE_REMOVAL_REASONS`); a word the vocabulary lacks reads as `bad-reply` (the same word an
+ * unreadable verdict gets).
  */
 function noticeReason(word: string): RemovalReason {
   return (REMOVAL_REASONS as readonly string[]).includes(word)
@@ -216,13 +225,14 @@ const removePrefix = async (
   if (!stored) return undefined
   const bottle = await removeOwnBottle(deps, appName, runner, stored)
   if (bottle !== 'not-bottle-backed') return bottle
-  const winePrefix = stored.winePrefix ? stored.winePrefix : undefined
-  if (!winePrefix) return undefined
-  if (winePrefix === deps.config.getSettings().winePrefix) {
-    logInfo(
-      'Keeping the shared default Wine prefix: the game has no prefix of its own',
-      LogPrefix.Backend
-    )
+  const winePrefix = storedPrefixRemovalTarget(deps, stored)
+  if (!winePrefix) {
+    if (stored.winePrefix) {
+      logInfo(
+        'Keeping the shared default Wine prefix: the game has no prefix of its own',
+        LogPrefix.Backend
+      )
+    }
     return undefined
   }
   logInfo(`Removing prefix ${winePrefix}`, LogPrefix.Backend)
@@ -386,7 +396,10 @@ export const uninstallGameCallback = async (
   // settings and the prefix exactly as they were, so clicking Uninstall again re-runs the same
   // checks (nothing was mutated to change the verdict).
   if (removesPrefix) {
-    const winePrefix = await readWinePrefix(deps, appName, runner)
+    const winePrefix = storedPrefixRemovalTarget(
+      deps,
+      await readStoredSettings(deps, appName, runner)
+    )
     if (winePrefix) {
       const check = await checkRemoval(
         deps,

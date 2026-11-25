@@ -800,8 +800,9 @@ describe('uninstallGameCallback per-game bottle (87-70)', () => {
       .map((a) => String(a))
       .join('\n')
   /** The transport answering the bottle op with `reply` (or rejecting it) and the guard with `yes`. */
-  const transport = (reply: unknown) => {
+  const transport = (reply: unknown, options: FakeSafetyOptions = {}) => {
     const fake = fakeSafety({
+      ...options,
       base: (channel) =>
         channel !== RUST_ENGINE_BOTTLE_REMOVE_PER_GAME
           ? Promise.reject(new Error(`unexpected channel ${channel}`))
@@ -896,8 +897,8 @@ describe('uninstallGameCallback per-game bottle (87-70)', () => {
 
     await run(withDefault)
 
+    // 87-75: the default prefix is no removal target, so the pre-flight does not ask about it either.
     expect(t.calls.map((c) => c.channel)).toEqual([
-      'safety_check_removal',
       'engine_bottle_remove_per_game'
     ])
     expect(existsSync(prefix)).toBe(true)
@@ -910,6 +911,101 @@ describe('uninstallGameCallback per-game bottle (87-70)', () => {
       'Keeping the shared default Wine prefix: the game has no prefix of its own'
     ])
     expect(statuses()).toEqual(['uninstalling', 'done'])
+  })
+
+  describe('a bottle-backed game on the shared default prefix (87-75, RF4)', () => {
+    /** The shared default prefix is what every bottle-backed game stores as its `winePrefix`. */
+    const onDefaultPrefix = (d: typeof deps) =>
+      ({
+        ...d,
+        config: {
+          getSettings: () => ({
+            defaultInstallPath: '',
+            sharedWinePrefix: '',
+            winePrefix: prefix
+          })
+        }
+      }) as typeof deps
+    /** A guard that would refuse anything it is asked about, so a skipped pre-flight is the only way through. */
+    const refusing: FakeSafetyOptions = {
+      checkVerdict: 'no',
+      reason: 'is-protected-root'
+    }
+    const guardTargets = (calls: { channel: string; args: unknown[] }[]) =>
+      calls
+        .filter((c) => c.channel.startsWith('safety_'))
+        .flatMap((c) => (c.args[0] as { targets: { path: string }[] }).targets)
+        .map((t) => t.path)
+
+    it('is not refused by the pre-flight: it uninstalls and the bottle route removes its own bottle', async () => {
+      const t = transport({ outcome: 'removed' }, refusing)
+
+      await run(onDefaultPrefix(t.deps))
+
+      expect(uninstall).toHaveBeenCalledTimes(1)
+      expect(t.calls.map((c) => c.channel)).toEqual([
+        'engine_bottle_remove_per_game'
+      ])
+      expect(notices()).toEqual([])
+      expect(statuses()).toEqual(['uninstalling', 'done'])
+    })
+
+    it('still pushes the remove-bottle notice when the op refuses', async () => {
+      const t = transport({ outcome: 'refused', reason: 'in-use' }, refusing)
+
+      await run(onDefaultPrefix(t.deps))
+
+      expect(uninstall).toHaveBeenCalledTimes(1)
+      expect(notices()).toEqual([
+        expect.objectContaining({
+          kind: 'remove-bottle',
+          outcome: 'refused'
+        })
+      ])
+      expect(statuses()).toEqual(['uninstalling', 'done'])
+    })
+
+    it('never hands the default prefix to a guard call, whichever route answers', async () => {
+      for (const reply of [
+        { outcome: 'removed' },
+        { outcome: 'not-bottle-backed' },
+        { outcome: 'refused', reason: 'unsafe-name' }
+      ]) {
+        const t = transport(reply)
+
+        await run(onDefaultPrefix(t.deps))
+
+        expect(guardTargets(t.calls)).not.toContain(prefix)
+        expect(existsSync(prefix)).toBe(true)
+      }
+    })
+
+    it('a custom stored prefix still gets the pre-flight and its refusal before anything is uninstalled', async () => {
+      const t = transport({ outcome: 'removed' }, refusing)
+      const elsewhere = {
+        ...t.deps,
+        config: {
+          getSettings: () => ({
+            defaultInstallPath: '',
+            sharedWinePrefix: '',
+            winePrefix: join(prefixRoot, 'the-shared-default')
+          })
+        }
+      } as typeof deps
+
+      await run(elsewhere)
+
+      expect(uninstall).not.toHaveBeenCalled()
+      expect(t.calls.map((c) => c.channel)).toEqual(['safety_check_removal'])
+      expect(notices()).toEqual([
+        expect.objectContaining({
+          kind: 'uninstall',
+          outcome: 'refused',
+          reason: 'is-protected-root'
+        })
+      ])
+      expect(statuses()).toEqual(['uninstalling', 'done'])
+    })
   })
 
   it('a refusal pushes the remove-bottle notice with the reason and the other game', async () => {
