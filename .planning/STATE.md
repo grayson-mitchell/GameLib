@@ -6,10 +6,10 @@ current_phase: 87
 current_phase_name: Engine, Wine and tools
 status: executing
 stopped_at: Completed 88.1-05-PLAN.md
-last_updated: "2026-11-25T09:20:01.759Z"
+last_updated: "2026-11-25T09:46:36.840Z"
 last_activity: 2026-11-25
 last_activity_desc: Phase 87 execution started
-state_head: b16ad4385273bf7b228ee3b8dcaaad148caac5ba
+state_head: 0c973787a3afc3d5f762536bfb078a9bd6332306
 progress:
   total_phases: 25
   completed_phases: 23
@@ -533,6 +533,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 88.1 P07 | 3h | 2 tasks | 21 files |
 | Phase 88.1 P09 | ~3h across two sessions (decision pause) | 3 tasks | 15 files |
 | Phase 88.1 P08 | ~2h | 2 tasks | 29 files |
+| Phase 88.1 P10 | ~3h | 3 tasks | 38 files |
 
 ## Accumulated Context
 
@@ -1197,6 +1198,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 88.1]: 88.1-07: the TS builder bodies in launcher.ts stay exported for the launch-builders oracle until 88.1-17 deletes both
 - [Phase 88.1]: 88.1-09: pci.ids TXT lookup is an in-repo query over UDP (operator option A): adds no crate (Cargo.lock names stay 716), needs no re-plan, answers are short single strings so no TCP fallback, reversible; hickory-resolver (B) and nslookup (C) not taken
 - [Phase 88.1]: 88.1-08: launch_verify_wine_prefix answers { res } over gamelib-wine's verify_wine_prefix and is an unbounded channel (wineboot wait, eighteenth doc entry); the command runner's wine binding awaits Rust's env builders and prefix check through the shims, with bootstrap.ts off launcher.ts
+- [Phase 88.1]: 88.1-10: an unresolvable runner binary reads invalid in the system information (the TS rejected the whole read); getSystemInfo and the copy call sysinfo::get_system_info inside the crate's guarded wrapper, not as info_* ops
 
 ### Pending Todos
 
