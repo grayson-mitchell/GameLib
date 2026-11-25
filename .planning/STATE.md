@@ -6,10 +6,10 @@ current_phase: 87
 current_phase_name: Engine, Wine and tools
 status: executing
 stopped_at: Completed 88.1-05-PLAN.md
-last_updated: "2026-11-25T17:39:02.694Z"
+last_updated: "2026-11-25T17:54:05.364Z"
 last_activity: 2026-11-25
 last_activity_desc: Phase 87 execution started
-state_head: f3bf0c013907defa4c2dffd39b5f8b0e708b01de
+state_head: e250a0ec501e1e10ea74e1425ff0b9ea8dc6ffde
 progress:
   total_phases: 25
   completed_phases: 23
@@ -540,6 +540,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 88.1 P14 | 75min | 2 tasks | 16 files |
 | Phase 88.1 P15 | ~3h (contended machine) | 2 tasks | 31 files |
 | Phase 88.1 P16 | 75min | 2 tasks | 21 files |
+| Phase 88.1 P17 | 45min | 1 tasks | 27 files |
 
 ## Accumulated Context
 
@@ -1216,6 +1217,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 88.1]: 88.1-15: the interim prepare adapters (launchAdapters.ts) hold no builder logic; the TS store-setup hook runs between the begin and finish ops only when prefixUpdated; aborts stays in LauncherDeps until 88.1-16 ports checkWineBeforeLaunch
 - [Phase 88.1]: 88.1-15: the launchPrepare and launchPrepareWine oracle tests were deleted with the TS prepare bodies (88.1-17's git rm of them is a no-op); goldens and recordings stay
 - [Phase 88.1]: 88.1-16: isEpicServiceOffline resolves unknown (the D-06 shape row admits no cast) and takes no online-monitor argument, Rust's engine online flag answers; checkWineBeforeLaunch is an adapter that applies the reply's writes (global wineVersion, then gameSettings in place and the game write); LauncherDeps.aborts left
+- [Phase 88.1]: 88.1-17: the wine core oracle drives the createCommandRunner twin through a test-only copy of the two env builders (envBuildersFixture.ts) and a verifyWinePrefix stand-in kept in the oracle, because two prefix-verify goldens record its wineboot spawns; both go with the twin in 88.2
 
 ### Pending Todos
 

@@ -950,7 +950,7 @@ Plans:
   2. Anti-cheat at launch, `check_wine_before_launch`, `download_default_wine` (D-28), `isMacSonomaOrHigher`, `isEpicServiceOffline`, `removeQuoteIfNecessary` and system info behave as before
   3. The builder TS, `gamescopeCommand.ts`, `utils/systeminfo` and the replaced `utils.ts` rows are deleted; closes on goldens, three-OS CI and a Linux stub-gamescope smoke
 
-**Plans:** 16/20 plans executed in 15 waves; planned 2026-11-25 (goldens are recorded from the TS before each Rust slice, D-25)
+**Plans:** 17/20 plans executed in 15 waves; planned 2026-11-25 (goldens are recorded from the TS before each Rust slice, D-25)
 
 Plans:
 **Wave 1**
@@ -992,7 +992,7 @@ Plans:
 - [x] 88.1-16-PLAN.md — checkWineBeforeLaunch and isEpicServiceOffline callers on Rust
 
 **Wave 12** *(blocked on Wave 11 completion)*
-- [ ] 88.1-17-PLAN.md — Sync with main; delete the builder TypeScript, gamescopeCommand.ts and the replaced utils rows behind the RED-first buildersPortComplete gate
+- [x] 88.1-17-PLAN.md — Sync with main; delete the builder TypeScript, gamescopeCommand.ts and the replaced utils rows behind the RED-first buildersPortComplete gate
 
 **Wave 13** *(blocked on Wave 12 completion)*
 - [ ] 88.1-18-PLAN.md — Delete utils/systeminfo and the TS pci mirrors behind the RED-first systemInfoPortComplete gate (D-24)
