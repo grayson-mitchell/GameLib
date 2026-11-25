@@ -625,7 +625,9 @@ describeSkipOnWindows(
         }
       }
 
-      const runCase = async (c: ArchiveCase): Promise<unknown> => {
+      const runCase = async (
+        c: ArchiveCase
+      ): Promise<{ steps: Array<Record<string, unknown>> }> => {
         const steps: Array<Record<string, unknown>> = []
         for (const s of c.steps) steps.push(await runStep(s))
         return { steps }
@@ -640,6 +642,42 @@ describeSkipOnWindows(
 
       const cases = loadCases<ArchiveCase>(CRATE, SLICE)
 
+      /**
+       * The goldens hold the gzip bytes the recorded Node's zlib produced. Another zlib build deflates the same tar
+       * to other bytes (Node on the Linux CI runner gave 134 bytes where the macOS recording has 127), which is the
+       * zlib build and not the twin; Rust's replay compares those bytes on all three OSes. So the compressed-only
+       * fields (size, sha256, base64 of the gzip) are compared only where this Node's zlib reproduces the recorded
+       * archive of a reference case; elsewhere they are dropped from both sides, and everything that is not
+       * compression (the tar bytes and their digest, the header fields, the gzip header, round trips, errors) is
+       * still compared.
+       */
+      const exactGzip = ((): boolean => {
+        const ref = cases.find(
+          (x) => x.id === 'build-three-files-sorted-by-bytes'
+        )
+        const step = ref?.steps[0]
+        const want = ref ? golden(ref.id).steps[0] : undefined
+        if (step?.op !== 'build' || !want) return false
+        return (
+          buildOverlayTarGz(filesOf(step.files)).toString('base64') ===
+          want['base64']
+        )
+      })()
+      const comparable = (result: {
+        steps: Array<Record<string, unknown>>
+      }) => {
+        if (exactGzip) return result
+        return {
+          steps: result.steps.map((st) => {
+            const { size, sha256: gz, base64, ...rest } = st
+            void size
+            void gz
+            void base64
+            return st['op'] === 'build' || st['op'] === 'buildPair' ? rest : st
+          })
+        }
+      }
+
       it('visits every recorded case, and every step kind is among them', () => {
         expect(cases.length).toBeGreaterThanOrEqual(ARCHIVE_FLOOR)
         const ops = new Set(cases.flatMap((c) => c.steps.map((s) => s.op)))
@@ -653,7 +691,7 @@ describeSkipOnWindows(
       })
 
       it.each(cases)('$id', async (c) => {
-        expect(await runCase(c)).toEqual(golden(c.id))
+        expect(comparable(await runCase(c))).toEqual(comparable(golden(c.id)))
       })
 
       it('self-test: a planted mismatch (one expected digest altered in memory) fails the comparison', async () => {
@@ -661,12 +699,12 @@ describeSkipOnWindows(
         const c = cases.find((x) => x.id === id)
         if (!c) throw new Error(`${id} is missing from golden/overlay_archive`)
         const want = golden(id)
-        expect(await runCase(c)).toEqual(want)
+        expect(comparable(await runCase(c))).toEqual(comparable(want))
         const planted = JSON.parse(JSON.stringify(want)) as typeof want
         const first = planted.steps[0]
         if (!first) throw new Error('the golden has no first step')
-        first['sha256'] = `${String(first['sha256'])}-planted`
-        expect(await runCase(c)).not.toEqual(planted)
+        first['tarSha256'] = `${String(first['tarSha256'])}-planted`
+        expect(comparable(await runCase(c))).not.toEqual(comparable(planted))
       })
     })
 
