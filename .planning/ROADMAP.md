@@ -189,7 +189,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 85: Store host, config and versioned migrations** — 25/25 plans in 20 waves (the D-03 deletion split into four plans for context budget); completed 2026-11-22
 - [x] **Phase 86: Pure leaf services** — 27/27 plans in 21 waves (26 + 1 gap closure); completed 2026-11-23
 - [ ] **Phase 87: Engine, Wine and tools** — 59 plans in 38 waves; planned 2026-11-23 (executes after Phase 86 closes)
-- [ ] **Phase 88: Launch scaffolding and known fixes** — not planned (SVC-03 part 1 of 4; split 2026-11-25, 88-CONTEXT D-30)
+- [x] **Phase 88: Launch scaffolding and known fixes** — 17/17 plans in 14 waves; completed 2026-11-25 (SVC-03 part 1 of 4; split 2026-11-25, 88-CONTEXT D-30)
 - [ ] **Phase 88.1: Launch builders and prepare steps** — not planned
 - [ ] **Phase 88.2: Command runner and game processes** — not planned
 - [ ] **Phase 88.3: Launch funnel, re-adoption and the live gate** — not planned (runs the Phase 88 live gate)
@@ -863,7 +863,7 @@ Plans:
   3. The `launchOracle` harness, pairwise generator, and the `gamelib-launch` / `gamelib-knownfix` crates exist and run in three-OS CI
   4. The known-fixes TypeScript and its registrations are deleted, leaving only scheduled shims; closes on goldens and three-OS CI, no signed build
 
-**Plans:** 17/17 plans executed in 14 waves; planned 2026-11-25 (88-02 waits for 88-01 so the live gate is committed before any code, D-25)
+**Plans:** 17/17 plans complete in 14 waves; planned 2026-11-25, completed 2026-11-25 (88-02 waits for 88-01 so the live gate is committed before any code, D-25)
 
 Plans:
 **Wave 1**

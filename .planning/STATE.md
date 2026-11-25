@@ -76,10 +76,10 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 
 ## Current Position
 
-Phase: 88 (Launch scaffolding and known fixes) — EXECUTING
-Plan: 17 of 17
-Status: Phase complete — ready for verification
-Last activity: 2026-11-25 — Phase 88 execution started
+Phase: 88.1 (Launch builders and prepare steps) — READY TO PLAN
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-11-25 — Phase 88 complete (verification passed 4/4), transitioned to Phase 88.1
 Progress: [█████████░] 92%
 
 ## Native-Install Arc Phase Map (21–25)

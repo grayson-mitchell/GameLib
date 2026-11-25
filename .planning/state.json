@@ -561,7 +561,7 @@
     {
       "number": "88",
       "name": "Launch scaffolding and known fixes",
-      "status": "in_progress"
+      "status": "complete"
     },
     {
       "number": "88.1",
@@ -656,8 +656,8 @@
   ],
   "next": {
     "command": "/gsd-progress --next",
-    "label": "Advance to the next step (verify)",
-    "reason": "Phase 32 of 50 · 92% · ready to verify"
+    "label": "Advance to the next step (plan phase 88.1)",
+    "reason": "Phase 88.1 — needs a plan"
   },
-  "updated_at": "2026-11-25T02:48:41.781Z"
+  "updated_at": "2026-11-25T03:15:00.000Z"
 }
