@@ -5,7 +5,7 @@
  * Calls `registerClipboardFlows()` directly (never through `../bootstrap`'s full `init`), so
  * this suite only ever loads `clipboardFlowRegistration.ts`'s own import { createTestStores } from '../../testUtils/testServices'
 import graph
- * (`./platformApi`, `./sidecarRpc`, `../utils/systeminfo`, `common/types/sidecarTransport`) —
+ * (`./platformApi`, `./sidecarRpc`, `common/types/sidecarTransport`) —
  * never the rest of `handlers.ts`'s side-effecting module-scope registrations, which this
  * module never touches and which would otherwise require mocking a much larger surface (axios,
  * `GlobalConfig`, `backend/storeManagers`, dialog, ...) for no reason. Mirrors
@@ -34,7 +34,6 @@ jest.mock('os', () => {
 // ── electron / electron-store — route Jest's own module resolution at the REAL sidecar shims ──
 // ── Imports (after mocks) ───────────────────────────────────────────────────────────────────
 import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
-import { createTestStores } from 'backend/testUtils/testServices'
 import { createTestAppPaths } from 'backend/testUtils/testAppPaths'
 import { TEST_APP_INFO } from 'backend/testUtils/testContext'
 import { defined } from 'backend/testUtils/indexed'
@@ -123,10 +122,6 @@ registerClipboardFlows({
   ipc,
   appState: host.appState,
   managers: { library: {} } as never,
-  stores: createTestStores(),
-  infoCaches: {
-    systemInfo: { getSystemInfo: jest.fn() }
-  },
   paths: createTestAppPaths('/fake/root'),
   runner: {} as never,
   config: createTestGlobalConfig(),

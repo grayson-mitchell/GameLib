@@ -37,6 +37,7 @@ import {
   runSlice,
   rustWalk,
   SCANNED_FILES_FLOOR,
+  storeTable,
   tsWalk
 } from 'backend/testUtils/portSliceGate'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs'
@@ -431,6 +432,88 @@ describe('buildersPortComplete', () => {
         /was not read by the walk/
       )
     })
+  })
+})
+
+/**
+ * 88.1-18, D-18, D-24, D-25 and ROADMAP 88.1 SC3 (system-information half): system information is Rust's
+ * (88.1-05 ported the probes and the formatter into `gamelib-info`, 88.1-10 made `getSystemInfo` and
+ * `copySystemInfoToClipboard` native, 88.1-15 moved the launch log's system-information line). The whole
+ * `utils/systeminfo` tree is deleted, its oracle with it, and so are the TS mirrors of the two pci.ids caches
+ * (`createPciIdCaches`, store mirror deletion cell 88). Their `storeTable.json` rows move to `meta/genStoreTable.ts`
+ * `EXTRA_ROWS`, so the Rust host keeps owning `store_cache/pci_ids_device` and `store_cache/pci_ids_vendor`
+ * (`storeRowKeys`). The goldens the oracle wrote stay: `gamelib-info`'s `golden_sysinfo.rs` replays them.
+ *
+ * `forbiddenIdentifiers` is every export of the deleted tree that nothing else names, each checked with
+ * `git grep -w` on 2026-11-26. `getHeroicVersion` is still a renderer-facing channel name, but it has no TS handle
+ * under `src/backend` (the Rust `app` slice serves it), so no non-test backend code names it either.
+ * `channelsFloor` is the measured count of the `info` slice in `nativeChannels.json` (17 on 2026-11-26).
+ */
+const SYSTEM_INFO: SliceSpec = {
+  deleted: [
+    'src/backend/utils/systeminfo/__tests__/gpuLinux.test.ts',
+    'src/backend/utils/systeminfo/__tests__/index.test.ts',
+    'src/backend/utils/systeminfo/__tests__/probes.test.ts',
+    'src/backend/utils/systeminfo/gpu/index.ts',
+    'src/backend/utils/systeminfo/gpu/linux.ts',
+    'src/backend/utils/systeminfo/gpu/pci_ids.ts',
+    'src/backend/utils/systeminfo/gpu/windows.ts',
+    'src/backend/utils/systeminfo/heroicVersion.ts',
+    'src/backend/utils/systeminfo/index.ts',
+    'src/backend/utils/systeminfo/memory/index.ts',
+    'src/backend/utils/systeminfo/memory/linux.ts',
+    'src/backend/utils/systeminfo/memory/macos.ts',
+    'src/backend/utils/systeminfo/memory/windows.ts',
+    'src/backend/utils/systeminfo/osInfo/index.ts',
+    'src/backend/utils/systeminfo/osInfo/linux.ts',
+    'src/backend/utils/systeminfo/osInfo/windows.ts',
+    'src/backend/utils/systeminfo/steamDeck.ts',
+    'src/backend/__tests__/oracle/systemInfo.oracle.test.ts'
+  ],
+  kept: [
+    'src-tauri/crates/gamelib-info/tests/fixtures/golden/sysinfo',
+    'src/common/types/systemInfo.ts'
+  ],
+  forbiddenIdentifiers: [
+    'createSystemInfoCache',
+    'formatSystemInfo',
+    'createPciIdCaches',
+    'populateDeviceAndVendorName',
+    'parseLspciGpus',
+    'getGpuInfo',
+    'getMemoryInfo',
+    'getOsInfo',
+    'getSteamDeckInfo',
+    'getHeroicVersion'
+  ],
+  identifierRoot: 'src/backend',
+  flag: 'GAMELIB_LAUNCH',
+  manifestSlice: 'info',
+  channelsFloor: 17,
+  storeRowKeys: ['store_cache/pci_ids_device', 'store_cache/pci_ids_vendor']
+}
+
+describe('systemInfoPortComplete', () => {
+  runSlice(SYSTEM_INFO)
+
+  it('no file is left under src/backend/utils/systeminfo', () => {
+    expect(
+      tsWalk.files
+        .filter((f) => f.path.startsWith('src/backend/utils/systeminfo/'))
+        .map((f) => f.path)
+    ).toEqual([])
+  })
+
+  it('the two pci cache rows keep their cache kind and renderer names after the TS stores went (EXTRA_ROWS)', () => {
+    for (const name of ['pci_ids_device', 'pci_ids_vendor']) {
+      const row = storeTable.rows.find((r) => r.key === `store_cache/${name}`)
+      expect(row).toMatchObject({ kind: 'cache', tsNames: [name] })
+    }
+    const generator = tsWalk.files.find(
+      (f) => f.path === 'meta/genStoreTable.ts'
+    )
+    expect(generator?.code).toContain('pci_ids_device')
+    expect(generator?.code).toContain('pci_ids_vendor')
   })
 })
 

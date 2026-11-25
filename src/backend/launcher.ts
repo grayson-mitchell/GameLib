@@ -82,7 +82,7 @@ export interface LauncherDeps
   /** The boot process runner: the gamescope --help probe runs through it. */
   runner: Pick<ProcessRunner, 'run'>
   spawnAsync: SpawnAsync
-  stores: Pick<Stores, 'kvs' | 'runsForMe' | 'systemInfo'>
+  stores: Pick<Stores, 'kvs' | 'runsForMe'>
   config: Pick<
     GlobalConfigSlice,
     'getSettings' | 'getAlternativeWine' | 'setSetting'

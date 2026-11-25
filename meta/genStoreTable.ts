@@ -173,6 +173,19 @@ const EXTRA_ROWS: Omit<Row, 'family' | 'chain'>[] = [
     dotPaths: true,
     flavour: 'store' as const
   })),
+  // 88.1-18 (D-24, D-29 row 5): the TS pci.ids name-cache mirrors (`createPciIdCaches`) are deleted with the TS
+  // system-information tree; the Rust `gamelib-info` sysinfo slice still opens both caches (the 7-day GPU name
+  // lookups, `PCI_IDS_DEVICE` and `PCI_IDS_VENDOR`), so the rows live here with the cache kind unchanged.
+  ...['pci_ids_device', 'pci_ids_vendor'].map((name) => ({
+    key: `store_cache/${name}`,
+    dir: 'store_cache',
+    name,
+    tsNames: [name],
+    kind: 'cache' as const,
+    tokenBearing: false,
+    dotPaths: true,
+    flavour: 'store' as const
+  })),
   ...['itad_prices', 'itad_steam_gids'].map((name) => ({
     key: `store_cache/${name}`,
     dir: 'store_cache',

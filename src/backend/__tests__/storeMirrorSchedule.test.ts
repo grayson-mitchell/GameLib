@@ -68,6 +68,17 @@ const DELETED_IN_PHASE_87: ReadonlySet<string> = new Set([
   'steam_engine_notices'
 ])
 
+/**
+ * Mirrors a Phase 88 plan has already deleted, on the same terms as `DELETED_IN_PHASE_86`: the schedule cell is 88,
+ * 88 is not finished, and `CURRENT_PHASE` stays 85. 88.1-18: `pci_ids_device` and `pci_ids_vendor` (the pci.ids GPU name
+ * caches; system information is Rust's, so `createPciIdCaches` went with the TS `utils/systeminfo` tree), their
+ * `storeTable.json` rows in `EXTRA_ROWS` for the Rust host. `timestampStore` is also due in 88 and is not deleted yet.
+ */
+const DELETED_IN_PHASE_88: ReadonlySet<string> = new Set([
+  'pci_ids_device',
+  'pci_ids_vendor'
+])
+
 /** Store (TS name) -> the slice that deletes its TS mirror (82-STATE-OWNERSHIP.md). */
 const SCHEDULE: Readonly<Record<string, number>> = {
   configStore: 98,
@@ -293,7 +304,11 @@ describe('TS-mirror deletion schedule (D-19)', () => {
         { ...SCHEDULE, ...SETTINGS_SCHEDULE },
         registered,
         CURRENT_PHASE,
-        new Set([...DELETED_IN_PHASE_86, ...DELETED_IN_PHASE_87])
+        new Set([
+          ...DELETED_IN_PHASE_86,
+          ...DELETED_IN_PHASE_87,
+          ...DELETED_IN_PHASE_88
+        ])
       )
     ).toEqual([])
   })
@@ -301,6 +316,13 @@ describe('TS-mirror deletion schedule (D-19)', () => {
   it('every store a Phase 87 plan deleted is scheduled for 87 and has no registration', () => {
     for (const store of DELETED_IN_PHASE_87) {
       expect([store, SCHEDULE[store]]).toEqual([store, 87])
+      expect([store, registered.has(store)]).toEqual([store, false])
+    }
+  })
+
+  it('every store a Phase 88 plan deleted is scheduled for 88 and has no registration', () => {
+    for (const store of DELETED_IN_PHASE_88) {
+      expect([store, SCHEDULE[store]]).toEqual([store, 88])
       expect([store, registered.has(store)]).toEqual([store, false])
     }
   })

@@ -22,7 +22,6 @@ import { createLegendaryStores } from '../storeManagers/legendary/stores'
 import { createNileStores } from '../storeManagers/nile/stores'
 import { createSideloadStores } from '../storeManagers/sideload/stores'
 import { createSteamStores } from '../storeManagers/steam/stores'
-import { createPciIdCaches } from '../utils/systeminfo/gpu/pci_ids'
 import type { StoreFamilyDeps, StoreRoot } from '../stores/storeRoot'
 import { createTestStoreRoot } from './testStoreRoot'
 import { createFakeClock } from './fakeClock'
@@ -143,8 +142,7 @@ const STORE_KEYS = [
   'legendary',
   'nile',
   'sideload',
-  'steam',
-  'systemInfo'
+  'steam'
 ] as const satisfies readonly (keyof Stores)[]
 
 /** Builds one family against the shared registry; each call is lazy (see createTestStores). */
@@ -169,8 +167,7 @@ function familyBuilders(): FamilyBuilders {
     legendary: (deps) => createLegendaryStores(deps),
     nile: (deps) => createNileStores(deps),
     sideload: (deps) => createSideloadStores(deps),
-    steam: (deps) => createSteamStores(deps),
-    systemInfo: (deps) => createPciIdCaches(deps)
+    steam: (deps) => createSteamStores(deps)
   }
 }
 

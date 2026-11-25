@@ -124,26 +124,6 @@ const managerStubs = {
   }
 }
 
-// ── backend/utils/systeminfo mock (Phase 31 Plan 01) — `getSystemInfo`
-// (ported this plan) transitively shells out to several REAL subprocesses
-// (helperBinaries' version-check execs, macOS's `sysctl`/`vm_stat` via
-// getMemoryInfo, etc.) — a real, non-deterministic, platform-dependent
-// dependency this unit suite must not carry (unmocked, this suite's real
-// spawns raced past Jest's teardown / past `flush()`'s bounded wait window,
-// "You are trying to `import` a file after the Jest environment has been
-// torn down"). Mocked at this single boundary, exactly like the
-// `backend/storeManagers`/`backend/storeManagers/steam/state` boundaries
-// above — this suite proves the CHANNEL WIRING reaches the real
-// `getSystemInfo` export, not the OS-probing internals underneath it ────────
-jest.mock('backend/utils/systeminfo', () => {
-  const getSystemInfo = jest.fn()
-  return {
-    createSystemInfoCache: () => ({ getSystemInfo }),
-    getSystemInfo,
-    formatSystemInfo: jest.fn()
-  }
-})
-
 // ── backend/utils/os/path mock (Phase 31 Plan 01) — `hasExecutable`
 // (ported this plan) shells out to a real `which`/`where` subprocess via
 // `child_process.spawn`. Mocked for the same determinism reason as
@@ -166,7 +146,6 @@ import type { AppSettings, GameSettings } from 'common/types'
 // One boot-owned Steam session cluster per case (D-05, D-66.3-13); the boot is handed it as a prebuilt service.
 let steamSession: import('backend/services/types').SteamSessionServices
 let steamLibrary: Map<string, import('common/types').GameInfo>
-let mockedGetSystemInfo: jest.Mock
 let mockedHasExecutable: typeof import('backend/utils/os/path').hasExecutable
 let mockedGlobalConfigGet: jest.Mock
 let mockedGameConfigGet: jest.Mock
@@ -181,9 +160,6 @@ function freshRegistry(): void {
     require('backend/testUtils/testSteamSession') as typeof import('backend/testUtils/testSteamSession')
   ).createTestSteamSession()
   steamLibrary = steamSession.libraryState.library
-  ;({
-    getSystemInfo: mockedGetSystemInfo
-  } = require('backend/utils/systeminfo'))
   ;({ hasExecutable: mockedHasExecutable } = require('backend/utils/os/path'))
   const { createGlobalConfig } = require('backend/config')
   const { gameConfigFor } = require('backend/game_config')
@@ -509,13 +485,10 @@ describe('sidecar settings generic reads (Phase 31 Plan 01)', () => {
         ({ wineVersion: { name: 'steam-routed' } }) as unknown as GameSettings,
       isNative: () => true
     })
-    // resetMocks:true (shared root config) wipes the `backend/utils/systeminfo`/
-    // `backend/utils/os/path` factory implementations declared at the top of this
-    // file before EVERY test — re-establish them here, same pattern as
-    // `skeletonFlows.test.ts`'s own beforeEach re-establishment of `getSteamLibraries`.
-    jest.mocked(mockedGetSystemInfo).mockResolvedValue({
-      isFlatpak: false
-    })
+    // resetMocks:true (shared root config) wipes the `backend/utils/os/path` factory
+    // implementation declared at the top of this file before EVERY test — re-establish it
+    // here, same pattern as `skeletonFlows.test.ts`'s own beforeEach re-establishment of
+    // `getSteamLibraries`.
     jest.mocked(mockedHasExecutable).mockResolvedValue(true)
   })
 
@@ -558,7 +531,6 @@ describe('sidecar settings generic reads (Phase 31 Plan 01)', () => {
       | undefined
     expect(response?.ok).toBe(false)
     expect(response?.error).toContain(UNPORTED_CHANNEL_MARKER)
-    expect(mockedGetSystemInfo).not.toHaveBeenCalled()
   })
 
   it('hasExecutable resolves a real boolean, not the unported marker', async () => {

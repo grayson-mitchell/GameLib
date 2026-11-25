@@ -182,7 +182,6 @@ export function registerHandlers(deps: {
     config: deps.services.config,
     gameConfigs: deps.services.gameConfigs,
     appInfo: deps.services.appInfo,
-    infoCaches: deps.services.infoCaches,
     paths: deps.services.paths,
     steamSession: deps.services.steamSession,
     sendFrontendMessage: deps.services.host.sendFrontendMessage
@@ -315,11 +314,9 @@ export function registerHandlers(deps: {
     appState: deps.services.host.appState,
     requestRustInvoke: deps.services.host.requestRustInvoke,
     managers: deps.services.managers,
-    stores: deps.services.stores,
     runner: deps.services.runner,
     config: deps.services.config,
     appInfo: deps.services.appInfo,
-    infoCaches: deps.services.infoCaches,
     paths: deps.services.paths
   })
   // Phase 84 plan 84-06: the sidecar serves no logger channel. Every renderer logger channel

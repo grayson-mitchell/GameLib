@@ -23,13 +23,7 @@ export function createTestNileRuntime(): NileRuntime {
   return createNileRuntime()
 }
 
-/** A fresh system-info cache (66.4-12): one per call, so two tests never share a memo. */
+/** The boot's info caches (66.4-12): none is left in TypeScript (88.1-18), so a fresh empty record per call. */
 export function createTestInfoCaches(): InfoCaches {
-  /* eslint-disable @typescript-eslint/no-require-imports */
-  const { createSystemInfoCache } =
-    require('../utils/systeminfo') as typeof import('../utils/systeminfo')
-  /* eslint-enable @typescript-eslint/no-require-imports */
-  return {
-    systemInfo: createSystemInfoCache()
-  }
+  return {}
 }

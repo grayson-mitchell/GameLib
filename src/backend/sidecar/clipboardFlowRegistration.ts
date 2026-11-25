@@ -39,8 +39,8 @@
  * import time, and a side-effect import would double-register all three (`dispatchSend`/
  * `dispatchInvoke` iterate/hold every registered listener/handler for a channel, so a
  * duplicate registration duplicates every frontend call or breaks the single-registration
- * assumption other code relies on). `getSystemInfo`/`formatSystemInfo` are imported directly
- * from `../utils/systeminfo` instead, whose clean export this module relies on unchanged.
+ * assumption other code relies on). Since 88.1-18 the TS system-information tree is deleted and the
+ * Rust `info` slice owns the whole of it.
  *
  * D-03: `clipboardWriteText`'s registration below only calls `deps.appState.writeClipboardText(...)` — that
  * member is ITSELF the fire-and-forget, log-only Rust forward (Plan 05). This registration's
@@ -57,7 +57,7 @@ import type { IpcRegistry } from './ipcRegistry'
 import type { AppState } from '../host/appState'
 import type { RequestRustInvoke } from '../host'
 import { RUST_CLIPBOARD_READ_TEXT } from '../../common/types/sidecarTransport'
-import type { BootServices, StoreManagers, Stores } from '../services/types'
+import type { BootServices, StoreManagers } from '../services/types'
 
 function logSendFailure(channel: string, error: unknown): void {
   console.warn(
@@ -75,9 +75,6 @@ export interface ClipboardFlowDeps {
   config: Pick<GlobalConfigSlice, 'getSettings'>
   appInfo: Pick<AppInfo, 'version'>
   managers: Pick<StoreManagers, 'library'>
-  stores: Pick<Stores, 'systemInfo'>
-  /** The boot-owned system-information cache (66.4-12). */
-  infoCaches: Pick<BootServices['infoCaches'], 'systemInfo'>
   paths: Pick<BootServices['paths'], 'publicDir'>
   /** The boot process runner (66.2); consumers converted by 66.2-05. */
   runner: BootServices['runner']

@@ -2,7 +2,7 @@
  * App name, version, user agent and packaged flag (D-66.3-01). Pure: no module state.
  */
 
-// Static import, same pattern `utils/systeminfo/heroicVersion.ts` uses: `npm_package_version`
+// Static import, the pattern the deleted `utils/systeminfo/heroicVersion.ts` used: `npm_package_version`
 // is UNSET in the packaged SEA sidecar binary, so reading it would report '0.0.0'.
 import pkgJson from '../../../package.json'
 

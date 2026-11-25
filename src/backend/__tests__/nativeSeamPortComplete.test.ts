@@ -64,11 +64,11 @@ const FLAG_EXEMPTIONS: Record<string, string> = {}
 const namesFlag = (src: string, flag: string): boolean =>
   new RegExp(`\\b${flag}\\b`).test(src)
 
-// Modules the TS side keeps after the first slice (D-05): the sidecar's own URL policy, the
-// version helper the other sidecar consumers still read, and the host seams.
+// Modules the TS side keeps after the first slice (D-05): the sidecar's own URL policy and the host seams.
+// 88.1-18: `utils/systeminfo/heroicVersion.ts` left this list with the TS system-information tree (nothing
+// imported it; `host/appInfo.ts` reads the version itself), so no sidecar consumer reads a version helper any more.
 const KEPT = [
   'src/backend/sidecar/openPolicy.ts',
-  'src/backend/utils/systeminfo/heroicVersion.ts',
   'src/backend/host/appInfo.ts',
   'src/backend/host/openExternal.ts'
 ]

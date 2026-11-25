@@ -8,8 +8,8 @@
  * module graph (`jest.isolateModules`) and the disk is the only state carried
  * between launches.
  *
- * Mocked, and why: `backend/storeManagers`, `steam/state`, `backend/game_config`
- * and `backend/utils/systeminfo` sit only on the per-game branch of the settings
+ * Mocked, and why: `backend/storeManagers`, `steam/state` and `backend/game_config`
+ * sit only on the per-game branch of the settings
  * channels, which this suite never takes; `getDefaultWineBinary` is host discovery and
  * non-deterministic across machines.
  *
@@ -46,10 +46,6 @@ jest.mock('../../storeManagers/steam/state', () => ({
 
 jest.mock('backend/game_config', () => ({
   GameConfig: { get: jest.fn() }
-}))
-
-jest.mock('backend/utils/systeminfo', () => ({
-  getSystemInfo: jest.fn()
 }))
 
 jest.mock('backend/utils/compatibility_layers', () => ({

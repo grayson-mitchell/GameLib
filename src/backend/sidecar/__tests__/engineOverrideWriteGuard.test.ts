@@ -15,7 +15,6 @@ const mockWriteConfig = jest.fn()
 jest.mock('../../utils', () => ({
   writeConfig: (...a: unknown[]) => mockWriteConfig(...a)
 }))
-jest.mock('../../utils/systeminfo', () => ({ getSystemInfo: jest.fn() }))
 jest.mock('../../utils/os/path', () => ({ hasExecutable: jest.fn() }))
 
 import { defined } from 'backend/testUtils/indexed'

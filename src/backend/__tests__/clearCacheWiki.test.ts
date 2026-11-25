@@ -20,8 +20,7 @@ function fakeStores(): ClearCacheDeps['stores'] {
       'achievementStore'
     ]),
     legendary: family(['installStore', 'libraryStore', 'gameInfoStore']),
-    nile: family(['installStore', 'libraryStore']),
-    systemInfo: family(['deviceNameCache', 'vendorNameCache'])
+    nile: family(['installStore', 'libraryStore'])
   } as unknown as ClearCacheDeps['stores']
 }
 
@@ -72,7 +71,6 @@ describe('clearCache and the wiki cache', () => {
     expect(String(parts[1])).toContain('store-write')
     // The rest of the clear ran: the other families are empty.
     expect(deps.stores.gog.libraryStore.clear).toHaveBeenCalled()
-    expect(deps.stores.systemInfo.deviceNameCache.clear).toHaveBeenCalled()
   })
 
   // WR-64: the transport is a required member. These are compile-time checks (codecheck compiles

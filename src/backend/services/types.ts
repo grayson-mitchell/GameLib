@@ -39,7 +39,6 @@ import type { LegendaryRuntime } from 'backend/storeManagers/legendary/legendary
 import type { NileRuntime } from 'backend/storeManagers/nile/nileRuntime'
 import type { AppRuntime } from 'backend/appRuntime'
 import type { MiscRuntime } from 'backend/miscRuntime'
-import type { SystemInfoCache } from 'backend/utils/systeminfo'
 import type { AbortRegistry } from 'backend/utils/aborthandler/aborthandler'
 import type { WineWindowRaiser } from 'backend/utils/wineWindowRaise'
 import type { SteamInstallRuntime } from 'backend/storeManagers/steam/steamInstallRuntime'
@@ -97,9 +96,6 @@ export interface Stores {
   steam: ReturnType<
     typeof import('backend/storeManagers/steam/stores').createSteamStores
   >
-  systemInfo: ReturnType<
-    typeof import('backend/utils/systeminfo/gpu/pci_ids').createPciIdCaches
-  >
 }
 
 export interface StoreManagers {
@@ -129,10 +125,12 @@ export type CommandRunner = CommandRunnerImpl
 export type { SpawnAsync, QuitHandler }
 
 /** What every library manager receives through its constructor (66.1, R2). */
-/** The boot-owned info caches: system information (the HowLongToBeat credentials are Rust's since 86-21). */
-export interface InfoCaches {
-  systemInfo: SystemInfoCache
-}
+/**
+ * The boot-owned info caches. None is left in TypeScript: the HowLongToBeat credentials are Rust's since 86-21 and
+ * system information (with its pci.ids name caches) is Rust's since 88.1-18, so the record is empty. The member and
+ * its 'info-caches' boot step stay as the seam a later info cache would hang on.
+ */
+export type InfoCaches = Record<string, never>
 
 export interface ManagerDeps {
   /**

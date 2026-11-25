@@ -692,8 +692,6 @@ describe('66.4 end state: long tail at zero, census is a test, path shim gone', 
     'src/backend/storeManagers/steam/userTypes.ts',
     'src/backend/utils.ts',
     'src/backend/utils/aborthandler/aborthandler.ts',
-    'src/backend/utils/systeminfo/gpu/pci_ids.ts',
-    'src/backend/utils/systeminfo/index.ts',
     'src/backend/utils/wineWindowRaise.ts'
   ] as const
   // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -757,7 +755,8 @@ describe('66.4 end state: long tail at zero, census is a test, path shim gone', 
     // Phase 88 Plan 16 deleted knownFixOverlayInstall.ts and knownFixesFetcher.ts with the TS known-fix slice (D-18, D-25): 54 -> 52.
     // Phase 94 Plan 22 deleted sidecar/shortcutsFlowRegistration.ts with the shortcuts registration (D-27, SC4): 54 -> 53.
     // Both, after the 88/94 merge: 54 - 2 - 1 = 51.
-    assertAtOrAboveFloor('66.4 owned list', OWNED_66_4.length, 51)
+    // Phase 88.1 Plan 18 deleted utils/systeminfo/gpu/pci_ids.ts and utils/systeminfo/index.ts with the TS system-information tree (D-25): 51 -> 49.
+    assertAtOrAboveFloor('66.4 owned list', OWNED_66_4.length, 49)
   })
 
   it.each(OWNED_66_4)('%s is absent from the census', (file) => {

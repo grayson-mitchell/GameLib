@@ -131,7 +131,6 @@ import { createBridgeRuntime } from '../storeManagers/steam/bridge/bridgeRuntime
 import { createGogRuntime } from '../storeManagers/gog/gogRuntime'
 import { createLegendaryRuntime } from '../storeManagers/legendary/legendaryRuntime'
 import { createNileRuntime } from '../storeManagers/nile/nileRuntime'
-import { createSystemInfoCache } from '../utils/systeminfo'
 import { createSteamInstallRuntime } from '../storeManagers/steam/steamInstallRuntime'
 import type { OnlineMonitor } from '../online_monitor'
 // Block E (todo 2026-09-06, quick-260908-fre). `grep -rn
@@ -2137,12 +2136,11 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
     },
     {
       name: 'info-caches',
-      // Builds the system-information cache of this boot (D-05, 66.4-12); HowLongToBeat credentials are Rust's (86-21).
-      // No I/O, no timer, no handle: each cache fetches on first use. After 'nile-runtime', before 'store-managers'.
+      // Builds the info caches of this boot (D-05, 66.4-12). None is left in TypeScript: HowLongToBeat credentials are
+      // Rust's (86-21) and system information with its pci.ids caches is Rust's (88.1-18), so the record is empty.
+      // No I/O, no timer, no handle. After 'nile-runtime', before 'store-managers'.
       run: (_ctx, _io, state) => {
-        state.services.infoCaches = prebuilt.infoCaches ?? {
-          systemInfo: createSystemInfoCache()
-        }
+        state.services.infoCaches = prebuilt.infoCaches ?? {}
       }
     },
     {

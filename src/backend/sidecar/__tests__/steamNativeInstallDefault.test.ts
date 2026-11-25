@@ -38,10 +38,6 @@ jest.mock('backend/game_config', () => ({
   GameConfig: { get: jest.fn() }
 }))
 
-jest.mock('backend/utils/systeminfo', () => ({
-  getSystemInfo: jest.fn()
-}))
-
 jest.mock('backend/utils/compatibility_layers', () => ({
   ...jest.requireActual('backend/utils/compatibility_layers'),
   getDefaultWineBinary: () => ({ bin: '', name: 'Wine - Test', type: 'wine' })

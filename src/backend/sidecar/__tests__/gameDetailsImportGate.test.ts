@@ -267,8 +267,13 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
   // native router serves that channel (`info` slice); the diff is that removal plus docstring wording, no
   // other channel, guard or `steamLibrary.has` gate moved. Registered set 11 -> 10. Prior digest:
   // 2470b8a024e20be7f125b02f81fed8f3fb874f512c88dc9aafdc6bbdca7e1052
+  // Phase 88.1 / 88.1-18 (2026-11-26): re-pin -- TYPE-ONLY. The `systemInfo` store family and the `infoCaches`
+  // system-information cache were deleted with the TS `utils/systeminfo` tree, so `registerSettingsFlows` deps
+  // drop `infoCaches` and `stores` narrows to `Pick<Stores, 'kvs'>` (two type lines gone, none touched in a
+  // handler body). No channel, argument, guard or `steamLibrary.has` gate moved. Prior digest:
+  // f49eb0439c169c0755527e3654b7cd3497f7225589a13aca89d26ee7011085da
   const SETTINGS_FLOW_REGISTRATION_SHA256 =
-    'f49eb0439c169c0755527e3654b7cd3497f7225589a13aca89d26ee7011085da'
+    '5b02bd5a10d2e1f28af0b619700870a4e3a6100746ff41e3f6126f2ba2dd016a'
 
   it('REQ-34.2-10/D-09 Gate 7: settingsFlowRegistration.ts matches its committed sha256 digest', () => {
     const filePath = join(__dirname, '../settingsFlowRegistration.ts')

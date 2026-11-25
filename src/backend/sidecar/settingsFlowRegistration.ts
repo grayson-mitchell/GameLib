@@ -108,15 +108,13 @@ function isContainedGameConfig(
 export function registerSettingsFlows(deps: {
   ipc: Pick<IpcRegistry, 'handle' | 'on'>
   managers: Pick<StoreManagers, 'library'>
-  stores: Pick<Stores, 'kvs' | 'systemInfo'>
+  stores: Pick<Stores, 'kvs'>
   config: Pick<
     GlobalConfigSlice,
     'getSettings' | 'setSetting' | 'set' | 'flush'
   >
   gameConfigs: Pick<GameConfigs, 'get'>
   appInfo: Pick<AppInfo, 'version'>
-  /** The boot-owned system-information cache (66.4-12). */
-  infoCaches: Pick<BootServices['infoCaches'], 'systemInfo'>
   paths: Pick<BootServices['paths'], 'publicDir' | 'gamesConfigPath'>
   /** The boot process runner (66.2); consumers converted by 66.2-05. */
   runner: BootServices['runner']

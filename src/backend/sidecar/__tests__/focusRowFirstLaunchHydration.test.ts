@@ -27,8 +27,6 @@
  *     `backend/game_config`: exactly as `settingsFlows.test.ts` does. They sit
  *     only on the per-game branch of the settings channels, which this suite
  *     never takes.
- *   - `backend/utils/systeminfo`: `registerSettingsFlows` imports it, and it
- *     shells out to real subprocesses at call time; this suite never calls it.
  *   - `backend/utils/compatibility_layers` `getDefaultWineBinary` only (the rest of
  *     the module is real): `GlobalConfigV0.getFactoryDefaults()` calls it for
  *     host Wine discovery, which is irrelevant to `focusRow` and non-deterministic
@@ -72,10 +70,6 @@ jest.mock('../../storeManagers/steam/state', () => ({
 
 jest.mock('backend/game_config', () => ({
   GameConfig: { get: jest.fn() }
-}))
-
-jest.mock('backend/utils/systeminfo', () => ({
-  getSystemInfo: jest.fn()
 }))
 
 jest.mock('backend/utils/compatibility_layers', () => ({

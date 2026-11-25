@@ -66,12 +66,16 @@ const EXEMPT_NAMES: readonly { name: string; reason: string }[] = [
 // 46 -> 45 at Phase 87 plan 87-56c (2026-11-24): deleting engine/engineNoticeStore.ts removed exactly one construction
 // (steam_engine_notices), leaving 45. The floor tracks the construction list that plan shrank; it is not lowered to turn a
 // run green.
-const MIN_CONSTRUCTIONS = 45
+// 45 -> 43 at Phase 88.1 plan 88.1-18 (2026-11-26): deleting utils/systeminfo/gpu/pci_ids.ts removed exactly two
+// constructions (pci_ids_device, pci_ids_vendor), leaving 43. The floor tracks the construction list that plan shrank;
+// it is not lowered to turn a run green.
+const MIN_CONSTRUCTIONS = 43
 // 15 -> 13 at Phase 86 plan 86-24 (2026-11-23): the same two deleted files, wiki_game_info/stores.ts and
 // crossover_index/stores.ts, were two of the files holding a construction.
 // 13 -> 12 at Phase 87 plan 87-37 (2026-11-24): wine/manager/stores.ts was one of the files holding a construction.
 // 12 -> 11 at Phase 87 plan 87-56c (2026-11-24): engine/engineNoticeStore.ts was one of the files holding a construction.
-const MIN_FILES_WITH_CONSTRUCTION = 11
+// 11 -> 10 at Phase 88.1 plan 88.1-18 (2026-11-26): utils/systeminfo/gpu/pci_ids.ts was one of the files holding a construction.
+const MIN_FILES_WITH_CONSTRUCTION = 10
 const MIN_MIRRORS = 10
 
 // This is a shrink-and-grow equality ratchet. Never widen it to admit a failing case
@@ -127,9 +131,7 @@ const EXPECTED_KINDS: Record<string, Kind> = {
   humble_local_redeemed: 'user-state',
   humble_notified_expiration: 'user-state',
   humble_settle_declined: 'user-state',
-  humble_steam_appid: 'cache',
-  pci_ids_device: 'cache',
-  pci_ids_vendor: 'cache'
+  humble_steam_appid: 'cache'
 }
 
 const EXPECTED_TOKEN_BEARING = [

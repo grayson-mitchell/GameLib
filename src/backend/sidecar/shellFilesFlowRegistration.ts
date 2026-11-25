@@ -17,7 +17,7 @@
  *       `gamesConfigPath/${appName}.json` (Phase 72 D-08; never opened)
  *     - `showItemInFolder` -> `utils.ts`'s `showItemInFolder(item)`, a
  *       SYNCHRONOUS function, not a promise (`main.ts:1106`)
- *     - `clearCache` -> `utils.ts`'s `clearCache(undefined, fromVersionChange)`
+ *     - `clearCache` -> `utils.ts`'s `clearCache(undefined)` (88.1-18: the version-change flag no longer reaches it; the pci.ids name caches it spared are Rust's now and `clearCache` does not empty them)
  *       + `pushFrontendMessage('refreshLibrary')` + (only when `args[0]` is
  *       truthy) `showDialogBoxModalAuto` called with NO `event` property
  *       (sidecar `send` listeners never have one — this takes the
@@ -267,7 +267,7 @@ export function registerShellFilesFlows(deps: {
       const showDialog = args[0]
       const fromVersionChange = args[1] === true
       const clearAndRefresh = () => {
-        clearCache(deps, undefined, fromVersionChange)
+        clearCache(deps, undefined)
         startLegendaryCleanup({ libraryManagers: deps.managers.library })
         deps.pushFrontendMessage('refreshLibrary')
       }

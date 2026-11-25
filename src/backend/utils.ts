@@ -282,7 +282,7 @@ function removeSpecialcharacters(text: string): string {
  * is a compile error.
  */
 export interface ClearCacheDeps extends DialogBoxDeps, RustInvokeDeps {
-  stores: Pick<Stores, 'gog' | 'legendary' | 'nile' | 'systemInfo'>
+  stores: Pick<Stores, 'gog' | 'legendary' | 'nile'>
 }
 
 /**
@@ -301,10 +301,9 @@ export function startLegendaryCleanup(deps: {
 
 function clearCache(
   deps: ClearCacheDeps,
-  library?: 'gog' | 'legendary' | 'nile',
-  fromVersionChange = false
+  library?: 'gog' | 'legendary' | 'nile'
 ) {
-  const { gog, legendary, nile, systemInfo } = deps.stores
+  const { gog, legendary, nile } = deps.stores
   // The wiki cache is Rust's now. clearCache stays synchronous (its callers do not await), so the
   // clear is started here and a rejection is logged rather than thrown.
   void clearWikiGameInfoCache(deps).catch((error: unknown) => {
@@ -327,11 +326,6 @@ function clearCache(
   if (isStore(library, 'nile') || !library) {
     nile.installStore.clear()
     nile.libraryStore.clear()
-  }
-
-  if (!fromVersionChange) {
-    systemInfo.deviceNameCache.clear()
-    systemInfo.vendorNameCache.clear()
   }
 }
 

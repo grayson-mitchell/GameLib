@@ -145,7 +145,7 @@ describe('createStores', () => {
     return built
   }
 
-  // The fixture predates the `systemInfo` family: the pci_ids_* caches joined as `systemInfo`.
+  // 88.1-18: the pci_ids_* caches lost their TS registration with the TS system-information tree (no `systemInfo` family).
   // 87-56c: the `steam_engine_notices` cache lost its TS registration (the engine state is Rust's); its file name
   // stays on disk and its `storeTable.json` row stays for the Rust host, so no cache of that name is built here.
   const fixtureCaches = fixture.filter((entry) => entry.registeredAs === null)
@@ -197,12 +197,18 @@ describe('createStores', () => {
     expect(built.has('itad_steam_gids')).toBe(false)
   })
 
-  it('two roots build independent stores: pci caches do not share cells', () => {
+  it('builds no pci_ids_device or pci_ids_vendor cache: system information and its name caches are Rust-owned (88.1-18)', () => {
+    const built = builtCacheStores()
+    expect(built.has('pci_ids_device')).toBe(false)
+    expect(built.has('pci_ids_vendor')).toBe(false)
+  })
+
+  it('two roots build independent stores: the gog caches do not share cells', () => {
     const rootA = createTestStoreRoot()
     const rootB = createTestStoreRoot()
     const a = createStores({ registry: createStoreRegistry(), root: rootA })
     const b = createStores({ registry: createStoreRegistry(), root: rootB })
-    expect(a.systemInfo.deviceNameCache).not.toBe(b.systemInfo.deviceNameCache)
+    expect(a.gog.apiInfoCache).not.toBe(b.gog.apiInfoCache)
   })
 
   it('two boots get independent registries and instances, and no duplicate line', () => {

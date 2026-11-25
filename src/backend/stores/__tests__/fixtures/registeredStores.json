@@ -255,54 +255,6 @@
     "registeredAs": null,
     "options": {
       "cwd": "store_cache",
-      "name": "pci_ids_device",
-      "clearInvalidConfig": true,
-      "schemaKeys": null
-    },
-    "declaration": {
-      "kind": "cache"
-    }
-  },
-  {
-    "registeredAs": null,
-    "options": {
-      "cwd": "store_cache",
-      "name": "pci_ids_device",
-      "clearInvalidConfig": true,
-      "schemaKeys": null
-    },
-    "declaration": {
-      "kind": "cache"
-    }
-  },
-  {
-    "registeredAs": null,
-    "options": {
-      "cwd": "store_cache",
-      "name": "pci_ids_vendor",
-      "clearInvalidConfig": true,
-      "schemaKeys": null
-    },
-    "declaration": {
-      "kind": "cache"
-    }
-  },
-  {
-    "registeredAs": null,
-    "options": {
-      "cwd": "store_cache",
-      "name": "pci_ids_vendor",
-      "clearInvalidConfig": true,
-      "schemaKeys": null
-    },
-    "declaration": {
-      "kind": "cache"
-    }
-  },
-  {
-    "registeredAs": null,
-    "options": {
-      "cwd": "store_cache",
       "name": "steam_direct_launch_verdict",
       "clearInvalidConfig": true,
       "schemaKeys": null
