@@ -102,6 +102,7 @@ for completion, because a Steam operation does not always move the ACF.
   - cross-volume and external-drive moves
   - a library on an unmounted volume (it still fails the folder lookup)
   - Steam signed out
-  - a pre-move note in the Move dialog that the picked folder becomes the library root (it needs
-    i18n strings)
   - the live gate
+- Decided (2026-11-25): no pre-move note in the Move dialog that the picked folder becomes the
+  library root. The user judged the Location row, which shows the real
+  `<picked>/steamapps/common/<installdir>` path after the move, to be enough.
