@@ -1,0 +1,315 @@
+{
+  "split": "updated-log",
+  "trace": [
+    {
+      "seq": 1,
+      "channel": "engine_launch_settings_get",
+      "args": [
+        {
+          "key": "sideload:app-sideload",
+          "stored": {
+            "autoInstallDxvk": true,
+            "autoInstallVkd3d": true,
+            "autoInstallDxvkNvapi": false,
+            "autoSyncSaves": false,
+            "battlEyeRuntime": true,
+            "DXVKFpsCap": "0",
+            "eacRuntime": false,
+            "enableDXVKFpsLimit": false,
+            "enableEsync": true,
+            "enableFSR": false,
+            "enableMsync": false,
+            "enableFsync": true,
+            "enableWineWayland": false,
+            "enableHDR": false,
+            "enableWoW64": false,
+            "gamescope": {
+              "enableUpscaling": false,
+              "enableLimiter": false,
+              "enableForceGrabCursor": false,
+              "windowType": "",
+              "gameWidth": "",
+              "gameHeight": "",
+              "upscaleWidth": "",
+              "upscaleHeight": "",
+              "upscaleMethod": "",
+              "fpsLimiter": "",
+              "fpsLimiterNoFocus": "",
+              "additionalOptions": ""
+            },
+            "enviromentOptions": [],
+            "ignoreGameUpdates": false,
+            "language": "",
+            "launcherArgs": "",
+            "nvidiaPrime": false,
+            "offlineMode": false,
+            "preferSystemLibs": false,
+            "showFps": false,
+            "showMangohud": false,
+            "targetExe": "",
+            "useGameMode": false,
+            "wineCrossoverBottle": "",
+            "winePrefix": "<HOME>/Games/Prefix",
+            "wineVersion": {
+              "bin": "<HOME>/wine/bin/wine",
+              "name": "Game Wine",
+              "type": "wine",
+              "wineserver": "<HOME>/wine/bin/wineserver"
+            },
+            "wrapperOptions": [],
+            "savesPath": "",
+            "beforeLaunchScriptPath": "",
+            "afterLaunchScriptPath": "",
+            "disableUMU": false,
+            "verboseLogs": true,
+            "advertiseAvxForRosetta": false,
+            "enableQuickSavesMenu": false
+          }
+        }
+      ],
+      "kind": "rust",
+      "reply": {
+        "autoInstallDxvk": true,
+        "autoInstallVkd3d": true,
+        "autoInstallDxvkNvapi": false,
+        "autoSyncSaves": false,
+        "battlEyeRuntime": true,
+        "DXVKFpsCap": "0",
+        "eacRuntime": false,
+        "enableDXVKFpsLimit": false,
+        "enableEsync": true,
+        "enableFSR": false,
+        "enableMsync": false,
+        "enableFsync": true,
+        "enableWineWayland": false,
+        "enableHDR": false,
+        "enableWoW64": false,
+        "gamescope": {
+          "enableUpscaling": false,
+          "enableLimiter": false,
+          "enableForceGrabCursor": false,
+          "windowType": "",
+          "gameWidth": "",
+          "gameHeight": "",
+          "upscaleWidth": "",
+          "upscaleHeight": "",
+          "upscaleMethod": "",
+          "fpsLimiter": "",
+          "fpsLimiterNoFocus": "",
+          "additionalOptions": ""
+        },
+        "enviromentOptions": [],
+        "ignoreGameUpdates": false,
+        "language": "",
+        "launcherArgs": "",
+        "nvidiaPrime": false,
+        "offlineMode": false,
+        "preferSystemLibs": false,
+        "showFps": false,
+        "showMangohud": false,
+        "targetExe": "",
+        "useGameMode": false,
+        "wineCrossoverBottle": "",
+        "winePrefix": "<HOME>/Games/Prefix",
+        "wineVersion": {
+          "bin": "<HOME>/wine/bin/wine",
+          "name": "Game Wine",
+          "type": "wine",
+          "wineserver": "<HOME>/wine/bin/wineserver"
+        },
+        "wrapperOptions": [],
+        "savesPath": "",
+        "beforeLaunchScriptPath": "",
+        "afterLaunchScriptPath": "",
+        "disableUMU": false,
+        "verboseLogs": true,
+        "advertiseAvxForRosetta": false,
+        "enableQuickSavesMenu": false
+      }
+    },
+    {
+      "seq": 2,
+      "channel": "wine_valid",
+      "args": [
+        {
+          "bin": "<HOME>/wine/bin/wine",
+          "name": "Game Wine",
+          "type": "wine",
+          "wineserver": "<HOME>/wine/bin/wineserver"
+        }
+      ],
+      "kind": "rust",
+      "reply": true
+    },
+    {
+      "seq": 3,
+      "channel": "wine_winetricks_list_installed",
+      "args": [
+        {
+          "runner": "sideload",
+          "appName": "app-sideload",
+          "settings": {
+            "autoInstallDxvk": true,
+            "autoInstallVkd3d": true,
+            "autoInstallDxvkNvapi": false,
+            "autoSyncSaves": false,
+            "battlEyeRuntime": true,
+            "DXVKFpsCap": "0",
+            "eacRuntime": false,
+            "enableDXVKFpsLimit": false,
+            "enableEsync": true,
+            "enableFSR": false,
+            "enableMsync": false,
+            "enableFsync": true,
+            "enableWineWayland": false,
+            "enableHDR": false,
+            "enableWoW64": false,
+            "gamescope": {
+              "enableUpscaling": false,
+              "enableLimiter": false,
+              "enableForceGrabCursor": false,
+              "windowType": "",
+              "gameWidth": "",
+              "gameHeight": "",
+              "upscaleWidth": "",
+              "upscaleHeight": "",
+              "upscaleMethod": "",
+              "fpsLimiter": "",
+              "fpsLimiterNoFocus": "",
+              "additionalOptions": ""
+            },
+            "enviromentOptions": [],
+            "ignoreGameUpdates": false,
+            "language": "",
+            "launcherArgs": "",
+            "nvidiaPrime": false,
+            "offlineMode": false,
+            "preferSystemLibs": false,
+            "showFps": false,
+            "showMangohud": false,
+            "targetExe": "",
+            "useGameMode": false,
+            "wineCrossoverBottle": "",
+            "winePrefix": "<HOME>/Games/Prefix",
+            "wineVersion": {
+              "bin": "<HOME>/wine/bin/wine",
+              "name": "Game Wine",
+              "type": "wine",
+              "wineserver": "<HOME>/wine/bin/wineserver"
+            },
+            "wrapperOptions": [],
+            "savesPath": "",
+            "beforeLaunchScriptPath": "",
+            "afterLaunchScriptPath": "",
+            "disableUMU": false,
+            "verboseLogs": true,
+            "advertiseAvxForRosetta": false,
+            "enableQuickSavesMenu": false
+          }
+        }
+      ],
+      "kind": "rust",
+      "reply": [
+        "corefonts",
+        "vcrun2019"
+      ]
+    },
+    {
+      "seq": 4,
+      "kind": "log",
+      "level": "info",
+      "parts": [
+        "Winetricks packages: corefonts, vcrun2019\n\n"
+      ]
+    },
+    {
+      "seq": 5,
+      "channel": "wine_valid",
+      "args": [
+        {
+          "bin": "<HOME>/wine/bin/wine",
+          "name": "Game Wine",
+          "type": "wine",
+          "wineserver": "<HOME>/wine/bin/wineserver"
+        }
+      ],
+      "kind": "rust",
+      "reply": true
+    },
+    {
+      "seq": 6,
+      "channel": "wine_valid",
+      "args": [
+        {
+          "bin": "<HOME>/wine/bin/wine",
+          "name": "Game Wine",
+          "type": "wine",
+          "wineserver": "<HOME>/wine/bin/wineserver"
+        }
+      ],
+      "kind": "rust",
+      "reply": true
+    },
+    {
+      "seq": 7,
+      "program": "<HOME>/wine/bin/wine",
+      "argv": [
+        "wineboot",
+        "--init"
+      ],
+      "envDiff": {
+        "set": {
+          "APPDATA": "<HOME>/AppData/Roaming",
+          "HOME": "<HOME>",
+          "LANG": "C.UTF-8",
+          "LD_PRELOAD": "",
+          "LOCALAPPDATA": "<HOME>/AppData/Local",
+          "ORIG_LD_LIBRARY_PATH": "",
+          "PATH": "/usr/bin:/bin",
+          "PROTON_VERB": "run",
+          "USER": "gamelib-oracle",
+          "USERPROFILE": "<HOME>",
+          "WINEDLLOVERRIDES": "winemenubuilder.exe=d",
+          "WINEESYNC": "1",
+          "WINEPREFIX": "<HOME>/Games/Prefix",
+          "WINE_FULLSCREEN_FSR": "0",
+          "XDG_CACHE_HOME": "<HOME>/.cache",
+          "XDG_CONFIG_HOME": "<HOME>/.config",
+          "XDG_DATA_HOME": "<HOME>/.local/share",
+          "XDG_STATE_HOME": "<HOME>/.local/state"
+        },
+        "unset": []
+      },
+      "cwd": null,
+      "stdin": null,
+      "via": "run",
+      "result": {
+        "code": 0,
+        "stdout": "",
+        "stderr": ""
+      },
+      "kind": "spawn",
+      "callSite": "prepare_wine.verify_prefix",
+      "options": {
+        "timeoutMs": null,
+        "replaceEnv": true,
+        "resolveOn": "close",
+        "timeoutNone": true,
+        "windowsHide": false,
+        "track": {
+          "runner": "wine",
+          "key": "<HOME>/Games/Prefix"
+        }
+      },
+      "class": "helper"
+    },
+    {
+      "seq": 8,
+      "kind": "backend-log",
+      "level": "info",
+      "prefix": "Backend",
+      "text": "Created/Updated Wineprefix at <HOME>/Games/Prefix"
+    }
+  ],
+  "prefixUpdated": true
+}

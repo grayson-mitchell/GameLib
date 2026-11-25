@@ -1,0 +1,274 @@
+{
+  "trace": [
+    {
+      "seq": 9,
+      "runner": "gog",
+      "member": "prepareLaunch",
+      "args": [
+        "app-gog",
+        "<logWriter>"
+      ],
+      "kind": "hook"
+    },
+    {
+      "seq": 10,
+      "channel": "knownfix_apply_profile_registry",
+      "args": [
+        {
+          "appName": "app-gog",
+          "runner": "gog",
+          "gameSettings": {
+            "autoInstallDxvk": true,
+            "autoInstallVkd3d": true,
+            "autoInstallDxvkNvapi": false,
+            "autoSyncSaves": false,
+            "battlEyeRuntime": true,
+            "DXVKFpsCap": "0",
+            "eacRuntime": false,
+            "enableDXVKFpsLimit": false,
+            "enableEsync": true,
+            "enableFSR": false,
+            "enableMsync": false,
+            "enableFsync": true,
+            "enableWineWayland": false,
+            "enableHDR": false,
+            "enableWoW64": false,
+            "gamescope": {
+              "enableUpscaling": false,
+              "enableLimiter": false,
+              "enableForceGrabCursor": false,
+              "windowType": "",
+              "gameWidth": "",
+              "gameHeight": "",
+              "upscaleWidth": "",
+              "upscaleHeight": "",
+              "upscaleMethod": "",
+              "fpsLimiter": "",
+              "fpsLimiterNoFocus": "",
+              "additionalOptions": ""
+            },
+            "enviromentOptions": [],
+            "ignoreGameUpdates": false,
+            "language": "",
+            "launcherArgs": "",
+            "nvidiaPrime": false,
+            "offlineMode": false,
+            "preferSystemLibs": false,
+            "showFps": false,
+            "showMangohud": false,
+            "targetExe": "",
+            "useGameMode": false,
+            "wineCrossoverBottle": "",
+            "winePrefix": "<HOME>/Games/Prefix",
+            "wineVersion": {
+              "bin": "<HOME>/wine/proton",
+              "name": "Game Wine",
+              "type": "proton",
+              "lib": "<HOME>/wine/lib64",
+              "lib32": "<HOME>/wine/lib"
+            },
+            "wrapperOptions": [],
+            "savesPath": "",
+            "beforeLaunchScriptPath": "",
+            "afterLaunchScriptPath": "",
+            "disableUMU": false,
+            "verboseLogs": true,
+            "advertiseAvxForRosetta": false,
+            "enableQuickSavesMenu": false
+          }
+        }
+      ],
+      "kind": "rust",
+      "reply": null
+    },
+    {
+      "seq": 11,
+      "channel": "knownfix_profile_overlay_env",
+      "args": [
+        {
+          "appName": "app-gog",
+          "runner": "gog",
+          "gameSettings": {
+            "autoInstallDxvk": true,
+            "autoInstallVkd3d": true,
+            "autoInstallDxvkNvapi": false,
+            "autoSyncSaves": false,
+            "battlEyeRuntime": true,
+            "DXVKFpsCap": "0",
+            "eacRuntime": false,
+            "enableDXVKFpsLimit": false,
+            "enableEsync": true,
+            "enableFSR": false,
+            "enableMsync": false,
+            "enableFsync": true,
+            "enableWineWayland": false,
+            "enableHDR": false,
+            "enableWoW64": false,
+            "gamescope": {
+              "enableUpscaling": false,
+              "enableLimiter": false,
+              "enableForceGrabCursor": false,
+              "windowType": "",
+              "gameWidth": "",
+              "gameHeight": "",
+              "upscaleWidth": "",
+              "upscaleHeight": "",
+              "upscaleMethod": "",
+              "fpsLimiter": "",
+              "fpsLimiterNoFocus": "",
+              "additionalOptions": ""
+            },
+            "enviromentOptions": [],
+            "ignoreGameUpdates": false,
+            "language": "",
+            "launcherArgs": "",
+            "nvidiaPrime": false,
+            "offlineMode": false,
+            "preferSystemLibs": false,
+            "showFps": false,
+            "showMangohud": false,
+            "targetExe": "",
+            "useGameMode": false,
+            "wineCrossoverBottle": "",
+            "winePrefix": "<HOME>/Games/Prefix",
+            "wineVersion": {
+              "bin": "<HOME>/wine/proton",
+              "name": "Game Wine",
+              "type": "proton",
+              "lib": "<HOME>/wine/lib64",
+              "lib32": "<HOME>/wine/lib"
+            },
+            "wrapperOptions": [],
+            "savesPath": "",
+            "beforeLaunchScriptPath": "",
+            "afterLaunchScriptPath": "",
+            "disableUMU": false,
+            "verboseLogs": true,
+            "advertiseAvxForRosetta": false,
+            "enableQuickSavesMenu": false
+          },
+          "tier1Env": {},
+          "processEnvBase": {}
+        }
+      ],
+      "kind": "rust",
+      "reply": {}
+    },
+    {
+      "seq": 12,
+      "channel": "wine_valid",
+      "args": [
+        {
+          "bin": "<HOME>/wine/proton",
+          "name": "Game Wine",
+          "type": "proton",
+          "lib": "<HOME>/wine/lib64",
+          "lib32": "<HOME>/wine/lib"
+        }
+      ],
+      "kind": "rust",
+      "reply": true
+    },
+    {
+      "seq": 13,
+      "program": "<HOME>/wine/proton",
+      "argv": [
+        "runinprefix",
+        "cmd",
+        "/c",
+        "winepath",
+        "-u",
+        "C:\\ProgramData\\GOG.com\\Galaxy\\redists\\GalaxyCommunication.exe"
+      ],
+      "envDiff": {
+        "set": {
+          "APPDATA": "<HOME>/AppData/Roaming",
+          "DXVK_LOG_LEVEL": "info",
+          "HOME": "<HOME>",
+          "LANG": "C.UTF-8",
+          "LD_PRELOAD": "",
+          "LOCALAPPDATA": "<HOME>/AppData/Local",
+          "PATH": "/usr/bin:/bin",
+          "PROTONPATH": "<HOME>/wine",
+          "PROTON_BATTLEYE_RUNTIME": "<TOOLS>/runtimes/battleye_runtime",
+          "PROTON_DISABLE_NVAPI": "1",
+          "PROTON_LOG_DIR": "<HOME>",
+          "PROTON_VERB": "runinprefix",
+          "STEAM_COMPAT_APP_ID": "0",
+          "STEAM_COMPAT_CLIENT_INSTALL_PATH": "<HOME>/.steam/steam",
+          "STEAM_COMPAT_DATA_PATH": "<HOME>/Games/Prefix",
+          "SteamAppId": "0",
+          "SteamGameId": "heroic-0",
+          "USER": "gamelib-oracle",
+          "USERPROFILE": "<HOME>",
+          "VKD3D_DEBUG": "fixme",
+          "WINEDEBUG": "+fixme",
+          "WINEPREFIX": "<HOME>/Games/Prefix",
+          "WINE_FULLSCREEN_FSR": "0",
+          "XDG_CACHE_HOME": "<HOME>/.cache",
+          "XDG_CONFIG_HOME": "<HOME>/.config",
+          "XDG_DATA_HOME": "<HOME>/.local/share",
+          "XDG_STATE_HOME": "<HOME>/.local/state"
+        },
+        "unset": []
+      },
+      "cwd": null,
+      "stdin": null,
+      "via": "run",
+      "result": {
+        "code": 0,
+        "stdout": "",
+        "stderr": ""
+      },
+      "kind": "spawn",
+      "callSite": "prepare_wine.galaxy_winepath",
+      "options": {
+        "timeoutMs": null,
+        "replaceEnv": true,
+        "resolveOn": "close",
+        "timeoutNone": true,
+        "windowsHide": false,
+        "track": {
+          "runner": "wine",
+          "key": "<HOME>/Games/Prefix"
+        }
+      },
+      "class": "helper"
+    },
+    {
+      "seq": 14,
+      "kind": "backend-log",
+      "level": "error",
+      "prefix": "Backend",
+      "text": "Couldn't get wine path for C:\\ProgramData\\GOG.com\\Galaxy\\redists\\GalaxyCommunication.exe.\n"
+    },
+    {
+      "seq": 15,
+      "kind": "backend-log",
+      "level": "error",
+      "prefix": null,
+      "text": "Failed to install GalaxyCommunication dummy into the prefix: Error: ENOENT: no such file or directory, copyfile '<HOME>/public/bin/x64/win32/GalaxyCommunication.exe' -> ''"
+    },
+    {
+      "seq": 16,
+      "kind": "online-monitor",
+      "answer": false
+    },
+    {
+      "seq": 17,
+      "channel": "engine_launch_arm_deadline",
+      "args": [
+        {
+          "runner": "gog",
+          "appName": "app-gog",
+          "title": "Oracle gog Game",
+          "installPath": "<HOME>/Games/Oracle-gog"
+        }
+      ],
+      "kind": "rust",
+      "reply": {
+        "armed": false
+      }
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "success": true,
+  "envVars": {
+    "CX_BOTTLE": "EngineBottle",
+    "WINE_FULLSCREEN_FSR": "0",
+    "WINEESYNC": "1"
+  },
+  "knownFixEnv": {}
+}

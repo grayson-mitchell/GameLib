@@ -1,0 +1,12 @@
+{
+  "success": true,
+  "envVars": {
+    "CX_BOTTLE": "EngineBottle",
+    "WINE_FULLSCREEN_FSR": "0",
+    "WINEESYNC": "1",
+    "ORACLE_OVERLAY_LIB": "<HOME>/overlays/o1/lib"
+  },
+  "knownFixEnv": {
+    "ORACLE_OVERLAY_LIB": "<HOME>/overlays/o1/lib"
+  }
+}

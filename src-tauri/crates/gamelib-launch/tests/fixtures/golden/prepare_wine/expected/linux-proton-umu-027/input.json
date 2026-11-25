@@ -1,0 +1,248 @@
+{
+  "cell": "linux-proton-umu",
+  "os": "linux",
+  "wineType": "proton",
+  "umu": true,
+  "runner": "nile",
+  "appName": "app-nile",
+  "gameInfo": {
+    "app_name": "app-nile",
+    "runner": "nile",
+    "title": "Oracle nile Game",
+    "art_cover": "",
+    "art_square": "",
+    "is_installed": true,
+    "canRunOffline": true,
+    "folder_name": "Oracle-nile",
+    "install": {
+      "install_path": "<HOME>/Games/Oracle-nile"
+    }
+  },
+  "storedSettings": {
+    "autoInstallDxvk": true,
+    "autoInstallVkd3d": true,
+    "autoInstallDxvkNvapi": false,
+    "autoSyncSaves": false,
+    "battlEyeRuntime": false,
+    "DXVKFpsCap": "0",
+    "eacRuntime": false,
+    "enableDXVKFpsLimit": false,
+    "enableEsync": true,
+    "enableFSR": false,
+    "enableMsync": false,
+    "enableFsync": true,
+    "enableWineWayland": false,
+    "enableHDR": false,
+    "enableWoW64": false,
+    "gamescope": {
+      "enableUpscaling": false,
+      "enableLimiter": false,
+      "enableForceGrabCursor": false,
+      "windowType": "",
+      "gameWidth": "",
+      "gameHeight": "",
+      "upscaleWidth": "",
+      "upscaleHeight": "",
+      "upscaleMethod": "",
+      "fpsLimiter": "",
+      "fpsLimiterNoFocus": "",
+      "additionalOptions": ""
+    },
+    "enviromentOptions": [],
+    "ignoreGameUpdates": false,
+    "language": "",
+    "launcherArgs": "",
+    "nvidiaPrime": false,
+    "offlineMode": false,
+    "preferSystemLibs": false,
+    "showFps": false,
+    "showMangohud": false,
+    "targetExe": "",
+    "useGameMode": false,
+    "wineCrossoverBottle": "",
+    "winePrefix": "<HOME>/Games/Prefix",
+    "wineVersion": {
+      "bin": "<HOME>/wine/proton",
+      "name": "Game Wine",
+      "type": "proton",
+      "lib": "<HOME>/wine/lib64",
+      "lib32": "<HOME>/wine/lib"
+    },
+    "wrapperOptions": [],
+    "savesPath": "",
+    "beforeLaunchScriptPath": "",
+    "afterLaunchScriptPath": "",
+    "disableUMU": false,
+    "verboseLogs": true,
+    "advertiseAvxForRosetta": false,
+    "enableQuickSavesMenu": false
+  },
+  "defaultWine": {
+    "bin": "<HOME>/default/proton",
+    "name": "Default Wine",
+    "type": "proton",
+    "lib": "<HOME>/default/lib64",
+    "lib32": "<HOME>/default/lib"
+  },
+  "experimentalFeatures": {},
+  "opts": {
+    "mergesTier1Env": true
+  },
+  "engineSettings": {
+    "autoInstallDxvk": true,
+    "autoInstallVkd3d": true,
+    "autoInstallDxvkNvapi": false,
+    "autoSyncSaves": false,
+    "battlEyeRuntime": false,
+    "DXVKFpsCap": "0",
+    "eacRuntime": false,
+    "enableDXVKFpsLimit": false,
+    "enableEsync": true,
+    "enableFSR": false,
+    "enableMsync": false,
+    "enableFsync": true,
+    "enableWineWayland": false,
+    "enableHDR": false,
+    "enableWoW64": false,
+    "gamescope": {
+      "enableUpscaling": false,
+      "enableLimiter": false,
+      "enableForceGrabCursor": false,
+      "windowType": "",
+      "gameWidth": "",
+      "gameHeight": "",
+      "upscaleWidth": "",
+      "upscaleHeight": "",
+      "upscaleMethod": "",
+      "fpsLimiter": "",
+      "fpsLimiterNoFocus": "",
+      "additionalOptions": ""
+    },
+    "enviromentOptions": [],
+    "ignoreGameUpdates": false,
+    "language": "",
+    "launcherArgs": "",
+    "nvidiaPrime": false,
+    "offlineMode": false,
+    "preferSystemLibs": false,
+    "showFps": false,
+    "showMangohud": false,
+    "targetExe": "",
+    "useGameMode": false,
+    "wineCrossoverBottle": "",
+    "winePrefix": "<HOME>/engine/prefix",
+    "wineVersion": {
+      "bin": "<HOME>/engine/proton",
+      "name": "Engine Wine",
+      "type": "proton",
+      "lib": "<HOME>/engine/lib64",
+      "lib32": "<HOME>/engine/lib"
+    },
+    "wrapperOptions": [],
+    "savesPath": "",
+    "beforeLaunchScriptPath": "",
+    "afterLaunchScriptPath": "",
+    "disableUMU": false,
+    "verboseLogs": true,
+    "advertiseAvxForRosetta": false,
+    "enableQuickSavesMenu": false
+  },
+  "seed": [
+    {
+      "path": "<APPFOLDER>/fixes/local/app-nile-amazon.json",
+      "text": "{\"title\":\"tier-1 fix\",\"winetricks\":[\"corefonts\",\"vcrun2019\"]}"
+    },
+    {
+      "path": "<APPFOLDER>/fixes/local/app-nile-amazon.profile.json",
+      "text": "{\"title\":\"tier-2 profile\",\"evidence\":\"todo.md\",\"overlays\":[{\"id\":\"o1\"}]}"
+    },
+    {
+      "path": "<HOME>/public/bin/x64/win32/GalaxyCommunication.exe",
+      "text": "MZ oracle dummy"
+    },
+    {
+      "path": "<HOME>/bin/umu-run",
+      "text": "#!/bin/sh\n",
+      "mode": "0755"
+    },
+    {
+      "path": "<HOME>/engine/prefix/pfx/dosdevices",
+      "dir": true
+    },
+    {
+      "path": "<HOME>/engine/prefix/pfx/drive_c",
+      "dir": true
+    },
+    {
+      "path": "<HOME>/engine/prefix/pfx.lock",
+      "text": ""
+    },
+    {
+      "path": "<HOME>/engine/prefix/tracked_files",
+      "text": ""
+    },
+    {
+      "path": "<HOME>/engine/prefix/version",
+      "text": ""
+    },
+    {
+      "path": "<HOME>/engine/prefix/config_info",
+      "text": ""
+    },
+    {
+      "path": "<HOME>/engine/prefix/pfx/system.reg",
+      "text": ""
+    },
+    {
+      "path": "<HOME>/engine/prefix/pfx/user.reg",
+      "text": ""
+    },
+    {
+      "path": "<HOME>/engine/prefix/pfx/userdef.reg",
+      "text": ""
+    }
+  ],
+  "installedGames": "absent",
+  "prefixFolder": "<HOME>/engine/prefix",
+  "online": true,
+  "hooks": {
+    "isOverlayEnabled": false
+  },
+  "hooksDefined": {
+    "sideload": [],
+    "gog": [
+      "prepareLaunch"
+    ],
+    "legendary": [
+      "prepareLaunch",
+      "isOverlayEnabled"
+    ],
+    "nile": [
+      "prepareLaunch"
+    ],
+    "steam": []
+  },
+  "wineValid": {
+    "Game Wine": true,
+    "Default Wine": true,
+    "Engine Wine": true
+  },
+  "runtimeInstalled": {
+    "eac_runtime": false,
+    "battleye_runtime": false
+  },
+  "scriptedRust": {
+    "overlayEnv": {
+      "ORACLE_OVERLAY_LIB": "<HOME>/overlays/o1/lib"
+    },
+    "registry": "ok",
+    "overlay": "ok",
+    "deadline": "rejects"
+  },
+  "spawns": {
+    "runnerBin": "<HOME>/bin/umu-run",
+    "whoamiStderr": "cx: starting\nWINEPREFIX = \"<HOME>/engine/prefix\"\ncx: done\n",
+    "winepathStdout": "<HOME>/engine/prefix/drive_c/ProgramData/GOG.com/Galaxy/redists/GalaxyCommunication.exe\n",
+    "dummyDest": "<HOME>/engine/prefix/drive_c/ProgramData/GOG.com/Galaxy/redists/GalaxyCommunication.exe"
+  }
+}

@@ -1,0 +1,67 @@
+[
+  {
+    "path": "engine/prefix",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "engine/prefix/dosdevices",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "engine/prefix/drive_c",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "engine/prefix/drive_c/ProgramData",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "engine/prefix/drive_c/ProgramData/GOG.com",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "engine/prefix/drive_c/ProgramData/GOG.com/Galaxy",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "engine/prefix/drive_c/ProgramData/GOG.com/Galaxy/redists",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "engine/prefix/drive_c/ProgramData/GOG.com/Galaxy/redists/GalaxyCommunication.exe",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "4b40a682d1b6833ecc9d74074e650aadd827013251c2b3fd204fd9e4b01aa637"
+  },
+  {
+    "path": "engine/prefix/installed_games",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "b1b2d77de5918fabab43d33bcf9ccca75c751340d04c242b63c6fcb023a36085"
+  },
+  {
+    "path": "engine/prefix/system.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "engine/prefix/user.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "engine/prefix/userdef.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+]

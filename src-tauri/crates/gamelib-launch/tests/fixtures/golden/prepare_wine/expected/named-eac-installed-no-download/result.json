@@ -1,0 +1,15 @@
+{
+  "success": true,
+  "envVars": {
+    "WINEPREFIX": "<HOME>/Games/Prefix",
+    "WINEDLLOVERRIDES": "winemenubuilder.exe=d",
+    "WINE_FULLSCREEN_FSR": "0",
+    "WINEESYNC": "1",
+    "WINEFSYNC": "1",
+    "PROTON_EAC_RUNTIME": "<TOOLS>/runtimes/eac_runtime",
+    "PROTON_BATTLEYE_RUNTIME": "<TOOLS>/runtimes/battleye_runtime",
+    "ORIG_LD_LIBRARY_PATH": "",
+    "LD_LIBRARY_PATH": "<HOME>/wine/lib64:<HOME>/wine/lib"
+  },
+  "knownFixEnv": {}
+}

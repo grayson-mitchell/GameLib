@@ -1,0 +1,41 @@
+[
+  {
+    "path": "bottles/EngineBottle",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "bottles/EngineBottle/dosdevices",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "bottles/EngineBottle/drive_c",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "bottles/EngineBottle/installed_games",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "3b1f0c692ffd704ee4401863409f3d99d0dbb393a138fc6bb87fd76e029e8e6d"
+  },
+  {
+    "path": "bottles/EngineBottle/system.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "bottles/EngineBottle/user.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "bottles/EngineBottle/userdef.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+]

@@ -1,0 +1,13 @@
+[
+  {
+    "path": "Games/Prefix",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Games/Prefix/installed_games",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "85c8406276da207f1a3835258731aef09e333ffcb9003dc540abdf6f793ada9a"
+  }
+]

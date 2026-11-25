@@ -1,0 +1,49 @@
+[
+  {
+    "path": "Games/Prefix",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Games/Prefix/drive_c",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Games/Prefix/drive_c/ProgramData",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Games/Prefix/drive_c/ProgramData/GOG.com",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Games/Prefix/drive_c/ProgramData/GOG.com/Galaxy",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Games/Prefix/drive_c/ProgramData/GOG.com/Galaxy/redists",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Games/Prefix/drive_c/ProgramData/GOG.com/Galaxy/redists/GalaxyCommunication.exe",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "4b40a682d1b6833ecc9d74074e650aadd827013251c2b3fd204fd9e4b01aa637"
+  },
+  {
+    "path": "bottles/Bottle1",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "bottles/Bottle1/installed_games",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "95a1ef260bd68d6e0b75fff05337d4040846df62987217699c003c63e8394c5e"
+  }
+]

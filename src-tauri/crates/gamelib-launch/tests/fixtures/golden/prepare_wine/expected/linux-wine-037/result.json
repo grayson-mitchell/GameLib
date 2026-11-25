@@ -1,0 +1,18 @@
+{
+  "success": true,
+  "envVars": {
+    "WINEPREFIX": "<HOME>/Games/Prefix",
+    "WINEDLLOVERRIDES": "winemenubuilder.exe=d",
+    "WINE_FULLSCREEN_FSR": "0",
+    "WINEESYNC": "1",
+    "WINEFSYNC": "1",
+    "DXVK_ENABLE_NVAPI": "1",
+    "DXVK_NVAPI_ALLOW_OTHER_DRIVERS": "1",
+    "ORIG_LD_LIBRARY_PATH": "",
+    "LD_LIBRARY_PATH": "<HOME>/wine/lib64:<HOME>/wine/lib",
+    "ORACLE_OVERLAY_LIB": "<HOME>/overlays/o1/lib"
+  },
+  "knownFixEnv": {
+    "ORACLE_OVERLAY_LIB": "<HOME>/overlays/o1/lib"
+  }
+}

@@ -65,6 +65,7 @@ import {
   rmSync,
   writeFileSync
 } from 'fs'
+import { homedir } from 'os'
 import { dirname, join } from 'path'
 import i18next from 'i18next'
 import Backend from 'i18next-fs-backend/cjs'
@@ -147,7 +148,7 @@ jest.unmock('i18next')
 const CRATE = 'gamelib-launch'
 const SLICE = 'prepare_wine'
 /** The case count this plan committed; a later edit may raise it, never lower it. */
-const PREPARE_WINE_FLOOR = 1
+const PREPARE_WINE_FLOOR = 391
 
 const mode = engineWineOracleMode()
 
@@ -366,7 +367,6 @@ interface WineCase {
 
 const pad = (n: number): string => String(n).padStart(3, '0')
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars -- generated rows join the case list in task 2
 function pairwiseCases(): WineCase[] {
   const cases: WineCase[] = []
   for (const cell of CELL_IDS) {
@@ -407,12 +407,246 @@ function namedCases(): WineCase[] {
       'linux-wine',
       'a Linux wine launch that writes installed_games and installs a tier-1 winetricks fix, split at the store-setup hook',
       { runner: 'gog', tier1: 'winetricks' }
+    ),
+    // The early exits.
+    named(
+      'game-wine-invalid-default-valid',
+      'linux-wine',
+      "the game's wine is invalid and the default wine is valid: the step goes on with the game's settings",
+      { gameWine: 'invalid' }
+    ),
+    named(
+      'both-wines-invalid',
+      'linux-wine',
+      'both wines are invalid: an early { success: false } and no further trace',
+      { gameWine: 'invalid', defaultWine: 'invalid' }
+    ),
+    named(
+      'crossover-bottle-missing',
+      'mac-crossover',
+      'the CrossOver bottle does not exist: the dialog event and the failure reason',
+      { bottle: 'missing' }
+    ),
+    named(
+      'crossover-whoami-without-prefix-line',
+      'mac-crossover',
+      'whoami reports no WINEPREFIX line: no installed_games write, no store setup',
+      { whoami: 'no-prefix-line' }
+    ),
+    named(
+      'crossover-whoami-spawn-fails',
+      'mac-crossover',
+      'the whoami probe cannot be spawned: no installed_games write',
+      { whoami: 'fails' }
+    ),
+    // installed_games.
+    named(
+      'installed-games-lists-the-game',
+      'linux-wine',
+      'installed_games already lists the game: no store setup hook and no installFixes, tier-1 fix or not',
+      { installed: 'with-game', tier1: 'winetricks' }
+    ),
+    named(
+      'installed-games-without-the-game',
+      'linux-wine',
+      'installed_games lists another game: the game is appended and the prefix counts as updated',
+      { installed: 'without-game' }
+    ),
+    named(
+      'prefix-folder-absent',
+      'linux-wine',
+      'no prefix folder: wineboot creates it and installed_games is written',
+      { prefix: 'absent' }
+    ),
+    named(
+      'prefix-folder-absent-umu',
+      'linux-proton-umu',
+      'no prefix folder under umu: createprefix creates it',
+      { prefix: 'absent' }
+    ),
+    named(
+      'prefix-partial-waits-on-wineserver',
+      'linux-wine',
+      'a prefix with no system.reg waits on wineserver after wineboot',
+      { prefix: 'partial' }
+    ),
+    // Tier-1 and tier-2 fixes.
+    named(
+      'tier1-run-in-prefix',
+      'linux-wine',
+      'a tier-1 runInPrefix fix runs each program through the game wine command and sends the redist status',
+      { runner: 'nile', tier1: 'runInPrefix' }
+    ),
+    named(
+      'tier1-env-variables',
+      'linux-wine',
+      'a tier-1 envVariables fix reaches the overlay request as strings and the knownFixEnv log line',
+      { tier1: 'envVariables' }
+    ),
+    named(
+      'tier1-env-variables-not-merged-sideload',
+      'linux-wine',
+      'a sideload launch does not merge tier-1 envVariables (mergesTier1Env false)',
+      { runner: 'sideload', tier1: 'envVariables', mergesTier1Env: false }
+    ),
+    named(
+      'remote-layer-carries-tier2-keys',
+      'linux-wine',
+      'a remote-layer file with tier-2 keys: no registry or overlay effect, the tier-1 env of the overlay request is empty',
+      { remoteTier2: true }
+    ),
+    named(
+      'tier2-registry-and-overlay',
+      'linux-wine',
+      'a local tier-2 profile with registry and overlays: the overlay env joins the returned env and the log',
+      { tier2: 'both', tier1: 'envVariables' }
+    ),
+    named(
+      'registry-reply-rejects',
+      'linux-wine',
+      'the registry reply rejects: the settle warning and the launch goes on',
+      { tier2: 'registry', registry: 'rejects' }
+    ),
+    named(
+      'overlay-reply-rejects',
+      'linux-wine',
+      'the overlay reply rejects: the settle warning, an empty overlay env, the launch goes on',
+      { tier2: 'overlay', overlay: 'rejects' }
+    ),
+    named(
+      'registry-and-overlay-replies-reject',
+      'linux-wine',
+      'both tier-2 replies reject: two settle warnings and the launch goes on',
+      { tier2: 'both', registry: 'rejects', overlay: 'rejects' }
+    ),
+    // The GOG dummy.
+    named(
+      'gog-dummy-installed-and-service-created',
+      'linux-wine',
+      'GOG, comet on, the dummy is not in the prefix: it is copied and its service created',
+      { runner: 'gog', dummy: 'absent' }
+    ),
+    named(
+      'gog-dummy-already-present',
+      'linux-wine',
+      'GOG, comet on, the dummy is already in the prefix: winepath only',
+      { runner: 'gog', dummy: 'present' }
+    ),
+    named(
+      'gog-dummy-winepath-empty',
+      'linux-wine',
+      "the dummy's winepath answers '': the backend error line, the copy fails and is logged, the launch goes on",
+      { runner: 'gog', dummy: 'empty-winepath' }
+    ),
+    named(
+      'gog-comet-support-off',
+      'linux-wine',
+      'GOG with experimentalFeatures.cometSupport false: no dummy step',
+      { runner: 'gog', comet: 'off', dummy: 'absent' }
+    ),
+    named(
+      'gog-dummy-on-crossover',
+      'mac-crossover',
+      'GOG on a CrossOver bottle: winepath and the service creation run in the bottle',
+      { runner: 'gog', dummy: 'absent' }
+    ),
+    // DXVK and the runtimes.
+    named(
+      'dxvk-family-on-linux-wine',
+      'linux-wine',
+      'DXVK, DXVK-NVAPI and vkd3d are all installed on a Linux wine',
+      { dxvk: true, nvapi: true, vkd3d: true }
+    ),
+    named(
+      'dxvk-not-installed-on-proton',
+      'linux-proton-umu',
+      'DXVK, DXVK-NVAPI and vkd3d are on but a proton prefix installs none of them',
+      { dxvk: true, nvapi: true, vkd3d: true }
+    ),
+    named(
+      'dxvk-only-on-mac-wine',
+      'mac-wine',
+      'on macOS only DXVK is installed; DXVK-NVAPI and vkd3d are Linux-only',
+      { dxvk: true, nvapi: true, vkd3d: true }
+    ),
+    named(
+      'dxvk-not-installed-on-crossover',
+      'mac-crossover',
+      'CrossOver installs no DXVK',
+      { dxvk: true, nvapi: true, vkd3d: true }
+    ),
+    named(
+      'eac-offline-no-download',
+      'linux-wine',
+      'the EAC runtime is wanted but the monitor is offline: it is not even looked up',
+      { eac: 'missing', battleye: 'missing', online: false }
+    ),
+    named(
+      'eac-and-battleye-downloaded',
+      'linux-wine',
+      'both runtimes are wanted, online and not installed: each is downloaded',
+      { eac: 'missing', battleye: 'missing', online: true }
+    ),
+    named(
+      'eac-installed-no-download',
+      'linux-wine',
+      'both runtimes are wanted, online and installed: nothing is downloaded',
+      { eac: 'installed', battleye: 'installed', online: true }
+    ),
+    // The remaining collaborators.
+    named(
+      'offline-setting-game-cannot-run-offline',
+      'linux-wine',
+      "offline mode is on and the game does not support it: the warning goes to the game's log",
+      { offline: 'on-cannot' }
+    ),
+    named(
+      'eos-overlay-enabled-linux-legendary',
+      'linux-wine',
+      'legendary on Linux asks the overlay hook and logs it enabled',
+      { runner: 'legendary', eosOverlay: 'enabled' }
+    ),
+    named(
+      'eos-overlay-not-asked-on-mac',
+      'mac-wine',
+      'legendary on macOS never asks the overlay hook',
+      { runner: 'legendary' }
+    ),
+    named(
+      'engine-launch-settings-overlay',
+      'linux-wine',
+      'the engine layer answers different settings: the launch runs with the overlaid prefix and wine',
+      { engine: 'overlay', tier1: 'winetricks' }
+    ),
+    named(
+      'engine-launch-settings-overlay-crossover-bottle',
+      'mac-crossover',
+      'the engine layer names another CrossOver bottle: the bottle check and whoami use it',
+      { engine: 'overlay' }
+    ),
+    named(
+      'deadline-arm-rejects',
+      'linux-wine',
+      'the deadline arm rejects: the backend warning and the success is kept',
+      { deadline: 'rejects' }
+    ),
+    named(
+      'mac-toolkit-default',
+      'mac-toolkit',
+      'a macOS toolkit launch: no wineserver to wait on',
+      { prefix: 'partial' }
+    ),
+    named(
+      'proton-without-umu-prefix-partial',
+      'linux-proton-noumu',
+      'proton without umu runs `proton run wineboot`',
+      { prefix: 'partial' }
     )
   ]
 }
 
 function prepareWineCases(): WineCase[] {
-  return [...namedCases()]
+  return [...pairwiseCases(), ...namedCases()]
 }
 
 /** The documented Rust-side differences (D-19); the file is built from this, never hand-edited. */
@@ -475,12 +709,11 @@ function wineFor(
 /** The settings the case stores for the game (a full GameSettings, so the engine overlay has every key to carry). */
 function storedSettings(c: WineCase, home: string): GameSettings {
   const { spec } = c
-  const wine = CELLS[c.cell].type === 'wine'
   const offline = spec.offline.startsWith('on')
   return {
-    autoInstallDxvk: wine && spec.dxvk,
-    autoInstallVkd3d: wine && isLinuxCell(c.cell) && spec.vkd3d,
-    autoInstallDxvkNvapi: wine && isLinuxCell(c.cell) && spec.nvapi,
+    autoInstallDxvk: spec.dxvk,
+    autoInstallVkd3d: spec.vkd3d,
+    autoInstallDxvkNvapi: spec.nvapi,
     autoSyncSaves: false,
     battlEyeRuntime: spec.battleye !== 'off',
     DXVKFpsCap: '0',
@@ -1355,24 +1588,366 @@ describeSkipOnWindows('prepare_wine oracle (88.1-03)', () => {
     writeOrCompare(c.id, await recordCase(c))
   })
 
-  describe('the tracer', () => {
+  type Entry = {
+    seq: number
+    kind: string
+    channel?: string
+    member?: string
+    text?: string
+    callSite?: string
+    class?: string
+    level?: string
+    parts?: unknown[]
+    args?: unknown[]
+    reply?: unknown
+    argv?: string[]
+    program?: string
+    envDiff?: { set: Record<string, string> }
+    title?: string
+  }
+  const begin = (id: string) =>
+    committed(id, 'begin.json') as {
+      split: string
+      trace: Entry[]
+      prefixUpdated: boolean
+    }
+  const finish = (id: string) =>
+    committed(id, 'finish.json') as { trace: Entry[] }
+  const trace = (id: string): Entry[] => [
+    ...begin(id).trace,
+    ...finish(id).trace
+  ]
+  const channels = (id: string): string[] =>
+    trace(id).flatMap((e) => (e.kind === 'rust' ? [e.channel as string] : []))
+  const count = (id: string, channel: string): number =>
+    channels(id).filter((name) => name === channel).length
+  const backend = (id: string, level: string): string[] =>
+    trace(id).flatMap((e) =>
+      e.kind === 'backend-log' && e.level === level ? [String(e.text)] : []
+    )
+  const gameLog = (id: string): string =>
+    JSON.stringify(trace(id).filter((e) => e.kind === 'log'))
+  const result = (id: string) =>
+    committed(id, 'result.json') as Record<string, unknown>
+  const tree = (id: string) =>
+    (committed(id, 'tree.json') as { path: string }[]).map((e) => e.path)
+  const overlayRequest = (id: string) =>
+    trace(id).find(
+      (e) =>
+        e.kind === 'rust' && e.channel === RUST_KNOWNFIX_PROFILE_OVERLAY_ENV
+    )?.args?.[0] as { tier1Env: Record<string, string> }
+
+  describe('the split (D-26, D-30)', () => {
     it('the tracer case is cut at the store-setup hook: begin ends with prefixUpdated, finish starts with the hook call', () => {
       const id = 'named-tracer-linux-wine-winetricks-fix'
-      const begin = committed(id, 'begin.json') as {
-        split: string
-        trace: unknown[]
-        prefixUpdated: boolean
-      }
-      const finish = committed(id, 'finish.json') as {
-        trace: { kind: string; member?: string }[]
-      }
-      expect(Object.keys(begin).at(-1)).toBe('prefixUpdated')
-      expect(begin.prefixUpdated).toBe(true)
-      expect(begin.split).toBe('hook')
-      expect(finish.trace[0]).toMatchObject({
+      expect(Object.keys(begin(id)).at(-1)).toBe('prefixUpdated')
+      expect(begin(id).prefixUpdated).toBe(true)
+      expect(begin(id).split).toBe('hook')
+      expect(finish(id).trace[0]).toMatchObject({
         kind: 'hook',
         member: 'prepareLaunch'
       })
+    })
+
+    it('every case is cut by the rule: before the hook when the prefix was updated, else before the registry request', () => {
+      for (const c of cases) {
+        const b = begin(c.id)
+        const f = finish(c.id)
+        const all = [...b.trace, ...f.trace]
+        const updatedAt = all.findIndex(
+          (e) =>
+            e.kind === 'backend-log' &&
+            String(e.text).startsWith('Created/Updated Wineprefix at')
+        )
+        expect({ id: c.id, updated: b.prefixUpdated }).toEqual({
+          id: c.id,
+          updated: updatedAt >= 0
+        })
+        if (b.split === 'hook') {
+          expect(f.trace[0]).toMatchObject({
+            kind: 'hook',
+            member: 'prepareLaunch'
+          })
+          expect(b.trace.at(-1)?.text).toMatch(/^Created\/Updated Wineprefix/)
+        } else if (b.split === 'updated-log') {
+          // A runner with no store-setup hook (sideload): the cut sits where the call would be.
+          expect(b.trace.at(-1)?.text).toMatch(/^Created\/Updated Wineprefix/)
+          expect(all.some((e) => e.member === 'prepareLaunch')).toBe(false)
+        } else if (b.split === 'registry') {
+          expect(b.prefixUpdated).toBe(false)
+          expect(f.trace[0]).toMatchObject({
+            kind: 'rust',
+            channel: RUST_KNOWNFIX_APPLY_PROFILE_REGISTRY
+          })
+        } else {
+          expect(b.split).toBe('none')
+          expect(f.trace).toEqual([])
+        }
+        const seqs = all.map((e) => e.seq)
+        expect(seqs).toEqual([...seqs].sort((x, y) => x - y))
+      }
+    })
+  })
+
+  describe('what the step answers', () => {
+    it('a game wine that is invalid with a valid default goes on; both invalid is an early failure with no further trace', () => {
+      expect(result('named-game-wine-invalid-default-valid')).toMatchObject({
+        success: true
+      })
+      expect(result('named-both-wines-invalid')).toEqual({ success: false })
+      expect(channels('named-both-wines-invalid')).toEqual([
+        RUST_ENGINE_LAUNCH_SETTINGS_GET,
+        RUST_WINE_VALID,
+        RUST_WINE_VALID
+      ])
+      expect(begin('named-both-wines-invalid').split).toBe('none')
+    })
+
+    it('a missing CrossOver bottle shows the dialog and fails with the reason, with no spawn', () => {
+      const id = 'named-crossover-bottle-missing'
+      expect(result(id)).toEqual({
+        success: false,
+        failureReason: 'CrossOver bottle "Bottle1" does not exist'
+      })
+      const dialog = trace(id).find(
+        (e) => e.kind === 'frontend' && e.channel === 'showDialog'
+      )
+      expect(dialog?.args?.slice(0, 3)).toEqual([
+        'CrossOver bottle not found',
+        `The CrossOver bottle "Bottle1" does not exist, can't launch!`,
+        'ERROR'
+      ])
+      expect(trace(id).some((e) => e.kind === 'spawn')).toBe(false)
+    })
+
+    it('a whoami with no WINEPREFIX line, or one that cannot spawn, writes no installed_games and runs no store setup', () => {
+      for (const id of [
+        'named-crossover-whoami-without-prefix-line',
+        'named-crossover-whoami-spawn-fails'
+      ]) {
+        expect(begin(id).prefixUpdated).toBe(false)
+        expect(tree(id).some((p) => p.endsWith('installed_games'))).toBe(false)
+        expect(trace(id).some((e) => e.member === 'prepareLaunch')).toBe(false)
+        expect(result(id)).toMatchObject({ success: true })
+      }
+    })
+
+    it('a game installed_games already lists gets no store setup and no installFixes, whatever its tier-1 fix', () => {
+      const id = 'named-installed-games-lists-the-game'
+      expect(begin(id).prefixUpdated).toBe(false)
+      expect(trace(id).some((e) => e.member === 'prepareLaunch')).toBe(false)
+      expect(trace(id).some((e) => e.channel === 'gameStatusUpdate')).toBe(
+        false
+      )
+      expect(count(id, RUST_WINE_WINETRICKS_INSTALL)).toBe(0)
+      const other = 'named-installed-games-without-the-game'
+      expect(begin(other).prefixUpdated).toBe(true)
+    })
+
+    it('a tier-1 winetricks fix sends the winetricks status and installs the verbs; runInPrefix sends the redist status and runs each program', () => {
+      const tracer = 'named-tracer-linux-wine-winetricks-fix'
+      expect(count(tracer, RUST_WINE_WINETRICKS_INSTALL)).toBe(1)
+      expect(
+        trace(tracer)
+          .filter((e) => e.kind === 'frontend')
+          .map((e) => (e.args?.[0] as { status: string }).status)
+      ).toEqual(['winetricks', 'winetricks'])
+      const redist = 'named-tier1-run-in-prefix'
+      expect(count(redist, RUST_WINE_RUN_COMMAND_FOR_GAME)).toBe(2)
+      expect(count(redist, RUST_ENGINE_RESOLVE_TOOL_SETTINGS)).toBe(2)
+      expect(
+        trace(redist)
+          .filter((e) => e.kind === 'frontend')
+          .map((e) => (e.args?.[0] as { status: string }).status)
+      ).toEqual(['redist', 'redist'])
+    })
+
+    it('tier-1 envVariables reach the overlay request as strings, unless the caller does not merge them', () => {
+      expect(overlayRequest('named-tier1-env-variables').tier1Env).toEqual({
+        ORACLE_FLAG: 'on',
+        ORACLE_COUNT: '3'
+      })
+      expect(
+        overlayRequest('named-tier1-env-variables-not-merged-sideload').tier1Env
+      ).toEqual({})
+    })
+
+    it('a remote-layer file with tier-2 keys has no registry or overlay effect: the overlay request carries no tier-1 env', () => {
+      const id = 'named-remote-layer-carries-tier2-keys'
+      expect(overlayRequest(id).tier1Env).toEqual({})
+      expect(result(id)).toMatchObject({ success: true, knownFixEnv: {} })
+      expect(
+        backend(id, 'warning').some((line) => line.includes('tier-2 key'))
+      ).toBe(true)
+    })
+
+    it('a local tier-2 profile adds its overlay env to the returned env and to the log', () => {
+      const id = 'named-tier2-registry-and-overlay'
+      expect(result(id)).toMatchObject({
+        knownFixEnv: { ORACLE_OVERLAY_LIB: '<HOME>/overlays/o1/lib' }
+      })
+      expect(gameLog(id)).toContain('ORACLE_OVERLAY_LIB')
+    })
+
+    it('a registry reply that rejects and an overlay reply that rejects are warnings and the launch goes on', () => {
+      expect(
+        backend('named-registry-reply-rejects', 'warning').some((l) =>
+          l.includes('known-fix registry step failed')
+        )
+      ).toBe(true)
+      expect(
+        backend('named-overlay-reply-rejects', 'warning').some((l) =>
+          l.includes('overlay env failed')
+        )
+      ).toBe(true)
+      for (const id of [
+        'named-registry-reply-rejects',
+        'named-overlay-reply-rejects',
+        'named-registry-and-overlay-replies-reject'
+      ]) {
+        expect(result(id)).toMatchObject({ success: true })
+      }
+      expect(
+        backend('named-registry-and-overlay-replies-reject', 'warning')
+      ).toHaveLength(2)
+    })
+
+    it('the GOG dummy: copied with its service created, already present, an empty winepath, or comet off', () => {
+      const spawnSites = (id: string) =>
+        trace(id).flatMap((e) => (e.kind === 'spawn' ? [e.callSite] : []))
+      expect(
+        spawnSites('named-gog-dummy-installed-and-service-created')
+      ).toEqual([
+        'prepare_wine.verify_prefix',
+        'prepare_wine.galaxy_winepath',
+        'prepare_wine.galaxy_sc_create'
+      ])
+      expect(
+        tree('named-gog-dummy-installed-and-service-created').some((p) =>
+          p.endsWith('GalaxyCommunication.exe')
+        )
+      ).toBe(true)
+      expect(spawnSites('named-gog-dummy-already-present')).toEqual([
+        'prepare_wine.verify_prefix',
+        'prepare_wine.galaxy_winepath'
+      ])
+      const empty = backend('named-gog-dummy-winepath-empty', 'error')
+      expect(empty[0]).toContain("Couldn't get wine path for")
+      expect(empty[1]).toContain(
+        'Failed to install GalaxyCommunication dummy into the prefix'
+      )
+      expect(result('named-gog-dummy-winepath-empty')).toMatchObject({
+        success: true
+      })
+      expect(spawnSites('named-gog-comet-support-off')).toEqual([
+        'prepare_wine.verify_prefix'
+      ])
+    })
+
+    it('the DXVK family installs on a Linux wine, only DXVK on a macOS wine, and nothing on proton or CrossOver', () => {
+      const tools = (id: string) =>
+        trace(id)
+          .filter(
+            (e) =>
+              e.kind === 'rust' && e.channel === RUST_WINE_DXVK_INSTALL_REMOVE
+          )
+          .map((e) => (e.args?.[0] as { tool: string }).tool)
+      expect(tools('named-dxvk-family-on-linux-wine')).toEqual([
+        'dxvk',
+        'dxvk-nvapi',
+        'vkd3d'
+      ])
+      expect(tools('named-dxvk-only-on-mac-wine')).toEqual(['dxvk'])
+      expect(tools('named-dxvk-not-installed-on-proton')).toEqual([])
+      expect(tools('named-dxvk-not-installed-on-crossover')).toEqual([])
+    })
+
+    it('the EAC and BattlEye runtimes are downloaded only when wanted, online and not installed', () => {
+      const offline = 'named-eac-offline-no-download'
+      expect(count(offline, RUST_WINE_RUNTIME_IS_INSTALLED)).toBe(0)
+      expect(count(offline, RUST_WINE_RUNTIME_DOWNLOAD)).toBe(0)
+      const downloaded = 'named-eac-and-battleye-downloaded'
+      expect(
+        trace(downloaded)
+          .filter((e) => e.channel === RUST_WINE_RUNTIME_DOWNLOAD)
+          .map((e) => e.args)
+      ).toEqual([['eac_runtime'], ['battleye_runtime']])
+      const installed = 'named-eac-installed-no-download'
+      expect(count(installed, RUST_WINE_RUNTIME_IS_INSTALLED)).toBe(2)
+      expect(count(installed, RUST_WINE_RUNTIME_DOWNLOAD)).toBe(0)
+    })
+
+    it('the offline-mode warning, the EOS overlay line and the deadline arm failure reach their logs', () => {
+      expect(
+        gameLog('named-offline-setting-game-cannot-run-offline')
+      ).toContain(
+        "Warning: 'offlineMode' is turned on but the game does not support offline mode."
+      )
+      expect(gameLog('named-eos-overlay-enabled-linux-legendary')).toContain(
+        'EOS Overlay: Enabled'
+      )
+      expect(
+        trace('named-eos-overlay-not-asked-on-mac').some(
+          (e) => e.member === 'isOverlayEnabled'
+        )
+      ).toBe(false)
+      const id = 'named-deadline-arm-rejects'
+      expect(result(id)).toMatchObject({ success: true })
+      expect(backend(id, 'warning')).toEqual([
+        'Engine: the launch deadline could not be armed: Error: scripted deadline failure'
+      ])
+    })
+
+    it('the engine overlay settings, not the stored ones, drive the prefix, the wine and the CrossOver bottle', () => {
+      const linux = trace('named-engine-launch-settings-overlay')
+      const wineboot = linux.find((e) => e.kind === 'spawn')
+      expect(wineboot?.program).toBe('<HOME>/engine/bin/wine')
+      expect(wineboot?.envDiff?.set.WINEPREFIX).toBe('<HOME>/engine/prefix')
+      const cx = trace('named-engine-launch-settings-overlay-crossover-bottle')
+      const whoami = cx.find((e) => e.kind === 'spawn')
+      expect(whoami?.argv).toEqual([
+        '--bottle',
+        'EngineBottle',
+        '--verbose',
+        'whoami'
+      ])
+    })
+  })
+
+  describe('spawns', () => {
+    it('every spawn call site of the plan is recorded, each as a helper', () => {
+      const seen = new Map<string, Set<string>>()
+      for (const c of cases) {
+        for (const e of trace(c.id)) {
+          if (e.kind !== 'spawn') continue
+          const classes = seen.get(e.callSite as string) ?? new Set<string>()
+          classes.add(e.class as string)
+          seen.set(e.callSite as string, classes)
+        }
+      }
+      for (const site of [
+        'prepare_wine.verify_prefix',
+        'prepare_wine.crossover_bottle_folder',
+        'prepare_wine.galaxy_winepath',
+        'prepare_wine.galaxy_sc_create'
+      ]) {
+        expect({ site, classes: [...(seen.get(site) ?? [])] }).toEqual({
+          site,
+          classes: ['helper']
+        })
+      }
+    })
+
+    it('a wine never runs: no spawn names a binary outside the fake HOME, and no env carries the real home', () => {
+      const realHome = homedir()
+      for (const c of cases) {
+        for (const e of trace(c.id)) {
+          if (e.kind !== 'spawn') continue
+          expect(String(e.program)).toMatch(/^<HOME>\//)
+          expect(JSON.stringify(e.envDiff)).not.toContain(realHome)
+        }
+        expect(JSON.stringify(trace(c.id))).not.toContain(realHome)
+      }
     })
   })
 

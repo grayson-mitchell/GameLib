@@ -1,0 +1,20 @@
+{
+  "success": true,
+  "envVars": {
+    "STEAM_COMPAT_CLIENT_INSTALL_PATH": "<HOME>/.steam/steam",
+    "WINEPREFIX": "<HOME>/Games/Prefix",
+    "STEAM_COMPAT_DATA_PATH": "<HOME>/Games/Prefix",
+    "PROTONPATH": "<HOME>/wine",
+    "WINE_FULLSCREEN_FSR": "0",
+    "PROTON_DISABLE_NVAPI": "1",
+    "PROTON_BATTLEYE_RUNTIME": "<TOOLS>/runtimes/battleye_runtime",
+    "STEAM_COMPAT_APP_ID": "0",
+    "SteamAppId": "0",
+    "SteamGameId": "heroic-Oracle-gog",
+    "PROTON_LOG_DIR": "<HOME>",
+    "WINEDEBUG": "+fixme",
+    "DXVK_LOG_LEVEL": "info",
+    "VKD3D_DEBUG": "fixme"
+  },
+  "knownFixEnv": {}
+}

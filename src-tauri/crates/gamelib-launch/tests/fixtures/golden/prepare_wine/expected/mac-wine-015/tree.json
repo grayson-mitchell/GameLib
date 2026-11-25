@@ -1,0 +1,41 @@
+[
+  {
+    "path": "Games/Prefix",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Games/Prefix/dosdevices",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Games/Prefix/drive_c",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "Games/Prefix/installed_games",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "4d51c30273be2e036bec99d062fc54d729a39901a2dfafae67758d8438b0c9dd"
+  },
+  {
+    "path": "Games/Prefix/system.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "Games/Prefix/user.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "Games/Prefix/userdef.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+]

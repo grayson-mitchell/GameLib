@@ -1,0 +1,14 @@
+{
+  "success": true,
+  "envVars": {
+    "WINEPREFIX": "<HOME>/engine/prefix",
+    "WINEDLLOVERRIDES": "winemenubuilder.exe=d",
+    "WINE_FULLSCREEN_FSR": "0",
+    "WINEESYNC": "1",
+    "ORIG_LD_LIBRARY_PATH": "",
+    "ORACLE_OVERLAY_LIB": "<HOME>/overlays/o1/lib"
+  },
+  "knownFixEnv": {
+    "ORACLE_OVERLAY_LIB": "<HOME>/overlays/o1/lib"
+  }
+}

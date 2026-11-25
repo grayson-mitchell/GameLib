@@ -1,0 +1,70 @@
+[
+  {
+    "path": "engine/prefix",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "engine/prefix/config_info",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "engine/prefix/installed_games",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "3417d6c026ac1fb049777caf4bf036a3c01a3c8c6f8e95d2d16053038ad68993"
+  },
+  {
+    "path": "engine/prefix/pfx",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "engine/prefix/pfx.lock",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "engine/prefix/pfx/dosdevices",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "engine/prefix/pfx/drive_c",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "engine/prefix/pfx/system.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "engine/prefix/pfx/user.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "engine/prefix/pfx/userdef.reg",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "engine/prefix/tracked_files",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "engine/prefix/version",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+]

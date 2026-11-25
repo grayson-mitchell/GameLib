@@ -1,0 +1,13 @@
+[
+  {
+    "path": "bottles/Bottle1",
+    "kind": "dir",
+    "mode": "0755"
+  },
+  {
+    "path": "bottles/Bottle1/installed_games",
+    "kind": "file",
+    "mode": "0644",
+    "sha256": "3417d6c026ac1fb049777caf4bf036a3c01a3c8c6f8e95d2d16053038ad68993"
+  }
+]

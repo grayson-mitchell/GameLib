@@ -1,0 +1,9 @@
+{
+  "success": true,
+  "envVars": {
+    "WINEPREFIX": "<HOME>/Games/Prefix",
+    "WINE_FULLSCREEN_FSR": "0",
+    "WINEESYNC": "1"
+  },
+  "knownFixEnv": {}
+}

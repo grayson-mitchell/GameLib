@@ -1,0 +1,19 @@
+{
+  "success": true,
+  "envVars": {
+    "STEAM_COMPAT_CLIENT_INSTALL_PATH": "<HOME>/.steam/steam",
+    "WINEPREFIX": "<HOME>/engine/prefix",
+    "STEAM_COMPAT_DATA_PATH": "<HOME>/engine/prefix",
+    "PROTONPATH": "<HOME>/engine",
+    "WINE_FULLSCREEN_FSR": "0",
+    "PROTON_DISABLE_NVAPI": "1",
+    "STEAM_COMPAT_APP_ID": "0",
+    "SteamAppId": "0",
+    "SteamGameId": "heroic-Oracle-sideload",
+    "PROTON_LOG_DIR": "<HOME>",
+    "WINEDEBUG": "+fixme",
+    "DXVK_LOG_LEVEL": "info",
+    "VKD3D_DEBUG": "fixme"
+  },
+  "knownFixEnv": {}
+}
