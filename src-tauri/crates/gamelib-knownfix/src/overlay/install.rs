@@ -256,6 +256,8 @@ fn make_partial_dir(root: &Path, id: &str) -> std::io::Result<PathBuf> {
     let mut last = None;
     for _ in 0..16 {
         let path = root.join(format!(".{id}.partial-{}", random_suffix()));
+        // Only the unix arm below sets a mode, so `mut` is unused on Windows (the ratchet counts that warning).
+        #[cfg_attr(not(unix), allow(unused_mut))]
         let mut builder = fs::DirBuilder::new();
         #[cfg(unix)]
         {
