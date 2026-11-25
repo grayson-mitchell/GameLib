@@ -139,7 +139,7 @@ const DownloadManagerItem = ({
       return
     }
     return navigate(`/gamepage/${runner}/${appName}`, {
-      state: { fromDM: true, gameInfo: gameInfo }
+      state: { gameInfo }
     })
   }
 

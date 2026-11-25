@@ -239,6 +239,7 @@
     },
     "gamepage": {
         "appleRatingUnrated": "Unrated",
+        "backToLibrary": "Back to Library",
         "etaPrefix": "ETA: {{eta}}",
         "extraInfoEmptyBody": "Metacritic, OpenCritic and HowLongToBeat had nothing for this title.",
         "extraInfoEmptyTitle": "No extra info found",

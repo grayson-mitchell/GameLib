@@ -103,7 +103,7 @@ import {
 export default React.memo(function GamePage(): JSX.Element | null {
   const { appName, runner } = useParams() as { appName: string; runner: Runner }
   const location = useLocation() as {
-    state: { fromDM: boolean; gameInfo: GameInfo }
+    state: { gameInfo: GameInfo }
   }
   const { t, i18n } = useTranslation('gamepage')
   const { t: t2 } = useTranslation()
@@ -205,7 +205,10 @@ export default React.memo(function GamePage(): JSX.Element | null {
   const isOffline = connectivity.status !== 'online'
   const notPlayableOffline = isOffline && !gameInfo.canRunOffline
 
-  const backRoute = location.state?.fromDM ? '/download-manager' : '/library'
+  const backToLibraryLabel = tGamelib(
+    'gamelib:gamepage.backToLibrary',
+    'Back to Library'
+  )
 
   const storage: Storage = window.localStorage
 
@@ -545,8 +548,9 @@ export default React.memo(function GamePage(): JSX.Element | null {
                           />
                           <NavLink
                             className="backButton"
-                            to={backRoute}
-                            title={t2('webview.controls.back', 'Go Back')}
+                            to="/library"
+                            title={backToLibraryLabel}
+                            aria-label={backToLibraryLabel}
                           >
                             <ArrowBackIosNew />
                           </NavLink>
