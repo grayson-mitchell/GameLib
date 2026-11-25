@@ -1255,6 +1255,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261124-8f3 | Bottle-port quirks: is_bottle_provisioned refuses unclean names (item 5), prefix resolver refuses padded CrossOver bottle names (item 6); other quirks closed as intended | 2026-11-24 | de33de9b2 | — | [261124-8f3-bottle-port-quirks-sanitise-is-bottle-pr](./quick/261124-8f3-bottle-port-quirks-sanitise-is-bottle-pr/) |
 | 261125-pmb | Game page Back always returns to the Library (icon labelled Back to Library; Downloads drops fromDM) | 2026-11-25 | 8a044d243 | — | [261125-pmb-game-page-back-always-returns-to-the-lib](./quick/261125-pmb-game-page-back-always-returns-to-the-lib/) |
 | 261125-qp9 | Steam-managed download row opens the game page with its gameInfo (plain-text title when not in the library) | 2026-11-25 | 5e16ee214 | — | [261125-qp9-steam-managed-download-row-opens-the-gam](./quick/261125-qp9-steam-managed-download-row-opens-the-gam/) |
+| 261125-r0j | The game page loads the game itself when opened without router state (store, then getGameInfo; loading and not-found states) | 2026-11-25 | a94f6f9db | — | [261125-r0j-game-page-loads-the-game-itself-when-ope](./quick/261125-r0j-game-page-loads-the-game-itself-when-ope/) |
 
 ## Deferred Items
 
