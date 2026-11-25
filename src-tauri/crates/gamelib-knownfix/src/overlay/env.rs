@@ -30,7 +30,7 @@ use crate::catalogue::{catalogue, lookup, OverlayCatalogueEntry};
 use crate::ctx::KnownFixCtx;
 use crate::jsvalue::JsValue;
 use crate::reader::read_known_fix_profile;
-use crate::registry::{member, shown};
+use crate::registry::{member, redact_urls, shown};
 use crate::types::Runner;
 
 /// At most this many `overlays` entries are looked at.
@@ -99,31 +99,6 @@ impl OverlayInstaller for CtxInstaller<'_> {
 
 fn warn(ctx: &KnownFixCtx, label: &str, text: &str) {
     ctx.log_warn(&format!("{label}: {text}"));
-}
-
-/// `text` with every `scheme://...` run replaced by `<url>`. A rejected entry is echoed into the log, and
-/// the file it came from is the operator's: a URL in it (the entry that tried to name a download) must
-/// not reach `gamelib.log` (prohibition 1). A URL ends at the quote that closes its JSON string.
-fn redact_urls(text: &str) -> String {
-    let mut out = String::new();
-    let mut rest = text;
-    while let Some(at) = rest.find("://") {
-        let scheme_len = rest[..at]
-            .chars()
-            .rev()
-            .take_while(|c| c.is_ascii_alphanumeric() || matches!(c, '+' | '.' | '-'))
-            .count();
-        let start = at - scheme_len;
-        let tail = &rest[at + 3..];
-        let end = tail
-            .find(|c: char| c == '"' || c == '\\' || c.is_whitespace())
-            .unwrap_or(tail.len());
-        out.push_str(&rest[..start]);
-        out.push_str("<url>");
-        rest = &tail[end..];
-    }
-    out.push_str(rest);
-    out
 }
 
 /// Validates raw `overlays` entries (`validateOverlayEntries`): never fails, warns once per reject, keeps

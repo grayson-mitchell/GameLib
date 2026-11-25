@@ -208,8 +208,7 @@ impl<'de> Visitor<'de> for JsVisitor {
         // A repeated key keeps its first place and takes the last value. The index
         // keeps the lookup linear: a downloaded fix file is hostile input, and a
         // scan per key is quadratic over a 16 MiB body (CR-01).
-        let mut index: std::collections::HashMap<String, usize> =
-            std::collections::HashMap::new();
+        let mut index: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
         while let Some(key) = map.next_key::<String>()? {
             let value = map.next_value::<JsValue>()?;
             match index.get(&key) {

@@ -153,6 +153,31 @@ pub(crate) fn slice_units(s: &str) -> String {
     out
 }
 
+/// `text` with every `scheme://...` run replaced by `<url>`. A rejected entry is echoed into the log, and
+/// the file it came from is the operator's: a URL in it (the entry that tried to name a download) must
+/// not reach `gamelib.log` (prohibition 1). A URL ends at the quote that closes its JSON string.
+pub(crate) fn redact_urls(text: &str) -> String {
+    let mut out = String::new();
+    let mut rest = text;
+    while let Some(at) = rest.find("://") {
+        let scheme_len = rest[..at]
+            .chars()
+            .rev()
+            .take_while(|c| c.is_ascii_alphanumeric() || matches!(c, '+' | '.' | '-'))
+            .count();
+        let start = at - scheme_len;
+        let tail = &rest[at + 3..];
+        let end = tail
+            .find(|c: char| c == '"' || c == '\\' || c.is_whitespace())
+            .unwrap_or(tail.len());
+        out.push_str(&rest[..start]);
+        out.push_str("<url>");
+        rest = &tail[end..];
+    }
+    out.push_str(rest);
+    out
+}
+
 /// `String(JSON.stringify(v)).slice(0, 200)`; `undefined` for an absent value.
 pub(crate) fn shown(value: Option<&JsValue>) -> String {
     match value {

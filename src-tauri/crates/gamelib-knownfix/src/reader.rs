@@ -27,6 +27,7 @@ use serde_json::Value;
 
 use crate::ctx::KnownFixCtx;
 use crate::jsvalue::JsValue;
+use crate::registry::{redact_urls, slice_units};
 use crate::types::{
     FixLayer, GamelibFixStatus, KnownFixProfile, KnownFixesInfo, LayeredFix, Runner,
     DESCRIPTIVE_KEYS, TIER1_KNOWN_FIX_KEYS, TIER1_ROUTING_KEYS, TIER2_PROFILE_KEYS,
@@ -64,10 +65,18 @@ fn warn(ctx: &KnownFixCtx, line: String) {
 /// `JSON.stringify(value)` for a warning, cut at [`ECHO_MAX_CHARS`] characters.
 fn echo(value: &JsValue) -> String {
     let text = value.stringify();
-    match text.char_indices().nth(ECHO_MAX_CHARS) {
+    let cut = match text.char_indices().nth(ECHO_MAX_CHARS) {
         Some((cut, _)) => format!("{}...", &text[..cut]),
         None => text,
-    }
+    };
+    redact_urls(&cut)
+}
+
+/// A key name for a warning: cut at the same bound as a value and with any URL redacted. The key
+/// comes from a downloaded or hand-placed file, so neither its length nor a link in it may reach the
+/// log (WR-01).
+fn key_shown(key: &str) -> String {
+    redact_urls(&slice_units(key))
 }
 
 /// `String.prototype.trim` of JavaScript: the WhiteSpace and LineTerminator code points. Not Rust's
@@ -257,6 +266,7 @@ pub fn filter_tier1_known_fixes(
             }
             out.set(key, value.to_value());
         } else if TIER2_PROFILE_KEYS.contains(&key) && !DESCRIPTIVE_KEYS.contains(&key) {
+            let key = key_shown(key);
             warn(
                 ctx,
                 format!(
@@ -264,6 +274,7 @@ pub fn filter_tier1_known_fixes(
                 ),
             );
         } else {
+            let key = key_shown(key);
             warn(
                 ctx,
                 format!(
@@ -341,6 +352,7 @@ pub fn filter_tier2_profile(
         if TIER2_PROFILE_KEYS.contains(&key) {
             out.set(key, value.to_value());
         } else if TIER1_KNOWN_FIX_KEYS.contains(&key) {
+            let key = key_shown(key);
             warn(
                 ctx,
                 format!(
@@ -348,6 +360,7 @@ pub fn filter_tier2_profile(
                 ),
             );
         } else {
+            let key = key_shown(key);
             warn(
                 ctx,
                 format!(
