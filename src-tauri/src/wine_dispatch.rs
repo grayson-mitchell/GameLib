@@ -337,7 +337,7 @@ fn installs() -> std::sync::MutexGuard<'static, InstallCancels> {
 /// Registers an install under `id` and hands back its token. A second install under the same id
 /// replaces the first's entry (the TS abort registry did the same), and the first's guard then
 /// leaves the second's entry alone.
-fn register_install(id: &str) -> (CancellationToken, InstallGuard) {
+pub(crate) fn register_install(id: &str) -> (CancellationToken, InstallGuard) {
     let cancel = CancellationToken::new();
     let mut installs = installs();
     installs.next += 1;
@@ -359,7 +359,7 @@ fn register_install(id: &str) -> (CancellationToken, InstallGuard) {
 }
 
 /// Unregisters its install when the install ends, however it ends.
-struct InstallGuard {
+pub(crate) struct InstallGuard {
     id: String,
     generation: u64,
 }
@@ -430,7 +430,7 @@ fn install_settings_from(
 
 /// The install settings as the global config on disk holds them now (read per install, so a setting
 /// changed a moment ago is the one used). Blocking; call it on the blocking pool.
-fn read_install_settings(wine: &WineCtx) -> InstallSettings {
+pub(crate) fn read_install_settings(wine: &WineCtx) -> InstallSettings {
     let config = std::fs::read(wine.engine.paths.app_folder.join("config.json"))
         .ok()
         .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok());
@@ -650,7 +650,11 @@ fn steam_libraries(settings: &Map<String, Value>) -> Value {
 /// settings and the Steam root from the global config the shell reads itself, and the Steam libraries from
 /// the `libraryfolders.vdf` read (Linux only: the macOS set takes none). Nothing the renderer or the
 /// sidecar sent is in it. Blocking: it reads config.json and the vdf.
-fn discovery_host(wine: &WineCtx, path: Option<String>, scan_custom: Option<bool>) -> Value {
+pub(crate) fn discovery_host(
+    wine: &WineCtx,
+    path: Option<String>,
+    scan_custom: Option<bool>,
+) -> Value {
     let settings = gamelib_engine::config::global_settings(&wine.engine);
     let paths = &wine.engine.paths;
     let mut host = Map::new();

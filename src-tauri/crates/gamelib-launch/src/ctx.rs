@@ -9,6 +9,7 @@ use gamelib_info::ctx::InfoCtx;
 use gamelib_knownfix::ctx::KnownFixCtx;
 use gamelib_wine::ctx::WineCtx;
 
+use crate::prepare::deps::WineManagerFacts;
 use crate::prepare::dialogs::LaunchDialogs;
 
 /// The shell (or the CLI) builds one `LaunchCtx` and every op takes `&LaunchCtx`. Cloning gives another
@@ -29,6 +30,10 @@ pub struct LaunchCtx {
     /// The modal the prepare steps ask (`checkWineBeforeLaunch`'s "use another wine?"). The shell sets one over its
     /// native message box; the CLI and a headless run leave it `None`, and every ask is then a dismissal.
     pub dialogs: Option<Arc<dyn LaunchDialogs>>,
+    /// The facts only the shell has for the wine manager (the discovery roots, the install settings and the cancel
+    /// registry the renderer's abort reaches). `None` (the CLI, a test): discovery over the context's own
+    /// directories, install settings off and an install nothing cancels.
+    pub manager: Option<Arc<dyn WineManagerFacts>>,
 }
 
 impl LaunchCtx {
@@ -44,12 +49,19 @@ impl LaunchCtx {
             wine,
             info,
             dialogs: None,
+            manager: None,
         }
     }
 
     /// The same context with a dialog source (the shell's native message box).
     pub fn with_dialogs(mut self, dialogs: Arc<dyn LaunchDialogs>) -> LaunchCtx {
         self.dialogs = Some(dialogs);
+        self
+    }
+
+    /// The same context with the shell's wine-manager facts.
+    pub fn with_manager(mut self, manager: Arc<dyn WineManagerFacts>) -> LaunchCtx {
+        self.manager = Some(manager);
         self
     }
 }

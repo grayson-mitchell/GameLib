@@ -45,7 +45,9 @@ use gamelib_info::http::ReqwestHttp;
 use gamelib_knownfix::ctx::KnownFixCtx;
 use gamelib_knownfix::types::Runner;
 use gamelib_launch::ctx::LaunchCtx;
-use gamelib_launch::prepare::check_wine::{check_wine_before_launch, CheckWineArgs};
+use gamelib_launch::prepare::check_wine::{
+    check_wine_before_launch, download_default_wine, CheckWineArgs,
+};
 use gamelib_launch::prepare::deps::testing::{Call, ScriptedPrepareDeps};
 use gamelib_launch::prepare::dialogs::testing::ScriptedDialogs;
 use gamelib_launch::prepare::dialogs::LaunchDialogs;
@@ -715,26 +717,6 @@ fn scripted_answers(input: &Value) -> Vec<Option<usize>> {
     }
 }
 
-/// Whether the tracer's slice handles the case: the game's own wine is valid, or the global default is.
-fn in_tracer_slice(input: &Value) -> bool {
-    if input["call"] != "check" {
-        return false;
-    }
-    let valid: Vec<&str> = input["scripted"]["validWines"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .filter_map(Value::as_str)
-        .collect();
-    let game = input["storedSettings"]["wineVersion"]["name"]
-        .as_str()
-        .unwrap();
-    let default = input["globalSettings"]["wineVersion"]["name"]
-        .as_str()
-        .unwrap();
-    valid.contains(&game) || valid.contains(&default)
-}
-
 /// The golden's trace entries that are ordered against each other, as the timeline's text, sorted by `seq`.
 fn golden_timeline(dir: &Path) -> Vec<String> {
     let mut entries: Vec<(u64, String)> = Vec::new();
@@ -817,9 +799,32 @@ fn replay_check_wine(case: &Value, used: &mut BTreeSet<&'static str>) -> Result<
         .iter()
         .filter_map(Value::as_str)
         .collect();
-    for wine in [&game_wine, &default_wine] {
+    let mut alternatives: Vec<Result<Vec<WineInstallation>, String>> = Vec::new();
+    for reply in scripted["alternatives"].as_array().into_iter().flatten() {
+        alternatives.push(match reply.get("reject") {
+            Some(message) => Err(message.as_str().unwrap().to_string()),
+            None => Ok(reply["list"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(wine_of)
+                .collect()),
+        });
+    }
+    let listed: Vec<&WineInstallation> = alternatives
+        .iter()
+        .flatten()
+        .flatten()
+        .chain([&game_wine, &default_wine])
+        .collect();
+    for wine in listed {
         deps.wine_validity
             .insert(wine.name.clone(), valid.contains(&wine.name.as_str()));
+    }
+    deps.alternatives_replies = alternatives;
+    deps.releases_reply = scripted["releases"].clone();
+    if let Some(answer) = scripted["install"].as_str() {
+        deps.install_reply = answer.to_string();
     }
     deps.default_wine = Some(default_wine);
     let timeline = rig.timeline.clone();
@@ -828,7 +833,14 @@ fn replay_check_wine(case: &Value, used: &mut BTreeSet<&'static str>) -> Result<
     let want_result = read_json(&dir.join("result.json"));
     let mut got_writes: Vec<Value> = Vec::new();
     let mut got_log = json!([]);
-    let got_result = {
+    let got_result = if input["call"] == "download" {
+        // `downloadDefaultWine` called directly: the value, and the global write when there is one.
+        let value = runtime().block_on(download_default_wine(&rig.ctx, &deps, &host));
+        if let Some(wine) = &value {
+            got_writes.push(json!({"target": "global", "key": "wineVersion", "value": wine}));
+        }
+        json!({"value": value})
+    } else {
         let args = CheckWineArgs {
             app_name: app_name.clone(),
             runner: RunnerArg(
@@ -971,7 +983,6 @@ fn every_golden_check_wine_case_replays() {
     let mut failures = Vec::new();
     let mut used = BTreeSet::new();
     let mut compared = 0usize;
-    let mut left = 0usize;
     for case in cases {
         let call = case["call"].as_str().unwrap();
         assert!(
@@ -979,34 +990,21 @@ fn every_golden_check_wine_case_replays() {
             "{}: a call kind this replay does not handle: {call}",
             case["id"]
         );
-        let input = read_json(
-            &check_wine_dir()
-                .join("expected")
-                .join(case["id"].as_str().unwrap())
-                .join("input.json"),
-        );
-        // Task 1 (the tracer) replays the cases its slice handles; Task 2 replays them all.
-        if !in_tracer_slice(&input) {
-            left += 1;
-            continue;
-        }
         compared += 1;
         if let Err(problem) = replay_check_wine(case, &mut used) {
             failures.push(problem);
         }
     }
-    println!(
-        "golden check_wine: compared {compared} floor {CHECK_WINE_FLOOR} (cases {}, left for the next task {left})",
-        cases.len()
-    );
+    println!("golden check_wine: compared {compared} floor {CHECK_WINE_FLOOR}");
     assert!(
         failures.is_empty(),
         "{} case(s) differ:\n{}",
         failures.len(),
         failures.join("\n")
     );
-    assert!(compared > 0, "the replay compared nothing");
-    assert_eq!(compared + left, cases.len());
+    assert_eq!(compared, cases.len());
+    // A difference no case uses is itself an error.
+    assert_eq!(used, BTreeSet::from([REJECTION_DELTA]));
 }
 
 #[test]

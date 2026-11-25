@@ -28,6 +28,8 @@
 //! against 14, so Ventura gets the Game Porting Toolkit; and a failed alternative-wine discovery escapes
 //! `checkWineBeforeLaunch` as a failure (an `Err`, where `downloadDefaultWine` catches and logs it).
 
+use gamelib_engine::ctx::Platform;
+use gamelib_wine::wine_cmd::valid::is_mac_sonoma_or_higher;
 use gamelib_wine::wine_cmd::{WineHost, WineInstallation};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
@@ -178,14 +180,96 @@ fn continue_with_found_wine(ctx: &LaunchCtx, selected_wine: &str, found_wine: &s
     dialogs::ask(ctx, &title, &message, &buttons) == Some(0)
 }
 
-/// `checkWineBeforeLaunch`. `Err` is a fixed reason: `bad-args` for a game wine that is not an object.
+/// `downloadDefaultWine`: the wine to use when none installed works. Windows has none (`None`, no request). Else it
+/// refreshes the release list, picks the release for the OS by type (`Proton-CachyOS` on Linux; on macOS
+/// `Game-Porting-Toolkit` when the Darwin major is 14 or more and `Wine-Crossover` below, with the TS's two backend
+/// lines), installs it and answers the first alternative wine discovery then lists. `None` when there is no such
+/// release, the install did not succeed or no wine is found after it (each logged as the TS logged it). The
+/// caller reports the answer as the global `wineVersion` write (the TS wrote it here).
+pub async fn download_default_wine(
+    ctx: &LaunchCtx,
+    deps: &dyn PrepareDeps,
+    host: &WineHost,
+) -> Option<WineInstallation> {
+    let platform = ctx.engine.platform;
+    if platform == Platform::Windows {
+        return None;
+    }
+    // Refresh the wine list (the wine manager writes the store; a failed feed is logged there), then read it back.
+    deps.wine_manager_refresh(true).await;
+    let stored = deps.wine_manager_list().await;
+    let available: &[Value] = stored.as_array().map_or(&[], Vec::as_slice);
+
+    let wanted = match platform {
+        Platform::Linux => "Proton-CachyOS",
+        _ => {
+            log_info(ctx, "Checking if macOS is Sonoma or higher");
+            let up_to_date = is_mac_sonoma_or_higher(platform, host.darwin_release.as_deref());
+            log_info(
+                ctx,
+                &format!(
+                    "macOS is {}",
+                    if up_to_date {
+                        "Sonoma or higher"
+                    } else {
+                        "not Sonoma or higher"
+                    }
+                ),
+            );
+            if up_to_date {
+                "Game-Porting-Toolkit"
+            } else {
+                "Wine-Crossover"
+            }
+        }
+    };
+    let Some(release) = available
+        .iter()
+        .find(|release| release.get("type").and_then(Value::as_str) == Some(wanted))
+    else {
+        log_error(ctx, "Could not find default wine version");
+        return None;
+    };
+
+    if deps.wine_manager_install(release.clone()).await != "success" {
+        return None;
+    }
+
+    // `Err` is a category word of the discovery; the TS appended the rejection's text, which Rust never does.
+    match deps.discover_alternative_wine().await {
+        Ok(found) => match found.into_iter().next() {
+            Some(first) => {
+                log_info(ctx, &format!("Changing wine version to {}", first.name));
+                Some(first)
+            }
+            None => {
+                log_error(
+                    ctx,
+                    "Error when changing wine version to default Error: No alternative wine version found after installing",
+                );
+                None
+            }
+        },
+        Err(reason) => {
+            log_error(
+                ctx,
+                &format!("Error when changing wine version to default Error: {reason}"),
+            );
+            None
+        }
+    }
+}
+
+/// `checkWineBeforeLaunch`. `Err` is a fixed reason: `bad-args` for a game wine that is not an object, `failed` for
+/// an alternative-wine discovery that failed, which the TS let escape as a rejection (D-20).
 pub async fn check_wine_before_launch(
     ctx: &LaunchCtx,
     deps: &dyn PrepareDeps,
     args: CheckWineArgs,
-    _host: &WineHost,
+    host: &WineHost,
 ) -> Result<CheckWineReply, &'static str> {
     const BAD_ARGS: &str = "bad-args";
+    const FAILED: &str = "failed";
 
     if !args.wine_version.is_object() {
         return Err(BAD_ARGS);
@@ -243,6 +327,33 @@ pub async fn check_wine_before_launch(
         return Ok(CheckWineReply::stays(false, log));
     }
 
-    // The alternative-wine and download branches are Task 2 of 88.1-14; until they land the answer is "not ok".
-    Ok(CheckWineReply::stays(false, log))
+    let alternatives = deps.discover_alternative_wine().await.map_err(|_| FAILED)?;
+    let first = alternatives.into_iter().next();
+    let first_is_valid = first.as_ref().is_some_and(|wine| deps.valid_wine(wine));
+
+    match first {
+        Some(first) if first_is_valid => {
+            if continue_with_found_wine(ctx, &selected_name, &first.name) {
+                log_info(ctx, &format!("Changing wine version to {}", first.name));
+                return Ok(CheckWineReply::changes(first, None, log));
+            }
+            log_info(ctx, "User canceled the launch");
+            Ok(CheckWineReply::stays(false, log))
+        }
+        _ => {
+            // No alternative, or an invalid first one: download the default wine for this OS and carry on with it.
+            if let Some(downloaded) = download_default_wine(ctx, deps, host).await {
+                log_info(
+                    ctx,
+                    &format!("Changing wine version to {}", downloaded.name),
+                );
+                return Ok(CheckWineReply::changes(
+                    downloaded.clone(),
+                    Some(downloaded),
+                    log,
+                ));
+            }
+            Ok(CheckWineReply::stays(false, log))
+        }
+    }
 }

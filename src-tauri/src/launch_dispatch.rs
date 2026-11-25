@@ -27,6 +27,7 @@
 use super::*;
 
 use gamelib_launch::ctx::LaunchCtx;
+use gamelib_launch::prepare::deps::WineManagerFacts;
 use gamelib_launch::prepare::dialogs::LaunchDialogs;
 
 /// The one context, set once by [`install`].
@@ -61,6 +62,29 @@ impl LaunchDialogs for ShellDialogs {
     }
 }
 
+/// The wine manager's shell facts for the prepare steps (88.1-14): the discovery host `getAlternativeWine` runs over
+/// ([`wine_dispatch::discovery_host`], with the custom paths scanned), the install settings the global config holds now
+/// and the cancel registry the renderer's `abort(version)` reaches, so a default-wine download started by a launch
+/// can be cancelled like one the renderer started.
+struct ShellWineManager {
+    wine: Arc<gamelib_wine::ctx::WineCtx>,
+}
+
+impl WineManagerFacts for ShellWineManager {
+    fn discovery_host(&self, path: Option<String>) -> Value {
+        wine_dispatch::discovery_host(&self.wine, path, Some(true))
+    }
+
+    fn install_settings(&self) -> gamelib_wine::manager::install::InstallSettings {
+        wine_dispatch::read_install_settings(&self.wine)
+    }
+
+    fn register_install(&self, id: &str) -> (gamelib_launch::CancellationToken, Box<dyn Send>) {
+        let (cancel, guard) = wine_dispatch::register_install(id);
+        (cancel, Box::new(guard))
+    }
+}
+
 /// Builds the launch context from the engine, known-fix, wine and information contexts and stores it, with the
 /// dialog source over the app's native message box. A no-op when any of the four was not installed (no home
 /// directory), so every launch channel answers not ready. A second call is ignored (the first context stays).
@@ -79,7 +103,10 @@ pub(crate) fn install(app: &AppHandle) {
         Arc::clone(wine),
         Arc::clone(info),
     )
-    .with_dialogs(Arc::new(ShellDialogs { app: app.clone() }));
+    .with_dialogs(Arc::new(ShellDialogs { app: app.clone() }))
+    .with_manager(Arc::new(ShellWineManager {
+        wine: Arc::clone(wine),
+    }));
     let _ = LAUNCH_CTX.set(Arc::new(ctx));
 }
 

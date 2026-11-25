@@ -26,6 +26,8 @@ use gamelib_info::anticheat::{info as anticheat_info, InfoArgs};
 use gamelib_info::sysinfo::format::format_system_info;
 use gamelib_info::sysinfo::get_system_info;
 use gamelib_knownfix::types::Runner;
+use gamelib_wine::discovery::{discover_alternatives, DiscoveryHost};
+use gamelib_wine::manager::install::{install as install_wine, InstallSettings};
 use gamelib_wine::runtimes;
 use gamelib_wine::tools::{dxvk, HostWineRunner, ToolsHost};
 use gamelib_wine::wine_cmd::command::{find_on_path, run_wine_command_for_game, ForGameArgs};
@@ -34,7 +36,8 @@ use gamelib_wine::wine_cmd::valid::valid_wine;
 use gamelib_wine::wine_cmd::{WineHost, WineInstallation};
 use gamelib_wine::winetricks::install::{install, list_installed};
 use gamelib_wine::winetricks::{is_verb_shape, HostLauncher, Session, Target, ToolSettings};
-use serde_json::Value;
+use serde_json::{json, Value};
+use tokio_util::sync::CancellationToken;
 
 use super::crossover::crossover_bottle_folder;
 use super::epic::{epic_service_offline, EpicService};
@@ -135,6 +138,40 @@ pub trait PrepareDeps: Send + Sync {
 
     /// `armEngineLaunchDeadline`. `Err` is a category word; the TS logged a warning and the launch went on.
     fn arm_deadline(&self, request: DeadlineRequest) -> Fut<'_, Result<(), String>>;
+
+    /// `updateWineVersionInfos(deps, fetch)`: refreshes the stored release list from the feeds. A failed feed is
+    /// logged by the wine manager and answered as done, as the TS refresh swallowed it.
+    fn wine_manager_refresh(&self, fetch: bool) -> Fut<'_, ()>;
+
+    /// `listWineReleases`: the stored release list as JSON (an array when it could be read, `null` when it could
+    /// not, which the caller treats as no list).
+    fn wine_manager_list(&self) -> Fut<'_, Value>;
+
+    /// `installWineVersion`: the install of one release (the `WineVersionInfo` object), answered as the TS
+    /// answered it: `success`, `abort` or `error`. Notifications and the `progressOfWineManager` push are the wine
+    /// manager's, in process (D-23).
+    fn wine_manager_install(&self, release: Value) -> Fut<'_, String>;
+
+    /// `config.getAlternativeWine`: the wines installed on this machine, in the order discovery lists them. `Err`
+    /// is a category word.
+    fn discover_alternative_wine(&self) -> Fut<'_, Result<Vec<WineInstallation>, String>>;
+}
+
+/// The facts of the wine manager only the shell has (it reads `config.json` and the Steam libraries, and owns the
+/// registry the renderer's `abort(version)` reaches). The context carries one when the shell built it; without
+/// one, discovery runs over the context's own directories, an install reads no settings and nothing cancels it.
+pub trait WineManagerFacts: Send + Sync {
+    /// The `DiscoveryHost` object (`{ roots, path?, settings, steamLibraries?, scanCustom }`) for the discovery of
+    /// `getAlternativeWine`, with `path` the `PATH` of the process. Blocking: it reads `config.json` and the vdf.
+    fn discovery_host(&self, path: Option<String>) -> Value;
+
+    /// The install settings (`downloadProtonToSteam`, `defaultSteamPath`) as the global config holds them now.
+    /// Blocking: it reads `config.json`.
+    fn install_settings(&self) -> InstallSettings;
+
+    /// Registers an install under `id` (the release version) and answers the cancel the renderer's `abort(id)`
+    /// fires, with a guard that unregisters it when dropped.
+    fn register_install(&self, id: &str) -> (CancellationToken, Box<dyn Send>);
 }
 
 /// What `knownFixProfileOverlayEnv` is asked: the game, its launch settings, the tier-1 env and the process env's
@@ -469,6 +506,77 @@ impl PrepareDeps for CtxPrepareDeps<'_> {
             .map_err(|error| error.as_str().to_string())
         })
     }
+
+    fn wine_manager_refresh(&self, fetch: bool) -> Fut<'_, ()> {
+        Box::pin(async move {
+            // The op logs a failed refresh itself and answers `null`, as the TS handler swallowed it.
+            let _ = gamelib_wine::dispatch("wine_manager_refresh", &[json!(fetch)], &self.ctx.wine)
+                .await;
+        })
+    }
+
+    fn wine_manager_list(&self) -> Fut<'_, Value> {
+        Box::pin(async move {
+            gamelib_wine::dispatch("wine_manager_list", &[], &self.ctx.wine)
+                .await
+                .unwrap_or(Value::Null)
+        })
+    }
+
+    fn wine_manager_install(&self, release: Value) -> Fut<'_, String> {
+        Box::pin(async move {
+            let version = release
+                .get("version")
+                .and_then(Value::as_str)
+                .unwrap_or_default()
+                .to_string();
+            let (settings, cancel, _guard) = match &self.ctx.manager {
+                Some(facts) => {
+                    let (cancel, guard) = facts.register_install(&version);
+                    let reader = std::sync::Arc::clone(facts);
+                    let settings = tokio::task::spawn_blocking(move || reader.install_settings())
+                        .await
+                        .unwrap_or_default();
+                    (settings, cancel, Some(guard))
+                }
+                None => (InstallSettings::default(), CancellationToken::new(), None),
+            };
+            match install_wine(&self.ctx.wine, &release, &settings, &cancel).await {
+                Ok(outcome) => outcome.as_str().to_string(),
+                // A version or archive name that is not one plain path component: the install did not start.
+                Err(_) => "error".to_string(),
+            }
+        })
+    }
+
+    fn discover_alternative_wine(&self) -> Fut<'_, Result<Vec<WineInstallation>, String>> {
+        Box::pin(async move {
+            const FAILED: &str = "discovery-failed";
+            let path = self.host.env.get("PATH").map(str::to_string);
+            let host = match &self.ctx.manager {
+                Some(facts) => {
+                    let reader = std::sync::Arc::clone(facts);
+                    tokio::task::spawn_blocking(move || reader.discovery_host(path))
+                        .await
+                        .map_err(|_| FAILED.to_string())?
+                }
+                None => {
+                    let paths = &self.ctx.engine.paths;
+                    json!({
+                        "roots": {
+                            "home": paths.user_home.to_string_lossy(),
+                            "configPath": paths.app_folder.join("config.json").to_string_lossy(),
+                        },
+                        "path": path,
+                        "scanCustom": true,
+                    })
+                }
+            };
+            let host: DiscoveryHost =
+                serde_json::from_value(host).map_err(|_| FAILED.to_string())?;
+            Ok(discover_alternatives(&self.ctx.wine, &host).await)
+        })
+    }
 }
 
 /// The scripted collaborators of the goldens (feature `testing`).
@@ -510,6 +618,14 @@ pub mod testing {
         RunWineCommandForGame(ForGameRequest),
         /// `engine_launch_arm_deadline`.
         ArmDeadline(DeadlineRequest),
+        /// `wine_manager_refresh` with the fetch flag.
+        WineManagerRefresh(bool),
+        /// `wine_manager_list`.
+        WineManagerList,
+        /// `wine_manager_install` with the release.
+        WineManagerInstall(Value),
+        /// `wine_discover_alternatives` (always asked with the custom paths scanned).
+        DiscoverAlternatives,
     }
 
     impl Call {
@@ -620,6 +736,18 @@ pub mod testing {
                         "args": [Value::Object(arg)]
                     })
                 }
+                Call::WineManagerRefresh(fetch) => json!({
+                    "kind": "rust", "channel": "wine_manager_refresh", "args": [fetch]
+                }),
+                Call::WineManagerList => json!({
+                    "kind": "rust", "channel": "wine_manager_list", "args": []
+                }),
+                Call::WineManagerInstall(release) => json!({
+                    "kind": "rust", "channel": "wine_manager_install", "args": [release]
+                }),
+                Call::DiscoverAlternatives => json!({
+                    "kind": "rust", "channel": "wine_discover_alternatives", "args": [true]
+                }),
             }
         }
     }
@@ -669,10 +797,17 @@ pub mod testing {
         /// Whether a wine `wine_validity` does not list is valid (default `true`; a check-wine case lists the
         /// valid ones and every other wine is not).
         pub unlisted_wines_valid: bool,
+        /// What the stored release list answers: an array, or anything else for "no list".
+        pub releases_reply: Value,
+        /// What a wine install answers (`success`, `abort` or `error`).
+        pub install_reply: String,
+        /// What each alternative-wine discovery answers, one per call, in order (`Err` is a rejection); a call past
+        /// the end is a rejection too, so an unscripted discovery cannot pass.
+        pub alternatives_replies: Vec<Result<Vec<WineInstallation>, String>>,
         /// Called with each call as it is made, for a test that has to see how the calls interleave with another
         /// effect (the status pushes of an install fix).
         pub observer: Option<CallObserver>,
-        cursors: Mutex<(usize, usize)>,
+        cursors: Mutex<(usize, usize, usize)>,
         calls: Mutex<Vec<Call>>,
     }
 
@@ -697,8 +832,11 @@ pub mod testing {
                 tool_settings_replies: Vec::new(),
                 deadline_reply: Ok(()),
                 unlisted_wines_valid: true,
+                releases_reply: Value::Null,
+                install_reply: "success".to_string(),
+                alternatives_replies: Vec::new(),
                 observer: None,
-                cursors: Mutex::new((0, 0)),
+                cursors: Mutex::new((0, 0, 0)),
                 calls: Mutex::new(Vec::new()),
             }
         }
@@ -885,6 +1023,36 @@ pub mod testing {
         fn arm_deadline(&self, request: DeadlineRequest) -> Fut<'_, Result<(), String>> {
             self.record(Call::ArmDeadline(request));
             Box::pin(async move { self.deadline_reply.clone() })
+        }
+
+        fn wine_manager_refresh(&self, fetch: bool) -> Fut<'_, ()> {
+            self.record(Call::WineManagerRefresh(fetch));
+            Box::pin(async move {})
+        }
+
+        fn wine_manager_list(&self) -> Fut<'_, Value> {
+            self.record(Call::WineManagerList);
+            Box::pin(async move { self.releases_reply.clone() })
+        }
+
+        fn wine_manager_install(&self, release: Value) -> Fut<'_, String> {
+            self.record(Call::WineManagerInstall(release));
+            Box::pin(async move { self.install_reply.clone() })
+        }
+
+        fn discover_alternative_wine(&self) -> Fut<'_, Result<Vec<WineInstallation>, String>> {
+            let at = {
+                let mut cursors = self.cursors.lock().unwrap_or_else(|e| e.into_inner());
+                cursors.2 += 1;
+                cursors.2 - 1
+            };
+            self.record(Call::DiscoverAlternatives);
+            let reply = self
+                .alternatives_replies
+                .get(at)
+                .cloned()
+                .unwrap_or_else(|| Err("unscripted discovery call".to_string()));
+            Box::pin(async move { reply })
         }
     }
 }
