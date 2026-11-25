@@ -14,6 +14,9 @@ use crate::http::Http;
 use crate::itad::gate::ItadGate;
 use crate::recent::RecentSink;
 use crate::secrets::{ItadKey, SecretSource, SgdbKey, Slot};
+use crate::sysinfo::cache::SystemInfoCache;
+use crate::sysinfo::host::HostEnv;
+use crate::sysinfo::versions::RunnerBinSettings;
 use crate::wiki::hltb::HltbState;
 
 /// The platform the app runs on, as the shell reports it (the crate never asks the OS).
@@ -99,6 +102,15 @@ pub struct InfoCtx {
     /// The one spawn seam of the system-information probes (88.1-09, D-21): the shell's
     /// `SpecProcRunner`, a Helper. [`NoSpecRunner`] until the shell installs it.
     pub proc: Arc<dyn SpecRunner>,
+    /// The single-flight cache of `getSystemInfo` (88.1-10, `createSystemInfoCache`): one per context, so
+    /// one per process in the shell.
+    pub sysinfo: SystemInfoCache,
+    /// The three environment facts the system information reads (`FLATPAK_ID`, `APPIMAGE` and the Steam
+    /// Deck game-mode flag), read once by the shell.
+    pub host_env: HostEnv,
+    /// The user's alternative runner binaries (`altLegendaryBin` and the other three), read when a
+    /// system-information fetch starts. `None` until the shell installs its settings reader.
+    pub runner_settings: Option<Arc<dyn RunnerBinSettings>>,
 }
 
 impl InfoCtx {
@@ -130,6 +142,9 @@ impl InfoCtx {
             crossover: CrossoverState::new(),
             hltb: HltbState::new(),
             proc: Arc::new(NoSpecRunner),
+            sysinfo: SystemInfoCache::new(),
+            host_env: HostEnv::default(),
+            runner_settings: None,
         }
     }
 

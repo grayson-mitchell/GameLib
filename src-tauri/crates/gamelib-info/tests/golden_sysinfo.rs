@@ -10,10 +10,10 @@
 //! alone cannot lower the bar, and an empty list fails. The only differences from the TS are the entries
 //! of `deltas.json`, each with its reason; a delta that no case uses is itself an error.
 //!
-//! The version probes, `filesize` formatting, the formatted text and the single-flight cache are
-//! 88.1-10's (the system information assembly); the kinds that exercise them are listed in
-//! `DEFERRED_KINDS` and counted, so a new kind cannot be added to `cases.json` without being either
-//! compared here or handed over there.
+//! 88.1-10 completes the replay: the four version probes (a direct `<bin> --version` spawn each, where
+//! the TS went through its library managers), the `filesize` vectors, the formatted text and the
+//! single-flight cache (the `sequence` cases). Every kind of `cases.json` is replayed; a kind this file
+//! does not handle fails the test, so a new kind cannot be added without being compared here.
 
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
@@ -26,9 +26,14 @@ use gamelib_engine::testing::{RecordedSpawn, ScriptedSpecRunner};
 use gamelib_info::cache_view::{js_date_string, CacheView, PCI_IDS_DEVICE, PCI_IDS_VENDOR};
 use gamelib_info::ctx::{InfoCtx, InfoLog, InfoPaths, Platform};
 use gamelib_info::http::ReqwestHttp;
+use gamelib_info::sysinfo::cache::SystemInfoCache;
 use gamelib_info::sysinfo::dns::TxtResolver;
+use gamelib_info::sysinfo::format::{filesize, format_system_info};
 use gamelib_info::sysinfo::host::HostFacts;
-use gamelib_info::sysinfo::probe_system;
+use gamelib_info::sysinfo::versions::{
+    resolve_runner_bin, FixedAltBins, RunnerBins, RUNNER_VERSION_TIMEOUT,
+};
+use gamelib_info::sysinfo::{fetch_system_info, SystemInformation};
 use gamelib_store::host::StoreHost;
 use gamelib_store::json::Json;
 use gamelib_testutil::FakeHome;
@@ -37,17 +42,13 @@ use serde_json::{json, Value};
 /// `golden/sysinfo` holds 94 cases, the MANIFEST floor; a later edit may raise this, never lower it.
 const SYSINFO_FLOOR: usize = 94;
 
-/// Every `call.kind` of `golden/sysinfo` this file replays: `info` is a whole probe run, which covers the
-/// Linux, macOS and Windows probes, the `pci.ids` lookups and caches and the Steam Deck check. The test
-/// fails when `cases.json` holds a kind that is in neither this list nor [`DEFERRED_KINDS`].
-const HANDLED_KINDS: [&str; 1] = ["info"];
+/// Every `call.kind` of `golden/sysinfo`: `info` is a whole read (the Linux, macOS and Windows probes, the
+/// `pci.ids` lookups and caches, the Steam Deck check, the version probes and the text), `sequence` the
+/// single-flight cache of `getSystemInfo` and `filesize` the byte-size format. The test fails when
+/// `cases.json` holds a kind that is not in this list.
+const HANDLED_KINDS: [&str; 3] = ["info", "sequence", "filesize"];
 
-/// The kinds 88.1-10 replays: `sequence` (the single-flight cache of `getSystemInfo`) and `filesize`
-/// (the byte-size format).
-const DEFERRED_KINDS: [&str; 2] = ["sequence", "filesize"];
-
-/// The programs this slice spawns. The comet and manager version probes of a recorded case are
-/// 88.1-10's, so they are left out of the expected spawns.
+/// The programs the machine probes spawn; the version probes are told apart by their `--version` argv.
 const PROBE_PROGRAMS: [&str; 5] = ["free", "lspci", "sysctl", "vm_stat", "powershell"];
 
 fn fixtures() -> PathBuf {
@@ -73,6 +74,14 @@ fn check_floor(what: &str, count: usize, floor: usize) -> Result<(), String> {
 // ---------------------------------------------------------------------------------------------
 // The deltas
 // ---------------------------------------------------------------------------------------------
+
+/// The delta kind for the three Python runners' version probes: the TS asked them through its library
+/// managers' command runners (no spawn of its own in the golden), the Rust spawns `<bin> --version`
+/// directly.
+const VERSION_DIRECT_SPAWN: &str = "version-probe-direct-spawn";
+
+/// The delta kind for the bound those direct spawns carry (30 s; the TS had none).
+const VERSION_BOUNDED: &str = "version-probe-bounded";
 
 /// One documented difference between the TS golden and the Rust answer.
 struct Delta {
@@ -103,7 +112,13 @@ impl Deltas {
                 );
                 let kind = d["kind"].as_str().expect("delta kind").to_string();
                 assert!(
-                    kind == "replace" || kind == "env-inherited",
+                    [
+                        "replace",
+                        "env-inherited",
+                        VERSION_DIRECT_SPAWN,
+                        VERSION_BOUNDED
+                    ]
+                    .contains(&kind.as_str()),
                     "unknown delta kind {kind}"
                 );
                 Delta {
@@ -129,12 +144,27 @@ impl Deltas {
     }
 
     fn find(&self, id: &str, file: &str) -> Option<&Delta> {
-        // An `env-inherited` delta names no case: it holds for every spawn of its programs.
+        // An `env-inherited` delta names no case: it holds for every spawn of its programs. The two
+        // version-probe deltas hold for every case too, and are read by [`Deltas::version_probe`].
         let at = self.entries.iter().position(|d| {
-            d.file == file && (d.id == id || (d.kind == "env-inherited" && d.id == "*"))
+            d.file == file
+                && d.kind != VERSION_DIRECT_SPAWN
+                && d.kind != VERSION_BOUNDED
+                && (d.id == id || (d.kind == "env-inherited" && d.id == "*"))
         })?;
         self.used.lock().unwrap().insert(at);
         Some(&self.entries[at])
+    }
+
+    /// The delta of `kind` (a version-probe one), marked used.
+    fn version_probe(&self, kind: &str) -> &Delta {
+        let at = self
+            .entries
+            .iter()
+            .position(|d| d.kind == kind)
+            .unwrap_or_else(|| panic!("deltas.json has no {kind} delta"));
+        self.used.lock().unwrap().insert(at);
+        &self.entries[at]
     }
 
     /// What the golden says the case's `file` holds, with its documented delta applied.
@@ -296,10 +326,91 @@ fn powershell_argv(class: &str, properties: &str, select: &str) -> Vec<String> {
     .collect()
 }
 
+/// A script of a Python runner's `--version` (the TS manager's `runRunnerCommand` result): `stdout`, an
+/// `error` or an `abort`. The Rust spawns the binary directly, so an error is a failed run and an abort a
+/// cancelled one.
+fn manager_output(script: &Value) -> SpecOutput {
+    if script["abort"].as_bool().unwrap_or(false) {
+        return SpecOutput {
+            code: None,
+            cancelled: true,
+            ..SpecOutput::default()
+        };
+    }
+    if script["error"].is_string() {
+        return SpecOutput {
+            code: Some(1),
+            stderr: "boom".to_string(),
+            ..SpecOutput::default()
+        };
+    }
+    SpecOutput {
+        code: Some(0),
+        stdout: script["stdout"].as_str().unwrap_or_default().to_string(),
+        ..SpecOutput::default()
+    }
+}
+
+/// Where the bundled binary of `name` is on `platform` and `arch` under `<home>/public`, spelled out
+/// independently of the crate's rule: `bin/<arch>/<node platform>/<name>`, `.exe` on Windows, and one
+/// directory deeper on macOS for the three Python runners.
+fn expected_bin(home: &str, name: &str, platform: &str, arch: &str) -> String {
+    let node = match platform {
+        "linux" => "linux",
+        "mac" => "darwin",
+        "windows" => "win32",
+        other => panic!("unknown platform {other}"),
+    };
+    let file = if platform == "windows" {
+        format!("{name}.exe")
+    } else {
+        name.to_string()
+    };
+    if platform == "mac" && name != "comet" {
+        format!("{home}/public/bin/{arch}/{node}/{file}/{file}")
+    } else {
+        format!("{home}/public/bin/{arch}/{node}/{file}")
+    }
+}
+
+/// The runner binaries the crate resolves for a scenario, over a bundled directory in which every file
+/// exists (the golden's `existsSync` answered true) and the scenario's `altCometBin`.
+fn bins_for(scenario: &Value, home: &str) -> (RunnerBins, FixedAltBins) {
+    let platform = platform_of(scenario["platform"].as_str().expect("platform"));
+    let arch = scenario["arch"].as_str().expect("arch");
+    let alts = FixedAltBins(
+        scenario["altCometBin"]
+            .as_str()
+            .map(|alt| vec![("altCometBin".to_string(), alt.to_string())])
+            .unwrap_or_default(),
+    );
+    let public = Path::new(home).join("public");
+    let resolve = |name: &str, key: &str| {
+        use gamelib_info::sysinfo::versions::RunnerBinSettings;
+        resolve_runner_bin(
+            name,
+            alts.alt_bin(key).as_deref(),
+            &public,
+            platform,
+            arch,
+            &|_| true,
+        )
+        .ok()
+    };
+    let bins = RunnerBins {
+        legendary: resolve("legendary", "altLegendaryBin"),
+        gogdl: resolve("gogdl", "altGogdlBin"),
+        comet: resolve("comet", "altCometBin"),
+        nile: resolve("nile", "altNileBin"),
+    };
+    (bins, alts)
+}
+
 /// The runner a scenario's scripts make: `lspci`, `free`, `sysctl`, `vm_stat` and the two PowerShell
-/// queries, each answering what the case scripted. A probe a case leaves `null` is not scripted, so a
-/// spawn of it is listed as unscripted and fails the case.
-fn runner_for(scenario: &Value) -> Arc<ScriptedSpecRunner> {
+/// queries, comet's `--version` and the three Python runners' `--version`, each answering what the case
+/// scripted. A probe a case leaves `null` is not scripted, so a spawn of it is listed as unscripted and
+/// fails the case.
+fn runner_for(scenario: &Value, bins: &RunnerBins) -> Arc<ScriptedSpecRunner> {
     let strings = |argv: &[&str]| argv.iter().map(|a| (*a).to_string()).collect::<Vec<_>>();
     let table: Vec<(&str, Vec<String>, &str)> = vec![
         ("lspci", strings(&["-mm", "-v", "-n", "-k"]), "lspci"),
@@ -334,6 +445,32 @@ fn runner_for(scenario: &Value) -> Arc<ScriptedSpecRunner> {
         let argv: Vec<&str> = argv.iter().map(String::as_str).collect();
         runner = runner.on(program, &argv, script_output(program, script));
     }
+    let version_argv = ["--version"];
+    if !scenario["comet"].is_null() {
+        let comet = bins.comet.as_ref().expect("a comet binary");
+        let program = comet.to_string_lossy().into_owned();
+        runner = runner.on(
+            &program,
+            &version_argv,
+            script_output("comet", &scenario["comet"]),
+        );
+    }
+    for (bin, manager) in [
+        (&bins.legendary, "legendary"),
+        (&bins.gogdl, "gog"),
+        (&bins.nile, "nile"),
+    ] {
+        let script = &scenario["managers"][manager];
+        if script.is_null() {
+            continue;
+        }
+        let program = bin
+            .as_ref()
+            .expect("a runner binary")
+            .to_string_lossy()
+            .into_owned();
+        runner = runner.on(&program, &version_argv, manager_output(script));
+    }
     Arc::new(runner)
 }
 
@@ -366,24 +503,6 @@ fn spawn_shape(spawn: &RecordedSpawn) -> Value {
         "cwd": spawn.cwd.as_ref().map(|p| p.to_string_lossy().into_owned()),
         "stdin": spawn.stdin,
     })
-}
-
-/// The expected spawn list: this slice's programs only, in order, without `seq` and `result`.
-fn expected_spawns(raw: &Value) -> Value {
-    let kept: Vec<Value> = raw
-        .as_array()
-        .expect("spawns.json is an array")
-        .iter()
-        .filter(|s| PROBE_PROGRAMS.contains(&s["program"].as_str().unwrap_or_default()))
-        .map(|s| {
-            let mut s = s.clone();
-            let fields = s.as_object_mut().expect("a spawn is an object");
-            fields.remove("seq");
-            fields.remove("result");
-            s
-        })
-        .collect();
-    Value::Array(kept)
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -476,81 +595,162 @@ fn cache_contents(ctx: &InfoCtx, params: gamelib_info::cache_view::CacheParams) 
     Value::Object(names)
 }
 
-/// The fields of a recorded `result.json` the probe produces (the sizes' formatted text and the
-/// software versions are 88.1-10's).
-fn expected_result(want: &Value) -> Value {
-    match want.get("error") {
-        Some(_) => want.clone(),
-        None => {
-            let info = &want["systemInfo"];
-            json!({
-                "CPU": info["CPU"],
-                "memory": { "total": info["memory"]["total"], "used": info["memory"]["used"] },
-                "GPUs": info["GPUs"],
-                "OS": info["OS"],
-                "steamDeckInfo": info["steamDeckInfo"],
-                "isFlatpak": info["isFlatpak"],
-                "isAppImage": info["isAppImage"],
-            })
+/// The expected spawn list of a case, in the order the Rust makes them: the machine probes the golden
+/// recorded (in its order, without `seq` and `result`), then, when the golden shows the version probes ran
+/// (comet's `--version`), the four `--version` spawns in the TS's start order: legendary, gogdl, comet,
+/// nile. Comet's is the golden's own, with its path; the three Python runners' are the direct spawns of
+/// the `version-probe-direct-spawn` delta, carrying the bound of the `version-probe-bounded` one.
+fn expected_spawns(raw: &Value, deltas: &Deltas, home: &str, scenario: &Value) -> Value {
+    let all = raw.as_array().expect("spawns.json is an array");
+    let strip = |s: &Value| {
+        let mut s = s.clone();
+        let fields = s.as_object_mut().expect("a spawn is an object");
+        fields.remove("seq");
+        fields.remove("result");
+        s
+    };
+    let mut kept: Vec<Value> = all
+        .iter()
+        .filter(|s| PROBE_PROGRAMS.contains(&s["program"].as_str().unwrap_or_default()))
+        .map(strip)
+        .collect();
+    let comet = all
+        .iter()
+        .find(|s| s["argv"] == json!(["--version"]))
+        .map(strip);
+    if let Some(mut comet) = comet {
+        let direct = deltas.version_probe(VERSION_DIRECT_SPAWN);
+        let bounded = deltas.version_probe(VERSION_BOUNDED);
+        let timeout = bounded.rust.as_ref().expect("a bound")["timeoutMs"].clone();
+        assert_eq!(timeout, json!(RUNNER_VERSION_TIMEOUT.as_millis() as u64));
+        let platform = scenario["platform"].as_str().expect("platform");
+        let arch = scenario["arch"].as_str().expect("arch");
+        let program = comet["program"]
+            .as_str()
+            .expect("program")
+            .replace("<HOME>", home);
+        comet["program"] = json!(program);
+        let direct_spawn = |name: &str| {
+            assert!(direct.programs.iter().any(|p| p == name), "{name}");
+            let mut spawn = comet.clone();
+            spawn["program"] = json!(expected_bin(home, name, platform, arch));
+            spawn["timeoutMs"] = timeout.clone();
+            spawn
+        };
+        let (legendary, gogdl, nile) = (
+            direct_spawn("legendary"),
+            direct_spawn("gogdl"),
+            direct_spawn("nile"),
+        );
+        kept.extend([legendary, gogdl, comet, nile]);
+    }
+    Value::Array(kept)
+}
+
+/// The scripted machine of one scenario: a fake profile, the context over the scripted runner, the host
+/// facts, the `pci.ids` resolver and the runner binaries.
+struct Machine {
+    home: FakeHome,
+    ctx: InfoCtx,
+    runner: Arc<ScriptedSpecRunner>,
+    lines: Arc<Lines>,
+    host: ScenarioHost,
+    txt: ScriptedTxt,
+    bins: RunnerBins,
+    platform: Platform,
+}
+
+impl Machine {
+    fn of(scenario: &Value) -> Machine {
+        let platform = platform_of(scenario["platform"].as_str().expect("platform"));
+        let home = FakeHome::new("info-sysinfo-");
+        let user_data = home.root().join("userData");
+        std::fs::create_dir_all(&user_data).unwrap();
+        let home_text = home.root().to_string_lossy().into_owned();
+        let (bins, alts) = bins_for(scenario, &home_text);
+        let runner = runner_for(scenario, &bins);
+        let lines = Arc::new(Lines::default());
+        let mut ctx = InfoCtx::new(
+            Arc::new(StoreHost::new()),
+            Arc::new(SystemClock),
+            platform,
+            InfoPaths {
+                app_folder: user_data.clone(),
+                user_data,
+                temp: home.root().join("temp"),
+                public_dir: Some(home.root().join("public")),
+            },
+            scenario["appVersion"]
+                .as_str()
+                .unwrap_or("0.0.0")
+                .to_string(),
+            Shutdown::new(),
+            Arc::new(ReqwestHttp::new()),
+        );
+        ctx.log = Some(lines.clone());
+        ctx.proc = runner.clone();
+        ctx.runner_settings = Some(Arc::new(alts));
+        seed_cache(&ctx, "pci_ids_device", &scenario["caches"]["device"]);
+        seed_cache(&ctx, "pci_ids_vendor", &scenario["caches"]["vendor"]);
+        Machine {
+            home,
+            ctx,
+            runner,
+            lines,
+            host: ScenarioHost::of(scenario),
+            txt: ScriptedTxt::of(scenario),
+            bins,
+            platform,
         }
     }
+
+    async fn read(&self) -> Result<SystemInformation, gamelib_info::sysinfo::ProbeError> {
+        fetch_system_info(&self.ctx, &self.host, &self.txt, &self.bins).await
+    }
+}
+
+fn caches_of(ctx: &InfoCtx) -> Value {
+    json!({
+        "device": cache_contents(ctx, PCI_IDS_DEVICE),
+        "vendor": cache_contents(ctx, PCI_IDS_VENDOR),
+    })
 }
 
 fn run_case(case: &Value, deltas: &Deltas) -> Vec<String> {
     let id = case["id"].as_str().expect("case id");
     let dir = fixtures().join("expected").join(id);
     let scenario = &case["scenario"];
-    let platform = platform_of(scenario["platform"].as_str().expect("platform"));
-
-    let home = FakeHome::new("info-sysinfo-");
-    let user_data = home.root().join("userData");
-    std::fs::create_dir_all(&user_data).unwrap();
-    let runner = runner_for(scenario);
-    let lines = Arc::new(Lines::default());
-    let mut ctx = InfoCtx::new(
-        Arc::new(StoreHost::new()),
-        Arc::new(SystemClock),
-        platform,
-        InfoPaths {
-            app_folder: user_data.clone(),
-            user_data,
-            temp: home.root().join("temp"),
-            public_dir: None,
-        },
-        scenario["appVersion"]
-            .as_str()
-            .unwrap_or("0.0.0")
-            .to_string(),
-        Shutdown::new(),
-        Arc::new(ReqwestHttp::new()),
-    );
-    ctx.log = Some(lines.clone());
-    ctx.proc = runner.clone();
-    let host = ScenarioHost::of(scenario);
-    seed_cache(&ctx, "pci_ids_device", &scenario["caches"]["device"]);
-    seed_cache(&ctx, "pci_ids_vendor", &scenario["caches"]["vendor"]);
-    let caches_before = json!({
-        "device": cache_contents(&ctx, PCI_IDS_DEVICE),
-        "vendor": cache_contents(&ctx, PCI_IDS_VENDOR),
-    });
-    let txt = ScriptedTxt::of(scenario);
+    let machine = Machine::of(scenario);
+    let home_text = machine.home.root().to_string_lossy().into_owned();
+    let caches_before = caches_of(&machine.ctx);
 
     let runtime = tokio::runtime::Builder::new_current_thread()
         .build()
         .expect("runtime");
-    let outcome = runtime.block_on(probe_system(&ctx, &host, &txt));
+    let outcome = runtime.block_on(machine.read());
 
     let want_result = read_json(&dir.join("result.json"));
     let got_result = match &outcome {
-        Ok(probed) => probed.to_value(),
+        Ok(info) => json!({ "systemInfo": info.to_value() }),
         Err(error) => json!({ "error": error.to_string() }),
     };
     let mut failures = Vec::new();
-    let want = deltas.expected(id, "result.json", expected_result(&want_result));
+    let want = deltas.expected(id, "result.json", want_result);
     if want != got_result {
         failures.push(format!(
             "{id}: result.json\n  want {want}\n  got  {got_result}"
         ));
+    }
+
+    // The text the clipboard gets, for a read that succeeded.
+    let want_text = read_json(&dir.join("text.json"));
+    if let (Ok(info), Some(text)) = (&outcome, want_text["text"].as_str()) {
+        let got_text = format_system_info(info, machine.platform);
+        if got_text != text {
+            failures.push(format!(
+                "{id}: text.json\n  want {text:?}\n  got  {got_text:?}"
+            ));
+        }
     }
 
     // The lookups, in the order the TS made them, each with the answer it was given.
@@ -560,25 +760,22 @@ fn run_case(case: &Value, deltas: &Deltas) -> Vec<String> {
         .iter()
         .map(|e| json!({ "name": e["name"], "answer": e["answer"] }))
         .collect();
-    let got_dns = txt.0.asked.lock().unwrap().clone();
+    let got_dns = machine.txt.0.asked.lock().unwrap().clone();
     if want_dns != got_dns {
         failures.push(format!(
             "{id}: dns.json\n  want {want_dns:?}\n  got  {got_dns:?}"
         ));
     }
-    if !txt.0.unscripted.lock().unwrap().is_empty() {
+    if !machine.txt.0.unscripted.lock().unwrap().is_empty() {
         failures.push(format!(
             "{id}: unscripted lookups {:?}",
-            txt.0.unscripted.lock().unwrap()
+            machine.txt.0.unscripted.lock().unwrap()
         ));
     }
 
     // The caches, before and after.
     let want_cache = read_json(&dir.join("cache.json"));
-    let got_after = json!({
-        "device": cache_contents(&ctx, PCI_IDS_DEVICE),
-        "vendor": cache_contents(&ctx, PCI_IDS_VENDOR),
-    });
+    let got_after = caches_of(&machine.ctx);
     if want_cache["before"] != caches_before || want_cache["after"] != got_after {
         failures.push(format!(
             "{id}: cache.json\n  want {}\n  got  before {caches_before} after {got_after}",
@@ -589,16 +786,24 @@ fn run_case(case: &Value, deltas: &Deltas) -> Vec<String> {
     let want_spawns = deltas.expected(
         id,
         "spawns.json",
-        expected_spawns(&read_json(&dir.join("spawns.json"))),
+        expected_spawns(
+            &read_json(&dir.join("spawns.json")),
+            deltas,
+            &home_text,
+            scenario,
+        ),
     );
-    let got_spawns = Value::Array(runner.spawns().iter().map(spawn_shape).collect());
+    let got_spawns = Value::Array(machine.runner.spawns().iter().map(spawn_shape).collect());
     if want_spawns != got_spawns {
         failures.push(format!(
             "{id}: spawns.json\n  want {want_spawns}\n  got  {got_spawns}"
         ));
     }
-    if !runner.unscripted().is_empty() {
-        failures.push(format!("{id}: unscripted spawns {:?}", runner.unscripted()));
+    if !machine.runner.unscripted().is_empty() {
+        failures.push(format!(
+            "{id}: unscripted spawns {:?}",
+            machine.runner.unscripted()
+        ));
     }
 
     let want_events: Vec<Value> = read_json(&dir.join("events.json"))
@@ -618,11 +823,201 @@ fn run_case(case: &Value, deltas: &Deltas) -> Vec<String> {
             .collect(),
         None => want_events,
     };
-    let got_events: Vec<Value> = lines.0.lock().unwrap().iter().map(|l| json!(l)).collect();
+    let got_events: Vec<Value> = machine
+        .lines
+        .0
+        .lock()
+        .unwrap()
+        .iter()
+        .map(|l| json!(l))
+        .collect();
     if want_events != got_events {
         failures.push(format!(
             "{id}: events\n  want {want_events:?}\n  got  {got_events:?}"
         ));
+    }
+    failures
+}
+
+// ---------------------------------------------------------------------------------------------
+// The single-flight cache
+// ---------------------------------------------------------------------------------------------
+
+/// Replays one `sequence` case: the steps of the TS test (`start` a call, `await` it, `settle`, make a
+/// `newCache`) over `SystemInfoCache`s sharing the scripted machine. The calls' results (which cache
+/// instance each used and which call's object it got back) are compared with `result.json`; the spawns by
+/// program, as a multiset, because concurrent reads interleave their probes.
+fn run_sequence(case: &Value, deltas: &Deltas) -> Vec<String> {
+    let id = case["id"].as_str().expect("case id");
+    let dir = fixtures().join("expected").join(id);
+    let scenario = &case["scenario"];
+    let machine = Arc::new(Machine::of(scenario));
+    let home_text = machine.home.root().to_string_lossy().into_owned();
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .build()
+        .expect("runtime");
+
+    type Outcome = Result<Arc<SystemInformation>, gamelib_info::sysinfo::ProbeError>;
+    let mut instances: Vec<Arc<SystemInfoCache>> = vec![Arc::new(SystemInfoCache::new())];
+    let mut started: Vec<(String, bool, usize, tokio::task::JoinHandle<Outcome>)> = Vec::new();
+    let mut settled: Vec<(String, bool, usize, Outcome)> = Vec::new();
+    runtime.block_on(async {
+        for step in case["call"]["steps"].as_array().expect("steps") {
+            match step["op"].as_str().expect("op") {
+                "start" => {
+                    let name = step["call"].as_str().expect("call").to_string();
+                    let cache = step["cache"].as_bool().unwrap_or(true);
+                    let instance = instances.len() - 1;
+                    let (machine, cache_of) =
+                        (Arc::clone(&machine), Arc::clone(&instances[instance]));
+                    let task =
+                        tokio::spawn(async move { cache_of.get(cache, machine.read()).await });
+                    started.push((name, cache, instance, task));
+                }
+                "settle" => {
+                    for _ in 0..64 {
+                        tokio::task::yield_now().await;
+                    }
+                }
+                "newCache" => instances.push(Arc::new(SystemInfoCache::new())),
+                "await" => {
+                    let name = step["call"].as_str().expect("call");
+                    let at = started
+                        .iter()
+                        .position(|(n, ..)| n == name)
+                        .unwrap_or_else(|| panic!("{id}: {name} was not started"));
+                    let (name, cache, instance, task) = started.remove(at);
+                    settled.push((name, cache, instance, task.await.expect("the task ran")));
+                }
+                other => panic!("{id}: unknown step {other}"),
+            }
+        }
+    });
+
+    let mut failures = Vec::new();
+    let want = read_json(&dir.join("result.json"));
+    let want_calls = want["calls"].as_array().expect("calls");
+    if want_calls.len() != settled.len() {
+        failures.push(format!(
+            "{id}: {} calls, want {}",
+            settled.len(),
+            want_calls.len()
+        ));
+        return failures;
+    }
+    for (at, (want, (name, cache, instance, outcome))) in
+        want_calls.iter().zip(&settled).enumerate()
+    {
+        let info = outcome.as_ref().expect("a successful read");
+        let same_as = match want["sameObjectAs"].as_str() {
+            Some(other) => settled
+                .iter()
+                .find(|(n, ..)| n == other)
+                .map(|(.., o)| Arc::ptr_eq(o.as_ref().unwrap(), info)),
+            None => None,
+        };
+        let shape = json!({
+            "call": name,
+            "cache": cache,
+            "instance": instance,
+            "sameObjectAs": want["sameObjectAs"],
+            "systemInfo": info.to_value(),
+        });
+        if &shape != want || same_as == Some(false) {
+            failures.push(format!("{id}: call {name}\n  want {want}\n  got  {shape}"));
+        }
+        // A call that named another call's object must hold that very object, and one that did not
+        // must not hold the object of a call settled before it.
+        if want["sameObjectAs"].is_null() {
+            let twin = settled[..at]
+                .iter()
+                .any(|(.., o)| Arc::ptr_eq(o.as_ref().unwrap(), info));
+            if twin {
+                failures.push(format!("{id}: call {name} shares an object it should not"));
+            }
+        }
+    }
+
+    // The spawns, as a multiset of program and argv.
+    let want_spawns = expected_spawns(
+        &read_json(&dir.join("spawns.json")),
+        deltas,
+        &home_text,
+        scenario,
+    );
+    let mut want_all: Vec<String> = Vec::new();
+    // `expected_spawns` lists one fetch's version spawns; a sequence repeats them once per fetch.
+    let golden = read_json(&dir.join("spawns.json"));
+    let fetches = golden
+        .as_array()
+        .expect("spawns")
+        .iter()
+        .filter(|s| s["argv"] == json!(["--version"]))
+        .count();
+    let probes: Vec<&Value> = golden
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|s| PROBE_PROGRAMS.contains(&s["program"].as_str().unwrap_or_default()))
+        .collect();
+    let one_fetch = want_spawns.as_array().expect("spawns");
+    let version_spawns: Vec<&Value> = one_fetch
+        .iter()
+        .filter(|s| s["argv"] == json!(["--version"]))
+        .collect();
+    for probe in &probes {
+        want_all.push(format!("{} {}", probe["program"], probe["argv"]));
+    }
+    for _ in 0..fetches {
+        // The golden lists the probes of every fetch; the versions of one fetch are four spawns.
+        for spawn in &version_spawns[..4.min(version_spawns.len())] {
+            want_all.push(format!("{} {}", spawn["program"], spawn["argv"]));
+        }
+    }
+    let mut got_all: Vec<String> = machine
+        .runner
+        .spawns()
+        .iter()
+        .map(|s| format!("{} {}", json!(s.program), json!(s.argv)))
+        .collect();
+    want_all.sort();
+    got_all.sort();
+    if want_all != got_all {
+        failures.push(format!(
+            "{id}: spawns\n  want {want_all:?}\n  got  {got_all:?}"
+        ));
+    }
+    failures
+}
+
+// ---------------------------------------------------------------------------------------------
+// The `filesize` vectors
+// ---------------------------------------------------------------------------------------------
+
+fn run_filesize(case: &Value) -> Vec<String> {
+    let id = case["id"].as_str().expect("case id");
+    let want = read_json(&fixtures().join("expected").join(id).join("result.json"));
+    let vectors = want["vectors"].as_array().expect("vectors");
+    let asked = case["call"]["values"].as_array().expect("values");
+    let mut failures = Vec::new();
+    if vectors.len() != asked.len() || vectors.is_empty() {
+        failures.push(format!(
+            "{id}: {} vectors for {} values",
+            vectors.len(),
+            asked.len()
+        ));
+    }
+    for vector in vectors {
+        let value = vector["value"].as_f64().expect("value");
+        for (key, base2) in [("base2", true), ("plain", false)] {
+            let got = filesize(value, base2);
+            if vector[key] != json!(got) {
+                failures.push(format!(
+                    "{id}: {value} {key}: want {} got {got}",
+                    vector[key]
+                ));
+            }
+        }
     }
     failures
 }
@@ -645,11 +1040,11 @@ fn the_floor_matches_the_manifest_and_an_empty_list_fails() {
 }
 
 #[test]
-fn every_case_has_an_expected_folder_and_every_kind_is_handled_or_handed_over() {
+fn every_case_has_an_expected_folder_and_every_kind_is_handled() {
     let cases = read_json(&fixtures().join("cases.json"));
     let cases = cases.as_array().expect("cases.json is an array");
     check_floor("golden/sysinfo cases", cases.len(), SYSINFO_FLOOR).unwrap();
-    let handled: BTreeSet<&str> = HANDLED_KINDS.into_iter().chain(DEFERRED_KINDS).collect();
+    let handled: BTreeSet<&str> = HANDLED_KINDS.into_iter().collect();
     for case in cases {
         let id = case["id"].as_str().expect("case id");
         assert!(
@@ -665,38 +1060,31 @@ fn every_case_has_an_expected_folder_and_every_kind_is_handled_or_handed_over() 
 }
 
 #[test]
-fn the_probe_cases_replay_the_ts_goldens() {
+fn every_case_of_golden_sysinfo_replays_the_ts_goldens() {
     let cases = read_json(&fixtures().join("cases.json"));
     let cases = cases.as_array().expect("cases.json is an array");
     check_floor("golden/sysinfo cases", cases.len(), SYSINFO_FLOOR).unwrap();
 
     let deltas = Deltas::load();
     let mut compared = 0usize;
-    let mut deferred = 0usize;
     let mut failures = Vec::new();
     for case in cases {
         let kind = case["call"]["kind"].as_str().expect("call kind");
-        if DEFERRED_KINDS.contains(&kind) {
-            deferred += 1;
-            continue;
-        }
         assert!(HANDLED_KINDS.contains(&kind), "{kind} is not handled");
-        failures.extend(run_case(case, &deltas));
+        failures.extend(match kind {
+            "info" => run_case(case, &deltas),
+            "sequence" => run_sequence(case, &deltas),
+            _ => run_filesize(case),
+        });
         compared += 1;
     }
     deltas.assert_all_used();
-    eprintln!("golden sysinfo: compared {compared} deferred {deferred} floor {SYSINFO_FLOOR}");
-    check_floor(
-        "golden/sysinfo compared and deferred",
-        compared + deferred,
-        SYSINFO_FLOOR,
-    )
-    .unwrap();
+    eprintln!("golden sysinfo: compared {compared} floor {SYSINFO_FLOOR}");
+    check_floor("golden/sysinfo compared", compared, SYSINFO_FLOOR).unwrap();
     assert!(
         failures.is_empty(),
         "{} differences over {compared} cases:\n{}",
         failures.len(),
         failures.join("\n")
     );
-    assert!(compared > 0, "no case was compared");
 }

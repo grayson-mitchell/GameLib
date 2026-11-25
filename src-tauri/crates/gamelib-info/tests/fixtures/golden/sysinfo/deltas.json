@@ -61,5 +61,19 @@
     "kind": "replace",
     "rust": [{ "level": "warning", "text": "Could not gather GPU info" }],
     "reason": "The TS line appends the String of the spawn error ('Error: spawn powershell ENOENT'). The Rust note is fixed text and never carries an error string (prohibition 1); the GPU list is still [] and the read still succeeds."
+  },
+  {
+    "id": "*",
+    "file": "spawns.json",
+    "kind": "version-probe-direct-spawn",
+    "programs": ["legendary", "gogdl", "nile"],
+    "reason": "The TS asked legendary, gogdl and nile for their versions through its library managers' command runners (a wrapper with the runner environment and, on Windows, a PowerShell launcher), so the golden records no spawn of those three programs, only the manager calls (versions.json). The Rust has no such runner: it spawns each bundled or user-configured binary directly as a Helper with `--version` as its only argument, no shell, no runner environment and no wrapper. comet already ran through the plain spawn seam and is unchanged. The three spawns follow the machine probes and come in the TS's start order: legendary, gogdl, comet, nile."
+  },
+  {
+    "id": "*",
+    "file": "spawns.json",
+    "kind": "version-probe-bounded",
+    "rust": { "timeoutMs": 30000 },
+    "reason": "The TS waited for the three Python runners' version calls without a bound of its own (the command runner had none), so a hung runner stalled the whole system-information read; comet alone was capped, at 5 s. The Rust gives each of the three the same 30 s as every other system probe, and a runner that does not answer in time reads `invalid`, as a failed one does. comet keeps its 5 s."
   }
 ]

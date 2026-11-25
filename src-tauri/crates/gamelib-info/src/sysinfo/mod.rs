@@ -10,13 +10,16 @@
 //! - A probe failure logs fixed text through the context's log: never a hostname, hardware id, query or
 //!   profile path (prohibition 1).
 
+pub mod cache;
 pub mod deck;
 pub mod dns;
+pub mod format;
 pub mod gpu;
 pub mod host;
 pub mod memory;
 pub mod os_info;
 pub mod pci_ids;
+pub mod versions;
 
 use std::fmt;
 use std::time::Duration;
@@ -26,11 +29,13 @@ use serde_json::{json, Value};
 
 use crate::ctx::{InfoCtx, Platform};
 use deck::{steam_deck_info, SteamDeckInfo};
-use dns::TxtResolver;
-use host::HostFacts;
+use dns::{SystemTxtResolver, TxtResolver};
+use format::filesize;
+use host::{HostFacts, RealHostFacts};
 use memory::{get_memory_info, MemoryInfo};
 use os_info::get_os_info;
 use pci_ids::GpuInfo;
+use versions::{resolve_runner_bins, runner_versions, RunnerBins, SoftwareVersions};
 
 /// `genericSpawnWrapper`'s default bound for a system probe (`DEFAULT_TIMEOUT_MS`).
 pub const PROBE_TIMEOUT: Duration = Duration::from_millis(30_000);
@@ -43,6 +48,9 @@ pub enum ProbeError {
     Spawn(String),
     /// The host reported no CPU (`os.cpus() returned no CPUs`).
     NoCpus,
+    /// The read this call was waiting on was dropped before it answered (the application began to exit);
+    /// the TS had no such case, its in-flight promise always settled.
+    Cancelled,
 }
 
 impl fmt::Display for ProbeError {
@@ -50,6 +58,7 @@ impl fmt::Display for ProbeError {
         match self {
             ProbeError::Spawn(program) => write!(f, "spawn {program} failed"),
             ProbeError::NoCpus => f.write_str("os.cpus() returned no CPUs"),
+            ProbeError::Cancelled => f.write_str("the system information read was cancelled"),
         }
     }
 }
@@ -74,6 +83,19 @@ pub(crate) async fn run_probe(
     env: &[(&str, &str)],
     hide_window: bool,
 ) -> Result<SpecOutput, ProbeError> {
+    run_probe_bounded(ctx, label, program, argv, env, hide_window, PROBE_TIMEOUT).await
+}
+
+/// [`run_probe`] with a bound of its own (the comet version probe's 5 s).
+pub(crate) async fn run_probe_bounded(
+    ctx: &InfoCtx,
+    label: &'static str,
+    program: &str,
+    argv: &[&str],
+    env: &[(&str, &str)],
+    hide_window: bool,
+    timeout: Duration,
+) -> Result<SpecOutput, ProbeError> {
     let mut spec = ProcSpec::new(label, program);
     spec.argv = argv.iter().map(|a| (*a).to_string()).collect();
     spec.env = env
@@ -81,7 +103,7 @@ pub(crate) async fn run_probe(
         .map(|(k, v)| ((*k).to_string(), (*v).to_string()))
         .collect();
     spec.stdin = Some(String::new());
-    spec.timeout = Some(PROBE_TIMEOUT);
+    spec.timeout = Some(timeout);
     spec.hide_window = hide_window;
     let out = ctx.proc.run(spec, None).await;
     if spawn_failed(&out) {
@@ -99,8 +121,8 @@ pub fn node_platform(platform: Platform) -> &'static str {
     }
 }
 
-/// What the probes of `fetchSystemInfo` learn about the machine: everything in `SystemInformation`
-/// except the software versions and the formatted sizes, which 88.1-10 adds.
+/// What the machine probes of `fetchSystemInfo` learn: everything in `SystemInformation` except the
+/// software versions and the formatted sizes.
 #[derive(Debug, Clone, PartialEq)]
 pub struct SystemProbe {
     pub cpu_model: String,
@@ -116,7 +138,7 @@ pub struct SystemProbe {
 }
 
 impl SystemProbe {
-    /// The TS object's fields this slice fills: `CPU`, the sizes of `memory`, `GPUs`, `OS`,
+    /// The TS object's fields this part fills: `CPU`, the sizes of `memory`, `GPUs`, `OS`,
     /// `steamDeckInfo`, `isFlatpak` and `isAppImage`.
     pub fn to_value(&self) -> Value {
         json!({
@@ -135,14 +157,25 @@ impl SystemProbe {
     }
 }
 
-/// The probes of `fetchSystemInfo` in the TS's order: the CPU list, memory, GPUs, the operating system,
-/// the Steam Deck check, and last (after the version probes 88.1-10 runs) the check that the host listed a
-/// CPU at all. The first probe that cannot start rejects the whole read.
-pub async fn probe_system(
+/// The machine probes before the host's CPU list is checked: the CPU models are still a list.
+struct ProbeParts {
+    cpus: Vec<String>,
+    memory: MemoryInfo,
+    gpus: Vec<GpuInfo>,
+    os_name: String,
+    os_version: String,
+    steam_deck: SteamDeckInfo,
+    is_flatpak: bool,
+    is_app_image: bool,
+}
+
+/// The probes of `fetchSystemInfo` in the TS's order: the CPU list, memory, GPUs, the operating system and
+/// the Steam Deck check. The first probe that cannot start rejects the whole read.
+async fn probe_parts(
     ctx: &InfoCtx,
     host: &dyn HostFacts,
     resolver: &dyn TxtResolver,
-) -> Result<SystemProbe, ProbeError> {
+) -> Result<ProbeParts, ProbeError> {
     let cpus = host.cpu_models();
     let memory = get_memory_info(ctx, host).await?;
     let gpus = gpu::get_gpu_info(ctx, resolver).await;
@@ -152,15 +185,10 @@ pub async fn probe_system(
         &gpus,
         host.steam_deck_game_mode(),
     );
-    let Some(first_cpu) = cpus.first() else {
-        return Err(ProbeError::NoCpus);
-    };
-    Ok(SystemProbe {
-        cpu_model: first_cpu.clone(),
-        cores: cpus.len(),
+    Ok(ProbeParts {
+        cpus,
         memory,
         gpus,
-        os_platform: node_platform(ctx.platform),
         // `os.release()` unless the detailed probe found a version of its own.
         os_version: os.version.unwrap_or_else(|| host.release()),
         os_name: os.name,
@@ -168,6 +196,97 @@ pub async fn probe_system(
         is_flatpak: host.flatpak_id().is_some_and(|id| !id.is_empty()),
         is_app_image: host.appimage().is_some_and(|path| !path.is_empty()),
     })
+}
+
+impl ProbeParts {
+    /// The check the TS ran last: a host that listed no CPU rejects the read.
+    fn into_probe(self, platform: Platform) -> Result<SystemProbe, ProbeError> {
+        let Some(first_cpu) = self.cpus.first() else {
+            return Err(ProbeError::NoCpus);
+        };
+        Ok(SystemProbe {
+            cpu_model: first_cpu.clone(),
+            cores: self.cpus.len(),
+            memory: self.memory,
+            gpus: self.gpus,
+            os_platform: node_platform(platform),
+            os_name: self.os_name,
+            os_version: self.os_version,
+            steam_deck: self.steam_deck,
+            is_flatpak: self.is_flatpak,
+            is_app_image: self.is_app_image,
+        })
+    }
+}
+
+/// The machine probes alone (no version probes): the 88.1-09 slice of the read.
+pub async fn probe_system(
+    ctx: &InfoCtx,
+    host: &dyn HostFacts,
+    resolver: &dyn TxtResolver,
+) -> Result<SystemProbe, ProbeError> {
+    probe_parts(ctx, host, resolver)
+        .await?
+        .into_probe(ctx.platform)
+}
+
+/// `SystemInformation`: the probe, the two formatted sizes and the software versions.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SystemInformation {
+    pub probe: SystemProbe,
+    pub total_formatted: String,
+    pub used_formatted: String,
+    pub software: SoftwareVersions,
+}
+
+impl SystemInformation {
+    /// The renderer's `SystemInformation` object.
+    pub fn to_value(&self) -> Value {
+        let mut value = self.probe.to_value();
+        if let Some(fields) = value.as_object_mut() {
+            if let Some(memory) = fields.get_mut("memory").and_then(Value::as_object_mut) {
+                memory.insert("totalFormatted".into(), json!(self.total_formatted));
+                memory.insert("usedFormatted".into(), json!(self.used_formatted));
+            }
+            fields.insert("softwareInUse".into(), self.software.to_value());
+        }
+        value
+    }
+}
+
+/// `fetchSystemInfo`: the machine probes, then the four version probes together, and last the check that
+/// the host listed a CPU at all (so a host with none still runs the version probes first, as the TS did).
+pub async fn fetch_system_info(
+    ctx: &InfoCtx,
+    host: &dyn HostFacts,
+    resolver: &dyn TxtResolver,
+    bins: &RunnerBins,
+) -> Result<SystemInformation, ProbeError> {
+    let parts = probe_parts(ctx, host, resolver).await?;
+    let software = runner_versions(ctx, bins).await;
+    let probe = parts.into_probe(ctx.platform)?;
+    Ok(SystemInformation {
+        total_formatted: filesize(probe.memory.total as f64, true),
+        used_formatted: filesize(probe.memory.used as f64, true),
+        probe,
+        software,
+    })
+}
+
+/// `getSystemInfo(cache)` of one context: the production host facts and resolver over [`fetch_system_info`],
+/// behind the context's single-flight cache.
+pub async fn get_system_info(
+    ctx: &InfoCtx,
+    cache: bool,
+) -> Result<std::sync::Arc<SystemInformation>, ProbeError> {
+    let host = RealHostFacts::new(ctx.host_env.clone());
+    let resolver = SystemTxtResolver::new(ctx.shutdown.clone());
+    ctx.sysinfo
+        .get(cache, async {
+            let bins = resolve_runner_bins(ctx);
+            fetch_system_info(ctx, &host, &resolver, &bins).await
+        })
+        .await
 }
 
 // ---------------------------------------------------------------------------------------------
