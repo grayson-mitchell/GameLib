@@ -8,8 +8,9 @@ import { NAV_TAB_IDS, resolveActiveTab } from './navTabs'
  * - Ownership: a location belongs to the tab `resolveActiveTab` lights for
  *   it, the tab the user sees selected while there. Every game page
  *   therefore belongs to Games, including one opened from Downloads or the
- *   Redeem dialog (its `fromDM` state keeps its Back button honest).
- * - The router state is kept because `GamePage/index.tsx:107` destructures
+ *   Redeem dialog. Its Back button returns to the Library whatever opened
+ *   it (quick 261125-pmb).
+ * - The router state is kept because `GamePage/index.tsx` destructures
  *   `location.state`; a game page without `gameInfo` (the tray/deeplink
  *   shape) is never remembered, so a restore cannot crash it.
  * - `/loginweb` is never remembered: mounting the login WebView starts a

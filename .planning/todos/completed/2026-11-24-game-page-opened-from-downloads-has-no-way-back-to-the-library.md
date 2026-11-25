@@ -26,3 +26,14 @@ and the engine log in Phase 87 and to track the rest as todos, so this is delibe
 
 Decide whether the game page should remember where it was opened from and offer a Library link, or whether the app-level tabs
 are the intended route, and then make the back control say where it goes.
+
+## Resolution (2026-11-25): Back always returns to the Library
+
+The user chose always-back-to-Library over remembering the opening screen, so a game page's Back control goes to
+`/library` whatever screen opened it, and Downloads is reached through its app-level tab.
+
+What changed: the Downloads item no longer marks its origin in router state and passes `gameInfo` only. GamePage's
+Back NavLink always targets `/library`, its tooltip and accessible name read "Back to Library" from
+`gamelib:gamepage.backToLibrary`, and it stays icon-only on the art band.
+
+Guard: `src/frontend/screens/Game/GamePage/__tests__/gamePageBackButton.test.ts`. Fix commit: 4773f414e.
