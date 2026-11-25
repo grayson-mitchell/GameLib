@@ -430,3 +430,110 @@ async fn both_branches_keep_the_stored_shared_prefix_and_never_write_it_to_the_g
         );
     }
 }
+
+/// The `wineserver -k` spawns a case recorded: what `kill_bottle_wineserver` runs.
+fn wineserver_kills(rig: &Rig) -> Vec<gamelib_engine::testing::RecordedSpawn> {
+    rig.runner
+        .spawns()
+        .into_iter()
+        .filter(|spawn| spawn.label == "engine-wineserver-kill")
+        .collect()
+}
+
+#[tokio::test]
+async fn the_plain_branch_stops_the_wineserver_its_own_probe_started_before_the_launch() {
+    // RF1, the named cause: the pre-flight's `--demo-status` run boots the game's bottle (a `wineserver`
+    // without the launch's sync environment), the plain branch switches nothing, and legendary's wine child
+    // then meets that warm server and never starts. The restore branch's switch kills the server first (87-72,
+    // `## Root cause`), so the plain branch must do the same before it hands the launch over.
+    let (rig, reply) = plain_branch().await;
+    assert_eq!(reply["kind"], "use", "reply: {reply}");
+    let kills = wineserver_kills(&rig);
+    assert_eq!(
+        kills.len(),
+        1,
+        "one wineserver kill for the game's bottle on the plain branch: {:?}",
+        rig.runner.spawns()
+    );
+    let bin_dir = rig.profile.root().join(BIN_REL);
+    assert_eq!(
+        kills[0].program,
+        bin_dir.join("wineserver").to_string_lossy().as_ref(),
+        "the kill runs CrossOver's own wineserver"
+    );
+    assert_eq!(kills[0].argv, ["-k"]);
+    assert_eq!(
+        kills[0].env_set.get("WINEPREFIX").map(String::as_str),
+        Some(
+            rig.profile
+                .bottles_root()
+                .join(&rig.bottle)
+                .to_string_lossy()
+                .as_ref()
+        ),
+        "the kill is aimed at the game's own bottle directory"
+    );
+    // After the probe that started the server, never before it.
+    let order: Vec<&str> = rig
+        .runner
+        .spawns()
+        .iter()
+        .map(|spawn| spawn.label)
+        .collect();
+    let probe_at = order.iter().position(|label| label.contains("demo-status"));
+    let kill_at = order
+        .iter()
+        .position(|label| *label == "engine-wineserver-kill");
+    assert!(
+        probe_at.is_some() && probe_at < kill_at,
+        "the kill comes after the demo-status probe: {order:?}"
+    );
+}
+
+#[tokio::test]
+async fn the_plain_branch_leaves_the_bottles_wineserver_alone_while_another_game_runs_in_it() {
+    // A second game of the bottle keeps its server (59-REVIEW WR-07: never stop a server under a running game).
+    let rig = rig("fx-crossover-marker");
+    assert!(rig
+        .ctx
+        .ledger
+        .mark_game_running(None, &rig.bottle, "legendary:other-game"));
+    let reply = dispatch("engine_launch_select", &[request(&rig)], &rig.ctx)
+        .await
+        .expect("the step answers");
+    assert_eq!(reply["kind"], "use", "reply: {reply}");
+    assert!(
+        wineserver_kills(&rig).is_empty(),
+        "no kill with another game running in the bottle: {:?}",
+        rig.runner.spawns()
+    );
+}
+
+#[tokio::test]
+async fn the_plain_branch_leaves_the_wineserver_alone_while_the_same_game_still_runs() {
+    // A second Play on a game that is still marked running must not stop the server under it.
+    let rig = rig("fx-crossover-marker");
+    let key = format!("{RUNNER}:{APP}");
+    assert!(rig.ctx.ledger.mark_game_running(None, &rig.bottle, &key));
+    let reply = dispatch("engine_launch_select", &[request(&rig)], &rig.ctx)
+        .await
+        .expect("the step answers");
+    assert_eq!(reply["kind"], "use", "reply: {reply}");
+    assert!(
+        wineserver_kills(&rig).is_empty(),
+        "no kill while the game itself is marked running: {:?}",
+        rig.runner.spawns()
+    );
+}
+
+#[tokio::test]
+async fn the_restore_branch_does_not_add_a_second_kill_after_its_switch() {
+    // The real switch stops the previous engine's server itself (scripted here); the step adds nothing.
+    let (rig, _reply, handed) = restore_branch().await;
+    assert_eq!(handed.len(), 1, "the switch ran once: {handed:?}");
+    assert!(
+        wineserver_kills(&rig).is_empty(),
+        "the step does not kill after a switch that ran: {:?}",
+        rig.runner.spawns()
+    );
+}
