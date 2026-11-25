@@ -1,0 +1,42 @@
+[
+  {
+    "id": "wrapper-env-legendary",
+    "call": {
+      "op": "wrapperEnvVars",
+      "appName": "app-legendary",
+      "appRunner": "legendary"
+    }
+  },
+  {
+    "id": "wrapper-env-gog",
+    "call": {
+      "op": "wrapperEnvVars",
+      "appName": "app-gog",
+      "appRunner": "gog"
+    }
+  },
+  {
+    "id": "wrapper-env-nile",
+    "call": {
+      "op": "wrapperEnvVars",
+      "appName": "app-nile",
+      "appRunner": "nile"
+    }
+  },
+  {
+    "id": "wrapper-env-sideload",
+    "call": {
+      "op": "wrapperEnvVars",
+      "appName": "app-sideload",
+      "appRunner": "sideload"
+    }
+  },
+  {
+    "id": "wrapper-env-steam",
+    "call": {
+      "op": "wrapperEnvVars",
+      "appName": "app-steam",
+      "appRunner": "steam"
+    }
+  }
+]

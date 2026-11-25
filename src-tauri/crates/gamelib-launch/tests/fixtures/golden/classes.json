@@ -1,0 +1,13 @@
+{
+  "prepare_launch.gamescope_help": "helper",
+  "prepare_launch.crossover_bottle_folder": "helper",
+  "prepare_wine.crossover_bottle_folder": "helper",
+  "prepare_wine.verify_prefix": "helper",
+  "prepare_wine.winetricks_list": "helper",
+  "prepare_wine.install_fixes.winetricks": "helper",
+  "prepare_wine.install_fixes.run_in_prefix": "helper",
+  "prepare_wine.registry": "helper",
+  "prepare_wine.galaxy_winepath": "helper",
+  "prepare_wine.galaxy_sc_create": "helper",
+  "prepare_wine.dxvk": "helper"
+}
