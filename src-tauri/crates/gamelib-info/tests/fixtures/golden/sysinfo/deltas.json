@@ -47,5 +47,19 @@
     "kind": "replace",
     "rust": [{ "level": "warning", "text": "Could not list GPUs: lspci did not exit successfully" }],
     "reason": "The TS line prints the exit code and signal name ('lspci exited with null null'). The Rust note is fixed text without them; a timeout is an unsuccessful exit, one line, as in the TS."
+  },
+  {
+    "id": "windows-os-info-powershell-missing-rejects-the-whole-read",
+    "file": "result.json",
+    "kind": "replace",
+    "rust": { "error": "spawn powershell failed" },
+    "reason": "The TS rejects with Node's own spawn error text, 'spawn powershell ENOENT', which carries the errno word. The Rust error names the program that could not start in fixed text ('spawn <program> failed'); the read still fails as a whole, at the same probe (the operating-system query, after the GPU query and both name lookups ran)."
+  },
+  {
+    "id": "getgpuinfo-tolerance-resolves-when-the-win32-probe-rejects",
+    "file": "events.json",
+    "kind": "replace",
+    "rust": [{ "level": "warning", "text": "Could not gather GPU info" }],
+    "reason": "The TS line appends the String of the spawn error ('Error: spawn powershell ENOENT'). The Rust note is fixed text and never carries an error string (prohibition 1); the GPU list is still [] and the read still succeeds."
   }
 ]

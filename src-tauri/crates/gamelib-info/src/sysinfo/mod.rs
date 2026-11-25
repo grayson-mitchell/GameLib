@@ -10,17 +10,27 @@
 //! - A probe failure logs fixed text through the context's log: never a hostname, hardware id, query or
 //!   profile path (prohibition 1).
 
+pub mod deck;
+pub mod dns;
 pub mod gpu;
 pub mod host;
 pub mod memory;
 pub mod os_info;
+pub mod pci_ids;
 
 use std::fmt;
 use std::time::Duration;
 
 use gamelib_core::process::{ProcSpec, SpecOutput};
+use serde_json::{json, Value};
 
-use crate::ctx::InfoCtx;
+use crate::ctx::{InfoCtx, Platform};
+use deck::{steam_deck_info, SteamDeckInfo};
+use dns::TxtResolver;
+use host::HostFacts;
+use memory::{get_memory_info, MemoryInfo};
+use os_info::get_os_info;
+use pci_ids::GpuInfo;
 
 /// `genericSpawnWrapper`'s default bound for a system probe (`DEFAULT_TIMEOUT_MS`).
 pub const PROBE_TIMEOUT: Duration = Duration::from_millis(30_000);
@@ -78,6 +88,86 @@ pub(crate) async fn run_probe(
         return Err(ProbeError::Spawn(program.to_string()));
     }
     Ok(out)
+}
+
+/// `process.platform` of a platform the shell reports.
+pub fn node_platform(platform: Platform) -> &'static str {
+    match platform {
+        Platform::Linux => "linux",
+        Platform::Mac => "darwin",
+        Platform::Windows => "win32",
+    }
+}
+
+/// What the probes of `fetchSystemInfo` learn about the machine: everything in `SystemInformation`
+/// except the software versions and the formatted sizes, which 88.1-10 adds.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SystemProbe {
+    pub cpu_model: String,
+    pub cores: usize,
+    pub memory: MemoryInfo,
+    pub gpus: Vec<GpuInfo>,
+    pub os_platform: &'static str,
+    pub os_name: String,
+    pub os_version: String,
+    pub steam_deck: SteamDeckInfo,
+    pub is_flatpak: bool,
+    pub is_app_image: bool,
+}
+
+impl SystemProbe {
+    /// The TS object's fields this slice fills: `CPU`, the sizes of `memory`, `GPUs`, `OS`,
+    /// `steamDeckInfo`, `isFlatpak` and `isAppImage`.
+    pub fn to_value(&self) -> Value {
+        json!({
+            "CPU": { "model": self.cpu_model, "cores": self.cores },
+            "memory": { "total": self.memory.total, "used": self.memory.used },
+            "GPUs": self.gpus.iter().map(GpuInfo::to_value).collect::<Vec<_>>(),
+            "OS": {
+                "platform": self.os_platform,
+                "version": self.os_version,
+                "name": self.os_name,
+            },
+            "steamDeckInfo": self.steam_deck.to_value(),
+            "isFlatpak": self.is_flatpak,
+            "isAppImage": self.is_app_image,
+        })
+    }
+}
+
+/// The probes of `fetchSystemInfo` in the TS's order: the CPU list, memory, GPUs, the operating system,
+/// the Steam Deck check, and last (after the version probes 88.1-10 runs) the check that the host listed a
+/// CPU at all. The first probe that cannot start rejects the whole read.
+pub async fn probe_system(
+    ctx: &InfoCtx,
+    host: &dyn HostFacts,
+    resolver: &dyn TxtResolver,
+) -> Result<SystemProbe, ProbeError> {
+    let cpus = host.cpu_models();
+    let memory = get_memory_info(ctx, host).await?;
+    let gpus = gpu::get_gpu_info(ctx, resolver).await;
+    let os = get_os_info(ctx, host).await?;
+    let steam_deck = steam_deck_info(
+        cpus.first().map(String::as_str),
+        &gpus,
+        host.steam_deck_game_mode(),
+    );
+    let Some(first_cpu) = cpus.first() else {
+        return Err(ProbeError::NoCpus);
+    };
+    Ok(SystemProbe {
+        cpu_model: first_cpu.clone(),
+        cores: cpus.len(),
+        memory,
+        gpus,
+        os_platform: node_platform(ctx.platform),
+        // `os.release()` unless the detailed probe found a version of its own.
+        os_version: os.version.unwrap_or_else(|| host.release()),
+        os_name: os.name,
+        steam_deck,
+        is_flatpak: host.flatpak_id().is_some_and(|id| !id.is_empty()),
+        is_app_image: host.appimage().is_some_and(|path| !path.is_empty()),
+    })
 }
 
 // ---------------------------------------------------------------------------------------------

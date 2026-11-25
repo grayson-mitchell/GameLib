@@ -1,40 +1,45 @@
 //! The Rust replay of the system-information goldens 88.1-05 recorded from the TypeScript
 //! (`tests/fixtures/golden/sysinfo`, 94 cases): the probes (`lspci`, `free`, `sysctl`, `vm_stat`, the
-//! two PowerShell queries) over a scripted spawn seam, the host facts from each case's scenario, and
-//! the partial results they produce, compared with the TS's recorded ones.
+//! two PowerShell queries) over a scripted spawn seam, the host facts from each case's scenario, the
+//! `pci.ids` lookups over a scripted TXT resolver and two seeded caches, and the probe result the
+//! assembly (`probe_system`) produces, compared with the TS's recorded one: the CPU, memory sizes, GPUs
+//! with their names, OS, Steam Deck info and the two container flags, the spawns, the log lines, the
+//! lookups in order (`dns.json`) and the caches after (`cache.json`).
 //!
 //! A count floor lives in this file next to the replay (equal to the MANIFEST's), so editing the JSON
 //! alone cannot lower the bar, and an empty list fails. The only differences from the TS are the entries
 //! of `deltas.json`, each with its reason; a delta that no case uses is itself an error.
 //!
-//! The version probes, `filesize` formatting and the single-flight cache are 88.1-10's (the system
-//! information assembly); the kinds that exercise them are listed in `DEFERRED_KINDS` and counted, so a
-//! new kind cannot be added to `cases.json` without being either compared here or handed over there.
+//! The version probes, `filesize` formatting, the formatted text and the single-flight cache are
+//! 88.1-10's (the system information assembly); the kinds that exercise them are listed in
+//! `DEFERRED_KINDS` and counted, so a new kind cannot be added to `cases.json` without being either
+//! compared here or handed over there.
 
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
 use gamelib_core::clock::SystemClock;
-use gamelib_core::process::SpecOutput;
+use gamelib_core::process::{BoxFuture, SpecOutput};
 use gamelib_core::shutdown::Shutdown;
 use gamelib_engine::testing::{RecordedSpawn, ScriptedSpecRunner};
+use gamelib_info::cache_view::{js_date_string, CacheView, PCI_IDS_DEVICE, PCI_IDS_VENDOR};
 use gamelib_info::ctx::{InfoCtx, InfoLog, InfoPaths, Platform};
 use gamelib_info::http::ReqwestHttp;
-use gamelib_info::sysinfo::gpu::{gpu_info_linux, PartialGpu};
+use gamelib_info::sysinfo::dns::TxtResolver;
 use gamelib_info::sysinfo::host::HostFacts;
-use gamelib_info::sysinfo::memory::get_memory_info;
-use gamelib_info::sysinfo::os_info::get_os_info;
-use gamelib_info::sysinfo::ProbeError;
+use gamelib_info::sysinfo::probe_system;
 use gamelib_store::host::StoreHost;
+use gamelib_store::json::Json;
 use gamelib_testutil::FakeHome;
 use serde_json::{json, Value};
 
 /// `golden/sysinfo` holds 94 cases, the MANIFEST floor; a later edit may raise this, never lower it.
 const SYSINFO_FLOOR: usize = 94;
 
-/// Every `call.kind` of `golden/sysinfo` this file replays. The test fails when `cases.json` holds a
-/// kind that is in neither this list nor [`DEFERRED_KINDS`].
+/// Every `call.kind` of `golden/sysinfo` this file replays: `info` is a whole probe run, which covers the
+/// Linux, macOS and Windows probes, the `pci.ids` lookups and caches and the Steam Deck check. The test
+/// fails when `cases.json` holds a kind that is in neither this list nor [`DEFERRED_KINDS`].
 const HANDLED_KINDS: [&str; 1] = ["info"];
 
 /// The kinds 88.1-10 replays: `sequence` (the single-flight cache of `getSystemInfo`) and `filesize`
@@ -176,6 +181,9 @@ struct ScenarioHost {
     total_mem: u64,
     free_mem: u64,
     os_release_files: Vec<(String, String)>,
+    flatpak_id: Option<String>,
+    appimage: Option<String>,
+    game_mode: bool,
 }
 
 impl ScenarioHost {
@@ -205,6 +213,9 @@ impl ScenarioHost {
                         .collect()
                 })
                 .unwrap_or_default(),
+            flatpak_id: scenario["env"]["FLATPAK_ID"].as_str().map(str::to_string),
+            appimage: scenario["env"]["APPIMAGE"].as_str().map(str::to_string),
+            game_mode: scenario["steamDeckGameMode"].as_bool().unwrap_or(false),
         }
     }
 }
@@ -232,13 +243,13 @@ impl HostFacts for ScenarioHost {
             .map(|(_, text)| text.clone())
     }
     fn flatpak_id(&self) -> Option<String> {
-        None
+        self.flatpak_id.clone()
     }
     fn appimage(&self) -> Option<String> {
-        None
+        self.appimage.clone()
     }
     fn steam_deck_game_mode(&self) -> bool {
-        false
+        self.game_mode
     }
 }
 
@@ -345,15 +356,6 @@ fn platform_of(name: &str) -> Platform {
     }
 }
 
-/// `process.platform` of a scenario platform.
-fn node_platform(platform: Platform) -> &'static str {
-    match platform {
-        Platform::Linux => "linux",
-        Platform::Mac => "darwin",
-        Platform::Windows => "win32",
-    }
-}
-
 fn spawn_shape(spawn: &RecordedSpawn) -> Value {
     json!({
         "program": spawn.program,
@@ -388,84 +390,110 @@ fn expected_spawns(raw: &Value) -> Value {
 // One case
 // ---------------------------------------------------------------------------------------------
 
-/// What the probes of this slice produced for a case.
-struct Probed {
-    result: Value,
-    gpus: Vec<PartialGpu>,
+/// The `pci.ids` resolver a scenario scripts: each name answers what the case's `dns` map says (`txt`
+/// records or an `error`), and every lookup is kept in order, with the answer it got, to compare with the
+/// recorded `dns.json`. A name the scenario does not script is listed as unscripted and fails the case.
+#[derive(Default)]
+struct TxtState {
+    script: Vec<(String, Value)>,
+    asked: Mutex<Vec<Value>>,
+    unscripted: Mutex<Vec<String>>,
 }
 
-/// The probes in the TS's order (memory, GPUs, operating system), then the CPU check the TS makes
-/// last. The first probe that cannot start rejects the read.
-async fn probe(ctx: &InfoCtx, host: &ScenarioHost) -> Result<Probed, ProbeError> {
-    let memory = get_memory_info(ctx, host).await?;
-    let gpus = match ctx.platform {
-        Platform::Linux => gpu_info_linux(ctx).await,
-        _ => Vec::new(),
-    };
-    let os = get_os_info(ctx, host).await?;
-    if host.cpu_models().is_empty() {
-        return Err(ProbeError::NoCpus);
+struct ScriptedTxt(Arc<TxtState>);
+
+impl ScriptedTxt {
+    fn of(scenario: &Value) -> ScriptedTxt {
+        ScriptedTxt(Arc::new(TxtState {
+            script: scenario["dns"]
+                .as_object()
+                .map(|names| names.iter().map(|(k, v)| (k.clone(), v.clone())).collect())
+                .unwrap_or_default(),
+            ..TxtState::default()
+        }))
     }
-    let version = os.version.unwrap_or_else(|| host.release());
-    Ok(Probed {
-        result: json!({
-            "memory": { "total": memory.total, "used": memory.used },
-            "OS": { "platform": node_platform(ctx.platform), "version": version, "name": os.name },
-        }),
-        gpus,
-    })
 }
 
-/// This slice replays Linux and macOS; the Windows GPU probe and the pci.ids names are Task 3's.
-fn replayed_now(scenario: &Value) -> bool {
-    scenario["platform"].as_str() != Some("windows")
+impl TxtResolver for ScriptedTxt {
+    fn lookup(&self, name: &str) -> BoxFuture<Option<String>> {
+        let answer = self
+            .0
+            .script
+            .iter()
+            .find(|(scripted, _)| scripted == name)
+            .map(|(_, answer)| answer.clone());
+        let this = self.0.clone();
+        let name = name.to_string();
+        Box::pin(async move {
+            let Some(answer) = answer else {
+                this.unscripted.lock().unwrap().push(name);
+                return None;
+            };
+            this.asked
+                .lock()
+                .unwrap()
+                .push(json!({ "name": name, "answer": answer }));
+            // `records[0]?.[0]?.replace(/^i=/, '')`
+            let first = answer["txt"][0][0].as_str()?;
+            Some(first.strip_prefix("i=").unwrap_or(first).to_string())
+        })
+    }
 }
 
-/// The part of a recorded `result.json` this slice produces.
+/// Seeds one pci.ids cache with a case's entries, each aged as the case says, through the same host the
+/// context holds.
+fn seed_cache(ctx: &InfoCtx, store: &str, entries: &Value) {
+    let dir = ctx.paths.user_data.join("store_cache");
+    std::fs::create_dir_all(&dir).unwrap();
+    let file = ctx.host.open_cache(&dir, store).unwrap();
+    let now = ctx.clock.now_ms() as i64;
+    for entry in entries.as_array().into_iter().flatten() {
+        let key = entry["key"].as_str().expect("cache key");
+        file.set(
+            key,
+            Json::Str(entry["value"].as_str().expect("value").to_string()),
+        )
+        .unwrap();
+        let age_ms = entry["ageDays"].as_f64().unwrap_or(0.0) * 86_400_000.0;
+        file.set(
+            &format!("__timestamp.{key}"),
+            Json::Str(js_date_string(now - age_ms as i64)),
+        )
+        .unwrap();
+    }
+}
+
+/// What a pci.ids cache holds, as the `cache.json` golden spells it: key to name.
+fn cache_contents(ctx: &InfoCtx, params: gamelib_info::cache_view::CacheParams) -> Value {
+    let view = CacheView::open(&ctx.host, &ctx.paths.user_data, params, ctx.clock.clone()).unwrap();
+    let mut names = serde_json::Map::new();
+    for (key, value) in view.entries() {
+        match value {
+            Json::Str(name) => names.insert(key, json!(name)),
+            other => panic!("a pci.ids cache entry that is not a string: {other:?}"),
+        };
+    }
+    Value::Object(names)
+}
+
+/// The fields of a recorded `result.json` the probe produces (the sizes' formatted text and the
+/// software versions are 88.1-10's).
 fn expected_result(want: &Value) -> Value {
     match want.get("error") {
         Some(_) => want.clone(),
         None => {
             let info = &want["systemInfo"];
-            json!({ "memory": { "total": info["memory"]["total"], "used": info["memory"]["used"] }, "OS": info["OS"] })
+            json!({
+                "CPU": info["CPU"],
+                "memory": { "total": info["memory"]["total"], "used": info["memory"]["used"] },
+                "GPUs": info["GPUs"],
+                "OS": info["OS"],
+                "steamDeckInfo": info["steamDeckInfo"],
+                "isFlatpak": info["isFlatpak"],
+                "isAppImage": info["isAppImage"],
+            })
         }
     }
-}
-
-/// Whether `got` lists, in order, a GPU for each of the recorded (named) GPUs: the recorded list drops a
-/// GPU whose names could not be looked up, which is Task 3's.
-fn gpus_cover(got: &[PartialGpu], want: &Value) -> Result<(), String> {
-    let wanted: Vec<&Value> = want["systemInfo"]["GPUs"]
-        .as_array()
-        .map(|a| a.iter().collect())
-        .unwrap_or_default();
-    let mut at = 0;
-    for expected in wanted {
-        let mut found = false;
-        while at < got.len() {
-            let candidate = got[at].to_value();
-            at += 1;
-            let same = [
-                "vendorId",
-                "deviceId",
-                "subvendorId",
-                "subdeviceId",
-                "driverVersion",
-            ]
-            .iter()
-            .all(|k| candidate.get(*k) == expected.get(*k));
-            if same {
-                found = true;
-                break;
-            }
-        }
-        if !found {
-            return Err(format!(
-                "the recorded GPU {expected} is not among the probed ones"
-            ));
-        }
-    }
-    Ok(())
 }
 
 fn run_case(case: &Value, deltas: &Deltas) -> Vec<String> {
@@ -499,15 +527,22 @@ fn run_case(case: &Value, deltas: &Deltas) -> Vec<String> {
     ctx.log = Some(lines.clone());
     ctx.proc = runner.clone();
     let host = ScenarioHost::of(scenario);
+    seed_cache(&ctx, "pci_ids_device", &scenario["caches"]["device"]);
+    seed_cache(&ctx, "pci_ids_vendor", &scenario["caches"]["vendor"]);
+    let caches_before = json!({
+        "device": cache_contents(&ctx, PCI_IDS_DEVICE),
+        "vendor": cache_contents(&ctx, PCI_IDS_VENDOR),
+    });
+    let txt = ScriptedTxt::of(scenario);
 
     let runtime = tokio::runtime::Builder::new_current_thread()
         .build()
         .expect("runtime");
-    let outcome = runtime.block_on(probe(&ctx, &host));
+    let outcome = runtime.block_on(probe_system(&ctx, &host, &txt));
 
     let want_result = read_json(&dir.join("result.json"));
     let got_result = match &outcome {
-        Ok(probed) => probed.result.clone(),
+        Ok(probed) => probed.to_value(),
         Err(error) => json!({ "error": error.to_string() }),
     };
     let mut failures = Vec::new();
@@ -517,10 +552,38 @@ fn run_case(case: &Value, deltas: &Deltas) -> Vec<String> {
             "{id}: result.json\n  want {want}\n  got  {got_result}"
         ));
     }
-    if let Ok(probed) = &outcome {
-        if let Err(why) = gpus_cover(&probed.gpus, &want_result) {
-            failures.push(format!("{id}: GPUs: {why}"));
-        }
+
+    // The lookups, in the order the TS made them, each with the answer it was given.
+    let want_dns: Vec<Value> = read_json(&dir.join("dns.json"))
+        .as_array()
+        .expect("dns.json is an array")
+        .iter()
+        .map(|e| json!({ "name": e["name"], "answer": e["answer"] }))
+        .collect();
+    let got_dns = txt.0.asked.lock().unwrap().clone();
+    if want_dns != got_dns {
+        failures.push(format!(
+            "{id}: dns.json\n  want {want_dns:?}\n  got  {got_dns:?}"
+        ));
+    }
+    if !txt.0.unscripted.lock().unwrap().is_empty() {
+        failures.push(format!(
+            "{id}: unscripted lookups {:?}",
+            txt.0.unscripted.lock().unwrap()
+        ));
+    }
+
+    // The caches, before and after.
+    let want_cache = read_json(&dir.join("cache.json"));
+    let got_after = json!({
+        "device": cache_contents(&ctx, PCI_IDS_DEVICE),
+        "vendor": cache_contents(&ctx, PCI_IDS_VENDOR),
+    });
+    if want_cache["before"] != caches_before || want_cache["after"] != got_after {
+        failures.push(format!(
+            "{id}: cache.json\n  want {}\n  got  before {caches_before} after {got_after}",
+            want_cache
+        ));
     }
 
     let want_spawns = deltas.expected(
@@ -609,17 +672,26 @@ fn the_probe_cases_replay_the_ts_goldens() {
 
     let deltas = Deltas::load();
     let mut compared = 0usize;
+    let mut deferred = 0usize;
     let mut failures = Vec::new();
     for case in cases {
         let kind = case["call"]["kind"].as_str().expect("call kind");
-        if kind != "info" || !replayed_now(&case["scenario"]) {
+        if DEFERRED_KINDS.contains(&kind) {
+            deferred += 1;
             continue;
         }
+        assert!(HANDLED_KINDS.contains(&kind), "{kind} is not handled");
         failures.extend(run_case(case, &deltas));
         compared += 1;
     }
     deltas.assert_all_used();
-    eprintln!("golden sysinfo: compared {compared} floor {SYSINFO_FLOOR}");
+    eprintln!("golden sysinfo: compared {compared} deferred {deferred} floor {SYSINFO_FLOOR}");
+    check_floor(
+        "golden/sysinfo compared and deferred",
+        compared + deferred,
+        SYSINFO_FLOOR,
+    )
+    .unwrap();
     assert!(
         failures.is_empty(),
         "{} differences over {compared} cases:\n{}",

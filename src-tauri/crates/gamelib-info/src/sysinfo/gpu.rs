@@ -1,10 +1,12 @@
-//! `utils/systeminfo/gpu/{index,linux}.ts`: the GPUs a machine lists, before their names are looked
-//! up. Linux asks `lspci -mm -v -n -k` once; macOS lists none.
+//! `utils/systeminfo/gpu/{index,linux,windows}.ts`: the GPUs a machine lists, then their `pci.ids`
+//! names. Linux asks `lspci -mm -v -n -k` once, Windows asks WMI through PowerShell, macOS lists none.
 
 use serde_json::{json, Map, Value};
 
-use super::{is_js_space, js_trim, run_probe};
-use crate::ctx::InfoCtx;
+use super::dns::TxtResolver;
+use super::pci_ids::{populate_device_and_vendor_name, GpuInfo, PciCaches};
+use super::{is_js_space, is_line_terminator, js_trim, run_probe, ProbeError};
+use crate::ctx::{InfoCtx, Platform};
 
 /// `PartialGpuInfo`: a GPU's ids and driver, before `pci.ids` names it.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -148,6 +150,176 @@ pub async fn gpu_info_linux(ctx: &InfoCtx) -> Vec<PartialGpu> {
     }
 }
 
+/// `Win32_VideoController` of the PowerShell answer: all three fields must be strings.
+fn video_controller(value: &Value) -> Option<(&str, &str, &str)> {
+    let object = value.as_object()?;
+    Some((
+        object.get("AdapterCompatibility")?.as_str()?,
+        object.get("DriverVersion")?.as_str()?,
+        object.get("PnPDeviceID")?.as_str()?,
+    ))
+}
+
+/// `getFormattedDriverVersion`: NVIDIA's `31.0.15.3713` is really driver `537.13` (the last five digits,
+/// a dot after the third); every other maker's version is shown as it is.
+fn formatted_driver_version(driver_version: &str, manufacturer: &str) -> String {
+    if manufacturer != "NVIDIA" {
+        return driver_version.to_string();
+    }
+    let digits: Vec<char> = driver_version.chars().filter(|c| *c != '.').collect();
+    // `slice(-5, -2)` of the dotless text, then `slice(-2)` of the dotted one.
+    let from_end = |chars: &[char], start: usize, end: usize| -> String {
+        let len = chars.len();
+        let (from, to) = (len.saturating_sub(start), len.saturating_sub(end));
+        if from >= to {
+            String::new()
+        } else {
+            chars[from..to].iter().collect()
+        }
+    };
+    let dotted: Vec<char> = driver_version.chars().collect();
+    format!("{}.{}", from_end(&digits, 5, 2), from_end(&dotted, 2, 0))
+}
+
+/// The four characters at `at` (`.{4}`: no line terminator among them).
+fn four_chars(chars: &[char], at: usize) -> Option<&[char]> {
+    let four = chars.get(at..at + 4)?;
+    if four.iter().any(|c| is_line_terminator(*c)) {
+        return None;
+    }
+    Some(four)
+}
+
+/// `/VEN_(.{4})&DEV_(.{4})&SUBSYS_(.{4})(.{4})/` on a PnP device id, the first place it matches:
+/// `(vendor, device, subdevice, subvendor)`, lowercased (WMI spells the hex in capitals).
+fn pnp_ids(pnp: &str) -> Option<(String, String, String, String)> {
+    let chars: Vec<char> = pnp.chars().collect();
+    let literal = |at: usize, text: &str| {
+        text.chars()
+            .enumerate()
+            .all(|(offset, c)| chars.get(at + offset) == Some(&c))
+    };
+    let lower = |part: &[char]| part.iter().collect::<String>().to_lowercase();
+    for start in 0..chars.len() {
+        if !literal(start, "VEN_") {
+            continue;
+        }
+        let vendor = start + 4;
+        let device_tag = vendor + 4;
+        let device = device_tag + 5;
+        let subsys_tag = device + 4;
+        let sub = subsys_tag + 8;
+        if !(literal(device_tag, "&DEV_") && literal(subsys_tag, "&SUBSYS_")) {
+            continue;
+        }
+        let (Some(ven), Some(dev), Some(subdevice), Some(subvendor)) = (
+            four_chars(&chars, vendor),
+            four_chars(&chars, device),
+            four_chars(&chars, sub),
+            four_chars(&chars, sub + 4),
+        ) else {
+            continue;
+        };
+        return Some((lower(ven), lower(dev), lower(subdevice), lower(subvendor)));
+    }
+    None
+}
+
+/// The GPUs of `Get-CimInstance Win32_VideoController | ConvertTo-Json`: one object for one GPU, an
+/// array for several. An answer that is not JSON, or has a controller missing a field, lists none; a
+/// controller whose PnP id carries no vendor and device ids is skipped.
+pub fn parse_windows_gpus(stdout: &str) -> Vec<PartialGpu> {
+    let Ok(parsed) = serde_json::from_str::<Value>(stdout) else {
+        return Vec::new();
+    };
+    let controllers: Vec<(&str, &str, &str)> = match &parsed {
+        Value::Array(items) => {
+            let all: Option<Vec<_>> = items.iter().map(video_controller).collect();
+            match all {
+                Some(all) => all,
+                None => return Vec::new(),
+            }
+        }
+        single => match video_controller(single) {
+            Some(controller) => vec![controller],
+            None => return Vec::new(),
+        },
+    };
+    controllers
+        .into_iter()
+        .filter_map(|(manufacturer, driver_version, pnp)| {
+            let (vendor_id, device_id, subdevice_id, subvendor_id) = pnp_ids(pnp)?;
+            Some(PartialGpu {
+                vendor_id,
+                device_id,
+                subvendor_id: Some(subvendor_id),
+                subdevice_id: Some(subdevice_id),
+                driver_version: Some(formatted_driver_version(driver_version, manufacturer)),
+            })
+        })
+        .collect()
+}
+
+/// `getGpuInfo_windows`: one PowerShell query. A missing PowerShell is the error; a timeout or a
+/// non-zero exit leaves whatever stdout there was to parse, as the TS did.
+pub async fn gpu_info_windows(ctx: &InfoCtx) -> Result<Vec<PartialGpu>, ProbeError> {
+    let out = run_probe(
+        ctx,
+        "info.sysinfo.powershell_gpu",
+        "powershell",
+        &[
+            "Get-CimInstance",
+            "-Class",
+            "Win32_VideoController",
+            "-Property",
+            "AdapterCompatibility,DriverVersion,PnPDeviceID",
+            "|",
+            "Select-Object",
+            "AdapterCompatibility,DriverVersion,PnPDeviceID",
+            "|",
+            "ConvertTo-Json",
+            "-Compress",
+        ],
+        &[],
+        true,
+    )
+    .await?;
+    Ok(parse_windows_gpus(&out.stdout))
+}
+
+/// `getGpuInfo`: the machine's GPUs with their names. A failure anywhere gives `[]` and one fixed
+/// warning (never the error: it could name a program, a path or a hardware id); a GPU whose device or
+/// vendor name cannot be found is left out.
+pub async fn get_gpu_info(ctx: &InfoCtx, resolver: &dyn TxtResolver) -> Vec<GpuInfo> {
+    const COULD_NOT: &str = "Could not gather GPU info";
+    let partial = match ctx.platform {
+        Platform::Windows => match gpu_info_windows(ctx).await {
+            Ok(gpus) => gpus,
+            Err(_) => {
+                ctx.note(COULD_NOT);
+                return Vec::new();
+            }
+        },
+        Platform::Linux => gpu_info_linux(ctx).await,
+        // macOS GPU probing is not implemented.
+        Platform::Mac => Vec::new(),
+    };
+    if partial.is_empty() {
+        return Vec::new();
+    }
+    let named = match PciCaches::open(ctx) {
+        Ok(caches) => populate_device_and_vendor_name(&caches, resolver, partial).await,
+        Err(error) => Err(error),
+    };
+    match named {
+        Ok(gpus) => gpus,
+        Err(_) => {
+            ctx.note(COULD_NOT);
+            Vec::new()
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -251,5 +423,74 @@ mod tests {
             gpu.to_value(),
             json!({ "vendorId": "1002", "deviceId": "163f", "driverVersion": "amdgpu" })
         );
+    }
+
+    #[test]
+    fn a_single_object_and_an_array_both_parse_and_ids_are_lowercased() {
+        let one = r#"{"AdapterCompatibility":"Intel Corporation","DriverVersion":"1.2.3","PnPDeviceID":"PCI\\VEN_8086&DEV_1234&SUBSYS_5678ABCD"}"#;
+        let gpus = parse_windows_gpus(one);
+        assert_eq!(
+            gpus,
+            vec![PartialGpu {
+                vendor_id: "8086".into(),
+                device_id: "1234".into(),
+                subdevice_id: Some("5678".into()),
+                subvendor_id: Some("abcd".into()),
+                driver_version: Some("1.2.3".into()),
+            }]
+        );
+        let two = format!("[{one},{one}]");
+        assert_eq!(parse_windows_gpus(&two).len(), 2);
+    }
+
+    #[test]
+    fn nvidia_driver_versions_are_reformatted_and_others_kept() {
+        assert_eq!(formatted_driver_version("31.0.15.3713", "NVIDIA"), "537.13");
+        assert_eq!(
+            formatted_driver_version("31.0.21001.1", "Advanced Micro Devices, Inc."),
+            "31.0.21001.1"
+        );
+        assert_eq!(
+            formatted_driver_version("1.2.3", "Intel Corporation"),
+            "1.2.3"
+        );
+        // Short versions follow JS `slice` clamping rather than panicking.
+        assert_eq!(formatted_driver_version("1.2", "NVIDIA"), "..2");
+        assert_eq!(formatted_driver_version("", "NVIDIA"), ".");
+        assert_eq!(formatted_driver_version("12345", "NVIDIA"), "123.45");
+    }
+
+    #[test]
+    fn malformed_windows_answers_list_no_gpu() {
+        for bad in [
+            "",
+            "not json",
+            "null",
+            "42",
+            r#"{"AdapterCompatibility":"NVIDIA"}"#,
+            r#"{"AdapterCompatibility":1,"DriverVersion":"1","PnPDeviceID":"x"}"#,
+            // One bad member spoils the whole array.
+            r#"[{"AdapterCompatibility":"a","DriverVersion":"1","PnPDeviceID":"PCI\\VEN_8086&DEV_1234&SUBSYS_5678ABCD"},{"x":1}]"#,
+            r#"{"AdapterCompatibility":"a","DriverVersion":"1","PnPDeviceID":"USB\\ROOT_HUB30\\4&1"}"#,
+            // The subsystem ids are part of the match.
+            r#"{"AdapterCompatibility":"a","DriverVersion":"1","PnPDeviceID":"PCI\\VEN_8086&DEV_1234"}"#,
+        ] {
+            assert!(parse_windows_gpus(bad).is_empty(), "{bad}");
+        }
+    }
+
+    #[test]
+    fn the_pnp_id_pattern_matches_where_it_first_can_and_not_across_a_line() {
+        assert_eq!(
+            pnp_ids("xx VEN_10DE&DEV_2684&SUBSYS_88EE1043&REV_A1"),
+            Some(("10de".into(), "2684".into(), "88ee".into(), "1043".into()))
+        );
+        // `VEN_` that does not complete the pattern is passed over for a later one that does.
+        assert_eq!(
+            pnp_ids("VEN_zz&DEV_ VEN_1002&DEV_1681&SUBSYS_88231043"),
+            Some(("1002".into(), "1681".into(), "8823".into(), "1043".into()))
+        );
+        assert_eq!(pnp_ids("VEN_10DE&DEV_2684&SUBSYS_88\n21043"), None);
+        assert_eq!(pnp_ids("VEN_10DE&DEV_2684&SUBSYS_88EE104"), None);
     }
 }

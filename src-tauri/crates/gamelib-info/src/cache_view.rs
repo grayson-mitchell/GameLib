@@ -97,6 +97,20 @@ pub const ITAD_STEAM_GIDS: CacheParams = CacheParams {
     invalidate: InvalidateCheck::Never,
 };
 
+/// `systeminfo/gpu/pci_ids.ts`: the device-name cache, 7 days, the default check. The on-disk name is
+/// fixed (87 D-07), so a rolled-back build reads what Rust wrote.
+pub const PCI_IDS_DEVICE: CacheParams = CacheParams {
+    store: "pci_ids_device",
+    lifespan_min: Some(60 * 24 * 7),
+    invalidate: InvalidateCheck::Always,
+};
+/// `systeminfo/gpu/pci_ids.ts`: the vendor-name cache, 7 days, the default check.
+pub const PCI_IDS_VENDOR: CacheParams = CacheParams {
+    store: "pci_ids_vendor",
+    lifespan_min: Some(60 * 24 * 7),
+    invalidate: InvalidateCheck::Always,
+};
+
 /// One cache store, opened through the host.
 pub struct CacheView {
     store: Arc<Store>,
