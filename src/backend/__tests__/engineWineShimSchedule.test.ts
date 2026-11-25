@@ -126,7 +126,6 @@ const COMPATIBILITY_LAYERS_IMPORTERS: readonly string[] = [
  * file (`src/backend/engine/*`) were deleted with the directory in 87-56c.
  */
 const ENGINE_TWIN_IMPORTERS: readonly string[] = [
-  'src/backend/launcher.ts',
   'src/backend/sidecar/bootstrap.ts',
   'src/backend/sidecar/engineWineResolvers.ts',
   'src/backend/sidecar/installFlowRegistration.ts',
@@ -162,10 +161,10 @@ const ENGINE_TWIN_IMPORTERS: readonly string[] = [
 ]
 /**
  * Every non-test importer of `enginewine/tools.ts` (the check is per file, so every row of that file lists them all):
- * the launcher and the Steam bridge's known fixes (87-56c deleted the still-TS engine's `installRemove`, `services/engineServices.ts`).
+ * the Steam bridge's known fixes (87-56c deleted the still-TS engine's `installRemove`, `services/engineServices.ts`; 88.1-15
+ * moved the launcher's DXVK step and installed-packages line into Rust).
  */
 const TOOLS_SHIM_IMPORTERS: readonly string[] = [
-  'src/backend/launcher.ts',
   'src/backend/storeManagers/steam/bridgeKnownFixes.ts'
 ]
 /**
@@ -189,7 +188,6 @@ const LAUNCH_PREPARE_SHIM_IMPORTERS: readonly string[] = [
  */
 const KNOWN_FIX_SHIM_IMPORTERS: readonly string[] = [
   'src/backend/downloadmanager/utils.ts',
-  'src/backend/launcher.ts',
   'src/backend/storeManagers/gog/games.ts',
   'src/backend/storeManagers/legendary/games.ts',
   'src/backend/storeManagers/nile/games.ts',
@@ -305,24 +303,6 @@ const COMMAND_RUNNER_IMPORTERS: readonly string[] = [
  */
 export const SCHEDULE: readonly ScheduleRow[] = [
   // 87-18 (D-15): the launcher's pre-launch runtime step. Phase 88 moves launch into Rust and deletes both.
-  {
-    name: 'isRuntimeInstalled',
-    file: 'src/backend/enginewine/runtimes.ts',
-    shape: 'shim',
-    channel: 'RUST_WINE_RUNTIME_IS_INSTALLED',
-    callers: ['src/backend/launcher.ts'],
-    // Last call site: launcher.ts:859-862, `prepareLaunch`'s umu step, ported in 88.1 (D-30).
-    deletedBy: 88.1
-  },
-  {
-    name: 'downloadRuntime',
-    file: 'src/backend/enginewine/runtimes.ts',
-    shape: 'shim',
-    channel: 'RUST_WINE_RUNTIME_DOWNLOAD',
-    callers: ['src/backend/launcher.ts'],
-    // Last call site: launcher.ts:1142-1152 (umu in `prepareLaunch`, EAC/BattlEye in `prepareWineLaunch`), ported in 88.1 (D-30).
-    deletedBy: 88.1
-  },
   // 87-20 (D-15): the wine manager. utils.ts's default-wine download (checkWineBeforeLaunch, reached from the
   // launch path and the bottle provisioning) and the `releasesInfoReady` listener go with Phase 88's launch
   // port; the sidecar's refresh at the `releasesInfoReady` listener goes with the config in Phase 98. `callers`
@@ -530,15 +510,6 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     channel: 'RUST_ENGINE_LAUNCH_SELECT',
     callers: LAUNCH_SHIM_IMPORTERS,
     deletedBy: 92
-  },
-  {
-    name: 'armEngineLaunchDeadline',
-    file: 'src/backend/enginewine/launch.ts',
-    shape: 'shim',
-    channel: 'RUST_ENGINE_LAUNCH_ARM_DEADLINE',
-    callers: LAUNCH_SHIM_IMPORTERS,
-    // Last call site: launcher.ts:1161, inside `prepareWineLaunch`, which 88.1 ports (88-02, D-30).
-    deletedBy: 88.1
   },
   {
     name: 'endEngineLaunch',
@@ -752,7 +723,7 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     inputs: ['gameSettings'],
     channel: 'RUST_WINE_DXVK_INSTALL_REMOVE',
     wiring: ['registerEngineWineResolvers'],
-    callers: ['src/backend/launcher.ts', 'src/backend/sidecar/handlers.ts'],
+    callers: ['src/backend/sidecar/handlers.ts'],
     deletedBy: 98
   },
   {
@@ -761,7 +732,7 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     shape: 'resolver',
     inputs: ['gameSettings'],
     channel: 'RUST_WINE_DXVK_INSTALL_REMOVE',
-    callers: ['src/backend/launcher.ts', 'src/backend/sidecar/handlers.ts'],
+    callers: ['src/backend/sidecar/handlers.ts'],
     deletedBy: 98
   },
   {
@@ -770,7 +741,7 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     shape: 'resolver',
     inputs: ['gameSettings'],
     channel: 'RUST_WINE_DXVK_INSTALL_REMOVE',
-    callers: ['src/backend/launcher.ts', 'src/backend/sidecar/handlers.ts'],
+    callers: ['src/backend/sidecar/handlers.ts'],
     deletedBy: 98
   },
   // 87-52 (D-23): the renderer's `getEngineState`. TypeScript gathers the library's native and Browser facts and a Steam
@@ -782,21 +753,12 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     shape: 'resolver',
     inputs: ['request'],
     channel: 'RUST_ENGINE_STATE_GET',
-    callers: ['src/backend/launcher.ts', 'src/backend/sidecar/handlers.ts'],
+    callers: ['src/backend/sidecar/handlers.ts'],
     deletedBy: 98
   },
   // 87-34 (D-15): the DXVK shim. The launcher's DXVK step and the Steam bridge's known fixes reach the Rust op through it
   // (the still-TS engine's `installRemove` went with `services/engineServices.ts` in 87-56c); Phase 88
   // moves launch into Rust and deletes it.
-  {
-    name: 'dxvkInstallRemove',
-    file: 'src/backend/enginewine/tools.ts',
-    shape: 'shim',
-    channel: 'RUST_WINE_DXVK_INSTALL_REMOVE',
-    callers: TOOLS_SHIM_IMPORTERS,
-    // Launcher-only callers (launcher.ts:1117-1131, `prepareWineLaunch`), ported in 88.1 (D-30); no bridge caller.
-    deletedBy: 88.1
-  },
   // 87-35 (D-15): the Winetricks shims. The launcher's known-fix install and its installed-packages log line, and the
   // Steam bridge's known fixes, reach the Rust Winetricks ops through them with the settings they already hold; Phase
   // 88 moves launch into Rust and deletes them. `callers` is every importer of the file (the check is per file).
@@ -809,15 +771,6 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     // The Steam bridge still calls it (bridgeKnownFixes.ts:290), so it outlives 88.1's launcher.ts:1198 caller and goes with the bridge in 97 (88-02).
     deletedBy: 97
   },
-  {
-    name: 'winetricksListInstalled',
-    file: 'src/backend/enginewine/tools.ts',
-    shape: 'shim',
-    channel: 'RUST_WINE_WINETRICKS_LIST_INSTALLED',
-    callers: TOOLS_SHIM_IMPORTERS,
-    // Launcher-only caller (launcher.ts:966, `prepareWineLaunch`), ported in 88.1 (D-30); no bridge caller.
-    deletedBy: 88.1
-  },
   // 87-35 (D-23): the Winetricks family's resolvers, registered by the same `registerEngineWineResolvers`. The
   // TS-only input is the Wine environment a game's tools act on (`target`: the tool settings or the reason there are
   // none, decided by `services/winetricksTarget.ts` from the game config, the live launch selection and the bottle
@@ -828,7 +781,7 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     shape: 'resolver',
     inputs: ['target'],
     channel: 'RUST_WINE_WINETRICKS_APPLY',
-    callers: ['src/backend/launcher.ts', 'src/backend/sidecar/handlers.ts'],
+    callers: ['src/backend/sidecar/handlers.ts'],
     deletedBy: 98
   },
   {
@@ -837,7 +790,7 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     shape: 'resolver',
     inputs: ['target'],
     channel: 'RUST_WINE_WINETRICKS_AVAILABLE',
-    callers: ['src/backend/launcher.ts', 'src/backend/sidecar/handlers.ts'],
+    callers: ['src/backend/sidecar/handlers.ts'],
     deletedBy: 98
   },
   {
@@ -846,7 +799,7 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     shape: 'resolver',
     inputs: ['target'],
     channel: 'RUST_WINE_WINETRICKS_INSTALLED',
-    callers: ['src/backend/launcher.ts', 'src/backend/sidecar/handlers.ts'],
+    callers: ['src/backend/sidecar/handlers.ts'],
     deletedBy: 98
   },
   // Every resolver row now lists `launcher.ts` among its callers: it imports `engineWineResolvers.ts` for
@@ -862,7 +815,7 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     shape: 'resolver',
     inputs: ['facts'],
     channel: 'RUST_WINE_RUN_COMMAND_FOR_GAME',
-    callers: ['src/backend/launcher.ts', 'src/backend/sidecar/handlers.ts'],
+    callers: ['src/backend/sidecar/handlers.ts'],
     deletedBy: 98
   },
   // 87-36 (D-23): the renderer's `runWineCommand` (`command` is the payload with the global settings spread under its
@@ -875,7 +828,7 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     shape: 'resolver',
     inputs: ['command'],
     channel: 'RUST_WINE_RUN_COMMAND',
-    callers: ['src/backend/launcher.ts', 'src/backend/sidecar/handlers.ts'],
+    callers: ['src/backend/sidecar/handlers.ts'],
     deletedBy: 98
   },
   {
@@ -884,7 +837,7 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     shape: 'resolver',
     inputs: ['facts'],
     channel: 'RUST_WINE_TOOL_CALL',
-    callers: ['src/backend/launcher.ts', 'src/backend/sidecar/handlers.ts'],
+    callers: ['src/backend/sidecar/handlers.ts'],
     deletedBy: 98
   },
   // 87-26 (D-22 deviation, for the checker and the operator): `getDefaultWineBinary` is read synchronously by
@@ -1123,22 +1076,6 @@ export const SCHEDULE: readonly ScheduleRow[] = [
   // 88-13 (D-03): the launcher's per-launch tier-2 registry fixes and overlay env. `prepareWineLaunch` awaits both; 88.1
   // moves `prepare_wine_launch` into Rust, which calls the two ops in-process, so both rows go with it
   // (`settleKnownFixRegistry` and `settleKnownFixOverlayEnv` keep a rejected call from failing the launch).
-  {
-    name: 'applyKnownFixProfileRegistry',
-    file: 'src/backend/launchrust/knownFixes.ts',
-    shape: 'shim',
-    channel: 'RUST_KNOWNFIX_APPLY_PROFILE_REGISTRY',
-    callers: KNOWN_FIX_SHIM_IMPORTERS,
-    deletedBy: 88.1
-  },
-  {
-    name: 'knownFixProfileOverlayEnv',
-    file: 'src/backend/launchrust/knownFixes.ts',
-    shape: 'shim',
-    channel: 'RUST_KNOWNFIX_PROFILE_OVERLAY_ENV',
-    callers: KNOWN_FIX_SHIM_IMPORTERS,
-    deletedBy: 88.1
-  },
   // 88-14 (D-03): the Steam bridge's registry fixes and overlay env. `applySteamBridgeKnownFixes` awaits both inside its
   // existing async body (`settleKnownFixRegistry` and `settleKnownFixOverlayEnv` keep a rejected call from failing a
   // launch). The bridge's known-fix application is TS until 97 deletes the bridge's TS known-fix modules, so both rows go
@@ -1239,6 +1176,24 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     file: 'src/backend/launchrust/prepare.ts',
     shape: 'shim',
     channel: 'RUST_LAUNCH_PREPARE',
+    callers: LAUNCH_PREPARE_SHIM_IMPORTERS,
+    // legendary's launch leaves in 91, gog's and nile's in 92
+    deletedBy: 92
+  },
+  {
+    name: 'prepareWineLaunchBegin',
+    file: 'src/backend/launchrust/prepare.ts',
+    shape: 'shim',
+    channel: 'RUST_LAUNCH_PREPARE_WINE_BEGIN',
+    callers: LAUNCH_PREPARE_SHIM_IMPORTERS,
+    // legendary's launch leaves in 91, gog's and nile's in 92
+    deletedBy: 92
+  },
+  {
+    name: 'prepareWineLaunchFinish',
+    file: 'src/backend/launchrust/prepare.ts',
+    shape: 'shim',
+    channel: 'RUST_LAUNCH_PREPARE_WINE_FINISH',
     callers: LAUNCH_PREPARE_SHIM_IMPORTERS,
     // legendary's launch leaves in 91, gog's and nile's in 92
     deletedBy: 92
@@ -2026,7 +1981,17 @@ describe('engineWineShimSchedule detector (planted fixtures)', () => {
       expect(rowsDueIn(rows, 88)).toEqual([])
       expect(rowsDueIn([], 98)).toEqual([])
       expect(rowsDueIn(SCHEDULE, 88)).toEqual([])
-      expect(rowsDueIn(SCHEDULE, 88.1).length).toBeGreaterThanOrEqual(9)
+      // 88.1-15 retired every row the TS prepare steps called; what is left is what 88.1-16 and 88.1-17 remove.
+      expect(
+        rowsDueIn(SCHEDULE, 88.1)
+          .map((r) => r.name)
+          .sort()
+      ).toEqual([
+        'installWineVersion',
+        'listWineReleases',
+        'setupEnvVars',
+        'setupWineEnvVars'
+      ])
       expect(rowsDueIn(SCHEDULE, 88.2).length).toBeGreaterThanOrEqual(2)
     })
 

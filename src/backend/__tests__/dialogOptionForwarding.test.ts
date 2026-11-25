@@ -276,9 +276,12 @@ describe('sidecarRpc UNBOUNDED_RUST_CHANNELS covers every human-gated dialog cha
     // Phase 88.1 plan 08: launch_verify_wine_prefix may wait on a wineboot for a cold prefix (haveToWait), past the generic
     // 60 s cap; the wine command core bounds and reaps it and the shutdown cancels it. Not a dialog channel either.
     'RUST_LAUNCH_VERIFY_WINE_PREFIX',
-    // Phase 88.1 plan 15: launch_prepare may download the umu runtime and probe Gamescope; Rust bounds each step and the
-    // shutdown ends them. Not a dialog channel either.
-    'RUST_LAUNCH_PREPARE'
+    // Phase 88.1 plan 15: launch_prepare may download the umu runtime and probe Gamescope; launch_prepare_wine_begin may create a
+    // prefix with a wineboot; launch_prepare_wine_finish may install a verb, a DXVK tool, a runtime or a known-fix overlay. Rust
+    // bounds each step and the shutdown ends them. Not dialog channels either.
+    'RUST_LAUNCH_PREPARE',
+    'RUST_LAUNCH_PREPARE_WINE_BEGIN',
+    'RUST_LAUNCH_PREPARE_WINE_FINISH'
   ]
 
   test('contains exactly the dialog, depot, Rust CM, safety remove, wine runtime download and wine manager channels', () => {

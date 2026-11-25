@@ -83,6 +83,8 @@ import {
   RUST_WINE_RUN_COMMAND_FOR_GAME,
   RUST_WINE_TOOL_CALL,
   RUST_LAUNCH_PREPARE,
+  RUST_LAUNCH_PREPARE_WINE_BEGIN,
+  RUST_LAUNCH_PREPARE_WINE_FINISH,
   RUST_LAUNCH_VERIFY_WINE_PREFIX,
   RUST_DIALOG_MESSAGE,
   RUST_DIALOG_OPEN,
@@ -240,6 +242,14 @@ const RUST_INVOKE_TIMEOUT_MS = 60_000
  * Nineteenth (Phase 88.1, 88.1-15): `launch_prepare` may download the umu runtime when the game runs under Proton, is online
  * and no `umu-run` is on the `PATH` (an archive of tens of megabytes plus an extraction, T-88.1-27), and probes Gamescope
  * with a helper. Rust bounds every spawn and download and the app shutdown ends them, so no entry can outlive the sidecar.
+ *
+ * Twentieth (Phase 88.1, 88.1-15): `launch_prepare_wine_begin` creates a missing wine prefix (a `wineboot` that a cold prefix
+ * can hold past 60 s) and reads the CrossOver bottle and the Winetricks log. The wine command core bounds and reaps each
+ * child (T-88.1-37) and the app shutdown cancels it, so no entry can outlive the sidecar.
+ *
+ * Twenty-first (Phase 88.1, 88.1-15): `launch_prepare_wine_finish` may install a Winetricks verb, a DXVK-family tool, the EAC or
+ * BattlEye runtime or a known-fix overlay, and run a known fix's programs in the prefix, each of which can exceed 60 s. Rust
+ * bounds each step (Helper timeouts, download cancels) and the app shutdown ends them (T-88.1-37).
  */
 const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_DIALOG_OPEN,
@@ -287,7 +297,9 @@ const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_WINE_RUN_COMMAND_FOR_GAME,
   RUST_WINE_TOOL_CALL,
   RUST_LAUNCH_VERIFY_WINE_PREFIX,
-  RUST_LAUNCH_PREPARE
+  RUST_LAUNCH_PREPARE,
+  RUST_LAUNCH_PREPARE_WINE_BEGIN,
+  RUST_LAUNCH_PREPARE_WINE_FINISH
 ]
 
 /**

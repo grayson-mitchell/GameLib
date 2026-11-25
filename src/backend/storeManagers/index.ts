@@ -213,7 +213,6 @@ export function createStoreManagers(
     stores: deps.stores,
     config: deps.config,
     gameConfigs: deps.gameConfigs,
-    infoCaches: deps.infoCaches,
     appInfo: deps.appInfo,
     dialogs: deps.dialogs,
     sendFrontendMessage: deps.sendFrontendMessage,

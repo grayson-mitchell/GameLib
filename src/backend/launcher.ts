@@ -18,7 +18,6 @@ import type { GameConfigs } from './game_config'
 import type { Notifications } from './host/notifications'
 import type { AppState } from './host/appState'
 import type { AppInfo, AppPaths } from './process/context'
-import i18next from 'i18next'
 import { existsSync, mkdirSync } from 'graceful-fs'
 import { join, dirname } from 'path'
 
@@ -37,14 +36,9 @@ import {
   LogPrefix,
   logWarning
 } from './logger'
-import {
-  gatherGameCommandFacts,
-  type GameCommandSource
-} from './services/gameCommandFacts'
-import { runWineCommandForGame } from './sidecar/engineWineResolvers'
+import type { GameCommandSource } from './services/gameCommandFacts'
 import type {
   CommandRunner,
-  InfoCaches,
   SpawnAsync,
   StoreManagers,
   Stores
@@ -52,29 +46,12 @@ import type {
 import shlex from 'shlex'
 import type { ProcessRunner } from './process/types'
 import type { OnlineMonitor } from './online_monitor'
-import { showDialogBoxModalAuto, type DialogBoxDeps } from './dialog/dialog'
-import { readFileSync, writeFileSync } from 'fs'
-import { downloadRuntime, isRuntimeInstalled } from './enginewine/runtimes'
-import {
-  dxvkInstallRemove,
-  winetricksInstallVerbs,
-  winetricksListInstalled
-} from './enginewine/tools'
+import type { DialogBoxDeps } from './dialog/dialog'
 import { validWine } from './enginewine/wineCore'
 import { recordPlaySession } from './runsForMe'
 import { isUmuSupported } from './utils/compatibility_layers'
-import { copyFile } from 'fs/promises'
 import { addRecentGame } from './info/recentGames'
-import { logKnownFixEnv, readKnownFixes } from './launchrust/knownFixTwins'
-import {
-  applyKnownFixProfileRegistry,
-  knownFixProfileOverlayEnv
-} from './launchrust/knownFixes'
-import {
-  settleKnownFixOverlayEnv,
-  settleKnownFixRegistry
-} from './knownFixLaunchReply'
-import { overlayBaseEnv } from 'common/knownFixOverlayCatalogue'
+import { readKnownFixes } from './launchrust/knownFixTwins'
 import {
   getKnownFixesEnvVariables as getKnownFixesEnvVariablesShim,
   setupEnvVars as setupEnvVarsShim,
@@ -90,15 +67,16 @@ import {
   settleWordList
 } from './launchBuilderReply'
 import { isCLINoGui, isLinux, isMac } from './constants/environment'
-import { armEngineLaunchDeadline, endEngineLaunch } from './enginewine/launch'
-import { launchSettingsFor, runLaunchEngineStep } from './launchEngineStep'
-import { engineKeyFor } from './enginewine/twin'
+import { endEngineLaunch } from './enginewine/launch'
+import { runLaunchEngineStep } from './launchEngineStep'
 
 import type { AppRuntimeSlice } from './appRuntime'
 import type LogWriter from './logger/targetWriter'
-import { Game } from 'common/types/game_manager'
 import type { RustInvokeDeps } from './host/rustInvokeDeps'
-import { prepareLaunch as prepareLaunchAdapter } from './launchAdapters'
+import {
+  prepareLaunch as prepareLaunchAdapter,
+  prepareWineLaunch as prepareWineLaunchAdapter
+} from './launchAdapters'
 
 /** What the launcher is built from (66.1, D-02): constructed once per boot by createStoreManagers. */
 export interface LauncherDeps
@@ -121,8 +99,6 @@ export interface LauncherDeps
     'getSettings' | 'getAlternativeWine' | 'setSetting'
   >
   gameConfigs: Pick<GameConfigs, 'get'>
-  /** The boot-owned system-information cache the launch log reads (66.4-12). */
-  infoCaches: Pick<InfoCaches, 'systemInfo'>
   appInfo: Pick<AppInfo, 'version'>
   onlineMonitor: Pick<OnlineMonitor, 'isOnline'>
   /** The boot's store root: the stored game config is read through it (85-15). */
@@ -147,7 +123,10 @@ export interface LauncherDeps
       | 'knownFixOverlaysPath'
       | 'defaultUmuPath'
     >
-  /** The boot-owned abort registry the tool downloads and known-fix overlay downloads register in (66.4-13). */
+  /**
+   * The boot-owned abort registry. Only `checkWineBeforeLaunch` (utils.ts) still reads it here; it leaves with that
+   * function when 88.1-16 ports it (IN-09).
+   */
   aborts: Pick<AbortRegistry, 'create' | 'delete'>
   /** The Steam bottle slice the Steam Wine-tool resolver reads (66.3-15). */
   steamBottle: GameCommandSource['steamBottle']
@@ -181,20 +160,6 @@ function releaseDisplaySleepBlock(deps: LaunchCtx): void {
   logInfo('Stopping Display Power Saver Blocker', LogPrefix.Backend)
   deps.appState.wakeLock.stop(id)
   deps.power.displayId = null
-}
-
-/** What the game-command facts read from this launcher's own deps (the wine command's settings, decided in Rust). */
-function gameCommandSource(deps: LauncherDeps): GameCommandSource {
-  return {
-    libraryManagers: deps.libraryManagers,
-    gameConfigs: deps.gameConfigs,
-    config: deps.config,
-    requestRustInvoke: deps.requestRustInvoke,
-    storeRoot: deps.storeRoot,
-    paths: deps.paths,
-    steamBottle: deps.steamBottle,
-    steamLaunchRuntime: deps.steamLaunchRuntime
-  }
 }
 
 async function runLaunchEventCallback(
@@ -550,386 +515,6 @@ const launchEventCallback = (
     },
     () => runLaunchEventCallback(deps, params)
   )
-
-// Use Crossover's verbose output to extract the path of the game's configured bottle
-async function getCrossoverBottleFolder(
-  deps: Pick<LauncherDeps, 'commandRunner'>,
-  gameSettings: GameSettings
-) {
-  const command = deps.commandRunner.runWineCommand({
-    commandParts: [
-      '--bottle',
-      gameSettings.wineCrossoverBottle,
-      '--verbose', // so it prints the WINEPREFIX env value
-      'whoami' // using whoami because we have to call a command
-    ],
-    gameSettings,
-    skipPrefixCheckIKnowWhatImDoing: true
-  })
-
-  return command
-    .then((result) => {
-      // match the `WINEPREFIX = .....` line to extract the bottle folder
-      const bottleFolder = result.stderr.match(/WINEPREFIX = "(.*)"\n/)?.[1]
-      if (bottleFolder !== undefined) return bottleFolder
-
-      return null
-    })
-    .catch(() => {
-      return null
-    })
-}
-
-async function prepareWineLaunch(
-  deps: LauncherDeps,
-  game: Game,
-  logWriter: LogWriter,
-  // False for callers that do not merge tier-1 `envVariables` (the sideload
-  // path), so the overlay base is not seeded from, and the log does not claim,
-  // a tier-1 value that is never applied there.
-  opts: { mergesTier1Env?: boolean } = {}
-): Promise<{
-  success: boolean
-  failureReason?: string
-  envVars?: Record<string, string>
-  knownFixEnv?: Record<string, string>
-}> {
-  const gameInfo = game.getGameInfo()
-
-  const gameSettings = await launchSettingsFor(
-    deps,
-    engineKeyFor(gameInfo.runner, gameInfo.app_name),
-    await game.getSettings()
-  )
-
-  if (!(await validWine(deps, gameSettings.wineVersion))) {
-    const defaultWine = deps.config.getSettings().wineVersion
-    // now check if the default wine is valid as well
-    if (!(await validWine(deps, defaultWine))) {
-      return { success: false }
-    }
-  }
-
-  // Verify that the CrossOver bottle exists
-  if (isMac && gameSettings.wineVersion.type === 'crossover') {
-    const bottleExists = existsSync(
-      join(
-        deps.paths.userHome,
-        'Library/Application Support/CrossOver/Bottles',
-        gameSettings.wineCrossoverBottle,
-        'cxbottle.conf'
-      )
-    )
-    if (!bottleExists) {
-      showDialogBoxModalAuto(deps, {
-        title: i18next.t(
-          'box.error.cx-bottle-not-found.title',
-          'CrossOver bottle not found'
-        ),
-        message: i18next.t(
-          'box.error.cx-bottle-not-found.message',
-          `The CrossOver bottle "{{bottle_name}}" does not exist, can't launch!`,
-          { bottle_name: gameSettings.wineCrossoverBottle }
-        ),
-        type: 'ERROR'
-      })
-      return {
-        success: false,
-        failureReason: `CrossOver bottle "${gameSettings.wineCrossoverBottle}" does not exist`
-      }
-    }
-  }
-
-  // Phase 87 (87-35): the log is read in Rust (`wine_winetricks_installed`), with the settings this step holds.
-  logWriter.logInfo(
-    winetricksListInstalled(deps, {
-      settings: gameSettings,
-      runner: gameInfo.runner,
-      appName: gameInfo.app_name
-    }).then((installedPackages) => {
-      const packagesString = (installedPackages as string[]).join(', ')
-      return `Winetricks packages: ${packagesString}\n\n`
-    })
-  )
-
-  // We only want to log this for legendary on Linux
-  // On windows, the overlay is installed globally
-  // On mac, the overlay doesn't work
-  const checkEOSOverlayStatusPromise = isLinux
-    ? deps.launchHooks[gameInfo.runner].isOverlayEnabled?.(gameInfo.app_name)
-    : undefined
-  if (checkEOSOverlayStatusPromise) {
-    // The first time a game runs, the overlay is not enabled yet at this point
-    void logWriter.logInfo(
-      checkEOSOverlayStatusPromise.then(
-        (enabled) => `EOS Overlay: ${enabled ? 'Enabled' : 'Not enabled'}`
-      )
-    )
-  }
-
-  if (gameSettings.offlineMode && !gameInfo.canRunOffline) {
-    void logWriter.logWarning(
-      "Warning: 'offlineMode' is turned on but the game does not support offline mode. Disable 'offlineMode' in the game's settings."
-    )
-  }
-
-  await verifyWinePrefix(deps, gameSettings)
-  const experimentalFeatures = deps.config.getSettings().experimentalFeatures
-
-  let hasUpdated = false
-
-  let prefixOrBottleFolder: string | null = gameSettings.winePrefix
-  if (isMac && gameSettings.wineVersion.type === 'crossover') {
-    prefixOrBottleFolder = await getCrossoverBottleFolder(deps, gameSettings)
-  }
-
-  // we check this because if the Crossover's bottle is not configured
-  // properly, this path will be null
-  if (prefixOrBottleFolder) {
-    const appsNamesPath = join(prefixOrBottleFolder, 'installed_games')
-    if (!existsSync(appsNamesPath)) {
-      mkdirSync(prefixOrBottleFolder, { recursive: true })
-      writeFileSync(appsNamesPath, JSON.stringify([gameInfo.app_name]), 'utf-8')
-      hasUpdated = true
-    } else {
-      const installedGames: string[] = JSON.parse(
-        readFileSync(appsNamesPath, 'utf-8')
-      )
-      if (!installedGames.includes(gameInfo.app_name)) {
-        installedGames.push(gameInfo.app_name)
-        writeFileSync(appsNamesPath, JSON.stringify(installedGames), 'utf-8')
-        hasUpdated = true
-      }
-    }
-  }
-
-  if (hasUpdated) {
-    logInfo(
-      ['Created/Updated Wineprefix at', gameSettings.winePrefix],
-      LogPrefix.Backend
-    )
-    await deps.launchHooks[gameInfo.runner].prepareLaunch?.(
-      gameInfo.app_name,
-      logWriter
-    )
-
-    await installFixes(deps, gameInfo.app_name, gameInfo.runner, gameSettings)
-  }
-
-  // Tier-2 profile registry, every launch (Decision 1, quick 261026-j6x).
-  // Phase 88 (88-13, D-03): Rust applies it, through the shim; deletedBy 88.1 (prepare_wine_launch calls it in-process).
-  await settleKnownFixRegistry(
-    `${gameInfo.runner} ${gameInfo.app_name}`,
-    applyKnownFixProfileRegistry(
-      deps,
-      gameInfo.app_name,
-      gameInfo.runner,
-      gameSettings
-    )
-  )
-
-  // Tier-2 overlays (quick 261027-n77): installed on demand, env merged last.
-  // A tier-1 file (the remote layer included) can carry a non-string value, and the overlay-env call
-  // takes a pure string map: one bad value would reject it and drop every tier-2 overlay. Normalise
-  // with String(), as the Steam bridge does (WR-06).
-  const rawTier1Env =
-    opts.mergesTier1Env === false
-      ? {}
-      : getKnownFixesEnvVariables(deps, gameInfo.app_name, gameInfo.runner)
-  const tier1Env: Record<string, string> = Object.fromEntries(
-    typeof rawTier1Env === 'object' && rawTier1Env !== null
-      ? Object.entries(rawTier1Env).map(([key, value]) => [key, String(value)])
-      : []
-  )
-  // The base values cross as data (D-03, T-88-33): only the overlay env keys, read from this process's env.
-  const knownFixEnv = await settleKnownFixOverlayEnv(
-    `${gameInfo.runner} ${gameInfo.app_name}`,
-    knownFixProfileOverlayEnv(
-      deps,
-      gameInfo.app_name,
-      gameInfo.runner,
-      gameSettings,
-      tier1Env,
-      overlayBaseEnv(process.env)
-    )
-  )
-  const knownFixEnvLine = logKnownFixEnv(
-    `${gameInfo.runner} ${gameInfo.app_name}`,
-    [
-      ...Object.entries(tier1Env).map(([key, value]) => ({
-        key,
-        value: String(value),
-        source: 'tier-1'
-      })),
-      ...Object.entries(knownFixEnv).map(([key, value]) => ({
-        key,
-        value,
-        source: 'overlay'
-      }))
-    ],
-    LogPrefix.Backend
-  )
-  if (knownFixEnvLine) void logWriter.logInfo(knownFixEnvLine)
-
-  try {
-    if (
-      isStore(gameInfo, 'gog') &&
-      experimentalFeatures?.cometSupport !== false
-    ) {
-      const galaxyCommWinePath =
-        'C:\\ProgramData\\GOG.com\\Galaxy\\redists\\GalaxyCommunication.exe'
-      const communicationDest = await deps.commandRunner.getWinePath({
-        path: galaxyCommWinePath,
-        gameSettings,
-        variant: 'unix'
-      })
-
-      if (!existsSync(communicationDest)) {
-        mkdirSync(dirname(communicationDest), { recursive: true })
-        await copyFile(deps.paths.galaxyCommunicationExePath, communicationDest)
-        await deps.commandRunner.runWineCommand({
-          commandParts: [
-            'sc',
-            'create',
-            'GalaxyCommunication',
-            `binpath=${galaxyCommWinePath}`
-          ],
-          gameSettings,
-          protonVerb: 'runinprefix'
-        })
-      }
-    }
-  } catch (err) {
-    logError([
-      'Failed to install GalaxyCommunication dummy into the prefix:',
-      err
-    ])
-  }
-
-  // If DXVK/VKD3D installation is enabled, install it
-  // Phase 87 (87-34): the install runs in Rust (`wine_dxvk_install_remove`), with the settings this step holds.
-  if (gameSettings.wineVersion.type === 'wine') {
-    if (gameSettings.autoInstallDxvk) {
-      await dxvkInstallRemove(deps, {
-        settings: gameSettings,
-        tool: 'dxvk',
-        action: 'backup'
-      })
-    }
-    if (isLinux && gameSettings.autoInstallDxvkNvapi) {
-      await dxvkInstallRemove(deps, {
-        settings: gameSettings,
-        tool: 'dxvk-nvapi',
-        action: 'backup'
-      })
-    }
-    if (isLinux && gameSettings.autoInstallVkd3d) {
-      await dxvkInstallRemove(deps, {
-        settings: gameSettings,
-        tool: 'vkd3d',
-        action: 'backup'
-      })
-    }
-  }
-
-  if (
-    gameSettings.eacRuntime &&
-    deps.onlineMonitor.isOnline() &&
-    !(await isRuntimeInstalled(deps, 'eac_runtime'))
-  ) {
-    await downloadRuntime(deps, 'eac_runtime')
-  }
-
-  if (
-    gameSettings.battlEyeRuntime &&
-    deps.onlineMonitor.isOnline() &&
-    !(await isRuntimeInstalled(deps, 'battleye_runtime'))
-  ) {
-    await downloadRuntime(deps, 'battleye_runtime')
-  }
-
-  const envVars = setupWineEnvVars(deps, gameSettings, gameInfo.folder_name)
-
-  // Phase 61-16 (D-18): after installFixes and the known-fix overlay env, so prerequisite
-  // installers never count against the deadline (RESEARCH Pitfall 3).
-  // The arm is Rust's (87-52): a plain-prefix launch and a launch with no registered selection arm nothing, and a
-  // failed call must not fail a launch that is otherwise ready, so it is logged and the launch goes on.
-  await armEngineLaunchDeadline(deps, {
-    runner: gameInfo.runner,
-    appName: gameInfo.app_name,
-    title: gameInfo.title,
-    installPath: gameInfo.install?.install_path
-  }).catch((error: unknown) =>
-    logWarning(
-      `Engine: the launch deadline could not be armed: ${String(error)}`,
-      LogPrefix.Backend
-    )
-  )
-
-  return {
-    success: true,
-    envVars: { ...envVars, ...knownFixEnv },
-    knownFixEnv
-  }
-}
-
-async function installFixes(
-  deps: LauncherDeps,
-  appName: string,
-  runner: Runner,
-  gameSettings: GameSettings
-) {
-  const knownFixes = readKnownFixes(deps, appName, runner)
-
-  if (!knownFixes) return
-
-  if (knownFixes.winetricks) {
-    sendGameStatusUpdate(deps, {
-      appName,
-      runner: runner,
-      status: 'winetricks'
-    })
-
-    // Phase 87 (87-35): the verbs install in Rust, one after another, with the launch settings this step holds.
-    await winetricksInstallVerbs(deps, {
-      settings: gameSettings,
-      runner,
-      appName,
-      verbs: knownFixes.winetricks
-    })
-  }
-
-  if (knownFixes.runInPrefix) {
-    const gameInfo = deps.libraryManagers[runner].getGame(appName).getGameInfo()
-
-    sendGameStatusUpdate(deps, {
-      appName,
-      runner: runner,
-      status: 'redist',
-      context: 'FIXES'
-    })
-
-    for (const filePath of knownFixes.runInPrefix) {
-      const fullPath = join(gameInfo.install.install_path!, filePath)
-      // Phase 87 (87-36): one wine command through the shared resolver; Rust judges the Steam, native and
-      // install-path guards and spawns the program in the game's own bottle.
-      await runWineCommandForGame(
-        {
-          requestRustInvoke: deps.requestRustInvoke,
-          gameCommandFacts: (r, a, opts) =>
-            gatherGameCommandFacts(gameCommandSource(deps), r, a, opts)
-        },
-        {
-          runner,
-          appName,
-          commandParts: [fullPath],
-          wait: true,
-          protonVerb: 'run'
-        }
-      )
-    }
-  }
-}
 
 // The TypeScript original, kept for the launch-builders oracle until 88.1-17 (see `setupWrapperEnvVars`).
 export function getKnownFixesEnvVariables(
@@ -1367,8 +952,8 @@ export interface Launcher {
     ...a: DropFirst<Parameters<typeof prepareLaunchAdapter>>
   ): ReturnType<typeof prepareLaunchAdapter>
   prepareWineLaunch(
-    ...a: DropFirst<Parameters<typeof prepareWineLaunch>>
-  ): ReturnType<typeof prepareWineLaunch>
+    ...a: DropFirst<Parameters<typeof prepareWineLaunchAdapter>>
+  ): ReturnType<typeof prepareWineLaunchAdapter>
   setupEnvVars(
     gameSettings: GameSettings,
     installPath?: string
@@ -1413,7 +998,7 @@ export function createLauncher(deps: LauncherDeps): Launcher {
   }) as LaunchCtx
   return {
     prepareLaunch: (...a) => prepareLaunchAdapter(deps, ...a),
-    prepareWineLaunch: (...a) => prepareWineLaunch(deps, ...a),
+    prepareWineLaunch: (...a) => prepareWineLaunchAdapter(deps, ...a),
     setupEnvVars: async (gameSettings, installPath) =>
       settleEnvMap(
         await setupEnvVarsShim(deps, gameSettings, installPath),

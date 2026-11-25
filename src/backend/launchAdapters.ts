@@ -5,16 +5,24 @@ import type {
 } from 'common/types'
 import { asStoreGame } from 'common/gameInfoNarrowing'
 import { isStore } from 'common/storeCapabilities'
+import type { Game } from 'common/types/game_manager'
 import type { LauncherDeps } from './launcher'
 import type LogWriter from './logger/targetWriter'
-import { prepareLaunch as prepareLaunchShim } from './launchrust/prepare'
+import { logInfo, LogPrefix } from './logger'
+import {
+  prepareLaunch as prepareLaunchShim,
+  prepareWineLaunchBegin,
+  prepareWineLaunchFinish
+} from './launchrust/prepare'
+import { settleEnvMap } from './launchBuilderReply'
 
 /**
- * Phase 88.1 interim glue (D-01, D-30): the Launcher's `prepareLaunch` member, now that the
- * prepare step runs in Rust (`gamelib-launch`). An adapter holds no builder logic. It gathers the facts only the
+ * Phase 88.1 interim glue (D-01, D-30): the Launcher's `prepareLaunch` and `prepareWineLaunch` members, now that the
+ * prepare steps run in Rust (`gamelib-launch`). An adapter holds no builder logic. It gathers the facts only the
  * TypeScript has (the game's info and settings, the store's hooks), makes the call through `launchrust/prepare.ts`,
  * replays the log lines Rust returned into the caller's `LogWriter` in order (the writer stays the only writer and
- * rotator until 88.3), and maps the reply to the return shape the managers read.
+ * rotator until 88.3), runs the TypeScript store-setup hook between the two wine halves, and maps the reply to the
+ * return shape the managers read.
  *
  * Deleted when the managers' launch leaves TypeScript (91 and 92), or when 88.3's `ManagerHooks` takes the hook seam
  * (D-26). The schedule in `engineWineShimSchedule.test.ts` pins the shims these call.
@@ -168,4 +176,108 @@ export async function prepareLaunch(
     result.offlineMode = reply.offlineMode
   }
   return result
+}
+
+/** What `prepareWineLaunch` answers: the environment of the wine launch, or why it did not go on. */
+export interface PrepareWineLaunchResult {
+  success: boolean
+  failureReason?: string
+  envVars?: Record<string, string>
+  knownFixEnv?: Record<string, string>
+}
+
+/**
+ * The wine prepare step of a launch (the Launcher's `prepareWineLaunch`): Rust's first half, then the store's own
+ * setup hook where the TypeScript ran it (only when the prefix or bottle gained this game), then Rust's second half.
+ * `opts.mergesTier1Env` is false for the callers that do not merge tier-1 `envVariables` (the sideload path).
+ */
+export async function prepareWineLaunch(
+  deps: LauncherDeps,
+  game: Game,
+  logWriter: LogWriter,
+  opts: { mergesTier1Env?: boolean } = {}
+): Promise<PrepareWineLaunchResult> {
+  const gameInfo = game.getGameInfo()
+  const { runner } = gameInfo
+  const storedSettings = await game.getSettings()
+  const hooks = deps.launchHooks[runner]
+
+  const beginReply: unknown = await prepareWineLaunchBegin(deps, {
+    runner,
+    appName: gameInfo.app_name,
+    title: gameInfo.title,
+    canRunOffline: Boolean(gameInfo.canRunOffline),
+    folderName: gameInfo.folder_name,
+    storedSettings
+  })
+  if (!isRecord(beginReply) || typeof beginReply.success !== 'boolean') {
+    throw new Error('prepareWineLaunch: the begin reply was not a result')
+  }
+  // The overlay line is the runner's own check, answered here and written in place (unawaited, as before).
+  writeLaunchLog(
+    logWriter,
+    settleLog(beginReply, 'prepareWineLaunch'),
+    (slot) =>
+      slot === 'eosOverlay'
+        ? hooks
+            .isOverlayEnabled?.(gameInfo.app_name)
+            .then(
+              (enabled) => `EOS Overlay: ${enabled ? 'Enabled' : 'Not enabled'}`
+            )
+        : undefined
+  )
+
+  if (!beginReply.success) {
+    const failureReason = optionalString(
+      beginReply.failureReason,
+      'failureReason'
+    )
+    return failureReason === undefined
+      ? { success: false }
+      : { success: false, failureReason }
+  }
+
+  const settings = beginReply.settings
+  if (!isRecord(settings)) {
+    throw new Error('prepareWineLaunch: the begin reply had no settings')
+  }
+  // The crate checked the object; the adapter hands it back to the finish step unmodified (T-88.1-39).
+  const launchSettings = settings as unknown as GameSettings
+  const prefixUpdated = beginReply.prefixUpdated === true
+
+  if (prefixUpdated) {
+    logInfo(
+      ['Created/Updated Wineprefix at', launchSettings.winePrefix],
+      LogPrefix.Backend
+    )
+    await hooks.prepareLaunch?.(gameInfo.app_name, logWriter)
+  }
+
+  const finishReply: unknown = await prepareWineLaunchFinish(deps, {
+    runner,
+    appName: gameInfo.app_name,
+    title: gameInfo.title,
+    installPath: gameInfo.install?.install_path,
+    folderName: gameInfo.folder_name,
+    settings: launchSettings,
+    storedSettings,
+    prefixUpdated,
+    mergesTier1Env: opts.mergesTier1Env !== false,
+    isGog: isStore(gameInfo, 'gog'),
+    cometSupport: deps.config.getSettings().experimentalFeatures?.cometSupport
+  })
+  if (!isRecord(finishReply) || typeof finishReply.success !== 'boolean') {
+    throw new Error('prepareWineLaunch: the finish reply was not a result')
+  }
+  writeLaunchLog(logWriter, settleLog(finishReply, 'prepareWineLaunch'))
+
+  if (!finishReply.success) return { success: false }
+  return {
+    success: true,
+    envVars: settleEnvMap(finishReply.envVars, 'prepareWineLaunch envVars'),
+    knownFixEnv: settleEnvMap(
+      finishReply.knownFixEnv,
+      'prepareWineLaunch knownFixEnv'
+    )
+  }
 }

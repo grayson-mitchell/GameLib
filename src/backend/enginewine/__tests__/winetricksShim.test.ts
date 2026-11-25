@@ -1,17 +1,13 @@
 /**
- * The Winetricks shims (Phase 87, 87-35, D-15): the launcher's known-fix install and its installed-packages log
- * line, and the Steam bridge's known fixes, reach the Rust Winetricks ops through `winetricksInstallVerbs` and
- * `winetricksListInstalled`, with the settings and ids they already hold (no Game object crosses). The shape of each
+ * The Winetricks shims (Phase 87, 87-35, D-15): the Steam bridge's known fixes reach the Rust Winetricks op
+ * through `winetricksInstallVerbs`, with the settings and ids they already hold (no Game object crosses). The shape of each
  * shim is pinned by `engineWineShimSchedule.test.ts`; this file pins what crosses and what comes back.
  */
 import type { GameSettings } from 'common/types'
-import {
-  RUST_WINE_WINETRICKS_INSTALL,
-  RUST_WINE_WINETRICKS_LIST_INSTALLED
-} from 'common/types/sidecarTransport'
+import { RUST_WINE_WINETRICKS_INSTALL } from 'common/types/sidecarTransport'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 
-import { winetricksInstallVerbs, winetricksListInstalled } from '../tools'
+import { winetricksInstallVerbs } from '../tools'
 
 const SETTINGS = { winePrefix: '/prefix' } as unknown as GameSettings
 
@@ -62,25 +58,5 @@ describe('winetricksInstallVerbs', () => {
         verbs: ['xact']
       })
     ).rejects.toThrow('wine_winetricks_install:bad-args')
-  })
-})
-
-describe('winetricksListInstalled', () => {
-  it('sends one typed call carrying the target and answers the log lines Rust read', async () => {
-    const lines = ['vcrun2019', 'corefonts']
-    const deps = fakeTransport(lines)
-    expect(
-      await winetricksListInstalled(deps, {
-        settings: SETTINGS,
-        runner: 'legendary',
-        appName: 'app-2'
-      })
-    ).toBe(lines)
-    expect(deps.calls).toEqual([
-      [
-        RUST_WINE_WINETRICKS_LIST_INSTALLED,
-        [{ runner: 'legendary', appName: 'app-2', settings: SETTINGS }]
-      ]
-    ])
   })
 })

@@ -26,17 +26,18 @@ function bodyOf(source: string, startMarker: string): string {
 describe('launcher.ts overlay census', () => {
   const launcher = read('launcher.ts')
 
-  it('prepareWineLaunch reads settings only through getLaunchSettings(', () => {
-    const body = bodyOf(launcher, 'async function prepareWineLaunch(')
-    const reads = body.match(/\.getSettings\(\)/g) ?? []
-    // The GlobalConfig reads are not game settings; the game read is the only game.getSettings().
+  it('prepareWineLaunch is the interim adapter: one stored-settings read handed to Rust, which overlays the engine itself', () => {
+    // 88.1-15: the body left launcher.ts; the engine overlay (`launchSettingsFor`) is Rust's, read through the engine
+    // registry inside `launch_prepare_wine_begin` (88.1-12), so the adapter passes the game's own stored settings.
+    expect(launcher).not.toContain('async function prepareWineLaunch(')
+    expect(launcher).not.toContain('launchSettingsFor(')
+    const body = bodyOf(
+      read('launchAdapters.ts'),
+      'export async function prepareWineLaunch('
+    )
     const gameReads = body.match(/game\.getSettings\(\)/g) ?? []
     expect(gameReads).toHaveLength(1)
-    expect(reads.length).toBeGreaterThanOrEqual(1)
-    // 87-52: the overlay is Rust's registry, read through the async shim (`launchSettingsFor`).
-    expect(body).toMatch(
-      /launchSettingsFor\(\s*deps,\s*engineKeyFor\([^)]*\),\s*await game\.getSettings\(\)\s*\)/
-    )
+    expect(body).toMatch(/storedSettings/)
   })
 
   it('runLaunchEventCallback reads game settings once, before the engine step, and overlays after it', () => {

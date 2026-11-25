@@ -227,8 +227,9 @@ describe('knownFixSurvivors', () => {
     (KNOWN_FIX_SURVIVOR_FILES as readonly string[]).includes(r.file)
   )
 
-  it('anti-vacuity: both survivor files are read and 16 rows (7 shims, 9 twins) are scheduled', () => {
-    assertAtOrAboveFloor('known-fix survivor rows', rows.length, 16)
+  it('anti-vacuity: both survivor files are read and 14 rows (5 shims, 9 twins) are scheduled', () => {
+    // 88.1-15 deleted the two launcher-only shims (applyKnownFixProfileRegistry, knownFixProfileOverlayEnv): 16 -> 14.
+    assertAtOrAboveFloor('known-fix survivor rows', rows.length, 14)
     for (const file of KNOWN_FIX_SURVIVOR_FILES) {
       expect(tsWalk.files.some((f) => f.path === file)).toBe(true)
       expect(rows.some((r) => r.file === file)).toBe(true)

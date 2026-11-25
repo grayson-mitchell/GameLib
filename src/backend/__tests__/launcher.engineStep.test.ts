@@ -430,14 +430,16 @@ describe('launcher engine step request: the offline flag (87-63, F1)', () => {
 })
 
 describe('launcher deadline arming position (61-16)', () => {
-  it('arms once in prepareWineLaunch, after installFixes and the known-fix env, before success', () => {
-    const src = readFileSync(join(__dirname, '..', 'launcher.ts'), 'utf-8')
-    const start = src.indexOf('async function prepareWineLaunch(')
-    const body = src.slice(start, src.indexOf('async function installFixes('))
-    const arm = body.indexOf('armEngineLaunchDeadline(')
-    expect(src.split('armEngineLaunchDeadline(').length - 1).toBe(1)
-    expect(arm).toBeGreaterThan(body.indexOf('await installFixes('))
-    expect(arm).toBeGreaterThan(body.indexOf('knownFixProfileOverlayEnv('))
-    expect(arm).toBeLessThan(body.lastIndexOf('success: true'))
+  it('the arm moved into Rust with the wine prepare step: launcher.ts holds no arm call and the adapter ends with one finish call', () => {
+    // 88.1-13 and 88.1-15: `launch_prepare_wine_finish` arms the deadline after the known-fix overlay env (its replay
+    // pins the order), so the launcher and its adapter never call `armEngineLaunchDeadline`.
+    const launcher = readFileSync(join(__dirname, '..', 'launcher.ts'), 'utf-8')
+    const adapters = readFileSync(
+      join(__dirname, '..', 'launchAdapters.ts'),
+      'utf-8'
+    )
+    expect(launcher).not.toContain('armEngineLaunchDeadline(')
+    expect(adapters).not.toContain('armEngineLaunchDeadline(')
+    expect(adapters.split('prepareWineLaunchFinish(').length - 1).toBe(1)
   })
 })

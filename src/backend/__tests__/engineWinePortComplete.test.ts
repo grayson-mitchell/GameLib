@@ -658,11 +658,12 @@ describe('noRollbackFlag', () => {
  * shape, wiring); `deletedBy` is held to 88..98 for every row but is not part of the key, because a later plan may move a
  * deleting phase to the latest phase among a row's callers without changing what survives.
  *
- * 78 rows and three wiring helpers. The plan's table named 70; the 87-56a and 87-56b splits added five rows the plan was
+ * 73 rows (78 until 88.1-15) and three wiring helpers. The plan's table named 70; the 87-56a and 87-56b splits added five rows the plan was
  * written before (`resolveEngineToolSettings`, `resolveNonCrossoverEngine`, `ensureFallbackEngine`, `crossoverBinDirSync`,
  * `parseEngineOverride`), and two rows were created by plans 87-42 (`cancelFallbackBottle`, a bottles shim) and 87-54
  * (`bridgeDeadlines`, the D-24 view over the bridge deadline callbacks) that the plan's table did not list. Plan 87-70
- * added the 78th, `removeGameBottle`, on the user's 2026-11-24 gap decision 5.
+ * added the 78th, `removeGameBottle`, on the user's 2026-11-24 gap decision 5. Plan 88.1-15 deleted five launcher-only rows
+ * (`isRuntimeInstalled`, `downloadRuntime`, `dxvkInstallRemove`, `winetricksListInstalled`, `armEngineLaunchDeadline`), 78 to 73.
  */
 type ScheduleShape = (typeof SCHEDULE)[number]['shape']
 
@@ -684,10 +685,6 @@ const rowsOf = (
 ): Survivor[] => names.map((name) => ({ file, name, shape }))
 
 const EXPECTED_SURVIVORS: readonly Survivor[] = [
-  ...rowsOf(`${ENGINEWINE}/runtimes.ts`, 'shim', [
-    'isRuntimeInstalled',
-    'downloadRuntime'
-  ]),
   ...rowsOf(`${ENGINEWINE}/wineManager.ts`, 'shim', [
     'updateWineVersionInfos',
     'installWineVersion',
@@ -724,11 +721,7 @@ const EXPECTED_SURVIVORS: readonly Survivor[] = [
     'callTool',
     'getEngineState'
   ]),
-  ...rowsOf(`${ENGINEWINE}/tools.ts`, 'shim', [
-    'dxvkInstallRemove',
-    'winetricksInstallVerbs',
-    'winetricksListInstalled'
-  ]),
+  ...rowsOf(`${ENGINEWINE}/tools.ts`, 'shim', ['winetricksInstallVerbs']),
   ...rowsOf(`${ENGINEWINE}/twin.ts`, 'twin', [
     'engineKeyFor',
     'isWritableEngineOverride',
@@ -773,7 +766,6 @@ const EXPECTED_SURVIVORS: readonly Survivor[] = [
   },
   ...rowsOf(`${ENGINEWINE}/launch.ts`, 'shim', [
     'selectEngineForLaunch',
-    'armEngineLaunchDeadline',
     'endEngineLaunch',
     'getLaunchSettings',
     'engineDialogDisplayed'
@@ -934,13 +926,13 @@ describe('engineWineSurvivors', () => {
       !f.path.startsWith('src/backend/testUtils/')
   )
 
-  it('the table holds 78 rows, three of them naming a wiring helper (anti-vacuity)', () => {
+  it('the table holds 73 rows, three of them naming a wiring helper (anti-vacuity)', () => {
     assertAtOrAboveFloor(
       'EXPECTED_SURVIVORS rows',
       EXPECTED_SURVIVORS.length,
-      78
+      73
     )
-    expect(EXPECTED_SURVIVORS).toHaveLength(78)
+    expect(EXPECTED_SURVIVORS).toHaveLength(73)
     expect(
       EXPECTED_SURVIVORS.filter((r) => r.wiring).map((r) => r.name)
     ).toEqual(['toggleDXVK', 'engineSelectionView', 'armBridgeDeadline'])
@@ -1048,7 +1040,7 @@ describe('engineWineSurvivors', () => {
     })
     const base: readonly Survivor[] = EXPECTED_SURVIVORS
     const row = (over: Partial<Survivor> = {}): Survivor => ({
-      file: `${ENGINEWINE}/runtimes.ts`,
+      file: `${ENGINEWINE}/wineCore.ts`,
       name: 'planted',
       shape: 'shim',
       ...over
@@ -1091,7 +1083,7 @@ describe('engineWineSurvivors', () => {
     it('self-test: a planted file naming a channel constant outside the table and the channel list is caught', () => {
       const files = [
         planted(
-          'src/backend/enginewine/runtimes.ts',
+          'src/backend/enginewine/wineCore.ts',
           'requestRustInvoke(RUST_WINE_RUNTIME_DOWNLOAD)'
         ),
         planted(

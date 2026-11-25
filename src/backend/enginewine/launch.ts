@@ -1,7 +1,6 @@
 import type { GameSettings } from 'common/types'
 import {
   RUST_ENGINE_DIALOG_DISPLAYED,
-  RUST_ENGINE_LAUNCH_ARM_DEADLINE,
   RUST_ENGINE_LAUNCH_END,
   RUST_ENGINE_LAUNCH_SELECT,
   RUST_ENGINE_LAUNCH_SETTINGS_GET
@@ -47,26 +46,6 @@ export async function selectEngineForLaunch(
   args: SelectEngineRequest
 ): Promise<unknown> {
   return deps.requestRustInvoke(RUST_ENGINE_LAUNCH_SELECT, [args])
-}
-
-/** The game a launch deadline speaks for. */
-export interface ArmEngineDeadlineRequest {
-  runner: string
-  appName: string
-  title: string
-  installPath?: string
-}
-
-/**
- * Arms the launch deadline of a bottle-backed launch and its process watch, after the prerequisite installers. Resolves
- * `{armed: false}` for a plain-prefix launch, a launch with no registered selection or a game with no engine key, else
- * `{armed: true, watching}`. A deadline that fires shows the no-kill notice and never raises the window.
- */
-export async function armEngineLaunchDeadline(
-  deps: RustInvokeDeps,
-  args: ArmEngineDeadlineRequest
-): Promise<unknown> {
-  return deps.requestRustInvoke(RUST_ENGINE_LAUNCH_ARM_DEADLINE, [args])
 }
 
 /**

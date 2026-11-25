@@ -6,11 +6,9 @@
  */
 import { rustInvokeArgs } from 'common/types/ipc/rustInvoke'
 import {
-  RUST_KNOWNFIX_APPLY_PROFILE_REGISTRY,
   RUST_KNOWNFIX_APPLY_REGISTRY,
   RUST_KNOWNFIX_FETCH_REMOTE,
   RUST_KNOWNFIX_LAUNCH_OVERRIDES,
-  RUST_KNOWNFIX_PROFILE_OVERLAY_ENV,
   RUST_KNOWNFIX_REPORT_DETECTED,
   RUST_KNOWNFIX_RESOLVE_OVERLAY_ENV
 } from 'common/types/sidecarTransport'
@@ -22,10 +20,8 @@ import {
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 
 import {
-  applyKnownFixProfileRegistry,
   applyRegistryFixes,
   fetchRemoteKnownFixes,
-  knownFixProfileOverlayEnv,
   readKnownFixLaunchOverrides,
   reportDetectedFix,
   resolveKnownFixOverlayEnv
@@ -130,103 +126,6 @@ describe('fetchRemoteKnownFixes', () => {
 const SETTINGS = {
   wineVersion: { type: 'crossover' }
 } as unknown as GameSettings
-
-describe('applyKnownFixProfileRegistry', () => {
-  it('sends one knownfix_apply_profile_registry call carrying the app, the runner and the launch settings', async () => {
-    const deps = fakeTransport(null)
-    expect(
-      await applyKnownFixProfileRegistry(deps, '1234', 'gog', SETTINGS)
-    ).toBeNull()
-    expect(deps.calls).toEqual([
-      [
-        RUST_KNOWNFIX_APPLY_PROFILE_REGISTRY,
-        [{ appName: '1234', runner: 'gog', gameSettings: SETTINGS }]
-      ]
-    ])
-    expect(RUST_KNOWNFIX_APPLY_PROFILE_REGISTRY).toBe(
-      'knownfix_apply_profile_registry'
-    )
-  })
-
-  it('the arguments pass the channel schema, and a settings value that is not an object does not', async () => {
-    const deps = fakeTransport(null)
-    await applyKnownFixProfileRegistry(deps, 'App', 'sideload', SETTINGS)
-    const schema = rustInvokeArgs[RUST_KNOWNFIX_APPLY_PROFILE_REGISTRY]
-    expect(() => schema.parse(deps.calls[0]?.[1])).not.toThrow()
-    for (const bad of [null, [], 'x', 1]) {
-      expect(() =>
-        schema.parse([{ appName: 'App', runner: 'gog', gameSettings: bad }])
-      ).toThrow()
-    }
-    expect(() =>
-      schema.parse([
-        { appName: 'App', runner: 'gog', gameSettings: {}, extra: 1 }
-      ])
-    ).toThrow()
-  })
-
-  it('rejects with what the transport rejected with', async () => {
-    const deps = fakeTransport(
-      new Error('knownfix_apply_profile_registry:not-ready')
-    )
-    await expect(
-      applyKnownFixProfileRegistry(deps, '1', 'gog', SETTINGS)
-    ).rejects.toThrow('not-ready')
-  })
-})
-
-describe('knownFixProfileOverlayEnv', () => {
-  it('sends one knownfix_profile_overlay_env call carrying the settings, the tier-1 env and the base values', async () => {
-    const reply = { GST_PLUGIN_PATH: '/a:/b' }
-    const deps = fakeTransport(reply)
-    const base = { GST_PLUGIN_PATH: '/a' }
-    expect(
-      await knownFixProfileOverlayEnv(
-        deps,
-        '1234',
-        'legendary',
-        SETTINGS,
-        { FOO: 'bar' },
-        base
-      )
-    ).toBe(reply)
-    expect(deps.calls).toEqual([
-      [
-        RUST_KNOWNFIX_PROFILE_OVERLAY_ENV,
-        [
-          {
-            appName: '1234',
-            runner: 'legendary',
-            gameSettings: SETTINGS,
-            tier1Env: { FOO: 'bar' },
-            processEnvBase: base
-          }
-        ]
-      ]
-    ])
-    expect(RUST_KNOWNFIX_PROFILE_OVERLAY_ENV).toBe(
-      'knownfix_profile_overlay_env'
-    )
-  })
-
-  it('the arguments pass the channel schema, and a non-string env value does not', async () => {
-    const deps = fakeTransport({})
-    await knownFixProfileOverlayEnv(deps, 'App', 'nile', SETTINGS, {}, {})
-    const schema = rustInvokeArgs[RUST_KNOWNFIX_PROFILE_OVERLAY_ENV]
-    expect(() => schema.parse(deps.calls[0]?.[1])).not.toThrow()
-    expect(() =>
-      schema.parse([
-        {
-          appName: 'App',
-          runner: 'nile',
-          gameSettings: {},
-          tier1Env: { A: 1 },
-          processEnvBase: {}
-        }
-      ])
-    ).toThrow()
-  })
-})
 
 describe('applyRegistryFixes (the Steam bridge, 88-14)', () => {
   it('sends one knownfix_apply_registry call carrying the app, the label, the bridge settings and the bottle folder', async () => {

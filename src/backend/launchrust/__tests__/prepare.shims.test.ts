@@ -5,11 +5,19 @@
  * pass the same zod schema the sidecar checks before the frame is written.
  */
 import { rustInvokeArgs } from 'common/types/ipc/rustInvoke'
-import { RUST_LAUNCH_PREPARE } from 'common/types/sidecarTransport'
+import {
+  RUST_LAUNCH_PREPARE,
+  RUST_LAUNCH_PREPARE_WINE_BEGIN,
+  RUST_LAUNCH_PREPARE_WINE_FINISH
+} from 'common/types/sidecarTransport'
 import type { GameSettings } from 'common/types'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 
-import { prepareLaunch } from '../prepare'
+import {
+  prepareLaunch,
+  prepareWineLaunchBegin,
+  prepareWineLaunchFinish
+} from '../prepare'
 
 function fakeTransport(answer: unknown): RustInvokeDeps & {
   calls: Array<[string, unknown[]]>
@@ -62,5 +70,69 @@ describe('prepareLaunch', () => {
     const deps = fakeTransport(new Error('not-ready'))
     await expect(prepareLaunch(deps, args)).rejects.toThrow('not-ready')
     expect(deps.calls).toHaveLength(1)
+  })
+})
+
+const beginArgs = {
+  runner: 'gog' as const,
+  appName: '1234',
+  title: 'A Game',
+  canRunOffline: false,
+  folderName: 'a-game',
+  storedSettings: settings
+}
+
+describe('prepareWineLaunchBegin', () => {
+  it('sends one launch_prepare_wine_begin call carrying the facts object and answers what Rust did', async () => {
+    const reply = { success: true, prefixUpdated: true, settings, log: [] }
+    const deps = fakeTransport(reply)
+    expect(await prepareWineLaunchBegin(deps, beginArgs)).toBe(reply)
+    expect(deps.calls).toEqual([[RUST_LAUNCH_PREPARE_WINE_BEGIN, [beginArgs]]])
+  })
+
+  it('sends arguments the sidecar schema accepts, and refuses a key it does not know', () => {
+    const schema = rustInvokeArgs[RUST_LAUNCH_PREPARE_WINE_BEGIN]
+    expect(schema.safeParse([beginArgs]).success).toBe(true)
+    expect(schema.safeParse([{ ...beginArgs, extra: 1 }]).success).toBe(false)
+  })
+
+  it('rejects when the call could not be made, with no fallback', async () => {
+    const deps = fakeTransport(new Error('not-ready'))
+    await expect(prepareWineLaunchBegin(deps, beginArgs)).rejects.toThrow(
+      'not-ready'
+    )
+  })
+})
+
+const finishArgs = {
+  runner: 'gog' as const,
+  appName: '1234',
+  title: 'A Game',
+  installPath: '/games/a',
+  folderName: 'a-game',
+  settings,
+  storedSettings: settings,
+  prefixUpdated: true,
+  mergesTier1Env: true,
+  isGog: true,
+  cometSupport: undefined
+}
+
+describe('prepareWineLaunchFinish', () => {
+  it("sends one launch_prepare_wine_finish call carrying begin's settings and the stored settings", async () => {
+    const reply = { success: true, envVars: {}, knownFixEnv: {}, log: [] }
+    const deps = fakeTransport(reply)
+    expect(await prepareWineLaunchFinish(deps, finishArgs)).toBe(reply)
+    expect(deps.calls).toEqual([
+      [RUST_LAUNCH_PREPARE_WINE_FINISH, [finishArgs]]
+    ])
+  })
+
+  it('sends arguments the sidecar schema accepts, and refuses a missing storedSettings and an unknown key', () => {
+    const schema = rustInvokeArgs[RUST_LAUNCH_PREPARE_WINE_FINISH]
+    expect(schema.safeParse([finishArgs]).success).toBe(true)
+    const { storedSettings: _dropped, ...withoutStored } = finishArgs
+    expect(schema.safeParse([withoutStored]).success).toBe(false)
+    expect(schema.safeParse([{ ...finishArgs, extra: 1 }]).success).toBe(false)
   })
 })

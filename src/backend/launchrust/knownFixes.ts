@@ -1,11 +1,9 @@
 import type { GameSettings, Runner } from 'common/types'
 import type { KnownFixReportKey, KnownFixReportOp } from 'common/knownFixReport'
 import {
-  RUST_KNOWNFIX_APPLY_PROFILE_REGISTRY,
   RUST_KNOWNFIX_APPLY_REGISTRY,
   RUST_KNOWNFIX_FETCH_REMOTE,
   RUST_KNOWNFIX_LAUNCH_OVERRIDES,
-  RUST_KNOWNFIX_PROFILE_OVERLAY_ENV,
   RUST_KNOWNFIX_REPORT_DETECTED,
   RUST_KNOWNFIX_RESOLVE_OVERLAY_ENV
 } from 'common/types/sidecarTransport'
@@ -52,45 +50,6 @@ export async function fetchRemoteKnownFixes(
 ): Promise<unknown> {
   return deps.requestRustInvoke(RUST_KNOWNFIX_FETCH_REMOTE, [
     { appName, runner }
-  ])
-}
-
-/**
- * The launcher's tier-2 registry step, every launch: the game's profile `registry` entries applied to its own
- * prefix, each `reg add` a helper in Rust. Resolves `null` whatever a command did (a failed `reg add` is a
- * warning in the Rust log). Rejects with Rust's category word when the call could not be made (an argument
- * the crate refused, the shell not ready). The channel is unbounded on the sidecar side: several 15 s commands
- * can pass the 60 s cap.
- */
-export async function applyKnownFixProfileRegistry(
-  deps: RustInvokeDeps,
-  appName: string,
-  runner: Runner,
-  gameSettings: GameSettings
-): Promise<unknown> {
-  return deps.requestRustInvoke(RUST_KNOWNFIX_APPLY_PROFILE_REGISTRY, [
-    { appName, runner, gameSettings }
-  ])
-}
-
-/**
- * The overlay env of a non-Steam launch: the game's tier-2 `overlays` resolved against the base values the
- * caller holds, an overlay installed on demand in Rust. `processEnvBase` is the sidecar's own env reduced to
- * `KNOWN_FIX_OVERLAY_BASE_ENV_KEYS` (`overlayBaseEnv(process.env)`), so Rust computes the game environment from
- * the same values the TS callback read. Resolves the env map `{KEY: value}` as `unknown`, because the transport
- * is untyped. Rejects with Rust's category word when the call could not be made. The channel is unbounded on the
- * sidecar side: the overlay download can take 120 s.
- */
-export async function knownFixProfileOverlayEnv(
-  deps: RustInvokeDeps,
-  appName: string,
-  runner: Runner,
-  gameSettings: GameSettings,
-  tier1Env: Record<string, string>,
-  processEnvBase: Record<string, string>
-): Promise<unknown> {
-  return deps.requestRustInvoke(RUST_KNOWNFIX_PROFILE_OVERLAY_ENV, [
-    { appName, runner, gameSettings, tier1Env, processEnvBase }
   ])
 }
 
