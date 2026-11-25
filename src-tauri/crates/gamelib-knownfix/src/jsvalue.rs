@@ -205,11 +205,19 @@ impl<'de> Visitor<'de> for JsVisitor {
 
     fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<JsValue, A::Error> {
         let mut entries: Vec<(String, JsValue)> = Vec::new();
+        // A repeated key keeps its first place and takes the last value. The index
+        // keeps the lookup linear: a downloaded fix file is hostile input, and a
+        // scan per key is quadratic over a 16 MiB body (CR-01).
+        let mut index: std::collections::HashMap<String, usize> =
+            std::collections::HashMap::new();
         while let Some(key) = map.next_key::<String>()? {
             let value = map.next_value::<JsValue>()?;
-            match entries.iter_mut().find(|(existing, _)| *existing == key) {
-                Some(slot) => slot.1 = value,
-                None => entries.push((key, value)),
+            match index.get(&key) {
+                Some(&at) => entries[at].1 = value,
+                None => {
+                    index.insert(key.clone(), entries.len());
+                    entries.push((key, value));
+                }
             }
         }
         Ok(JsValue::Object(js_order(entries)))
