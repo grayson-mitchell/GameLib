@@ -175,6 +175,19 @@ interface PowerState {
 
 type LaunchCtx = LauncherDeps & { power: PowerState }
 
+/**
+ * Ends the display sleep blocker this launcher holds, once, and clears the held id so the next launch starts its own.
+ * Every end of a launch that began after the blocker started goes through here (87-73, RF2): the normal end, a refused
+ * engine step, a rejected one and a failed Wine check.
+ */
+function releaseDisplaySleepBlock(deps: LaunchCtx): void {
+  const id = deps.power.displayId
+  if (id === null) return
+  logInfo('Stopping Display Power Saver Blocker', LogPrefix.Backend)
+  deps.appState.wakeLock.stop(id)
+  deps.power.displayId = null
+}
+
 /** What the game-command facts read from this launcher's own deps (the wine command's settings, decided in Rust). */
 function gameCommandSource(deps: LauncherDeps): GameCommandSource {
   return {
@@ -287,21 +300,35 @@ async function runLaunchEventCallback(
   // Phase 61 (D-05, D-13): on macOS every non-Steam Windows launch runs the engine step before
   // any Wine check. It returns the engine this launch uses; nothing is persisted (D-08). The step is
   // Rust's (87-52, D-01): the reply carries the settings this launch runs with and the lines for the log.
-  const engineStep = await runLaunchEngineStep(
-    deps,
-    {
-      runner,
+  let engineStep: Awaited<ReturnType<typeof runLaunchEngineStep>>
+  try {
+    engineStep = await runLaunchEngineStep(
+      deps,
+      {
+        runner,
+        appName,
+        title,
+        installPath: gameInfo.install?.install_path,
+        platform: gameInfo.install?.platform,
+        isNative,
+        settings: gameSettings,
+        offline: !deps.onlineMonitor.isOnline()
+      },
+      logWriter
+    )
+  } catch (error) {
+    // A launch whose engine step failed ends here: its status and its blocker end with it (87-73, RF2).
+    releaseDisplaySleepBlock(deps)
+    sendGameStatusUpdate(deps, {
       appName,
-      title,
-      installPath: gameInfo.install?.install_path,
-      platform: gameInfo.install?.platform,
-      isNative,
-      settings: gameSettings,
-      offline: !deps.onlineMonitor.isOnline()
-    },
-    logWriter
-  )
+      runner,
+      status: 'done'
+    })
+    await logWriter.close().catch(() => undefined)
+    throw error
+  }
   if (engineStep.kind === 'refused') {
+    releaseDisplaySleepBlock(deps)
     sendGameStatusUpdate(deps, {
       appName,
       runner,
@@ -346,6 +373,7 @@ async function runLaunchEventCallback(
         LogPrefix.Backend
       )
 
+      releaseDisplaySleepBlock(deps)
       sendGameStatusUpdate(deps, {
         appName,
         runner,
@@ -438,10 +466,7 @@ async function runLaunchEventCallback(
 
   await deps.launchHooks[runner].clearPresence?.()
   // Stop display sleep blocker
-  if (deps.power.displayId !== null) {
-    logInfo('Stopping Display Power Saver Blocker', LogPrefix.Backend)
-    deps.appState.wakeLock.stop(deps.power.displayId)
-  }
+  releaseDisplaySleepBlock(deps)
 
   // Update playtime and last played date
   const finishedPlayingDate = new Date()

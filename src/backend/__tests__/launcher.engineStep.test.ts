@@ -63,11 +63,14 @@ const OVERLAY = {
 
 /** The reply of `engine_launch_select` the next launch gets, and every Rust call the launcher made. */
 let selectReply: unknown
+/** When set, `engine_launch_select` rejects with it instead of answering. */
+let selectError: Error | null
 const rustCalls: { channel: string; args: unknown[] }[] = []
 const requestRustInvoke = ((channel: string, args: unknown[]) => {
   rustCalls.push({ channel, args })
   if (channel === RUST_ENGINE_LAUNCH_SELECT) {
     calls.push('engineStep')
+    if (selectError) return Promise.reject(selectError)
     return Promise.resolve(selectReply)
   }
   if (channel === RUST_ENGINE_LAUNCH_END) return Promise.resolve(null)
@@ -86,10 +89,22 @@ let logWriter: {
 }
 let launchMock: jest.Mock
 
+/** The display sleep blocker, observed: each `start` hands out the next id, each `stop` is recorded. */
+let nextWakeLockId = 0
+const wakeLock = { start: jest.fn(), stop: jest.fn(), isStarted: jest.fn() }
+const BLOCKER_STOPPED = 'Stopping Display Power Saver Blocker'
+const blockerStops = () =>
+  (logInfo as jest.Mock).mock.calls.filter(
+    (call) => call[0] === BLOCKER_STOPPED
+  )
+
 beforeEach(() => {
   calls.length = 0
   rustCalls.length = 0
   selectReply = { kind: 'skip' }
+  selectError = null
+  nextWakeLockId = 100
+  wakeLock.start.mockImplementation(() => ++nextWakeLockId)
   // A fresh launcher (and so a fresh single-flight table) per test, as one per boot in production.
   launchEventCallback = buildLauncher().launchEventCallback
   globalSettingsMock.mockReturnValue({
@@ -139,6 +154,7 @@ const buildLauncher = (
 ) =>
   createLauncher({
     ...slices,
+    appState: { ...slices.appState, wakeLock },
     requestRustInvoke,
     onlineMonitor,
     libraryManagers: {
@@ -264,6 +280,86 @@ describe('launcher engine step (61-14, 87-52)', () => {
     selectReply = { kind: 'use', key: KEY, logLines: [] }
     await expect(run()).rejects.toThrow('engine_launch_select')
     expect(launchMock).not.toHaveBeenCalled()
+  })
+})
+
+/**
+ * 87-73 (RF2, D-06): every end of a launch after the display sleep blocker started ends it, clears the held id and
+ * sends `done` once. Re-run 1 item 1 logged the launch start and the blocker and never their end: the refused path sent
+ * `done` and left the blocker held, and the normal end stopped the blocker without clearing the id, so the next launch
+ * saw an id and never started a fresh one.
+ */
+describe('the end of a launch releases the display sleep blocker (87-73, RF2)', () => {
+  const doneFrames = () =>
+    (sendGameStatusUpdate as jest.Mock).mock.calls.filter(
+      (call) => call[1]?.status === 'done'
+    )
+
+  it("'refused': stops the blocker it started once, logs it once, sends done once", async () => {
+    selectReply = { kind: 'refused', key: KEY, logLines: [] }
+    const result = await run()
+
+    expect(result).toEqual({ status: 'abort' })
+    expect(wakeLock.start).toHaveBeenCalledTimes(1)
+    expect(wakeLock.stop).toHaveBeenCalledTimes(1)
+    expect(wakeLock.stop).toHaveBeenCalledWith(101)
+    expect(blockerStops()).toHaveLength(1)
+    expect(doneFrames()).toHaveLength(1)
+  })
+
+  it('after a refused launch the next launch starts a fresh blocker (the id was cleared)', async () => {
+    selectReply = { kind: 'refused', key: KEY, logLines: [] }
+    await run()
+    selectReply = { kind: 'skip' }
+    await run()
+
+    expect(wakeLock.start).toHaveBeenCalledTimes(2)
+    expect(wakeLock.stop.mock.calls).toEqual([[101], [102]])
+  })
+
+  it('a rejected engine step sends done, stops and clears the blocker, and rejects with the original error', async () => {
+    const failure = new Error('engine_launch_select is down')
+    selectError = failure
+    await expect(run()).rejects.toBe(failure)
+
+    expect(wakeLock.stop).toHaveBeenCalledTimes(1)
+    expect(wakeLock.stop).toHaveBeenCalledWith(101)
+    expect(blockerStops()).toHaveLength(1)
+    expect(doneFrames()).toHaveLength(1)
+
+    // The id is cleared: the next launch starts a blocker of its own.
+    selectError = null
+    await run()
+    expect(wakeLock.start).toHaveBeenCalledTimes(2)
+  })
+
+  it('a failed Wine check stops and clears the blocker and sends done once', async () => {
+    checkWineMock.mockImplementation(() => Promise.resolve(false))
+    const result = await run()
+
+    expect(result).toEqual({ status: 'error' })
+    expect(wakeLock.stop).toHaveBeenCalledTimes(1)
+    expect(wakeLock.stop).toHaveBeenCalledWith(101)
+    expect(blockerStops()).toHaveLength(1)
+    expect(doneFrames()).toHaveLength(1)
+
+    checkWineMock.mockImplementation(() => Promise.resolve(true))
+    await run()
+    expect(wakeLock.start).toHaveBeenCalledTimes(2)
+  })
+
+  it('a normal launch stops the blocker once at its end and clears the id', async () => {
+    const result = await run()
+
+    expect(result).toEqual({ status: 'done' })
+    expect(wakeLock.start).toHaveBeenCalledTimes(1)
+    expect(wakeLock.stop).toHaveBeenCalledTimes(1)
+    expect(wakeLock.stop).toHaveBeenCalledWith(101)
+    expect(blockerStops()).toHaveLength(1)
+
+    await run()
+    expect(wakeLock.start).toHaveBeenCalledTimes(2)
+    expect(wakeLock.stop).toHaveBeenLastCalledWith(102)
   })
 })
 
