@@ -204,6 +204,14 @@ jobs:
       # real tag push is what yields a binary.
       GAMELIB_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
     steps:
+      # Phase 88 CR-02: the gamelib-knownfix golden case folders are named after the test titles that
+      # recorded them, so tracked paths reach 248 characters and pass 260 with the runner's checkout
+      # prefix. git on Windows stops the checkout ("unable to create file") without core.longpaths.
+      # The same step is in rust-test.yml.
+      - name: Allow long paths in git (Windows leg only, Phase 88 golden case folders)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: git config --system core.longpaths true
       - uses: actions/checkout@v6
 
       # WR-03 (gap cycle 2 review): TAURI_SIGNING_PRIVATE_KEY is the ONE
