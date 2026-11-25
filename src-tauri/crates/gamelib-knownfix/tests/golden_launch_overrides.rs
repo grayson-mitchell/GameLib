@@ -201,6 +201,34 @@ fn not_found_text(rig: &Rig) -> String {
         .to_string()
 }
 
+/// Every text the OS gives for a path that is not there. Windows has two: the file is missing in a folder that
+/// exists (`os error 2`) and a folder on the way is missing (`os error 3`); Node's single `ENOENT` covers both, so
+/// the replay accepts either of them and `fold_not_found` makes them one. Elsewhere there is the one text.
+fn not_found_texts(rig: &Rig) -> Vec<String> {
+    if cfg!(windows) {
+        [2, 3]
+            .iter()
+            .map(|code| std::io::Error::from_raw_os_error(*code).to_string())
+            .collect()
+    } else {
+        vec![not_found_text(rig)]
+    }
+}
+
+/// A line the Rust side logged, with an accepted not-found text in `could not be verified (...)` replaced by the
+/// one `expected_line` writes; any other text there stays, and so fails the comparison.
+fn fold_not_found(rig: &Rig, got: &str) -> String {
+    const VERIFIED: &str = "could not be verified (";
+    const CLOSING: &str = "), using the default executable.";
+    if let (Some(at), Some(end)) = (got.find(VERIFIED), got.rfind(CLOSING)) {
+        let from = at + VERIFIED.len();
+        if from <= end && not_found_texts(rig).iter().any(|t| t == &got[from..end]) {
+            return format!("{}{}{}", &got[..from], not_found_text(rig), &got[end..]);
+        }
+    }
+    got.to_string()
+}
+
 /// The two documented differences (`deltas.json`), applied to a golden line so the comparison is against
 /// what the Rust side is specified to say:
 ///
@@ -339,6 +367,15 @@ fn every_launch_override_golden_replays() {
         }
         let dir = golden_dir().join("expected").join(id);
         let (result, events) = run_case(case);
+        let events = {
+            let rig = Rig::new();
+            let mut lines = events.as_array().unwrap().clone();
+            for line in &mut lines {
+                let text = line["text"].as_str().unwrap().to_string();
+                line["text"] = Value::String(fold_not_found(&rig, &text));
+            }
+            Value::Array(lines)
+        };
         let want_result = read_json(&dir.join("result.json"));
         let want_events = {
             let rig = Rig::new();
@@ -427,6 +464,9 @@ fn only_enoent_is_recorded_and_no_warning_carries_a_profile_path() {
             if text.contains("could not be verified (") {
                 assert!(text.contains("Error: ENOENT:"), "{id}: {text}");
             }
+        }
+        if !cfg!(unix) && has_symlink(&case) {
+            continue;
         }
         let (_, events) = run_case(&case);
         for line in events.as_array().unwrap() {
