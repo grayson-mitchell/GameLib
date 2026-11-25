@@ -406,8 +406,8 @@ function commandRunnerDeps(
       getDefaultSettings: () => ({}) as never,
       verifyWinePrefix: async () => ({ res: { stdout: '', stderr: '' } }),
       validWine: async () => true,
-      setupEnvVars: () => ({}),
-      setupWineEnvVars: () => ({}),
+      setupEnvVars: async () => ({}),
+      setupWineEnvVars: async () => ({}),
       isUmuSupported: async () => false,
       getUmuPath: async () => '/umu'
     }

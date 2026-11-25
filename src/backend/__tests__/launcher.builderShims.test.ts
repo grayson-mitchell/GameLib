@@ -10,6 +10,7 @@ import {
   RUST_LAUNCH_KNOWN_FIX_ENV,
   RUST_LAUNCH_SETUP_ENV_VARS,
   RUST_LAUNCH_SETUP_WRAPPER_ENV_VARS,
+  RUST_LAUNCH_SETUP_WINE_ENV_VARS,
   RUST_LAUNCH_SETUP_WRAPPERS,
   RUST_LAUNCH_VERIFY_WINE_PREFIX
 } from 'common/types/sidecarTransport'
@@ -73,6 +74,17 @@ describe('the launcher builder members', () => {
     await expect(words.launcher.setupWrappers(settings)).rejects.toThrow(
       'setupWrappers: the reply was not a list of words'
     )
+  })
+
+  it('setupWineEnvVars sends its channel and answers a string map, and an answer of the wrong shape is an error', async () => {
+    const { launcher, calls } = launcherAnswering({ WINEPREFIX: '/p' })
+    expect(await launcher.setupWineEnvVars(settings, 'g1')).toEqual({
+      WINEPREFIX: '/p'
+    })
+    expect(calls).toEqual([[RUST_LAUNCH_SETUP_WINE_ENV_VARS, [settings, 'g1']]])
+    await expect(
+      launcherAnswering(['not', 'a', 'map']).launcher.setupWineEnvVars(settings)
+    ).rejects.toThrow('setupWineEnvVars: the reply was not a string map')
   })
 
   it('verifyWinePrefix sends its channel with the settings alone and answers the result, and an answer of the wrong shape is an error', async () => {

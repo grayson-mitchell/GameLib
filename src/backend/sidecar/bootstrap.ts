@@ -247,9 +247,13 @@ import {
 } from '../storeManagers/steam/bridge/helperRegistry'
 import { createSteamApiPinResolver } from '../storeManagers/steam/bridge/steamApiPin'
 import { createSteamUser } from '../storeManagers/steam/user'
-// Transitional (removed by plan 27): the legacy registries still hold children until plans
-// 23/24/26 move them onto the runner.
-import { setupEnvVars, setupWineEnvVars, verifyWinePrefix } from '../launcher'
+// The command runner's wine env builders and prefix check are Rust's (88.1-08), reached through the launch shims.
+import {
+  setupEnvVars as setupEnvVarsShim,
+  setupWineEnvVars as setupWineEnvVarsShim,
+  verifyWinePrefix as verifyWinePrefixShim
+} from '../launchrust/builders'
+import { settleEnvMap } from '../launchBuilderReply'
 import { validWine } from '../enginewine/wineCore'
 import { setEngineOnline } from '../enginewine/engineOnline'
 import { crossoverBinDirSync } from '../enginewine/twin'
@@ -1880,28 +1884,41 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
             wine: {
               getDefaultSettings: () =>
                 requireServices(state).config.getSettings(),
-              // The runner built below: wineboot goes through it, not a legacy launcher function.
-              verifyWinePrefix: (settings) => {
-                const { commandRunner } = state.services
-                if (!commandRunner) throw new Error('command runner not built')
-                return verifyWinePrefix(
-                  {
-                    commandRunner,
-                    paths: ctx.paths,
-                    requestRustInvoke: requireHost(state).requestRustInvoke
-                  },
+              // Rust's (88.1-08): the prefix check runs its wineboot through the wine command core, so it
+              // no longer re-enters the runner built below. Read lazily, like the host reads around it.
+              verifyWinePrefix: (settings) =>
+                verifyWinePrefixShim(
+                  { requestRustInvoke: requireHost(state).requestRustInvoke },
                   settings
-                )
-              },
+                ),
               // Read lazily, like the host reads around it: the closure only fires after boot.
               validWine: (wineVersion) =>
                 validWine(
                   { requestRustInvoke: requireHost(state).requestRustInvoke },
                   wineVersion
                 ),
-              setupEnvVars,
-              setupWineEnvVars: (settings, gameId) =>
-                setupWineEnvVars({ paths: ctx.paths }, settings, gameId),
+              setupEnvVars: async (settings, installPath) =>
+                settleEnvMap(
+                  await setupEnvVarsShim(
+                    {
+                      requestRustInvoke: requireHost(state).requestRustInvoke
+                    },
+                    settings,
+                    installPath
+                  ),
+                  'setupEnvVars'
+                ),
+              setupWineEnvVars: async (settings, gameId) =>
+                settleEnvMap(
+                  await setupWineEnvVarsShim(
+                    {
+                      requestRustInvoke: requireHost(state).requestRustInvoke
+                    },
+                    settings,
+                    gameId
+                  ),
+                  'setupWineEnvVars'
+                ),
               isUmuSupported: (settings) =>
                 isUmuSupported({ paths: ctx.paths }, settings),
               getUmuPath: () => getUmuPath({ paths: ctx.paths })

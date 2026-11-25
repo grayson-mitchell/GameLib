@@ -100,7 +100,7 @@ interface ScheduleRow extends ShimRow {
 /** Every non-test importer of `launcher.ts` and of `commandRunner.ts` (the twin check is per file). */
 const LAUNCHER_IMPORTERS: readonly string[] = [
   'src/backend/services/types.ts',
-  'src/backend/sidecar/bootstrap.ts',
+  // 88.1-08: bootstrap.ts no longer imports `launcher.ts` (its command-runner `wine` binding goes through the shims).
   'src/backend/storeManagers/index.ts',
   // 88.1-01: the launch oracle's fake deps import the `LauncherDeps` type to build the real Launcher over fakes.
   'src/backend/testUtils/launchOracle/fakeLauncherDeps.ts'
@@ -168,10 +168,12 @@ const TOOLS_SHIM_IMPORTERS: readonly string[] = [
 ]
 /**
  * Every non-test importer of `launchrust/builders.ts` (the check is per file, so every row of that file lists them
- * all): the launcher binds the shims into its members, which the three managers' `launch()` call (88.1-07).
+ * all): the launcher binds the shims into its members, which the three managers' `launch()` call (88.1-07), and the
+ * command runner's `wine` binding calls three of them from `bootstrap.ts` (88.1-08).
  */
 const LAUNCH_BUILDER_SHIM_IMPORTERS: readonly string[] = [
-  'src/backend/launcher.ts'
+  'src/backend/launcher.ts',
+  'src/backend/sidecar/bootstrap.ts'
 ]
 /**
  * Every non-test importer of `launchrust/knownFixes.ts` (the check is per file, so every row of that file lists them
@@ -1202,8 +1204,18 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     // legendary's launch leaves in 91, gog's and nile's in 92
     deletedBy: 92
   },
-  // 88.1-08 (D-01, D-19, 87 D-22): the prefix check. The save-path sync and the GOG and Amazon setup reach it through the
-  // launcher's member; it goes when the save sync and the setup modules leave (92).
+  // 88.1-08 (D-01, D-19, 87 D-22): the wine env and the prefix check. The save-path sync and the GOG and Amazon setup reach
+  // them through the launcher's members, and the command runner's `wine` binding through `bootstrap.ts`; they go when
+  // the save sync and the setup modules leave (92).
+  {
+    name: 'setupWineEnvVars',
+    file: 'src/backend/launchrust/builders.ts',
+    shape: 'shim',
+    channel: 'RUST_LAUNCH_SETUP_WINE_ENV_VARS',
+    callers: LAUNCH_BUILDER_SHIM_IMPORTERS,
+    // save_sync and the setup modules leave in 92
+    deletedBy: 92
+  },
   {
     name: 'verifyWinePrefix',
     file: 'src/backend/launchrust/builders.ts',

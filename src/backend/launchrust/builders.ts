@@ -2,6 +2,7 @@ import type { GameSettings, Runner, WrapperEnv } from 'common/types'
 import {
   RUST_LAUNCH_KNOWN_FIX_ENV,
   RUST_LAUNCH_SETUP_ENV_VARS,
+  RUST_LAUNCH_SETUP_WINE_ENV_VARS,
   RUST_LAUNCH_SETUP_WRAPPER_ENV_VARS,
   RUST_LAUNCH_SETUP_WRAPPERS,
   RUST_LAUNCH_VERIFY_WINE_PREFIX
@@ -45,6 +46,22 @@ export async function setupEnvVars(
   return deps.requestRustInvoke(RUST_LAUNCH_SETUP_ENV_VARS, [
     gameSettings,
     installPath
+  ])
+}
+
+/**
+ * The wine environment of a game from its settings (`WINEPREFIX`, `STEAM_COMPAT_DATA_PATH`, `CX_BOTTLE`, the wine's
+ * library folders and the rest), as a string map. `gameId` is absent when the caller has none. The shell appends the
+ * process environment and the Darwin release itself (T-88.1-14), so none crosses from here.
+ */
+export async function setupWineEnvVars(
+  deps: RustInvokeDeps,
+  gameSettings: GameSettings,
+  gameId?: string
+): Promise<unknown> {
+  return deps.requestRustInvoke(RUST_LAUNCH_SETUP_WINE_ENV_VARS, [
+    gameSettings,
+    gameId
   ])
 }
 

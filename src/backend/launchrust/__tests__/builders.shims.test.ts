@@ -8,6 +8,7 @@ import { rustInvokeArgs } from 'common/types/ipc/rustInvoke'
 import {
   RUST_LAUNCH_KNOWN_FIX_ENV,
   RUST_LAUNCH_SETUP_ENV_VARS,
+  RUST_LAUNCH_SETUP_WINE_ENV_VARS,
   RUST_LAUNCH_SETUP_WRAPPER_ENV_VARS,
   RUST_LAUNCH_SETUP_WRAPPERS,
   RUST_LAUNCH_VERIFY_WINE_PREFIX
@@ -18,6 +19,7 @@ import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import {
   getKnownFixesEnvVariables,
   setupEnvVars,
+  setupWineEnvVars,
   setupWrapperEnvVars,
   setupWrappers,
   verifyWinePrefix
@@ -203,6 +205,37 @@ describe('getKnownFixesEnvVariables', () => {
     expect(() =>
       rustInvokeArgs[RUST_LAUNCH_KNOWN_FIX_ENV].parse(['App', 'epic'])
     ).toThrow()
+  })
+})
+
+describe('setupWineEnvVars', () => {
+  it('sends one launch_setup_wine_env_vars call carrying the settings and the game id and answers what Rust did', async () => {
+    const reply = { WINEPREFIX: '/p' }
+    const deps = fakeTransport(reply)
+    expect(await setupWineEnvVars(deps, settings, 'g1')).toBe(reply)
+    expect(deps.calls).toEqual([
+      [RUST_LAUNCH_SETUP_WINE_ENV_VARS, [settings, 'g1']]
+    ])
+    expect(RUST_LAUNCH_SETUP_WINE_ENV_VARS).toBe('launch_setup_wine_env_vars')
+  })
+
+  it('sends arguments that pass the channel schema with and without a game id, and the schema refuses a non-object', async () => {
+    const deps = fakeTransport({})
+    await setupWineEnvVars(deps, settings)
+    await setupWineEnvVars(deps, settings, 'g1')
+    const schema = rustInvokeArgs[RUST_LAUNCH_SETUP_WINE_ENV_VARS]
+    for (const [, args] of deps.calls) {
+      expect(() => schema.parse(args)).not.toThrow()
+    }
+    expect(() => schema.parse(['not an object', null])).toThrow()
+  })
+
+  it('passes a rejected call on to the caller and never falls back', async () => {
+    const deps = fakeTransport(new Error('launch_setup_wine_env_vars:bad-args'))
+    await expect(setupWineEnvVars(deps, settings)).rejects.toThrow(
+      'launch_setup_wine_env_vars:bad-args'
+    )
+    expect(deps.calls).toHaveLength(1)
   })
 })
 

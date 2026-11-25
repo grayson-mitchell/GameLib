@@ -79,14 +79,15 @@ export interface CommandRunnerDeps {
     getDefaultSettings(): GameSettings
     verifyWinePrefix(settings: GameSettings): Promise<unknown>
     validWine(wineVersion: WineInstallation): Promise<unknown>
+    // Async since 88.1-08: both are Rust's (`launchrust/builders.ts`), and `runWineCommand` awaits them in the same merge order.
     setupEnvVars(
       settings: GameSettings,
       installPath?: string
-    ): Record<string, string>
+    ): Promise<Record<string, string>>
     setupWineEnvVars(
       settings: GameSettings,
       gameId?: string
-    ): Record<string, string>
+    ): Promise<Record<string, string>>
     isUmuSupported(settings: GameSettings): Promise<boolean>
     getUmuPath(): Promise<string>
   }
@@ -306,8 +307,8 @@ export function createCommandRunner(deps: CommandRunnerDeps) {
     const envVars: Record<string, string> = {
       ...(process.env as Record<string, string>),
       ...options?.env,
-      ...wine.setupEnvVars(settings, gameInstallPath),
-      ...wine.setupWineEnvVars(settings, installFolderName),
+      ...(await wine.setupEnvVars(settings, gameInstallPath)),
+      ...(await wine.setupWineEnvVars(settings, installFolderName)),
       PROTON_VERB: protonVerb
     }
 

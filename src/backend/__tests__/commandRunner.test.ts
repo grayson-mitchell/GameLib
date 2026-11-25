@@ -110,8 +110,8 @@ function setup(
       verifyWinePrefix: () =>
         Promise.resolve({ res: { stdout: '', stderr: '' } }),
       validWine: (w) => Promise.resolve(w.bin !== '/nonexistent/wine'),
-      setupEnvVars: () => ({}),
-      setupWineEnvVars: () => ({ WINEPREFIX: '/fake-prefix' }),
+      setupEnvVars: () => Promise.resolve({}),
+      setupWineEnvVars: () => Promise.resolve({ WINEPREFIX: '/fake-prefix' }),
       isUmuSupported: () => Promise.resolve(false),
       getUmuPath: () => Promise.resolve('/umu')
     },
@@ -1207,8 +1207,8 @@ describe('Layer-2: real children (createRealRunner, fake HOME)', () => {
         verifyWinePrefix: () =>
           Promise.resolve({ res: { stdout: '', stderr: '' } }),
         validWine: () => Promise.resolve(true),
-        setupEnvVars: () => ({}),
-        setupWineEnvVars: () => ({}),
+        setupEnvVars: () => Promise.resolve({}),
+        setupWineEnvVars: () => Promise.resolve({}),
         isUmuSupported: () => Promise.resolve(false),
         getUmuPath: () => Promise.resolve('/umu')
       }

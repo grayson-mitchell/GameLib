@@ -86,6 +86,7 @@ import { overlayBaseEnv } from 'common/knownFixOverlayCatalogue'
 import {
   getKnownFixesEnvVariables as getKnownFixesEnvVariablesShim,
   setupEnvVars as setupEnvVarsShim,
+  setupWineEnvVars as setupWineEnvVarsShim,
   setupWrapperEnvVars as setupWrapperEnvVarsShim,
   setupWrappers as setupWrappersShim,
   verifyWinePrefix as verifyWinePrefixShim
@@ -1751,8 +1752,9 @@ export interface Launcher {
   ): Promise<Record<string, string>>
   setupWrapperEnvVars(wrapperEnv: WrapperEnv): Promise<Record<string, string>>
   setupWineEnvVars(
-    ...a: DropFirst<Parameters<typeof setupWineEnvVars>>
-  ): ReturnType<typeof setupWineEnvVars>
+    gameSettings: GameSettings,
+    gameId?: string
+  ): Promise<Record<string, string>>
   setupWrappers(
     gameSettings: GameSettings,
     mangoHudCommand?: string[],
@@ -1800,7 +1802,11 @@ export function createLauncher(deps: LauncherDeps): Launcher {
         await setupWrapperEnvVarsShim(deps, wrapperEnv),
         'setupWrapperEnvVars'
       ),
-    setupWineEnvVars: (...a) => setupWineEnvVars(deps, ...a),
+    setupWineEnvVars: async (gameSettings, gameId) =>
+      settleEnvMap(
+        await setupWineEnvVarsShim(deps, gameSettings, gameId),
+        'setupWineEnvVars'
+      ),
     setupWrappers: async (
       gameSettings,
       mangoHudCommand,

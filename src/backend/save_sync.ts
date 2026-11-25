@@ -97,7 +97,7 @@ async function getDefaultLegendarySavePath(
       logMessagePrefix: 'Getting default save path',
       env: game.isNative()
         ? {}
-        : deps.launcher.setupWineEnvVars(await game.getSettings())
+        : await deps.launcher.setupWineEnvVars(await game.getSettings())
     }
   )
 

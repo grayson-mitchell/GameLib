@@ -847,8 +847,9 @@ async function recordOnProfile(
         Promise.reject(new Error('not used: the prefix check is skipped')),
       // The launcher's validWine is a shim over Rust (87-24); the probe only needs the check to pass.
       validWine: () => Promise.resolve(true),
-      setupEnvVars,
-      setupWineEnvVars: (s, gameId) =>
+      // The runner awaits the env builders (88.1-08); the TS twins are the oracle's reference, so they are wrapped.
+      setupEnvVars: async (s, installPath) => setupEnvVars(s, installPath),
+      setupWineEnvVars: async (s, gameId) =>
         setupWineEnvVars({ paths: profile.paths }, s, gameId),
       isUmuSupported: (s) => isUmuSupported({ paths: profile.paths }, s),
       getUmuPath: () => getUmuPath({ paths: profile.paths })
