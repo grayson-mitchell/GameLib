@@ -665,7 +665,7 @@ Plans:
   3. Wine, CrossOver and Staging downloads, Winetricks and DXVK/DXMT/vkd3d tools install and report progress as before
   4. `wine/`, `tools/` and engine TypeScript and their sidecar registrations are deleted in this phase, except scheduled resolvers listed in the schedule test (D-23)
 
-**Plans:** 73/73 plans executed in 41 waves; planned 2026-11-23, revised the same day so every plan fits the 100k smart-zone budget (executes after Phase 86 closes); 87-56a/b/c added 2026-11-24 for the 87-56 remainder; 87-60..87-70 added 2026-11-24 as gap closure for the 87-59 live gate (F1-F5 and the engine-log gap) in 8 gap waves
+**Plans:** 73/82 plans executed in 41 waves; planned 2026-11-23, revised the same day so every plan fits the 100k smart-zone budget (executes after Phase 86 closes); 87-56a/b/c added 2026-11-24 for the 87-56 remainder; 87-60..87-70 added 2026-11-24 as gap closure for the 87-59 live gate (F1-F5 and the engine-log gap) in 8 gap waves; 87-71..87-79 added 2026-11-25 as gap closure cycle 2 for the 87-69 re-run findings (RF1-RF6) in 6 gap waves
 
 Plans:
 **Wave 1**
@@ -850,6 +850,34 @@ Plans:
 - Memory-note shape: any offline step turns the network off only for the action (off, act, on, report)
 - Two-profile rule: every golden runs on an isolated createFakeHomeProfile(); no case reads the real HOME
 - D-25 (c): `callTool` (winecfg, runExe) and `runWineCommandForGame` spawn in Rust as `SpawnClass::Helper`; the GOG offline-installer check, `pushGameToLibrary` and the final `gameStatusUpdate done` stay in the TS registration glue after the resolver returns, in the TS order
+
+**Gap closure cycle 2 (87-69 re-run findings; user decisions 2026-11-25)**
+
+**Gap wave 1**
+- [ ] 87-71-PLAN.md — Author the re-run 2 contract 87-RERUN-2-HUMAN-UAT.md (7 items, before any fix, D-21/D-E) and file O1 and O2 as todos; link the RF1 todo
+
+**Gap wave 2** *(blocked on 87-71)*
+- [ ] 87-72-PLAN.md — RF1 diagnosis only: reproduce the 1-2 s CrossOver exit (desk side-by-side, then a live operator capture) and name the cause with evidence; no fix
+- [ ] 87-73-PLAN.md — RF2: a refused, failed or rejected launch ends its status and display sleep blocker; the Play-click latch cannot outlive the launch
+- [ ] 87-74-PLAN.md — RF3: trace Cancel in the uninstall dialog to the Steam shortcut removal, cut the hop, test every close path
+- [ ] 87-75-PLAN.md — RF4: bottle-backed games on the shared default prefix reach the bottle removal (default prefix never a target); RF6: in-use and unsafe-name notice wording
+
+**Gap wave 3** *(blocked on 87-71, 87-73)*
+- [ ] 87-76-PLAN.md — RF5: the engine state carries the offline-gate verdict at read time, and launch() skips the generic offline warning when the engine will refuse
+
+**Gap wave 4** *(blocked on 87-72, 87-73, 87-76)*
+- [ ] 87-77-PLAN.md — RF1 fix at the layer 87-72 named, red-first regression in Rust and TS; any pre-fix 88.1 launch golden handed to 88.1 as a todo
+
+**Gap wave 5** *(blocked on 87-71..87-77)*
+- [ ] 87-78-PLAN.md — Clean-worktree proof, push checkpoint, three-OS CI and the signed 0.13.2 gap build 2 (D-12, D-13)
+
+**Gap wave 6** *(blocked on 87-71, 87-78)*
+- [ ] 87-79-PLAN.md — Run the live macOS re-run 2 gate on the signed gap build 2 (not its author, D-E); close RF1's todo if item 3 passes
+
+**Cross-cutting constraints:**
+- Memory-note shape: any offline step turns the network off only for the action (off, act, on, report); dev launch is `pnpm tauri:dev`, never `tauri:dev:run`
+- Phase 88.1 executes in parallel on main: STATE.md is not mutated by these plans, commits use `--files`, and cited `launcher.ts` lines are re-read at HEAD before editing
+- RF1 is fixed only after 87-72 names its cause (`status: root-cause-named` in `.planning/debug/rf1-crossover-launches-exit-within-two-seconds.md`)
 
 ### Phase 88: Launch scaffolding and known fixes
 
