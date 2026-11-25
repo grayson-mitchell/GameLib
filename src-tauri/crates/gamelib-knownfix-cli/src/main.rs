@@ -83,7 +83,10 @@ fn run_op(args: &[String]) {
         None => user_data.join("home"),
     };
     let bundled = opt_flag(rest, "--public").map(|dir| PathBuf::from(dir).join("fixes"));
-    let relay_url = opt_flag(rest, "--relay-url").unwrap_or("");
+    // Fails closed: without `--relay-url` a headless run answers `no-relay` and never posts to the
+    // deployed relay (WR-05).
+    let relay_url = opt_flag(rest, "--relay-url")
+        .unwrap_or(gamelib_knownfix::report::RELAY_URL_PENDING_SENTINEL);
     let app_version = opt_flag(rest, "--app-version").unwrap_or(env!("CARGO_PKG_VERSION"));
     let engine = EngineCtx::new(
         Arc::new(StoreHost::new()),
@@ -106,7 +109,12 @@ fn run_op(args: &[String]) {
         engine.paths.tools_path.join("runtimes"),
     );
     let host = WineHost {
-        env: EnvSnapshot::from_pairs(std::env::vars()),
+        env: EnvSnapshot::from_pairs(std::env::vars_os().map(|(k, v)| {
+            (
+                k.to_string_lossy().into_owned(),
+                v.to_string_lossy().into_owned(),
+            )
+        })),
         ..WineHost::default()
     };
     let ctx =
@@ -118,7 +126,11 @@ fn run_op(args: &[String]) {
 }
 
 fn main() {
-    let argv: Vec<String> = std::env::args().skip(1).collect();
+    // Lossy, not `env::args()`, which panics on a non-Unicode argument (WR-04).
+    let argv: Vec<String> = std::env::args_os()
+        .skip(1)
+        .map(|a| a.to_string_lossy().into_owned())
+        .collect();
     match argv.first().map(String::as_str) {
         Some("ops") if argv.len() == 1 => {
             for op in gamelib_knownfix::OPS {
