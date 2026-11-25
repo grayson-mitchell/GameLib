@@ -5,15 +5,15 @@ milestone_name: Node Sidecar Retirement
 current_phase: "88.1"
 current_phase_name: Launch builders and prepare steps
 status: executing
-stopped_at: Completed 88.1-03-PLAN.md
-last_updated: "2026-11-25T07:17:46.392Z"
+stopped_at: Completed 88.1-04-PLAN.md
+last_updated: "2026-11-25T07:26:17.735Z"
 last_activity: 2026-11-25
 last_activity_desc: Phase 88.1 execution started
-state_head: a7366b230f6c11898032bba3da7dd8190f3b9cfa
+state_head: 83b8f440f8457c98b53f6134b4c87a4a7d24e8c0
 progress:
   total_phases: 25
   completed_phases: 23
-  total_plans: 259
+  total_plans: 266
   completed_plans: 531
   percent: 92
 ---
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-25)
 ## Current Position
 
 Phase: 88.1 (Launch builders and prepare steps) — EXECUTING
-Plan: 4 of 20
+Plan: 5 of 20
 Status: Ready to execute
 Last activity: 2026-11-25 — Phase 88.1 execution started
 Progress: [████████████████░░░░] 204/257 plans ([█████████░] 92%)
@@ -523,6 +523,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 88.1 P01 | 40 min | 3 tasks | 9 files |
 | Phase 88.1 P02 | 95min | 2 tasks | 14 files |
 | Phase 88.1 P03 | 55min | 2 tasks | 5 files |
+| Phase 88.1 P04 | 30 min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -1174,6 +1175,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 88.1]: 88.1-02: prepare_launch is pinned by two pairwise suites per (OS, runner) cell (identity on every OS, tools on Linux) because the full product cannot be enumerated; tool axes are not paired with anti-cheat, Epic status or the expired flag
 - [Phase 88.1]: 88.1-02: Epic status replays hand-authored exchanges through replayAxiosClient; only the literal status 'major' counts as offline (recorded, filed as a todo, not fixed)
 - [Phase 88.1]: 88.1-03: prepare_wine goldens hold five files per case (input, result, begin, finish, tree); the seq-stamped ordered trace is cut at the store-setup hook; pairwise rows are generated in three suites per cell
+- [Phase 88.1]: 88.1-04: check_wine dialogs run through the real createDialogs over a scripted dialog_message reply, so a dismissal is the TS-mapped answer (cancelId absent, so the last button, No); settings writes are recorded as data for the Rust reply to return
+- [Phase 88.1]: 88.1-04: isMacSonomaOrHigher's Darwin-major>=14 threshold is kept as recorded (Darwin 22 picks the toolkit) and filed as a todo; the mac Wine-Crossover direction is recorded at Darwin 13
 
 ### Pending Todos
 
@@ -1459,8 +1462,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-25T07:17:43.386Z
-Stopped at: Completed 88.1-03-PLAN.md
+Last session: 2026-11-25T07:26:14.585Z
+Stopped at: Completed 88.1-04-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
