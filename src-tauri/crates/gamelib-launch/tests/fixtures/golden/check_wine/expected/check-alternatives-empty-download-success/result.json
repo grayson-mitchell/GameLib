@@ -1,0 +1,8 @@
+{
+  "ok": true,
+  "wineVersionAfter": {
+    "name": "Proton-CachyOS-9.0",
+    "type": "proton",
+    "bin": "/pins/wines/Proton-CachyOS-9.0/proton"
+  }
+}

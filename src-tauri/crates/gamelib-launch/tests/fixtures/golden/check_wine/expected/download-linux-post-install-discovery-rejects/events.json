@@ -1,0 +1,8 @@
+[
+  {
+    "seq": 4,
+    "level": "error",
+    "prefix": "Backend",
+    "text": "Error when changing wine version to default Error: wine discovery failed"
+  }
+]

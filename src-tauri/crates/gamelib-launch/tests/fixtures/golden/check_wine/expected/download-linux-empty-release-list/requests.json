@@ -1,0 +1,16 @@
+[
+  {
+    "seq": 0,
+    "channel": "wine_manager_refresh",
+    "args": [
+      true
+    ],
+    "reply": null
+  },
+  {
+    "seq": 1,
+    "channel": "wine_manager_list",
+    "args": [],
+    "reply": []
+  }
+]

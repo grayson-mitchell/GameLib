@@ -1,0 +1,14 @@
+[
+  {
+    "seq": 1,
+    "level": "error",
+    "prefix": "Backend",
+    "text": "Wine version Wine-Game-8.0 is not valid, trying another one."
+  },
+  {
+    "seq": 8,
+    "level": "error",
+    "prefix": "Backend",
+    "text": "Error when changing wine version to default Error: No alternative wine version found after installing"
+  }
+]

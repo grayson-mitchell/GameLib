@@ -1,0 +1,8 @@
+[
+  {
+    "seq": 2,
+    "level": "error",
+    "prefix": "Backend",
+    "text": "Could not find default wine version"
+  }
+]

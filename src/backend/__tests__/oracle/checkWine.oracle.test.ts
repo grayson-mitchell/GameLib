@@ -99,7 +99,7 @@ jest.unmock('i18next')
 const CRATE = 'gamelib-launch'
 const SLICE = 'check_wine'
 /** The case count this plan committed; a later edit may raise it, never lower it. */
-const CHECK_WINE_FLOOR = 1
+const CHECK_WINE_FLOOR = 49
 
 const mode = engineWineOracleMode()
 
@@ -176,14 +176,250 @@ const base = (id: string): CheckWineCase => ({
   valid: []
 })
 
+const proton = (name: string): WineInstallation => ({
+  name,
+  type: 'proton',
+  bin: `/pins/wines/${name}/proton`
+})
+
+const CACHY = proton('Proton-CachyOS-9.0')
+const MAC_WINE: WineInstallation = {
+  name: 'Game-Porting-Toolkit-2.0',
+  type: 'toolkit',
+  bin: '/pins/wines/Game-Porting-Toolkit-2.0/bin/wine64'
+}
+const CACHY_RELEASE = release('Proton-CachyOS', '9.0')
+const GE_RELEASE = release('GE-Proton', '9-20')
+const WINE_GE_RELEASE = release('Wine-GE', '8-26')
+const CROSSOVER_RELEASE = release('Wine-Crossover', '23.7.1')
+const GPTK_RELEASE = release('Game-Porting-Toolkit', '2.0')
+/** A Linux list with the wrong types first, so the pick is shown to be by type and not by position. */
+const LINUX_RELEASES = [WINE_GE_RELEASE, GE_RELEASE, CACHY_RELEASE]
+/** A Mac list with both types, Crossover first. */
+const MAC_RELEASES = [CROSSOVER_RELEASE, GPTK_RELEASE]
+
+const STEAM_BOTTLE = {
+  runner: 'steam' as const,
+  appName: STEAM_BOTTLE_RESERVED_APPNAME
+}
+
 function checkWineCases(): CheckWineCase[] {
+  const checkValid = (id: string, extra: Partial<CheckWineCase>) => ({
+    ...base(id),
+    valid: [DEFAULT_WINE.name],
+    ...extra
+  })
+  const altValid = (id: string, extra: Partial<CheckWineCase>) => ({
+    ...base(id),
+    valid: [ALT_WINE.name],
+    alternatives: [{ list: [ALT_WINE] }],
+    ...extra
+  })
+  // The game wine and the default are both invalid and discovery finds nothing: the download path.
+  const download = (id: string, extra: Partial<CheckWineCase>) => ({
+    ...base(id),
+    alternatives: [{ list: [] }, { list: [CACHY] }],
+    releases: LINUX_RELEASES,
+    install: 'success',
+    ...extra
+  })
+  const mac = (osRelease: string): Partial<CheckWineCase> => ({
+    platform: 'mac',
+    osRelease
+  })
+  // `downloadDefaultWine(deps)` called directly.
+  const direct = (
+    id: string,
+    extra: Partial<CheckWineCase>
+  ): CheckWineCase => ({
+    ...base(id),
+    call: 'download',
+    alternatives: [{ list: [CACHY] }],
+    releases: LINUX_RELEASES,
+    install: 'success',
+    ...extra
+  })
+
   return [
     // The tracer: the game wine is invalid, the default is valid and the user answers Yes.
     {
       ...base('check-default-valid-yes'),
       valid: [DEFAULT_WINE.name],
       dialog: 0
-    }
+    },
+
+    // ----- the game wine is valid: no dialog, no request beyond RUST_WINE_VALID
+    { ...base('check-game-wine-valid'), valid: [GAME_WINE.name] },
+    {
+      ...base('check-game-wine-valid-verbose'),
+      valid: [GAME_WINE.name],
+      verboseLogs: true
+    },
+
+    // ----- the default wine is valid: Yes, No, dismissed
+    checkValid('check-default-valid-no', { dialog: 1 }),
+    checkValid('check-default-valid-dismissed', { dialog: null }),
+
+    // ----- verboseLogs and disableLogs, both ways, on the default-valid Yes branch
+    checkValid('check-default-valid-yes-verbose', {
+      dialog: 0,
+      verboseLogs: true
+    }),
+    checkValid('check-default-valid-yes-disable-logs', {
+      dialog: 0,
+      disableLogs: true
+    }),
+    checkValid('check-default-valid-yes-verbose-disable-logs', {
+      dialog: 0,
+      verboseLogs: true,
+      disableLogs: true
+    }),
+    checkValid('check-default-valid-no-verbose', {
+      dialog: 1,
+      verboseLogs: true
+    }),
+
+    // ----- the callers: a store runner, and the Steam bottle's synthetic appName
+    checkValid('check-default-valid-yes-gog', {
+      dialog: 0,
+      runner: 'gog',
+      appName: 'gog-1207658930'
+    }),
+    checkValid('check-default-valid-yes-nile', {
+      dialog: 0,
+      runner: 'nile',
+      appName: 'amzn1.adg.product.example'
+    }),
+    checkValid('check-default-valid-yes-sideload', {
+      dialog: 0,
+      runner: 'sideload',
+      appName: 'sideload-game'
+    }),
+    checkValid('check-default-valid-yes-steam-bottle', {
+      dialog: 0,
+      ...STEAM_BOTTLE
+    }),
+    download('check-download-success-steam-bottle', STEAM_BOTTLE),
+
+    // ----- the default wine is invalid and discovery finds one that is valid: Yes, No, dismissed
+    altValid('check-alternative-valid-yes', { dialog: 0 }),
+    altValid('check-alternative-valid-no', { dialog: 1 }),
+    altValid('check-alternative-valid-dismissed', { dialog: null }),
+    altValid('check-alternative-valid-yes-verbose-disable-logs', {
+      dialog: 0,
+      verboseLogs: true,
+      disableLogs: true
+    }),
+    altValid('check-alternative-valid-first-of-several', {
+      dialog: 0,
+      alternatives: [{ list: [ALT_WINE, wine('Wine-Other-6.0')] }]
+    }),
+    altValid('check-alternative-valid-yes-steam-bottle', {
+      dialog: 0,
+      ...STEAM_BOTTLE
+    }),
+
+    // ----- discovery finds nothing, or the first find is invalid: the download path
+    download('check-alternatives-empty-download-success', {}),
+    download('check-alternatives-empty-download-success-verbose', {
+      verboseLogs: true
+    }),
+    download('check-alternatives-empty-download-error', {
+      install: 'error',
+      alternatives: [{ list: [] }]
+    }),
+    download('check-alternatives-empty-no-release', {
+      releases: [WINE_GE_RELEASE, GE_RELEASE],
+      alternatives: [{ list: [] }]
+    }),
+    download('check-alternatives-empty-download-then-no-alternatives', {
+      alternatives: [{ list: [] }, { list: [] }]
+    }),
+    download('check-alternative-invalid-download-success', {
+      alternatives: [{ list: [ALT_WINE] }, { list: [CACHY] }]
+    }),
+    download('check-alternative-invalid-download-error', {
+      install: 'error',
+      alternatives: [{ list: [ALT_WINE] }]
+    }),
+    {
+      ...base('check-alternatives-discovery-rejects'),
+      alternatives: [{ reject: 'wine discovery failed' }]
+    },
+    download('check-alternatives-empty-mac-toolkit', {
+      ...mac('23.1.0'),
+      releases: MAC_RELEASES,
+      alternatives: [{ list: [] }, { list: [MAC_WINE] }]
+    }),
+    download('check-alternatives-empty-mac-crossover', {
+      ...mac('13.6.0'),
+      releases: MAC_RELEASES,
+      alternatives: [{ list: [] }, { list: [MAC_WINE] }]
+    }),
+    download('check-alternatives-empty-windows', {
+      platform: 'windows',
+      alternatives: [{ list: [] }]
+    }),
+
+    // ----- downloadDefaultWine called directly, per OS
+    direct('download-windows', { platform: 'windows' }),
+    direct('download-linux-cachyos-success', {}),
+    direct('download-linux-no-cachyos-release', {
+      releases: [WINE_GE_RELEASE, GE_RELEASE]
+    }),
+    direct('download-linux-empty-release-list', { releases: [] }),
+    direct('download-linux-release-list-not-a-list', { releases: null }),
+    direct('download-linux-install-error', { install: 'error' }),
+    direct('download-linux-install-abort', { install: 'abort' }),
+    direct('download-linux-post-install-empty', {
+      alternatives: [{ list: [] }]
+    }),
+    direct('download-linux-post-install-discovery-rejects', {
+      alternatives: [{ reject: 'wine discovery failed' }]
+    }),
+    direct('download-linux-first-of-several-alternatives', {
+      alternatives: [{ list: [CACHY, ALT_WINE] }]
+    }),
+    direct('download-linux-disable-logs', { disableLogs: true }),
+    // Darwin 23 is Sonoma: the toolkit is picked over the Crossover wine listed before it.
+    direct('download-mac-darwin-23-toolkit', {
+      ...mac('23.1.0'),
+      alternatives: [{ list: [MAC_WINE] }],
+      releases: MAC_RELEASES
+    }),
+    // `isMacSonomaOrHigher` tests the Darwin major against 14, so Darwin 14 and Darwin 22 (Ventura) pick the toolkit too.
+    direct('download-mac-darwin-22-toolkit', {
+      ...mac('22.6.0'),
+      alternatives: [{ list: [MAC_WINE] }],
+      releases: MAC_RELEASES
+    }),
+    direct('download-mac-darwin-14-toolkit', {
+      ...mac('14.0.0'),
+      alternatives: [{ list: [MAC_WINE] }],
+      releases: MAC_RELEASES
+    }),
+    // Darwin 13 is below the threshold: the Crossover wine is picked over the toolkit listed after it.
+    direct('download-mac-darwin-13-crossover', {
+      ...mac('13.6.0'),
+      alternatives: [{ list: [MAC_WINE] }],
+      releases: MAC_RELEASES
+    }),
+    direct('download-mac-darwin-23-no-toolkit-release', {
+      ...mac('23.1.0'),
+      alternatives: [{ list: [MAC_WINE] }],
+      releases: [CROSSOVER_RELEASE]
+    }),
+    direct('download-mac-darwin-13-no-crossover-release', {
+      ...mac('13.6.0'),
+      alternatives: [{ list: [MAC_WINE] }],
+      releases: [GPTK_RELEASE]
+    }),
+    direct('download-mac-darwin-13-install-error', {
+      ...mac('13.6.0'),
+      alternatives: [{ list: [MAC_WINE] }],
+      releases: MAC_RELEASES,
+      install: 'error'
+    })
   ]
 }
 
@@ -520,13 +756,6 @@ function writeOrCompare(caseId: string, recorded: Recorded): void {
   }
 }
 
-/** A committed golden file of one case, parsed. */
-function committed(id: string, file: string): unknown {
-  return JSON.parse(
-    readFileSync(join(goldenDir(CRATE, SLICE), 'expected', id, file), 'utf8')
-  )
-}
-
 /** The sidecar's i18next init, as `sidecar/bootstrap.ts` does it (locale en). */
 async function initSidecarI18next(): Promise<void> {
   // The default instance, because that is the one `utils.ts` calls.
@@ -571,9 +800,6 @@ describeSkipOnWindows('check_wine oracle (88.1-04)', () => {
     if (!found) throw new Error(`case ${id} is missing`)
     return found
   }
-  void byId
-  void STEAM_BOTTLE_RESERVED_APPNAME
-  void committed
 
   beforeAll(initSidecarI18next)
 
@@ -598,6 +824,210 @@ describeSkipOnWindows('check_wine oracle (88.1-04)', () => {
       'NO'
     ])
     expect(recorded.result).toMatchObject({ ok: true })
+  })
+
+  it('records at least 24 cases', () => {
+    expect(cases.length).toBeGreaterThanOrEqual(24)
+  })
+
+  it('a valid game wine asks nothing but RUST_WINE_VALID, opens no dialog and writes nothing', async () => {
+    const recorded = await recordCase(byId('check-game-wine-valid'))
+    expect(recorded.result).toMatchObject({ ok: true })
+    expect(
+      (recorded.requests as { channel: string }[]).map((r) => r.channel)
+    ).toEqual([RUST_WINE_VALID])
+    expect(recorded.dialogs).toEqual([])
+    expect(recorded.writes).toEqual([])
+    expect(recorded.events).toEqual([])
+  })
+
+  it('a dismissal is recorded as the answer the TS treats it as: the last button, No, which cancels the launch', async () => {
+    for (const id of [
+      'check-default-valid-dismissed',
+      'check-alternative-valid-dismissed'
+    ]) {
+      const recorded = await recordCase(byId(id))
+      expect(recorded.dialogs).toEqual([
+        expect.objectContaining({
+          scriptedAnswer: null,
+          cancelId: null,
+          response: 1
+        })
+      ])
+      expect(recorded.result).toMatchObject({ ok: false })
+      expect(recorded.writes).toEqual([])
+      // The caller's stored wine is untouched.
+      expect(recorded.result).toMatchObject({
+        wineVersionAfter: expect.objectContaining({ name: GAME_WINE.name })
+      })
+    }
+    // A click on No answers the same way: the two are indistinguishable to the caller.
+    const no = await recordCase(byId('check-default-valid-no'))
+    expect(no.result).toEqual(
+      (await recordCase(byId('check-default-valid-dismissed'))).result
+    )
+  })
+
+  it('a Yes changes gameSettings.wineVersion in place and writes it once to the game config', async () => {
+    for (const id of [
+      'check-default-valid-yes',
+      'check-alternative-valid-yes',
+      'check-alternatives-empty-download-success'
+    ]) {
+      const recorded = await recordCase(byId(id))
+      const result = recorded.result as {
+        ok: boolean
+        wineVersionAfter: { name: string }
+      }
+      const writes = recorded.writes as {
+        target: string
+        key: string
+        value: { name: string }
+      }[]
+      const gameWrites = writes.filter((w) => w.target === 'game')
+      expect(result.ok).toBe(true)
+      expect(gameWrites).toHaveLength(1)
+      expect(gameWrites[0]?.key).toBe('wineVersion')
+      expect(result.wineVersionAfter).toEqual(gameWrites[0]?.value)
+      expect(result.wineVersionAfter.name).not.toBe(GAME_WINE.name)
+    }
+  })
+
+  it('a successful default-wine download also writes the global wineVersion, before the game write', async () => {
+    const recorded = await recordCase(
+      byId('check-alternatives-empty-download-success')
+    )
+    const writes = recorded.writes as {
+      target: string
+      key: string
+      store?: string
+    }[]
+    expect(writes.map((w) => [w.target, w.key])).toEqual([
+      ['global', 'wineVersion'],
+      ['game', 'wineVersion']
+    ])
+    expect(writes[0]?.store).toBe('kvs')
+  })
+
+  it('the Steam bottle caller writes its recovery under the reserved synthetic appName', async () => {
+    for (const id of [
+      'check-default-valid-yes-steam-bottle',
+      'check-download-success-steam-bottle',
+      'check-alternative-valid-yes-steam-bottle'
+    ]) {
+      const recorded = await recordCase(byId(id))
+      const gameWrites = (
+        recorded.writes as { target: string; appName?: string }[]
+      ).filter((w) => w.target === 'game')
+      expect(gameWrites).toHaveLength(1)
+      expect(gameWrites[0]?.appName).toBe(STEAM_BOTTLE_RESERVED_APPNAME)
+      expect(recorded.input).toMatchObject({
+        gameInfo: { runner: 'steam', app_name: STEAM_BOTTLE_RESERVED_APPNAME }
+      })
+    }
+  })
+
+  it('downloadDefaultWine picks its release by type per OS, and both mac directions are recorded', async () => {
+    const picked = async (id: string): Promise<unknown> => {
+      const recorded = await recordCase(byId(id))
+      const install = (
+        recorded.requests as { channel: string; args: { type: string }[] }[]
+      ).find((r) => r.channel === RUST_WINE_MANAGER_INSTALL)
+      return install?.args[0]?.type ?? null
+    }
+    expect(await picked('download-linux-cachyos-success')).toBe(
+      'Proton-CachyOS'
+    )
+    expect(await picked('download-mac-darwin-23-toolkit')).toBe(
+      'Game-Porting-Toolkit'
+    )
+    expect(await picked('download-mac-darwin-13-crossover')).toBe(
+      'Wine-Crossover'
+    )
+    // The recorded threshold: the Darwin major is tested against 14, so Ventura (Darwin 22) is "Sonoma or higher".
+    expect(await picked('download-mac-darwin-22-toolkit')).toBe(
+      'Game-Porting-Toolkit'
+    )
+    expect(await picked('download-mac-darwin-14-toolkit')).toBe(
+      'Game-Porting-Toolkit'
+    )
+    // No matching release: no install is asked for.
+    expect(await picked('download-linux-no-cachyos-release')).toBeNull()
+    expect(await picked('download-mac-darwin-23-no-toolkit-release')).toBeNull()
+    expect(
+      await picked('download-mac-darwin-13-no-crossover-release')
+    ).toBeNull()
+  })
+
+  it('downloadDefaultWine on Windows returns null and asks Rust for nothing', async () => {
+    const recorded = await recordCase(byId('download-windows'))
+    expect(recorded.result).toEqual({ value: null })
+    expect(recorded.requests).toEqual([])
+    expect(recorded.writes).toEqual([])
+  })
+
+  it('a failed install, an aborted install and an empty list after install each return null', async () => {
+    for (const id of [
+      'download-linux-install-error',
+      'download-linux-install-abort',
+      'download-linux-post-install-empty',
+      'download-linux-post-install-discovery-rejects'
+    ]) {
+      const recorded = await recordCase(byId(id))
+      expect(recorded.result).toEqual({ value: null })
+      expect(recorded.writes).toEqual([])
+    }
+    const empty = await recordCase(byId('download-linux-post-install-empty'))
+    expect(
+      (empty.events as { level: string; text: string }[]).map((e) => [
+        e.level,
+        e.text
+      ])
+    ).toContainEqual([
+      'error',
+      'Error when changing wine version to default Error: No alternative wine version found after installing'
+    ])
+  })
+
+  it('verboseLogs adds the per-game entries and disableLogs drops the backend error, each both ways', async () => {
+    const run = async (id: string) => recordCase(byId(id))
+    const plain = await run('check-default-valid-yes')
+    const verbose = await run('check-default-valid-yes-verbose')
+    const quiet = await run('check-default-valid-yes-disable-logs')
+    const both = await run('check-default-valid-yes-verbose-disable-logs')
+    const logLevels = (r: Recorded) =>
+      (r.log as { level: string }[]).map((e) => e.level)
+    const backendErrors = (r: Recorded) =>
+      (r.events as { level: string }[]).filter((e) => e.level === 'error')
+        .length
+    expect(logLevels(plain)).toEqual([])
+    expect(logLevels(verbose)).toEqual(['warning', 'info'])
+    expect(logLevels(quiet)).toEqual([])
+    expect(logLevels(both)).toEqual(['warning', 'info'])
+    expect(backendErrors(plain)).toBe(1)
+    expect(backendErrors(verbose)).toBe(1)
+    expect(backendErrors(quiet)).toBe(0)
+    expect(backendErrors(both)).toBe(0)
+  })
+
+  it('every recorded request is one of the five wine channels and no recording names the real home', async () => {
+    const allowed = new Set<string>([
+      RUST_WINE_VALID,
+      RUST_WINE_MANAGER_REFRESH,
+      RUST_WINE_MANAGER_LIST,
+      RUST_WINE_MANAGER_INSTALL,
+      RUST_WINE_DISCOVER_ALTERNATIVES
+    ])
+    const realHome = osModule().homedir()
+    for (const c of cases) {
+      const recorded = await recordCase(c)
+      for (const r of recorded.requests as { channel: string }[]) {
+        expect(allowed.has(r.channel)).toBe(true)
+      }
+      if (realHome.length > 1) {
+        expect(JSON.stringify(recorded)).not.toContain(realHome)
+      }
+    }
   })
 
   it('the committed MANIFEST agrees with the case list and holds one folder per case', () => {

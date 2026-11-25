@@ -1,0 +1,36 @@
+{
+  "call": "check",
+  "platform": "linux",
+  "osRelease": null,
+  "gameInfo": {
+    "app_name": "gog-1207658930",
+    "runner": "gog"
+  },
+  "storedSettings": {
+    "wineVersion": {
+      "name": "Wine-Game-8.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Game-8.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Game-8.0/bin/wineserver"
+    },
+    "verboseLogs": false
+  },
+  "globalSettings": {
+    "wineVersion": {
+      "name": "Wine-Default-9.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Default-9.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Default-9.0/bin/wineserver"
+    },
+    "disableLogs": false
+  },
+  "scripted": {
+    "validWines": [
+      "Wine-Default-9.0"
+    ],
+    "alternatives": null,
+    "releases": null,
+    "install": null,
+    "dialog": 0
+  }
+}

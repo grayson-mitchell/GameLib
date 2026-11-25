@@ -1,0 +1,62 @@
+[
+  {
+    "seq": 0,
+    "channel": "wine_valid",
+    "args": [
+      {
+        "name": "Wine-Game-8.0",
+        "type": "wine",
+        "bin": "/pins/wines/Wine-Game-8.0/bin/wine",
+        "wineserver": "/pins/wines/Wine-Game-8.0/bin/wineserver"
+      }
+    ],
+    "reply": false
+  },
+  {
+    "seq": 2,
+    "channel": "wine_valid",
+    "args": [
+      {
+        "name": "Wine-Default-9.0",
+        "type": "wine",
+        "bin": "/pins/wines/Wine-Default-9.0/bin/wine",
+        "wineserver": "/pins/wines/Wine-Default-9.0/bin/wineserver"
+      }
+    ],
+    "reply": false
+  },
+  {
+    "seq": 3,
+    "channel": "wine_discover_alternatives",
+    "args": [
+      true
+    ],
+    "reply": [
+      {
+        "name": "Wine-Alt-7.0",
+        "type": "wine",
+        "bin": "/pins/wines/Wine-Alt-7.0/bin/wine",
+        "wineserver": "/pins/wines/Wine-Alt-7.0/bin/wineserver"
+      },
+      {
+        "name": "Wine-Other-6.0",
+        "type": "wine",
+        "bin": "/pins/wines/Wine-Other-6.0/bin/wine",
+        "wineserver": "/pins/wines/Wine-Other-6.0/bin/wineserver"
+      }
+    ]
+  },
+  {
+    "seq": 4,
+    "channel": "wine_valid",
+    "args": [
+      {
+        "name": "Wine-Alt-7.0",
+        "type": "wine",
+        "bin": "/pins/wines/Wine-Alt-7.0/bin/wine",
+        "wineserver": "/pins/wines/Wine-Alt-7.0/bin/wineserver"
+      }
+    ],
+    "reply": true
+  }
+]

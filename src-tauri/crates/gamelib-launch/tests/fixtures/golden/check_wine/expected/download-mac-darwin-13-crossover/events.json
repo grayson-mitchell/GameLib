@@ -1,0 +1,20 @@
+[
+  {
+    "seq": 2,
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Checking if macOS is Sonoma or higher"
+  },
+  {
+    "seq": 3,
+    "level": "info",
+    "prefix": "Backend",
+    "text": "macOS is not Sonoma or higher"
+  },
+  {
+    "seq": 6,
+    "level": "info",
+    "prefix": null,
+    "text": "Changing wine version to Game-Porting-Toolkit-2.0"
+  }
+]

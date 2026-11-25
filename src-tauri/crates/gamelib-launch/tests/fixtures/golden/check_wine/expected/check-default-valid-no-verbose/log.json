@@ -1,0 +1,13 @@
+[
+  {
+    "seq": 2,
+    "level": "warning",
+    "parts": [
+      [
+        "Wine version",
+        "Wine-Game-8.0",
+        "is not valid, trying another one.\n"
+      ]
+    ]
+  }
+]

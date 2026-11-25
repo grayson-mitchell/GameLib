@@ -1,0 +1,32 @@
+[
+  {
+    "seq": 1,
+    "level": "error",
+    "prefix": "Backend",
+    "text": "Wine version Wine-Game-8.0 is not valid, trying another one."
+  },
+  {
+    "seq": 6,
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Checking if macOS is Sonoma or higher"
+  },
+  {
+    "seq": 7,
+    "level": "info",
+    "prefix": "Backend",
+    "text": "macOS is Sonoma or higher"
+  },
+  {
+    "seq": 10,
+    "level": "info",
+    "prefix": null,
+    "text": "Changing wine version to Game-Porting-Toolkit-2.0"
+  },
+  {
+    "seq": 12,
+    "level": "info",
+    "prefix": null,
+    "text": "Changing wine version to Game-Porting-Toolkit-2.0"
+  }
+]

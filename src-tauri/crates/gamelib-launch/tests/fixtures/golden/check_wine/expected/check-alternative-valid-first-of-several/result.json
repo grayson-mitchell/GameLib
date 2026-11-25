@@ -1,0 +1,9 @@
+{
+  "ok": true,
+  "wineVersionAfter": {
+    "name": "Wine-Alt-7.0",
+    "type": "wine",
+    "bin": "/pins/wines/Wine-Alt-7.0/bin/wine",
+    "wineserver": "/pins/wines/Wine-Alt-7.0/bin/wineserver"
+  }
+}

@@ -1,0 +1,24 @@
+[
+  {
+    "seq": 11,
+    "target": "global",
+    "key": "wineVersion",
+    "value": {
+      "name": "Game-Porting-Toolkit-2.0",
+      "type": "toolkit",
+      "bin": "/pins/wines/Game-Porting-Toolkit-2.0/bin/wine64"
+    },
+    "store": "kvs"
+  },
+  {
+    "seq": 13,
+    "target": "game",
+    "appName": "app-legendary",
+    "key": "wineVersion",
+    "value": {
+      "name": "Game-Porting-Toolkit-2.0",
+      "type": "toolkit",
+      "bin": "/pins/wines/Game-Porting-Toolkit-2.0/bin/wine64"
+    }
+  }
+]

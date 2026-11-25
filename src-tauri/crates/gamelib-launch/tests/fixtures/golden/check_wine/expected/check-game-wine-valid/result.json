@@ -1,0 +1,9 @@
+{
+  "ok": true,
+  "wineVersionAfter": {
+    "name": "Wine-Game-8.0",
+    "type": "wine",
+    "bin": "/pins/wines/Wine-Game-8.0/bin/wine",
+    "wineserver": "/pins/wines/Wine-Game-8.0/bin/wineserver"
+  }
+}

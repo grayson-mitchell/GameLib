@@ -1,0 +1,94 @@
+{
+  "call": "check",
+  "platform": "linux",
+  "osRelease": null,
+  "gameInfo": {
+    "app_name": "app-legendary",
+    "runner": "legendary"
+  },
+  "storedSettings": {
+    "wineVersion": {
+      "name": "Wine-Game-8.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Game-8.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Game-8.0/bin/wineserver"
+    },
+    "verboseLogs": false
+  },
+  "globalSettings": {
+    "wineVersion": {
+      "name": "Wine-Default-9.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Default-9.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Default-9.0/bin/wineserver"
+    },
+    "disableLogs": false
+  },
+  "scripted": {
+    "validWines": [],
+    "alternatives": [
+      {
+        "list": [
+          {
+            "name": "Wine-Alt-7.0",
+            "type": "wine",
+            "bin": "/pins/wines/Wine-Alt-7.0/bin/wine",
+            "wineserver": "/pins/wines/Wine-Alt-7.0/bin/wineserver"
+          }
+        ]
+      },
+      {
+        "list": [
+          {
+            "name": "Proton-CachyOS-9.0",
+            "type": "proton",
+            "bin": "/pins/wines/Proton-CachyOS-9.0/proton"
+          }
+        ]
+      }
+    ],
+    "releases": [
+      {
+        "version": "8-26",
+        "type": "Wine-GE",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Wine-GE/8-26.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-8-26",
+        "release_notes_link": "https://example.invalid/Wine-GE/8-26",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Wine-GE-8-26"
+      },
+      {
+        "version": "9-20",
+        "type": "GE-Proton",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/GE-Proton/9-20.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-9-20",
+        "release_notes_link": "https://example.invalid/GE-Proton/9-20",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/GE-Proton-9-20"
+      },
+      {
+        "version": "9.0",
+        "type": "Proton-CachyOS",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Proton-CachyOS/9.0.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-9.0",
+        "release_notes_link": "https://example.invalid/Proton-CachyOS/9.0",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Proton-CachyOS-9.0"
+      }
+    ],
+    "install": "success",
+    "dialog": "none"
+  }
+}

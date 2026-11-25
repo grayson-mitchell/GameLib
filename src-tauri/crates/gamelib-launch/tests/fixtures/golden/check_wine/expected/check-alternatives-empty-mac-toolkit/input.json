@@ -1,0 +1,74 @@
+{
+  "call": "check",
+  "platform": "mac",
+  "osRelease": "23.1.0",
+  "gameInfo": {
+    "app_name": "app-legendary",
+    "runner": "legendary"
+  },
+  "storedSettings": {
+    "wineVersion": {
+      "name": "Wine-Game-8.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Game-8.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Game-8.0/bin/wineserver"
+    },
+    "verboseLogs": false
+  },
+  "globalSettings": {
+    "wineVersion": {
+      "name": "Wine-Default-9.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Default-9.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Default-9.0/bin/wineserver"
+    },
+    "disableLogs": false
+  },
+  "scripted": {
+    "validWines": [],
+    "alternatives": [
+      {
+        "list": []
+      },
+      {
+        "list": [
+          {
+            "name": "Game-Porting-Toolkit-2.0",
+            "type": "toolkit",
+            "bin": "/pins/wines/Game-Porting-Toolkit-2.0/bin/wine64"
+          }
+        ]
+      }
+    ],
+    "releases": [
+      {
+        "version": "23.7.1",
+        "type": "Wine-Crossover",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Wine-Crossover/23.7.1.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-23.7.1",
+        "release_notes_link": "https://example.invalid/Wine-Crossover/23.7.1",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Wine-Crossover-23.7.1"
+      },
+      {
+        "version": "2.0",
+        "type": "Game-Porting-Toolkit",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Game-Porting-Toolkit/2.0.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-2.0",
+        "release_notes_link": "https://example.invalid/Game-Porting-Toolkit/2.0",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Game-Porting-Toolkit-2.0"
+      }
+    ],
+    "install": "success",
+    "dialog": "none"
+  }
+}

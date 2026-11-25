@@ -1,0 +1,90 @@
+[
+  {
+    "seq": 0,
+    "channel": "wine_manager_refresh",
+    "args": [
+      true
+    ],
+    "reply": null
+  },
+  {
+    "seq": 1,
+    "channel": "wine_manager_list",
+    "args": [],
+    "reply": [
+      {
+        "version": "8-26",
+        "type": "Wine-GE",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Wine-GE/8-26.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-8-26",
+        "release_notes_link": "https://example.invalid/Wine-GE/8-26",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Wine-GE-8-26"
+      },
+      {
+        "version": "9-20",
+        "type": "GE-Proton",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/GE-Proton/9-20.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-9-20",
+        "release_notes_link": "https://example.invalid/GE-Proton/9-20",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/GE-Proton-9-20"
+      },
+      {
+        "version": "9.0",
+        "type": "Proton-CachyOS",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Proton-CachyOS/9.0.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-9.0",
+        "release_notes_link": "https://example.invalid/Proton-CachyOS/9.0",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Proton-CachyOS-9.0"
+      }
+    ]
+  },
+  {
+    "seq": 2,
+    "channel": "wine_manager_install",
+    "args": [
+      {
+        "version": "9.0",
+        "type": "Proton-CachyOS",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Proton-CachyOS/9.0.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-9.0",
+        "release_notes_link": "https://example.invalid/Proton-CachyOS/9.0",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Proton-CachyOS-9.0"
+      }
+    ],
+    "reply": "success"
+  },
+  {
+    "seq": 3,
+    "channel": "wine_discover_alternatives",
+    "args": [
+      true
+    ],
+    "reply": [
+      {
+        "name": "Proton-CachyOS-9.0",
+        "type": "proton",
+        "bin": "/pins/wines/Proton-CachyOS-9.0/proton"
+      }
+    ]
+  }
+]

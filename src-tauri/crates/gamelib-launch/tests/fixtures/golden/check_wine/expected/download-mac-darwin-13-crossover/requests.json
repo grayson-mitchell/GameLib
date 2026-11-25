@@ -1,0 +1,77 @@
+[
+  {
+    "seq": 0,
+    "channel": "wine_manager_refresh",
+    "args": [
+      true
+    ],
+    "reply": null
+  },
+  {
+    "seq": 1,
+    "channel": "wine_manager_list",
+    "args": [],
+    "reply": [
+      {
+        "version": "23.7.1",
+        "type": "Wine-Crossover",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Wine-Crossover/23.7.1.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-23.7.1",
+        "release_notes_link": "https://example.invalid/Wine-Crossover/23.7.1",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Wine-Crossover-23.7.1"
+      },
+      {
+        "version": "2.0",
+        "type": "Game-Porting-Toolkit",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Game-Porting-Toolkit/2.0.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-2.0",
+        "release_notes_link": "https://example.invalid/Game-Porting-Toolkit/2.0",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Game-Porting-Toolkit-2.0"
+      }
+    ]
+  },
+  {
+    "seq": 4,
+    "channel": "wine_manager_install",
+    "args": [
+      {
+        "version": "23.7.1",
+        "type": "Wine-Crossover",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Wine-Crossover/23.7.1.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-23.7.1",
+        "release_notes_link": "https://example.invalid/Wine-Crossover/23.7.1",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Wine-Crossover-23.7.1"
+      }
+    ],
+    "reply": "success"
+  },
+  {
+    "seq": 5,
+    "channel": "wine_discover_alternatives",
+    "args": [
+      true
+    ],
+    "reply": [
+      {
+        "name": "Game-Porting-Toolkit-2.0",
+        "type": "toolkit",
+        "bin": "/pins/wines/Game-Porting-Toolkit-2.0/bin/wine64"
+      }
+    ]
+  }
+]

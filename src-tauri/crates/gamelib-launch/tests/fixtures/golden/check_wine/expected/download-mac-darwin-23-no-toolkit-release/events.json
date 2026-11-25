@@ -1,0 +1,20 @@
+[
+  {
+    "seq": 2,
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Checking if macOS is Sonoma or higher"
+  },
+  {
+    "seq": 3,
+    "level": "info",
+    "prefix": "Backend",
+    "text": "macOS is Sonoma or higher"
+  },
+  {
+    "seq": 4,
+    "level": "error",
+    "prefix": "Backend",
+    "text": "Could not find default wine version"
+  }
+]

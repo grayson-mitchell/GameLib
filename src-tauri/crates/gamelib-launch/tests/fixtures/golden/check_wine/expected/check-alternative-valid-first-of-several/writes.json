@@ -1,0 +1,14 @@
+[
+  {
+    "seq": 7,
+    "target": "game",
+    "appName": "app-legendary",
+    "key": "wineVersion",
+    "value": {
+      "name": "Wine-Alt-7.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Alt-7.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Alt-7.0/bin/wineserver"
+    }
+  }
+]

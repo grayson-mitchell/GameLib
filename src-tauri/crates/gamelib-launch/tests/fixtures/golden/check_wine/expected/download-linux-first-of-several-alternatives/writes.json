@@ -1,0 +1,13 @@
+[
+  {
+    "seq": 5,
+    "target": "global",
+    "key": "wineVersion",
+    "value": {
+      "name": "Proton-CachyOS-9.0",
+      "type": "proton",
+      "bin": "/pins/wines/Proton-CachyOS-9.0/proton"
+    },
+    "store": "kvs"
+  }
+]

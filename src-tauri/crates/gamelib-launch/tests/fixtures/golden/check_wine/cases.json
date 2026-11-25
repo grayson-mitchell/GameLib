@@ -18,5 +18,2285 @@
       "Wine-Default-9.0"
     ],
     "dialog": 0
+  },
+  {
+    "id": "check-game-wine-valid",
+    "call": "check",
+    "gameWine": {
+      "name": "Wine-Game-8.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Game-8.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Game-8.0/bin/wineserver"
+    },
+    "defaultWine": {
+      "name": "Wine-Default-9.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Default-9.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Default-9.0/bin/wineserver"
+    },
+    "valid": [
+      "Wine-Game-8.0"
+    ]
+  },
+  {
+    "id": "check-game-wine-valid-verbose",
+    "call": "check",
+    "gameWine": {
+      "name": "Wine-Game-8.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Game-8.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Game-8.0/bin/wineserver"
+    },
+    "defaultWine": {
+      "name": "Wine-Default-9.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Default-9.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Default-9.0/bin/wineserver"
+    },
+    "valid": [
+      "Wine-Game-8.0"
+    ],
+    "verboseLogs": true
+  },
+  {
+    "id": "check-default-valid-no",
+    "call": "check",
+    "gameWine": {
+      "name": "Wine-Game-8.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Game-8.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Game-8.0/bin/wineserver"
+    },
+    "defaultWine": {
+      "name": "Wine-Default-9.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Default-9.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Default-9.0/bin/wineserver"
+    },
+    "valid": [
+      "Wine-Default-9.0"
+    ],
+    "dialog": 1
+  },
+  {
+    "id": "check-default-valid-dismissed",
+    "call": "check",
+    "gameWine": {
+      "name": "Wine-Game-8.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Game-8.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Game-8.0/bin/wineserver"
+    },
+    "defaultWine": {
+      "name": "Wine-Default-9.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Default-9.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Default-9.0/bin/wineserver"
+    },
+    "valid": [
+      "Wine-Default-9.0"
+    ],
+    "dialog": null
+  },
+  {
+    "id": "check-default-valid-yes-verbose",
+    "call": "check",
+    "gameWine": {
+      "name": "Wine-Game-8.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Game-8.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Game-8.0/bin/wineserver"
+    },
+    "defaultWine": {
+      "name": "Wine-Default-9.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Default-9.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Default-9.0/bin/wineserver"
+    },
+    "valid": [
+      "Wine-Default-9.0"
+    ],
+    "dialog": 0,
+    "verboseLogs": true
+  },
+  {
+    "id": "check-default-valid-yes-disable-logs",
+    "call": "check",
+    "gameWine": {
+      "name": "Wine-Game-8.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Game-8.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Game-8.0/bin/wineserver"
+    },
+    "defaultWine": {
+      "name": "Wine-Default-9.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Default-9.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Default-9.0/bin/wineserver"
+    },
+    "valid": [
+      "Wine-Default-9.0"
+    ],
+    "dialog": 0,
+    "disableLogs": true
+  },
+  {
+    "id": "check-default-valid-yes-verbose-disable-logs",
+    "call": "check",
+    "gameWine": {
+      "name": "Wine-Game-8.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Game-8.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Game-8.0/bin/wineserver"
+    },
+    "defaultWine": {
+      "name": "Wine-Default-9.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Default-9.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Default-9.0/bin/wineserver"
+    },
+    "valid": [
+      "Wine-Default-9.0"
+    ],
+    "dialog": 0,
+    "verboseLogs": true,
+    "disableLogs": true
+  },
+  {
+    "id": "check-default-valid-no-verbose",
+    "call": "check",
+    "gameWine": {
+      "name": "Wine-Game-8.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Game-8.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Game-8.0/bin/wineserver"
+    },
+    "defaultWine": {
+      "name": "Wine-Default-9.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Default-9.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Default-9.0/bin/wineserver"
+    },
+    "valid": [
+      "Wine-Default-9.0"
+    ],
+    "dialog": 1,
+    "verboseLogs": true
+  },
+  {
+    "id": "check-default-valid-yes-gog",
+    "call": "check",
+    "gameWine": {
+      "name": "Wine-Game-8.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Game-8.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Game-8.0/bin/wineserver"
+    },
+    "defaultWine": {
+      "name": "Wine-Default-9.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Default-9.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Default-9.0/bin/wineserver"
+    },
+    "valid": [
+      "Wine-Default-9.0"
+    ],
+    "dialog": 0,
+    "runner": "gog",
+    "appName": "gog-1207658930"
+  },
+  {
+    "id": "check-default-valid-yes-nile",
+    "call": "check",
+    "gameWine": {
+      "name": "Wine-Game-8.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Game-8.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Game-8.0/bin/wineserver"
+    },
+    "defaultWine": {
+      "name": "Wine-Default-9.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Default-9.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Default-9.0/bin/wineserver"
+    },
+    "valid": [
+      "Wine-Default-9.0"
+    ],
+    "dialog": 0,
+    "runner": "nile",
+    "appName": "amzn1.adg.product.example"
+  },
+  {
+    "id": "check-default-valid-yes-sideload",
+    "call": "check",
+    "gameWine": {
+      "name": "Wine-Game-8.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Game-8.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Game-8.0/bin/wineserver"
+    },
+    "defaultWine": {
+      "name": "Wine-Default-9.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Default-9.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Default-9.0/bin/wineserver"
+    },
+    "valid": [
+      "Wine-Default-9.0"
+    ],
+    "dialog": 0,
+    "runner": "sideload",
+    "appName": "sideload-game"
+  },
+  {
+    "id": "check-default-valid-yes-steam-bottle",
+    "call": "check",
+    "gameWine": {
+      "name": "Wine-Game-8.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Game-8.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Game-8.0/bin/wineserver"
+    },
+    "defaultWine": {
+      "name": "Wine-Default-9.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Default-9.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Default-9.0/bin/wineserver"
+    },
+    "valid": [
+      "Wine-Default-9.0"
+    ],
+    "dialog": 0,
+    "runner": "steam",
+    "appName": "__gamelib_steam_bottle__"
+  },
+  {
+    "id": "check-download-success-steam-bottle",
+    "call": "check",
+    "gameWine": {
+      "name": "Wine-Game-8.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Game-8.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Game-8.0/bin/wineserver"
+    },
+    "defaultWine": {
+      "name": "Wine-Default-9.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Default-9.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Default-9.0/bin/wineserver"
+    },
+    "valid": [],
+    "alternatives": [
+      {
+        "list": []
+      },
+      {
+        "list": [
+          {
+            "name": "Proton-CachyOS-9.0",
+            "type": "proton",
+            "bin": "/pins/wines/Proton-CachyOS-9.0/proton"
+          }
+        ]
+      }
+    ],
+    "releases": [
+      {
+        "version": "8-26",
+        "type": "Wine-GE",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Wine-GE/8-26.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-8-26",
+        "release_notes_link": "https://example.invalid/Wine-GE/8-26",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Wine-GE-8-26"
+      },
+      {
+        "version": "9-20",
+        "type": "GE-Proton",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/GE-Proton/9-20.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-9-20",
+        "release_notes_link": "https://example.invalid/GE-Proton/9-20",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/GE-Proton-9-20"
+      },
+      {
+        "version": "9.0",
+        "type": "Proton-CachyOS",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Proton-CachyOS/9.0.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-9.0",
+        "release_notes_link": "https://example.invalid/Proton-CachyOS/9.0",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Proton-CachyOS-9.0"
+      }
+    ],
+    "install": "success",
+    "runner": "steam",
+    "appName": "__gamelib_steam_bottle__"
+  },
+  {
+    "id": "check-alternative-valid-yes",
+    "call": "check",
+    "gameWine": {
+      "name": "Wine-Game-8.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Game-8.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Game-8.0/bin/wineserver"
+    },
+    "defaultWine": {
+      "name": "Wine-Default-9.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Default-9.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Default-9.0/bin/wineserver"
+    },
+    "valid": [
+      "Wine-Alt-7.0"
+    ],
+    "alternatives": [
+      {
+        "list": [
+          {
+            "name": "Wine-Alt-7.0",
+            "type": "wine",
+            "bin": "/pins/wines/Wine-Alt-7.0/bin/wine",
+            "wineserver": "/pins/wines/Wine-Alt-7.0/bin/wineserver"
+          }
+        ]
+      }
+    ],
+    "dialog": 0
+  },
+  {
+    "id": "check-alternative-valid-no",
+    "call": "check",
+    "gameWine": {
+      "name": "Wine-Game-8.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Game-8.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Game-8.0/bin/wineserver"
+    },
+    "defaultWine": {
+      "name": "Wine-Default-9.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Default-9.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Default-9.0/bin/wineserver"
+    },
+    "valid": [
+      "Wine-Alt-7.0"
+    ],
+    "alternatives": [
+      {
+        "list": [
+          {
+            "name": "Wine-Alt-7.0",
+            "type": "wine",
+            "bin": "/pins/wines/Wine-Alt-7.0/bin/wine",
+            "wineserver": "/pins/wines/Wine-Alt-7.0/bin/wineserver"
+          }
+        ]
+      }
+    ],
+    "dialog": 1
+  },
+  {
+    "id": "check-alternative-valid-dismissed",
+    "call": "check",
+    "gameWine": {
+      "name": "Wine-Game-8.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Game-8.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Game-8.0/bin/wineserver"
+    },
+    "defaultWine": {
+      "name": "Wine-Default-9.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Default-9.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Default-9.0/bin/wineserver"
+    },
+    "valid": [
+      "Wine-Alt-7.0"
+    ],
+    "alternatives": [
+      {
+        "list": [
+          {
+            "name": "Wine-Alt-7.0",
+            "type": "wine",
+            "bin": "/pins/wines/Wine-Alt-7.0/bin/wine",
+            "wineserver": "/pins/wines/Wine-Alt-7.0/bin/wineserver"
+          }
+        ]
+      }
+    ],
+    "dialog": null
+  },
+  {
+    "id": "check-alternative-valid-yes-verbose-disable-logs",
+    "call": "check",
+    "gameWine": {
+      "name": "Wine-Game-8.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Game-8.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Game-8.0/bin/wineserver"
+    },
+    "defaultWine": {
+      "name": "Wine-Default-9.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Default-9.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Default-9.0/bin/wineserver"
+    },
+    "valid": [
+      "Wine-Alt-7.0"
+    ],
+    "alternatives": [
+      {
+        "list": [
+          {
+            "name": "Wine-Alt-7.0",
+            "type": "wine",
+            "bin": "/pins/wines/Wine-Alt-7.0/bin/wine",
+            "wineserver": "/pins/wines/Wine-Alt-7.0/bin/wineserver"
+          }
+        ]
+      }
+    ],
+    "dialog": 0,
+    "verboseLogs": true,
+    "disableLogs": true
+  },
+  {
+    "id": "check-alternative-valid-first-of-several",
+    "call": "check",
+    "gameWine": {
+      "name": "Wine-Game-8.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Game-8.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Game-8.0/bin/wineserver"
+    },
+    "defaultWine": {
+      "name": "Wine-Default-9.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Default-9.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Default-9.0/bin/wineserver"
+    },
+    "valid": [
+      "Wine-Alt-7.0"
+    ],
+    "alternatives": [
+      {
+        "list": [
+          {
+            "name": "Wine-Alt-7.0",
+            "type": "wine",
+            "bin": "/pins/wines/Wine-Alt-7.0/bin/wine",
+            "wineserver": "/pins/wines/Wine-Alt-7.0/bin/wineserver"
+          },
+          {
+            "name": "Wine-Other-6.0",
+            "type": "wine",
+            "bin": "/pins/wines/Wine-Other-6.0/bin/wine",
+            "wineserver": "/pins/wines/Wine-Other-6.0/bin/wineserver"
+          }
+        ]
+      }
+    ],
+    "dialog": 0
+  },
+  {
+    "id": "check-alternative-valid-yes-steam-bottle",
+    "call": "check",
+    "gameWine": {
+      "name": "Wine-Game-8.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Game-8.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Game-8.0/bin/wineserver"
+    },
+    "defaultWine": {
+      "name": "Wine-Default-9.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Default-9.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Default-9.0/bin/wineserver"
+    },
+    "valid": [
+      "Wine-Alt-7.0"
+    ],
+    "alternatives": [
+      {
+        "list": [
+          {
+            "name": "Wine-Alt-7.0",
+            "type": "wine",
+            "bin": "/pins/wines/Wine-Alt-7.0/bin/wine",
+            "wineserver": "/pins/wines/Wine-Alt-7.0/bin/wineserver"
+          }
+        ]
+      }
+    ],
+    "dialog": 0,
+    "runner": "steam",
+    "appName": "__gamelib_steam_bottle__"
+  },
+  {
+    "id": "check-alternatives-empty-download-success",
+    "call": "check",
+    "gameWine": {
+      "name": "Wine-Game-8.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Game-8.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Game-8.0/bin/wineserver"
+    },
+    "defaultWine": {
+      "name": "Wine-Default-9.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Default-9.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Default-9.0/bin/wineserver"
+    },
+    "valid": [],
+    "alternatives": [
+      {
+        "list": []
+      },
+      {
+        "list": [
+          {
+            "name": "Proton-CachyOS-9.0",
+            "type": "proton",
+            "bin": "/pins/wines/Proton-CachyOS-9.0/proton"
+          }
+        ]
+      }
+    ],
+    "releases": [
+      {
+        "version": "8-26",
+        "type": "Wine-GE",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Wine-GE/8-26.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-8-26",
+        "release_notes_link": "https://example.invalid/Wine-GE/8-26",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Wine-GE-8-26"
+      },
+      {
+        "version": "9-20",
+        "type": "GE-Proton",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/GE-Proton/9-20.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-9-20",
+        "release_notes_link": "https://example.invalid/GE-Proton/9-20",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/GE-Proton-9-20"
+      },
+      {
+        "version": "9.0",
+        "type": "Proton-CachyOS",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Proton-CachyOS/9.0.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-9.0",
+        "release_notes_link": "https://example.invalid/Proton-CachyOS/9.0",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Proton-CachyOS-9.0"
+      }
+    ],
+    "install": "success"
+  },
+  {
+    "id": "check-alternatives-empty-download-success-verbose",
+    "call": "check",
+    "gameWine": {
+      "name": "Wine-Game-8.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Game-8.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Game-8.0/bin/wineserver"
+    },
+    "defaultWine": {
+      "name": "Wine-Default-9.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Default-9.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Default-9.0/bin/wineserver"
+    },
+    "valid": [],
+    "alternatives": [
+      {
+        "list": []
+      },
+      {
+        "list": [
+          {
+            "name": "Proton-CachyOS-9.0",
+            "type": "proton",
+            "bin": "/pins/wines/Proton-CachyOS-9.0/proton"
+          }
+        ]
+      }
+    ],
+    "releases": [
+      {
+        "version": "8-26",
+        "type": "Wine-GE",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Wine-GE/8-26.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-8-26",
+        "release_notes_link": "https://example.invalid/Wine-GE/8-26",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Wine-GE-8-26"
+      },
+      {
+        "version": "9-20",
+        "type": "GE-Proton",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/GE-Proton/9-20.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-9-20",
+        "release_notes_link": "https://example.invalid/GE-Proton/9-20",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/GE-Proton-9-20"
+      },
+      {
+        "version": "9.0",
+        "type": "Proton-CachyOS",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Proton-CachyOS/9.0.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-9.0",
+        "release_notes_link": "https://example.invalid/Proton-CachyOS/9.0",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Proton-CachyOS-9.0"
+      }
+    ],
+    "install": "success",
+    "verboseLogs": true
+  },
+  {
+    "id": "check-alternatives-empty-download-error",
+    "call": "check",
+    "gameWine": {
+      "name": "Wine-Game-8.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Game-8.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Game-8.0/bin/wineserver"
+    },
+    "defaultWine": {
+      "name": "Wine-Default-9.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Default-9.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Default-9.0/bin/wineserver"
+    },
+    "valid": [],
+    "alternatives": [
+      {
+        "list": []
+      }
+    ],
+    "releases": [
+      {
+        "version": "8-26",
+        "type": "Wine-GE",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Wine-GE/8-26.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-8-26",
+        "release_notes_link": "https://example.invalid/Wine-GE/8-26",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Wine-GE-8-26"
+      },
+      {
+        "version": "9-20",
+        "type": "GE-Proton",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/GE-Proton/9-20.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-9-20",
+        "release_notes_link": "https://example.invalid/GE-Proton/9-20",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/GE-Proton-9-20"
+      },
+      {
+        "version": "9.0",
+        "type": "Proton-CachyOS",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Proton-CachyOS/9.0.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-9.0",
+        "release_notes_link": "https://example.invalid/Proton-CachyOS/9.0",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Proton-CachyOS-9.0"
+      }
+    ],
+    "install": "error"
+  },
+  {
+    "id": "check-alternatives-empty-no-release",
+    "call": "check",
+    "gameWine": {
+      "name": "Wine-Game-8.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Game-8.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Game-8.0/bin/wineserver"
+    },
+    "defaultWine": {
+      "name": "Wine-Default-9.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Default-9.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Default-9.0/bin/wineserver"
+    },
+    "valid": [],
+    "alternatives": [
+      {
+        "list": []
+      }
+    ],
+    "releases": [
+      {
+        "version": "8-26",
+        "type": "Wine-GE",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Wine-GE/8-26.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-8-26",
+        "release_notes_link": "https://example.invalid/Wine-GE/8-26",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Wine-GE-8-26"
+      },
+      {
+        "version": "9-20",
+        "type": "GE-Proton",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/GE-Proton/9-20.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-9-20",
+        "release_notes_link": "https://example.invalid/GE-Proton/9-20",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/GE-Proton-9-20"
+      }
+    ],
+    "install": "success"
+  },
+  {
+    "id": "check-alternatives-empty-download-then-no-alternatives",
+    "call": "check",
+    "gameWine": {
+      "name": "Wine-Game-8.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Game-8.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Game-8.0/bin/wineserver"
+    },
+    "defaultWine": {
+      "name": "Wine-Default-9.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Default-9.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Default-9.0/bin/wineserver"
+    },
+    "valid": [],
+    "alternatives": [
+      {
+        "list": []
+      },
+      {
+        "list": []
+      }
+    ],
+    "releases": [
+      {
+        "version": "8-26",
+        "type": "Wine-GE",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Wine-GE/8-26.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-8-26",
+        "release_notes_link": "https://example.invalid/Wine-GE/8-26",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Wine-GE-8-26"
+      },
+      {
+        "version": "9-20",
+        "type": "GE-Proton",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/GE-Proton/9-20.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-9-20",
+        "release_notes_link": "https://example.invalid/GE-Proton/9-20",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/GE-Proton-9-20"
+      },
+      {
+        "version": "9.0",
+        "type": "Proton-CachyOS",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Proton-CachyOS/9.0.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-9.0",
+        "release_notes_link": "https://example.invalid/Proton-CachyOS/9.0",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Proton-CachyOS-9.0"
+      }
+    ],
+    "install": "success"
+  },
+  {
+    "id": "check-alternative-invalid-download-success",
+    "call": "check",
+    "gameWine": {
+      "name": "Wine-Game-8.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Game-8.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Game-8.0/bin/wineserver"
+    },
+    "defaultWine": {
+      "name": "Wine-Default-9.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Default-9.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Default-9.0/bin/wineserver"
+    },
+    "valid": [],
+    "alternatives": [
+      {
+        "list": [
+          {
+            "name": "Wine-Alt-7.0",
+            "type": "wine",
+            "bin": "/pins/wines/Wine-Alt-7.0/bin/wine",
+            "wineserver": "/pins/wines/Wine-Alt-7.0/bin/wineserver"
+          }
+        ]
+      },
+      {
+        "list": [
+          {
+            "name": "Proton-CachyOS-9.0",
+            "type": "proton",
+            "bin": "/pins/wines/Proton-CachyOS-9.0/proton"
+          }
+        ]
+      }
+    ],
+    "releases": [
+      {
+        "version": "8-26",
+        "type": "Wine-GE",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Wine-GE/8-26.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-8-26",
+        "release_notes_link": "https://example.invalid/Wine-GE/8-26",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Wine-GE-8-26"
+      },
+      {
+        "version": "9-20",
+        "type": "GE-Proton",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/GE-Proton/9-20.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-9-20",
+        "release_notes_link": "https://example.invalid/GE-Proton/9-20",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/GE-Proton-9-20"
+      },
+      {
+        "version": "9.0",
+        "type": "Proton-CachyOS",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Proton-CachyOS/9.0.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-9.0",
+        "release_notes_link": "https://example.invalid/Proton-CachyOS/9.0",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Proton-CachyOS-9.0"
+      }
+    ],
+    "install": "success"
+  },
+  {
+    "id": "check-alternative-invalid-download-error",
+    "call": "check",
+    "gameWine": {
+      "name": "Wine-Game-8.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Game-8.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Game-8.0/bin/wineserver"
+    },
+    "defaultWine": {
+      "name": "Wine-Default-9.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Default-9.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Default-9.0/bin/wineserver"
+    },
+    "valid": [],
+    "alternatives": [
+      {
+        "list": [
+          {
+            "name": "Wine-Alt-7.0",
+            "type": "wine",
+            "bin": "/pins/wines/Wine-Alt-7.0/bin/wine",
+            "wineserver": "/pins/wines/Wine-Alt-7.0/bin/wineserver"
+          }
+        ]
+      }
+    ],
+    "releases": [
+      {
+        "version": "8-26",
+        "type": "Wine-GE",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Wine-GE/8-26.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-8-26",
+        "release_notes_link": "https://example.invalid/Wine-GE/8-26",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Wine-GE-8-26"
+      },
+      {
+        "version": "9-20",
+        "type": "GE-Proton",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/GE-Proton/9-20.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-9-20",
+        "release_notes_link": "https://example.invalid/GE-Proton/9-20",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/GE-Proton-9-20"
+      },
+      {
+        "version": "9.0",
+        "type": "Proton-CachyOS",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Proton-CachyOS/9.0.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-9.0",
+        "release_notes_link": "https://example.invalid/Proton-CachyOS/9.0",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Proton-CachyOS-9.0"
+      }
+    ],
+    "install": "error"
+  },
+  {
+    "id": "check-alternatives-discovery-rejects",
+    "call": "check",
+    "gameWine": {
+      "name": "Wine-Game-8.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Game-8.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Game-8.0/bin/wineserver"
+    },
+    "defaultWine": {
+      "name": "Wine-Default-9.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Default-9.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Default-9.0/bin/wineserver"
+    },
+    "valid": [],
+    "alternatives": [
+      {
+        "reject": "wine discovery failed"
+      }
+    ]
+  },
+  {
+    "id": "check-alternatives-empty-mac-toolkit",
+    "call": "check",
+    "gameWine": {
+      "name": "Wine-Game-8.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Game-8.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Game-8.0/bin/wineserver"
+    },
+    "defaultWine": {
+      "name": "Wine-Default-9.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Default-9.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Default-9.0/bin/wineserver"
+    },
+    "valid": [],
+    "alternatives": [
+      {
+        "list": []
+      },
+      {
+        "list": [
+          {
+            "name": "Game-Porting-Toolkit-2.0",
+            "type": "toolkit",
+            "bin": "/pins/wines/Game-Porting-Toolkit-2.0/bin/wine64"
+          }
+        ]
+      }
+    ],
+    "releases": [
+      {
+        "version": "23.7.1",
+        "type": "Wine-Crossover",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Wine-Crossover/23.7.1.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-23.7.1",
+        "release_notes_link": "https://example.invalid/Wine-Crossover/23.7.1",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Wine-Crossover-23.7.1"
+      },
+      {
+        "version": "2.0",
+        "type": "Game-Porting-Toolkit",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Game-Porting-Toolkit/2.0.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-2.0",
+        "release_notes_link": "https://example.invalid/Game-Porting-Toolkit/2.0",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Game-Porting-Toolkit-2.0"
+      }
+    ],
+    "install": "success",
+    "platform": "mac",
+    "osRelease": "23.1.0"
+  },
+  {
+    "id": "check-alternatives-empty-mac-crossover",
+    "call": "check",
+    "gameWine": {
+      "name": "Wine-Game-8.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Game-8.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Game-8.0/bin/wineserver"
+    },
+    "defaultWine": {
+      "name": "Wine-Default-9.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Default-9.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Default-9.0/bin/wineserver"
+    },
+    "valid": [],
+    "alternatives": [
+      {
+        "list": []
+      },
+      {
+        "list": [
+          {
+            "name": "Game-Porting-Toolkit-2.0",
+            "type": "toolkit",
+            "bin": "/pins/wines/Game-Porting-Toolkit-2.0/bin/wine64"
+          }
+        ]
+      }
+    ],
+    "releases": [
+      {
+        "version": "23.7.1",
+        "type": "Wine-Crossover",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Wine-Crossover/23.7.1.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-23.7.1",
+        "release_notes_link": "https://example.invalid/Wine-Crossover/23.7.1",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Wine-Crossover-23.7.1"
+      },
+      {
+        "version": "2.0",
+        "type": "Game-Porting-Toolkit",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Game-Porting-Toolkit/2.0.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-2.0",
+        "release_notes_link": "https://example.invalid/Game-Porting-Toolkit/2.0",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Game-Porting-Toolkit-2.0"
+      }
+    ],
+    "install": "success",
+    "platform": "mac",
+    "osRelease": "13.6.0"
+  },
+  {
+    "id": "check-alternatives-empty-windows",
+    "call": "check",
+    "gameWine": {
+      "name": "Wine-Game-8.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Game-8.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Game-8.0/bin/wineserver"
+    },
+    "defaultWine": {
+      "name": "Wine-Default-9.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Default-9.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Default-9.0/bin/wineserver"
+    },
+    "valid": [],
+    "alternatives": [
+      {
+        "list": []
+      }
+    ],
+    "releases": [
+      {
+        "version": "8-26",
+        "type": "Wine-GE",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Wine-GE/8-26.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-8-26",
+        "release_notes_link": "https://example.invalid/Wine-GE/8-26",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Wine-GE-8-26"
+      },
+      {
+        "version": "9-20",
+        "type": "GE-Proton",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/GE-Proton/9-20.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-9-20",
+        "release_notes_link": "https://example.invalid/GE-Proton/9-20",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/GE-Proton-9-20"
+      },
+      {
+        "version": "9.0",
+        "type": "Proton-CachyOS",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Proton-CachyOS/9.0.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-9.0",
+        "release_notes_link": "https://example.invalid/Proton-CachyOS/9.0",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Proton-CachyOS-9.0"
+      }
+    ],
+    "install": "success",
+    "platform": "windows"
+  },
+  {
+    "id": "download-windows",
+    "call": "download",
+    "gameWine": {
+      "name": "Wine-Game-8.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Game-8.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Game-8.0/bin/wineserver"
+    },
+    "defaultWine": {
+      "name": "Wine-Default-9.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Default-9.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Default-9.0/bin/wineserver"
+    },
+    "valid": [],
+    "alternatives": [
+      {
+        "list": [
+          {
+            "name": "Proton-CachyOS-9.0",
+            "type": "proton",
+            "bin": "/pins/wines/Proton-CachyOS-9.0/proton"
+          }
+        ]
+      }
+    ],
+    "releases": [
+      {
+        "version": "8-26",
+        "type": "Wine-GE",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Wine-GE/8-26.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-8-26",
+        "release_notes_link": "https://example.invalid/Wine-GE/8-26",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Wine-GE-8-26"
+      },
+      {
+        "version": "9-20",
+        "type": "GE-Proton",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/GE-Proton/9-20.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-9-20",
+        "release_notes_link": "https://example.invalid/GE-Proton/9-20",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/GE-Proton-9-20"
+      },
+      {
+        "version": "9.0",
+        "type": "Proton-CachyOS",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Proton-CachyOS/9.0.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-9.0",
+        "release_notes_link": "https://example.invalid/Proton-CachyOS/9.0",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Proton-CachyOS-9.0"
+      }
+    ],
+    "install": "success",
+    "platform": "windows"
+  },
+  {
+    "id": "download-linux-cachyos-success",
+    "call": "download",
+    "gameWine": {
+      "name": "Wine-Game-8.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Game-8.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Game-8.0/bin/wineserver"
+    },
+    "defaultWine": {
+      "name": "Wine-Default-9.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Default-9.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Default-9.0/bin/wineserver"
+    },
+    "valid": [],
+    "alternatives": [
+      {
+        "list": [
+          {
+            "name": "Proton-CachyOS-9.0",
+            "type": "proton",
+            "bin": "/pins/wines/Proton-CachyOS-9.0/proton"
+          }
+        ]
+      }
+    ],
+    "releases": [
+      {
+        "version": "8-26",
+        "type": "Wine-GE",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Wine-GE/8-26.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-8-26",
+        "release_notes_link": "https://example.invalid/Wine-GE/8-26",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Wine-GE-8-26"
+      },
+      {
+        "version": "9-20",
+        "type": "GE-Proton",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/GE-Proton/9-20.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-9-20",
+        "release_notes_link": "https://example.invalid/GE-Proton/9-20",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/GE-Proton-9-20"
+      },
+      {
+        "version": "9.0",
+        "type": "Proton-CachyOS",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Proton-CachyOS/9.0.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-9.0",
+        "release_notes_link": "https://example.invalid/Proton-CachyOS/9.0",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Proton-CachyOS-9.0"
+      }
+    ],
+    "install": "success"
+  },
+  {
+    "id": "download-linux-no-cachyos-release",
+    "call": "download",
+    "gameWine": {
+      "name": "Wine-Game-8.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Game-8.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Game-8.0/bin/wineserver"
+    },
+    "defaultWine": {
+      "name": "Wine-Default-9.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Default-9.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Default-9.0/bin/wineserver"
+    },
+    "valid": [],
+    "alternatives": [
+      {
+        "list": [
+          {
+            "name": "Proton-CachyOS-9.0",
+            "type": "proton",
+            "bin": "/pins/wines/Proton-CachyOS-9.0/proton"
+          }
+        ]
+      }
+    ],
+    "releases": [
+      {
+        "version": "8-26",
+        "type": "Wine-GE",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Wine-GE/8-26.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-8-26",
+        "release_notes_link": "https://example.invalid/Wine-GE/8-26",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Wine-GE-8-26"
+      },
+      {
+        "version": "9-20",
+        "type": "GE-Proton",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/GE-Proton/9-20.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-9-20",
+        "release_notes_link": "https://example.invalid/GE-Proton/9-20",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/GE-Proton-9-20"
+      }
+    ],
+    "install": "success"
+  },
+  {
+    "id": "download-linux-empty-release-list",
+    "call": "download",
+    "gameWine": {
+      "name": "Wine-Game-8.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Game-8.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Game-8.0/bin/wineserver"
+    },
+    "defaultWine": {
+      "name": "Wine-Default-9.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Default-9.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Default-9.0/bin/wineserver"
+    },
+    "valid": [],
+    "alternatives": [
+      {
+        "list": [
+          {
+            "name": "Proton-CachyOS-9.0",
+            "type": "proton",
+            "bin": "/pins/wines/Proton-CachyOS-9.0/proton"
+          }
+        ]
+      }
+    ],
+    "releases": [],
+    "install": "success"
+  },
+  {
+    "id": "download-linux-release-list-not-a-list",
+    "call": "download",
+    "gameWine": {
+      "name": "Wine-Game-8.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Game-8.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Game-8.0/bin/wineserver"
+    },
+    "defaultWine": {
+      "name": "Wine-Default-9.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Default-9.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Default-9.0/bin/wineserver"
+    },
+    "valid": [],
+    "alternatives": [
+      {
+        "list": [
+          {
+            "name": "Proton-CachyOS-9.0",
+            "type": "proton",
+            "bin": "/pins/wines/Proton-CachyOS-9.0/proton"
+          }
+        ]
+      }
+    ],
+    "releases": null,
+    "install": "success"
+  },
+  {
+    "id": "download-linux-install-error",
+    "call": "download",
+    "gameWine": {
+      "name": "Wine-Game-8.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Game-8.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Game-8.0/bin/wineserver"
+    },
+    "defaultWine": {
+      "name": "Wine-Default-9.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Default-9.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Default-9.0/bin/wineserver"
+    },
+    "valid": [],
+    "alternatives": [
+      {
+        "list": [
+          {
+            "name": "Proton-CachyOS-9.0",
+            "type": "proton",
+            "bin": "/pins/wines/Proton-CachyOS-9.0/proton"
+          }
+        ]
+      }
+    ],
+    "releases": [
+      {
+        "version": "8-26",
+        "type": "Wine-GE",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Wine-GE/8-26.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-8-26",
+        "release_notes_link": "https://example.invalid/Wine-GE/8-26",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Wine-GE-8-26"
+      },
+      {
+        "version": "9-20",
+        "type": "GE-Proton",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/GE-Proton/9-20.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-9-20",
+        "release_notes_link": "https://example.invalid/GE-Proton/9-20",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/GE-Proton-9-20"
+      },
+      {
+        "version": "9.0",
+        "type": "Proton-CachyOS",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Proton-CachyOS/9.0.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-9.0",
+        "release_notes_link": "https://example.invalid/Proton-CachyOS/9.0",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Proton-CachyOS-9.0"
+      }
+    ],
+    "install": "error"
+  },
+  {
+    "id": "download-linux-install-abort",
+    "call": "download",
+    "gameWine": {
+      "name": "Wine-Game-8.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Game-8.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Game-8.0/bin/wineserver"
+    },
+    "defaultWine": {
+      "name": "Wine-Default-9.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Default-9.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Default-9.0/bin/wineserver"
+    },
+    "valid": [],
+    "alternatives": [
+      {
+        "list": [
+          {
+            "name": "Proton-CachyOS-9.0",
+            "type": "proton",
+            "bin": "/pins/wines/Proton-CachyOS-9.0/proton"
+          }
+        ]
+      }
+    ],
+    "releases": [
+      {
+        "version": "8-26",
+        "type": "Wine-GE",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Wine-GE/8-26.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-8-26",
+        "release_notes_link": "https://example.invalid/Wine-GE/8-26",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Wine-GE-8-26"
+      },
+      {
+        "version": "9-20",
+        "type": "GE-Proton",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/GE-Proton/9-20.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-9-20",
+        "release_notes_link": "https://example.invalid/GE-Proton/9-20",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/GE-Proton-9-20"
+      },
+      {
+        "version": "9.0",
+        "type": "Proton-CachyOS",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Proton-CachyOS/9.0.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-9.0",
+        "release_notes_link": "https://example.invalid/Proton-CachyOS/9.0",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Proton-CachyOS-9.0"
+      }
+    ],
+    "install": "abort"
+  },
+  {
+    "id": "download-linux-post-install-empty",
+    "call": "download",
+    "gameWine": {
+      "name": "Wine-Game-8.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Game-8.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Game-8.0/bin/wineserver"
+    },
+    "defaultWine": {
+      "name": "Wine-Default-9.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Default-9.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Default-9.0/bin/wineserver"
+    },
+    "valid": [],
+    "alternatives": [
+      {
+        "list": []
+      }
+    ],
+    "releases": [
+      {
+        "version": "8-26",
+        "type": "Wine-GE",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Wine-GE/8-26.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-8-26",
+        "release_notes_link": "https://example.invalid/Wine-GE/8-26",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Wine-GE-8-26"
+      },
+      {
+        "version": "9-20",
+        "type": "GE-Proton",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/GE-Proton/9-20.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-9-20",
+        "release_notes_link": "https://example.invalid/GE-Proton/9-20",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/GE-Proton-9-20"
+      },
+      {
+        "version": "9.0",
+        "type": "Proton-CachyOS",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Proton-CachyOS/9.0.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-9.0",
+        "release_notes_link": "https://example.invalid/Proton-CachyOS/9.0",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Proton-CachyOS-9.0"
+      }
+    ],
+    "install": "success"
+  },
+  {
+    "id": "download-linux-post-install-discovery-rejects",
+    "call": "download",
+    "gameWine": {
+      "name": "Wine-Game-8.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Game-8.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Game-8.0/bin/wineserver"
+    },
+    "defaultWine": {
+      "name": "Wine-Default-9.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Default-9.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Default-9.0/bin/wineserver"
+    },
+    "valid": [],
+    "alternatives": [
+      {
+        "reject": "wine discovery failed"
+      }
+    ],
+    "releases": [
+      {
+        "version": "8-26",
+        "type": "Wine-GE",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Wine-GE/8-26.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-8-26",
+        "release_notes_link": "https://example.invalid/Wine-GE/8-26",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Wine-GE-8-26"
+      },
+      {
+        "version": "9-20",
+        "type": "GE-Proton",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/GE-Proton/9-20.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-9-20",
+        "release_notes_link": "https://example.invalid/GE-Proton/9-20",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/GE-Proton-9-20"
+      },
+      {
+        "version": "9.0",
+        "type": "Proton-CachyOS",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Proton-CachyOS/9.0.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-9.0",
+        "release_notes_link": "https://example.invalid/Proton-CachyOS/9.0",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Proton-CachyOS-9.0"
+      }
+    ],
+    "install": "success"
+  },
+  {
+    "id": "download-linux-first-of-several-alternatives",
+    "call": "download",
+    "gameWine": {
+      "name": "Wine-Game-8.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Game-8.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Game-8.0/bin/wineserver"
+    },
+    "defaultWine": {
+      "name": "Wine-Default-9.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Default-9.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Default-9.0/bin/wineserver"
+    },
+    "valid": [],
+    "alternatives": [
+      {
+        "list": [
+          {
+            "name": "Proton-CachyOS-9.0",
+            "type": "proton",
+            "bin": "/pins/wines/Proton-CachyOS-9.0/proton"
+          },
+          {
+            "name": "Wine-Alt-7.0",
+            "type": "wine",
+            "bin": "/pins/wines/Wine-Alt-7.0/bin/wine",
+            "wineserver": "/pins/wines/Wine-Alt-7.0/bin/wineserver"
+          }
+        ]
+      }
+    ],
+    "releases": [
+      {
+        "version": "8-26",
+        "type": "Wine-GE",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Wine-GE/8-26.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-8-26",
+        "release_notes_link": "https://example.invalid/Wine-GE/8-26",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Wine-GE-8-26"
+      },
+      {
+        "version": "9-20",
+        "type": "GE-Proton",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/GE-Proton/9-20.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-9-20",
+        "release_notes_link": "https://example.invalid/GE-Proton/9-20",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/GE-Proton-9-20"
+      },
+      {
+        "version": "9.0",
+        "type": "Proton-CachyOS",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Proton-CachyOS/9.0.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-9.0",
+        "release_notes_link": "https://example.invalid/Proton-CachyOS/9.0",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Proton-CachyOS-9.0"
+      }
+    ],
+    "install": "success"
+  },
+  {
+    "id": "download-linux-disable-logs",
+    "call": "download",
+    "gameWine": {
+      "name": "Wine-Game-8.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Game-8.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Game-8.0/bin/wineserver"
+    },
+    "defaultWine": {
+      "name": "Wine-Default-9.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Default-9.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Default-9.0/bin/wineserver"
+    },
+    "valid": [],
+    "alternatives": [
+      {
+        "list": [
+          {
+            "name": "Proton-CachyOS-9.0",
+            "type": "proton",
+            "bin": "/pins/wines/Proton-CachyOS-9.0/proton"
+          }
+        ]
+      }
+    ],
+    "releases": [
+      {
+        "version": "8-26",
+        "type": "Wine-GE",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Wine-GE/8-26.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-8-26",
+        "release_notes_link": "https://example.invalid/Wine-GE/8-26",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Wine-GE-8-26"
+      },
+      {
+        "version": "9-20",
+        "type": "GE-Proton",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/GE-Proton/9-20.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-9-20",
+        "release_notes_link": "https://example.invalid/GE-Proton/9-20",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/GE-Proton-9-20"
+      },
+      {
+        "version": "9.0",
+        "type": "Proton-CachyOS",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Proton-CachyOS/9.0.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-9.0",
+        "release_notes_link": "https://example.invalid/Proton-CachyOS/9.0",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Proton-CachyOS-9.0"
+      }
+    ],
+    "install": "success",
+    "disableLogs": true
+  },
+  {
+    "id": "download-mac-darwin-23-toolkit",
+    "call": "download",
+    "gameWine": {
+      "name": "Wine-Game-8.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Game-8.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Game-8.0/bin/wineserver"
+    },
+    "defaultWine": {
+      "name": "Wine-Default-9.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Default-9.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Default-9.0/bin/wineserver"
+    },
+    "valid": [],
+    "alternatives": [
+      {
+        "list": [
+          {
+            "name": "Game-Porting-Toolkit-2.0",
+            "type": "toolkit",
+            "bin": "/pins/wines/Game-Porting-Toolkit-2.0/bin/wine64"
+          }
+        ]
+      }
+    ],
+    "releases": [
+      {
+        "version": "23.7.1",
+        "type": "Wine-Crossover",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Wine-Crossover/23.7.1.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-23.7.1",
+        "release_notes_link": "https://example.invalid/Wine-Crossover/23.7.1",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Wine-Crossover-23.7.1"
+      },
+      {
+        "version": "2.0",
+        "type": "Game-Porting-Toolkit",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Game-Porting-Toolkit/2.0.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-2.0",
+        "release_notes_link": "https://example.invalid/Game-Porting-Toolkit/2.0",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Game-Porting-Toolkit-2.0"
+      }
+    ],
+    "install": "success",
+    "platform": "mac",
+    "osRelease": "23.1.0"
+  },
+  {
+    "id": "download-mac-darwin-22-toolkit",
+    "call": "download",
+    "gameWine": {
+      "name": "Wine-Game-8.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Game-8.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Game-8.0/bin/wineserver"
+    },
+    "defaultWine": {
+      "name": "Wine-Default-9.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Default-9.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Default-9.0/bin/wineserver"
+    },
+    "valid": [],
+    "alternatives": [
+      {
+        "list": [
+          {
+            "name": "Game-Porting-Toolkit-2.0",
+            "type": "toolkit",
+            "bin": "/pins/wines/Game-Porting-Toolkit-2.0/bin/wine64"
+          }
+        ]
+      }
+    ],
+    "releases": [
+      {
+        "version": "23.7.1",
+        "type": "Wine-Crossover",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Wine-Crossover/23.7.1.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-23.7.1",
+        "release_notes_link": "https://example.invalid/Wine-Crossover/23.7.1",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Wine-Crossover-23.7.1"
+      },
+      {
+        "version": "2.0",
+        "type": "Game-Porting-Toolkit",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Game-Porting-Toolkit/2.0.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-2.0",
+        "release_notes_link": "https://example.invalid/Game-Porting-Toolkit/2.0",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Game-Porting-Toolkit-2.0"
+      }
+    ],
+    "install": "success",
+    "platform": "mac",
+    "osRelease": "22.6.0"
+  },
+  {
+    "id": "download-mac-darwin-14-toolkit",
+    "call": "download",
+    "gameWine": {
+      "name": "Wine-Game-8.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Game-8.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Game-8.0/bin/wineserver"
+    },
+    "defaultWine": {
+      "name": "Wine-Default-9.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Default-9.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Default-9.0/bin/wineserver"
+    },
+    "valid": [],
+    "alternatives": [
+      {
+        "list": [
+          {
+            "name": "Game-Porting-Toolkit-2.0",
+            "type": "toolkit",
+            "bin": "/pins/wines/Game-Porting-Toolkit-2.0/bin/wine64"
+          }
+        ]
+      }
+    ],
+    "releases": [
+      {
+        "version": "23.7.1",
+        "type": "Wine-Crossover",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Wine-Crossover/23.7.1.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-23.7.1",
+        "release_notes_link": "https://example.invalid/Wine-Crossover/23.7.1",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Wine-Crossover-23.7.1"
+      },
+      {
+        "version": "2.0",
+        "type": "Game-Porting-Toolkit",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Game-Porting-Toolkit/2.0.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-2.0",
+        "release_notes_link": "https://example.invalid/Game-Porting-Toolkit/2.0",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Game-Porting-Toolkit-2.0"
+      }
+    ],
+    "install": "success",
+    "platform": "mac",
+    "osRelease": "14.0.0"
+  },
+  {
+    "id": "download-mac-darwin-13-crossover",
+    "call": "download",
+    "gameWine": {
+      "name": "Wine-Game-8.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Game-8.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Game-8.0/bin/wineserver"
+    },
+    "defaultWine": {
+      "name": "Wine-Default-9.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Default-9.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Default-9.0/bin/wineserver"
+    },
+    "valid": [],
+    "alternatives": [
+      {
+        "list": [
+          {
+            "name": "Game-Porting-Toolkit-2.0",
+            "type": "toolkit",
+            "bin": "/pins/wines/Game-Porting-Toolkit-2.0/bin/wine64"
+          }
+        ]
+      }
+    ],
+    "releases": [
+      {
+        "version": "23.7.1",
+        "type": "Wine-Crossover",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Wine-Crossover/23.7.1.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-23.7.1",
+        "release_notes_link": "https://example.invalid/Wine-Crossover/23.7.1",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Wine-Crossover-23.7.1"
+      },
+      {
+        "version": "2.0",
+        "type": "Game-Porting-Toolkit",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Game-Porting-Toolkit/2.0.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-2.0",
+        "release_notes_link": "https://example.invalid/Game-Porting-Toolkit/2.0",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Game-Porting-Toolkit-2.0"
+      }
+    ],
+    "install": "success",
+    "platform": "mac",
+    "osRelease": "13.6.0"
+  },
+  {
+    "id": "download-mac-darwin-23-no-toolkit-release",
+    "call": "download",
+    "gameWine": {
+      "name": "Wine-Game-8.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Game-8.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Game-8.0/bin/wineserver"
+    },
+    "defaultWine": {
+      "name": "Wine-Default-9.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Default-9.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Default-9.0/bin/wineserver"
+    },
+    "valid": [],
+    "alternatives": [
+      {
+        "list": [
+          {
+            "name": "Game-Porting-Toolkit-2.0",
+            "type": "toolkit",
+            "bin": "/pins/wines/Game-Porting-Toolkit-2.0/bin/wine64"
+          }
+        ]
+      }
+    ],
+    "releases": [
+      {
+        "version": "23.7.1",
+        "type": "Wine-Crossover",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Wine-Crossover/23.7.1.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-23.7.1",
+        "release_notes_link": "https://example.invalid/Wine-Crossover/23.7.1",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Wine-Crossover-23.7.1"
+      }
+    ],
+    "install": "success",
+    "platform": "mac",
+    "osRelease": "23.1.0"
+  },
+  {
+    "id": "download-mac-darwin-13-no-crossover-release",
+    "call": "download",
+    "gameWine": {
+      "name": "Wine-Game-8.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Game-8.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Game-8.0/bin/wineserver"
+    },
+    "defaultWine": {
+      "name": "Wine-Default-9.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Default-9.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Default-9.0/bin/wineserver"
+    },
+    "valid": [],
+    "alternatives": [
+      {
+        "list": [
+          {
+            "name": "Game-Porting-Toolkit-2.0",
+            "type": "toolkit",
+            "bin": "/pins/wines/Game-Porting-Toolkit-2.0/bin/wine64"
+          }
+        ]
+      }
+    ],
+    "releases": [
+      {
+        "version": "2.0",
+        "type": "Game-Porting-Toolkit",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Game-Porting-Toolkit/2.0.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-2.0",
+        "release_notes_link": "https://example.invalid/Game-Porting-Toolkit/2.0",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Game-Porting-Toolkit-2.0"
+      }
+    ],
+    "install": "success",
+    "platform": "mac",
+    "osRelease": "13.6.0"
+  },
+  {
+    "id": "download-mac-darwin-13-install-error",
+    "call": "download",
+    "gameWine": {
+      "name": "Wine-Game-8.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Game-8.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Game-8.0/bin/wineserver"
+    },
+    "defaultWine": {
+      "name": "Wine-Default-9.0",
+      "type": "wine",
+      "bin": "/pins/wines/Wine-Default-9.0/bin/wine",
+      "wineserver": "/pins/wines/Wine-Default-9.0/bin/wineserver"
+    },
+    "valid": [],
+    "alternatives": [
+      {
+        "list": [
+          {
+            "name": "Game-Porting-Toolkit-2.0",
+            "type": "toolkit",
+            "bin": "/pins/wines/Game-Porting-Toolkit-2.0/bin/wine64"
+          }
+        ]
+      }
+    ],
+    "releases": [
+      {
+        "version": "23.7.1",
+        "type": "Wine-Crossover",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Wine-Crossover/23.7.1.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-23.7.1",
+        "release_notes_link": "https://example.invalid/Wine-Crossover/23.7.1",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Wine-Crossover-23.7.1"
+      },
+      {
+        "version": "2.0",
+        "type": "Game-Porting-Toolkit",
+        "date": "2026-01-01",
+        "download": "https://example.invalid/Game-Porting-Toolkit/2.0.tar.xz",
+        "downsize": 1000,
+        "disksize": 2000,
+        "checksum": "sha-2.0",
+        "release_notes_link": "https://example.invalid/Game-Porting-Toolkit/2.0",
+        "isInstalled": false,
+        "hasUpdate": false,
+        "installDir": "/pins/tools/wine/Game-Porting-Toolkit-2.0"
+      }
+    ],
+    "install": "error",
+    "platform": "mac",
+    "osRelease": "13.6.0"
   }
 ]

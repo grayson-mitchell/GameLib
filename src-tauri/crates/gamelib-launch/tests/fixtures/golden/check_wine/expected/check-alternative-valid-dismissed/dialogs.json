@@ -1,0 +1,15 @@
+[
+  {
+    "seq": 5,
+    "title": "Wine not found!",
+    "message": "We could not find the selected wine version to launch this title (Wine-Game-8.0). \n We found another one, do you want to continue launching using Wine-Alt-7.0 ?",
+    "buttons": [
+      "YES",
+      "NO"
+    ],
+    "cancelId": null,
+    "scriptedAnswer": null,
+    "response": 1,
+    "raisedMainWindow": true
+  }
+]

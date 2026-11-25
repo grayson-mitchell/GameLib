@@ -1,0 +1,14 @@
+[
+  {
+    "seq": 2,
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Checking if macOS is Sonoma or higher"
+  },
+  {
+    "seq": 3,
+    "level": "info",
+    "prefix": "Backend",
+    "text": "macOS is not Sonoma or higher"
+  }
+]

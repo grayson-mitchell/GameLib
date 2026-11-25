@@ -1,0 +1,24 @@
+[
+  {
+    "seq": 9,
+    "target": "global",
+    "key": "wineVersion",
+    "value": {
+      "name": "Proton-CachyOS-9.0",
+      "type": "proton",
+      "bin": "/pins/wines/Proton-CachyOS-9.0/proton"
+    },
+    "store": "kvs"
+  },
+  {
+    "seq": 11,
+    "target": "game",
+    "appName": "__gamelib_steam_bottle__",
+    "key": "wineVersion",
+    "value": {
+      "name": "Proton-CachyOS-9.0",
+      "type": "proton",
+      "bin": "/pins/wines/Proton-CachyOS-9.0/proton"
+    }
+  }
+]

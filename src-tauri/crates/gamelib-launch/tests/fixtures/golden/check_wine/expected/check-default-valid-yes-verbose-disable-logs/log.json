@@ -1,0 +1,24 @@
+[
+  {
+    "seq": 1,
+    "level": "warning",
+    "parts": [
+      [
+        "Wine version",
+        "Wine-Game-8.0",
+        "is not valid, trying another one.\n"
+      ]
+    ]
+  },
+  {
+    "seq": 5,
+    "level": "info",
+    "parts": [
+      [
+        "Changing wine version to",
+        "Wine-Default-9.0",
+        "\n"
+      ]
+    ]
+  }
+]

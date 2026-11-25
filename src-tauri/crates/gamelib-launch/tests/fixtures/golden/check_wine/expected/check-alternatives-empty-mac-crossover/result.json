@@ -1,0 +1,8 @@
+{
+  "ok": true,
+  "wineVersionAfter": {
+    "name": "Game-Porting-Toolkit-2.0",
+    "type": "toolkit",
+    "bin": "/pins/wines/Game-Porting-Toolkit-2.0/bin/wine64"
+  }
+}

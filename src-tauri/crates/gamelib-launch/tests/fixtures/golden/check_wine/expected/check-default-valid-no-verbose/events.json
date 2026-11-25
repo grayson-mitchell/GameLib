@@ -1,0 +1,14 @@
+[
+  {
+    "seq": 1,
+    "level": "error",
+    "prefix": "Backend",
+    "text": "Wine version Wine-Game-8.0 is not valid, trying another one."
+  },
+  {
+    "seq": 5,
+    "level": "info",
+    "prefix": "Backend",
+    "text": "User canceled the launch"
+  }
+]
