@@ -23,9 +23,9 @@ use gamelib_engine::ctx::Platform;
 use gamelib_engine::key::engine_key_for;
 use gamelib_wine::wine_cmd::env::GameSettingsView;
 use gamelib_wine::wine_cmd::prefix::verify_wine_prefix;
-use gamelib_wine::wine_cmd::WineHost;
+use gamelib_wine::wine_cmd::{WineHost, WineKind};
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{json, Map, Value};
 
 use super::deps::PrepareDeps;
 use super::installed_games;
@@ -98,6 +98,43 @@ fn line(level: &'static str, text: String) -> BeginEntry {
 /// The warning the TS logged for offline mode on a game that cannot run offline.
 const OFFLINE_WARNING: &str = "Warning: 'offlineMode' is turned on but the game does not support offline mode. Disable 'offlineMode' in the game's settings.";
 
+/// The in-app error dialog of a missing CrossOver bottle (`showDialogBoxModalAuto`, type `ERROR`): the window is
+/// raised and one dialog sent, with no system notification and no acknowledgement id (the dialog carries no
+/// confirmation the launch waits for).
+fn show_bottle_missing(ctx: &LaunchCtx, bottle: &str) {
+    let Some(ui) = ctx.engine.ui.as_deref() else {
+        return;
+    };
+    let none = Map::<String, Value>::new();
+    let mut params = Map::new();
+    params.insert("bottle_name".to_string(), json!(bottle));
+    let title = ctx.engine.i18n.t(
+        "box.error.cx-bottle-not-found.title",
+        "CrossOver bottle not found",
+        &none,
+    );
+    let message = ctx.engine.i18n.t(
+        "box.error.cx-bottle-not-found.message",
+        "The CrossOver bottle \"{{bottle_name}}\" does not exist, can't launch!",
+        &params,
+    );
+    ui.raise_main_window();
+    ui.show_dialog(&title, &message, "ERROR", "");
+}
+
+/// Whether the CrossOver bottle `bottle` exists: its `cxbottle.conf` under the user's CrossOver bottles
+/// folder. The name is joined to the path as the TS joined it (T-88.1-29); only existence is probed.
+fn crossover_bottle_exists(ctx: &LaunchCtx, bottle: &str) -> bool {
+    let bottles = ctx
+        .engine
+        .paths
+        .user_home
+        .join("Library/Application Support/CrossOver/Bottles");
+    // A string join, as `path.join` does: a bottle name that is an absolute path stays under the folder.
+    let conf = format!("{}/{bottle}/cxbottle.conf", bottles.to_string_lossy());
+    Path::new(&conf).exists()
+}
+
 /// `prepareWineLaunch` up to the store-setup point. `Err` is a fixed reason (`bad-args` for settings that are
 /// not game settings, `failed` for a wine prefix or an `installed_games` file that could not be written); the
 /// causes name paths, which are logged as fixed text and never returned.
@@ -118,6 +155,7 @@ pub async fn prepare_wine_begin(
     let key = engine_key_for(runner.as_str(), &args.app_name);
     let settings = deps.launch_settings(key, args.stored_settings);
     let view: GameSettingsView = serde_json::from_value(settings.clone()).map_err(|_| BAD_ARGS)?;
+    let wine_is_crossover = view.wine_version.kind == WineKind::Crossover;
 
     if !deps.valid_wine(&view.wine_version) {
         // The game's wine is not valid: the global default has to be, or the launch stops. (The TS carried on
@@ -128,6 +166,21 @@ pub async fn prepare_wine_begin(
         if !default_is_valid {
             return Ok(PrepareWineBeginReply::failed(None, Vec::new()));
         }
+    }
+
+    // Verify that the CrossOver bottle exists.
+    if platform == Platform::Mac
+        && wine_is_crossover
+        && !crossover_bottle_exists(ctx, &view.wine_crossover_bottle)
+    {
+        show_bottle_missing(ctx, &view.wine_crossover_bottle);
+        return Ok(PrepareWineBeginReply::failed(
+            Some(format!(
+                "CrossOver bottle \"{}\" does not exist",
+                view.wine_crossover_bottle
+            )),
+            Vec::new(),
+        ));
     }
 
     let mut log: Vec<BeginEntry> = Vec::new();
@@ -154,7 +207,10 @@ pub async fn prepare_wine_begin(
         return Err(FAILED);
     }
 
-    let prefix_or_bottle_folder = Some(view.wine_prefix.clone());
+    let mut prefix_or_bottle_folder = Some(view.wine_prefix.clone());
+    if platform == Platform::Mac && wine_is_crossover {
+        prefix_or_bottle_folder = deps.crossover_bottle_folder(view.clone()).await;
+    }
 
     // The folder is null when the CrossOver bottle is not configured properly, and empty when no prefix is.
     let mut prefix_updated = false;

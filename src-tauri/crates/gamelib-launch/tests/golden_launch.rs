@@ -937,10 +937,12 @@ mod wine_begin_replay {
     /// `golden/prepare_wine` holds 391 cases, the MANIFEST floor; a later edit may raise this, never lower it.
     const PREPARE_WINE_FLOOR: usize = 391;
 
-    const DELTAS: [&str; 3] = [
+    const DELTAS: [&str; 5] = [
         "in-process-wine-valid",
         "eos-overlay-slot",
         "adapter-writes-prefix-line",
+        "wine-spawn-failure-line",
+        "dialog-without-ack-id",
     ];
 
     fn wine_dir() -> PathBuf {
@@ -1560,6 +1562,21 @@ mod wine_begin_replay {
             let extra: Vec<&Value> = got_tree.iter().filter(|e| !want_tree.contains(e)).collect();
             return Err(format!("{id}: tree missing {missing:?} extra {extra:?}"));
         }
+        // The missing-bottle case, named: the window raise and one `ERROR` dialog, and no `installed_games`.
+        if id == "named-crossover-bottle-missing" {
+            let dialogs: Vec<&Value> = got_ui.iter().filter(|e| e["dialog"].is_array()).collect();
+            if dialogs.len() != 1
+                || dialogs[0]["dialog"][2] != "ERROR"
+                || got_tree
+                    .iter()
+                    .any(|e| e["path"].as_str().unwrap().ends_with("/installed_games"))
+            {
+                return Err(format!(
+                    "{id}: want one ERROR dialog and no installed_games, got {got_ui:?}"
+                ));
+            }
+            used.0.insert("named-bottle-missing-case");
+        }
         Ok(())
     }
 
@@ -1594,10 +1611,6 @@ mod wine_begin_replay {
                 .clone();
             linux += usize::from(os == "linux");
             mac += usize::from(os == "mac");
-            // Task 1 (the tracer) replays the Linux cells; the Mac cells arrive with Task 2.
-            if os != "linux" {
-                continue;
-            }
             compared += 1;
             if let Err(problem) = replay_wine_case(case, &mut used) {
                 failures.push(problem);
@@ -1618,14 +1631,21 @@ mod wine_begin_replay {
                 .collect::<Vec<_>>()
                 .join("\n")
         );
-        assert_eq!(compared, linux);
-        assert!(linux > 0, "the Linux cases are replayed");
+        assert_eq!(compared, cases.len());
+        assert!(
+            linux > 0 && mac > 0,
+            "both Linux and Mac cases are replayed"
+        );
         for delta in DELTAS {
             assert!(
                 used.0.contains(delta),
                 "the delta {delta} was never used by a case"
             );
         }
+        assert!(
+            used.0.contains("named-bottle-missing-case"),
+            "the missing-CrossOver-bottle case was not replayed"
+        );
     }
 
     #[test]
