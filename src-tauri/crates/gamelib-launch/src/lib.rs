@@ -778,7 +778,11 @@ mod tests {
             text.contains("System information could not be read."),
             "{text}"
         );
-        assert!(text.contains("GamesConfig/app1.json"), "{text}");
+        // The path is the host's own, and the log is JSON text, where a Windows backslash is doubled.
+        assert!(
+            text.replace("\\\\", "/").contains("GamesConfig/app1.json"),
+            "{text}"
+        );
 
         // A missing GameMode binary is a refusal with its reason, after the log lines were written.
         let refused = dispatch(
