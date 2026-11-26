@@ -191,7 +191,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 87: Engine, Wine and tools** — 59 plans in 38 waves; planned 2026-11-23 (executes after Phase 86 closes)
 - [x] **Phase 88: Launch scaffolding and known fixes** — 17/17 plans in 14 waves; completed 2026-11-25 (SVC-03 part 1 of 4; split 2026-11-25, 88-CONTEXT D-30)
 - [ ] **Phase 88.1: Launch builders and prepare steps** — 20 plans in 15 waves; planned 2026-11-25 (SVC-03 part 2 of 4; D-30)
-- [ ] **Phase 88.2: Command runner and game processes** — not planned
+- [ ] **Phase 88.2: Command runner and game processes** — 18 plans in 13 waves; planned 2026-11-26 (SVC-03 part 3 of 4; D-30)
 - [ ] **Phase 88.3: Launch funnel, re-adoption and the live gate** — not planned (runs the Phase 88 live gate)
 - [ ] **Phase 89: Steam library state** — not planned
 - [ ] **Phase 90: Steam services and TypeScript depot path** — not planned (session, sign-in and redeem; split 2026-11-24, 90-CONTEXT D-01)
@@ -1019,10 +1019,57 @@ Plans:
   3. The quit dialog gains a "game running" condition (D-27, a recorded behaviour change) read from the Rust running-game registry
   4. `commandRunner.ts` is deleted; closes on goldens, three-OS CI and a stub-game smoke (launch, quit-kill, survival of parent SIGKILL)
 
-**Plans:** 0 plans
+**Plans:** 0/18 plans executed in 13 waves; planned 2026-11-26 (goldens are recorded from the TS before each Rust slice, D-25; the quit prompt lands before games become Game-class)
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 88.2 to break down)
+**Wave 1**
+- [ ] 88.2-01-PLAN.md — runnerTrace harness; goldens: callRunner (pairwise, dedup, abort, transcripts, every title), redaction and the auth log sanitizers; classes.json runner call sites
+- [ ] 88.2-02-PLAN.md — gamelib-proc unix: GameHandle, stamp-checked kill_game_tree, group_alive, terminate_one, orphan arms
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 88.2-03-PLAN.md — Goldens: the wine launch variant (header, chunks, track, resolveOn), launch scripts and winepath; the commandRunner.test.ts census closed
+- [ ] 88.2-04-PLAN.md — Goldens: spawnAsync and errorHandler/askForceUninstall
+- [ ] 88.2-05-PLAN.md — gamelib-proc Windows: GetProcessTimes stamp, named non-kill-on-close Game Job, kill over the Job, Windows orphan arms
+- [ ] 88.2-06-PLAN.md — Rust call_runner helper path: redaction, sanitizers, log hand-off, dedup, abort, 50-chunk window; golden_runner and golden_redaction
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 88.2-07-PLAN.md — Rust errorHandler and askForceUninstall over the ManagerHooks seam (game_title, force_uninstall)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 88.2-08-PLAN.md — Game class: a private capture file Rust tails, the tracked registry and kill ops, the stub-game smoke (launch, quit-kill, parent SIGKILL)
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [ ] 88.2-09-PLAN.md — The wine launch variant closing 87's three wine_command deltas; launch script and winepath ops
+
+**Wave 6** *(blocked on Wave 5 completion)*
+- [ ] 88.2-10-PLAN.md — spawnAsync as a Rust op; the Windows command-line cross-check against Node, with .bat and .cmd
+
+**Wave 7** *(blocked on Wave 6 completion)*
+- [ ] 88.2-11-PLAN.md — Streaming shim: runner call, kill and abort channels, output frames, stream table, log hand-off, the commandRunner-shaped adapter
+
+**Wave 8** *(blocked on Wave 7 completion)*
+- [ ] 88.2-12-PLAN.md — Wine command, winepath, script, spawnAsync, tracked-kill and games-running channels and shims
+
+**Wave 9** *(blocked on Wave 8 completion)*
+- [ ] 88.2-13-PLAN.md — ManagerHooks transport (`launchManagerCall`) and the askForceUninstall channel
+- [ ] 88.2-14-PLAN.md — The quit dialog gains the game-running condition from the Rust registry; Yes kills through gamelib-proc (D-27 behaviour change)
+
+**Wave 10** *(blocked on Wave 9 completion)*
+- [ ] 88.2-15-PLAN.md — Boot wiring of the runner and spawnAsync adapters; the five game launches spawn as Game class
+
+**Wave 11** *(blocked on Wave 10 completion)*
+- [ ] 88.2-16-PLAN.md — Sanitizers by name, the managers' Stop through the Rust registry, the folder-missing prompt through the shim
+
+**Wave 12** *(blocked on Wave 11 completion)*
+- [ ] 88.2-17-PLAN.md — Sync with main; delete commandRunner.ts and its tests behind the RED-first commandRunnerPortComplete gate; survivors
+
+**Wave 13** *(blocked on Wave 12 completion)*
+- [ ] 88.2-18-PLAN.md — Clean-worktree proof, push checkpoint and three-OS CI with the orphan arms, the stub-game smoke and Windows quoting (D-30: no signed build)
+
+**Cross-cutting constraints:** <!-- gsd:generated -->
+- No 88.2 commit lands before 88.1-20's push: its push check needs nothing outside .planning/ between its candidate head and the push (wave-1 preconditions)
+- Flagged assumption (spec-less edge probe): SVC-03's edge-coverage row is `unclassified` and unresolved; the D-14 matrix stands in for edge coverage and is not claimed as a verified edge
+- D-20: a recorded behaviour that looks wrong is kept and filed as a todo with the three triage keys
 
 ### Phase 88.3: Launch funnel, re-adoption and the live gate (INSERTED)
 
