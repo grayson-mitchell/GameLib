@@ -23,7 +23,7 @@ use builders::{env, known_fix_env, wrappers};
 use ctx::LaunchCtx;
 use gamelib_knownfix::types::Runner;
 use gamelib_wine::tools::ToolsHost;
-use gamelib_wine::wine_cmd::env::GameSettingsView;
+use gamelib_wine::wine_cmd::env::{GameSettingsView, SetupEnvView};
 use gamelib_wine::wine_cmd::WineHost;
 use prepare::check_wine::CheckWineArgs;
 use prepare::deps::CtxPrepareDeps;
@@ -168,7 +168,7 @@ async fn route(op: &str, args: &[Value], ctx: &LaunchCtx) -> Result<Value, Strin
         }
         // `setupEnvVars`. Arguments `[settings, installPath | null, host]`.
         "launch_setup_env_vars" => {
-            let (settings, install_path, host) = settings_arg(op, args)?;
+            let (settings, install_path, host) = settings_arg::<SetupEnvView>(op, args)?;
             result_of(serde_json::to_value(env::setup_env_vars(
                 ctx,
                 &settings,
@@ -178,7 +178,7 @@ async fn route(op: &str, args: &[Value], ctx: &LaunchCtx) -> Result<Value, Strin
         }
         // `setupWineEnvVars`. Arguments `[settings, gameId | null, host]`.
         "launch_setup_wine_env_vars" => {
-            let (settings, game_id, host) = settings_arg(op, args)?;
+            let (settings, game_id, host) = settings_arg::<GameSettingsView>(op, args)?;
             result_of(serde_json::to_value(env::setup_wine_env_vars(
                 ctx,
                 &settings,
@@ -269,7 +269,8 @@ struct WrapperEnvArgs {
 }
 
 /// The one field of `GameSettings` `launch_setup_wrappers` reads. The rest of the settings object is
-/// ignored (the same leniency as [`GameSettingsView`]): the caller passes the whole object.
+/// ignored (the same leniency as [`GameSettingsView`] and [`SetupEnvView`]): the caller passes the whole
+/// object.
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct WrapperSettings {
@@ -290,12 +291,14 @@ fn optional_words(value: &Value) -> Option<Option<Vec<String>>> {
     }
 }
 
-/// The `[settings, text | null, host]` shape of the two env ops. `host` is the process facts the shell
+/// The `[settings, text | null, host]` shape of the two env ops, the settings decoded as the view `T` the
+/// op reads: [`SetupEnvView`] for `launch_setup_env_vars` (no wine), [`GameSettingsView`] for
+/// `launch_setup_wine_env_vars` (the game's wine is required). `host` is the process facts the shell
 /// read (`env`, `darwinRelease`); `null` is none.
-fn settings_arg(
+fn settings_arg<T: serde::de::DeserializeOwned>(
     op: &str,
     args: &[Value],
-) -> Result<(GameSettingsView, Option<String>, WineHost), String> {
+) -> Result<(T, Option<String>, WineHost), String> {
     let bad = || format!("{op}:bad-args");
     let [settings @ Value::Object(_), text, host] = args else {
         return Err(bad());

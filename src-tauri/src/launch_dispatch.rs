@@ -617,8 +617,8 @@ mod tests {
         assert!(!err.contains(secret));
     }
 
-    /// The settings fields the env builders need: the game's wine installation is the one required field
-    /// (the sidecar always sends the merged `GameSettings`, which holds it), `extra` adds the rest.
+    /// The settings fields the env builders need: the game's wine installation (the wine ops require it;
+    /// `setupEnvVars` reads none, and Windows settings carry none), `extra` adds the rest.
     fn settings(extra: Value) -> Value {
         let mut base = json!({
             "wineVersion": {"type": "wine", "bin": "/w/wine", "name": "Wine-9", "wineserver": "/w/wineserver"},
@@ -659,6 +659,26 @@ mod tests {
         )
         .unwrap();
         assert!(preloaded.get("LD_PRELOAD").is_none());
+    }
+
+    #[test]
+    fn the_game_env_arm_answers_settings_with_no_wine() {
+        let home = FakeHome::new("launch-shell-");
+        let ctx = ctx_over(&home);
+        // The sidecar's exact argument shape on Windows: the settings alone, no wine in them (CR-01).
+        let bare = setup_env_vars_over(Some(&ctx), &[json!({})], host).unwrap();
+        assert_eq!(bare, json!({"LD_PRELOAD": ""}));
+        let got = setup_env_vars_over(
+            Some(&ctx),
+            &[
+                json!({"nvidiaPrime": true, "wineVersion": {}}),
+                json!("C:\\Games\\G"),
+            ],
+            host,
+        )
+        .unwrap();
+        assert_eq!(got["DRI_PRIME"], json!("1"));
+        assert_eq!(got["LD_PRELOAD"], json!(""));
     }
 
     #[test]

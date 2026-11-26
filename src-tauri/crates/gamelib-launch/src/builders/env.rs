@@ -7,8 +7,8 @@ use std::collections::BTreeMap;
 use std::path::Path;
 
 use gamelib_wine::wine_cmd::env::{
-    build_wine_env_vars, setup_env_vars as wine_setup_env_vars, EnvNote, GameSettingsView,
-    WineEnvPaths,
+    build_wine_env_vars, setup_env_vars_from as wine_setup_env_vars_from, EnvNote,
+    GameSettingsView, SetupEnvView, WineEnvPaths,
 };
 use gamelib_wine::wine_cmd::valid::is_mac_sonoma_or_higher as wine_is_mac_sonoma_or_higher;
 use gamelib_wine::wine_cmd::WineHost;
@@ -21,14 +21,15 @@ use serde_json::{json, Value};
 use crate::ctx::LaunchCtx;
 
 /// `setupEnvVars`: GPU offload, the HUD, the install path, the user's own variables and an empty
-/// `LD_PRELOAD` when none is set anywhere.
+/// `LD_PRELOAD` when none is set anywhere. It reads only the three settings of [`SetupEnvView`], so a game
+/// with no wine (a Windows one) answers the same as one with a wine.
 pub fn setup_env_vars(
     ctx: &LaunchCtx,
-    settings: &GameSettingsView,
+    settings: &SetupEnvView,
     install_path: Option<&str>,
     host: &WineHost,
 ) -> BTreeMap<String, String> {
-    wine_setup_env_vars(settings, install_path, ctx.engine.platform, &host.env)
+    wine_setup_env_vars_from(settings, install_path, ctx.engine.platform, &host.env)
 }
 
 /// The text each note logs (the TS wording where it carried no path or wine name).

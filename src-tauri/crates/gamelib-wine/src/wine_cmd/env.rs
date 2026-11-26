@@ -104,6 +104,31 @@ pub struct GameSettingsView {
     pub wine_version: WineInstallation,
 }
 
+/// The three `GameSettings` fields the pre-port TS `setupEnvVars` read
+/// (`33405c885~1:src/backend/launcher.ts:1304`): GPU offload, the HUD and the user's own variables.
+/// It carries no wine, because Windows game settings carry none, so a settings object without a
+/// `wineVersion` (or with a legacy-keyed one) still answers (CR-01). Every other field of the settings
+/// object is ignored: the caller passes the whole object, the same leniency as [`GameSettingsView`].
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct SetupEnvView {
+    #[serde(rename = "nvidiaPrime", default)]
+    pub nvidia_prime: bool,
+    #[serde(rename = "showFps", default)]
+    pub show_fps: bool,
+    #[serde(rename = "enviromentOptions", default)]
+    pub environment_options: Vec<EnvEntry>,
+}
+
+impl From<&GameSettingsView> for SetupEnvView {
+    fn from(settings: &GameSettingsView) -> Self {
+        Self {
+            nvidia_prime: settings.nvidia_prime,
+            show_fps: settings.show_fps,
+            environment_options: settings.environment_options.clone(),
+        }
+    }
+}
+
 /// The two directories `setupWineEnvVars` derives paths from (`AppPaths.flatpakHome` and
 /// `AppPaths.runtimePath`).
 #[derive(Debug, Clone)]
@@ -142,9 +167,20 @@ pub fn remove_quote_if_necessary(value: &str) -> String {
 }
 
 /// `setupEnvVars`: the platform-independent part of the environment (GPU offload, the HUD, the install
-/// path, the user's own variables and an empty `LD_PRELOAD` when none is set anywhere).
+/// path, the user's own variables and an empty `LD_PRELOAD` when none is set anywhere). A delegate over
+/// [`setup_env_vars_from`] for the callers that hold a full [`GameSettingsView`].
 pub fn setup_env_vars(
     settings: &GameSettingsView,
+    install_path: Option<&str>,
+    platform: Platform,
+    env: &EnvSnapshot,
+) -> BTreeMap<String, String> {
+    setup_env_vars_from(&SetupEnvView::from(settings), install_path, platform, env)
+}
+
+/// `setupEnvVars` over the three settings it reads ([`SetupEnvView`]); the body of [`setup_env_vars`].
+pub fn setup_env_vars_from(
+    settings: &SetupEnvView,
     install_path: Option<&str>,
     platform: Platform,
     env: &EnvSnapshot,
