@@ -36,6 +36,7 @@ use prepare::wine_begin::PrepareWineBeginArgs;
 use prepare::wine_finish::PrepareWineFinishArgs;
 use runner::call_runner::{abort_run, call_runner, RunnerCallArgs, RunnerHost};
 use runner::stream::{NullSink, OutputSink, UiOutputSink};
+use runner::wine_command::{launch_wine_command, LaunchWineCommandArgs};
 use serde::Deserialize;
 use serde_json::Value;
 use std::future::Future;
@@ -65,6 +66,7 @@ pub const OPS: &[&str] = &[
     "launch_tracked_kill",
     "launch_tracked_kill_all",
     "launch_verify_wine_prefix",
+    "launch_wine_command",
 ];
 
 /// The ops that end a run. They are not cut short by the app shutdown: a quit-kill runs while the shutdown
@@ -229,6 +231,25 @@ async fn route(op: &str, args: &[Value], ctx: &LaunchCtx) -> Result<Value, Strin
             };
             let result = call_runner(ctx, call, &host, sink).await;
             result_of(serde_json::to_value(result))
+        }
+        // `runWineCommand`, launch variant (88.2-12). Arguments `[args, host]`: the call (`LaunchWineCommandArgs`:
+        // the wine command, the caller's log writers and `spawnClass`) and the wine host facts the shell read
+        // (the process environment the child inherits). Answers `{ stdout, stderr, code? }`; a refusal answers
+        // `Invalid wine` with no code, a spawn failure an empty result with a `null` code. A wine command runs
+        // as long as the game or installer it hosts, so its shim lists the channel as unbounded (the tracked
+        // kill and the app shutdown still end it). A caller that watches the stream gets `runnerOutput` frames.
+        "launch_wine_command" => {
+            let [call @ Value::Object(_), host] = args else {
+                return Err(bad());
+            };
+            let call: LaunchWineCommandArgs =
+                serde_json::from_value(call.clone()).map_err(|_| bad())?;
+            let host = host_arg(host).ok_or_else(bad)?;
+            let sink: Arc<dyn OutputSink> = match (&ctx.engine.ui, call.observe) {
+                (Some(ui), true) => Arc::new(UiOutputSink::new(ui.clone(), call.stream_id.clone())),
+                _ => Arc::new(NullSink),
+            };
+            Ok(launch_wine_command(ctx, call, &host, sink).await.to_json())
         }
         // Whether a game run is registered (D-07): the answer the quit check reads. Arguments `[]`.
         "launch_games_running" => {
@@ -694,8 +715,8 @@ mod tests {
     }
 
     #[test]
-    fn the_eighteen_launch_ops_are_in_the_table() {
-        assert_eq!(OPS.len(), 18);
+    fn the_nineteen_launch_ops_are_in_the_table() {
+        assert_eq!(OPS.len(), 19);
         assert!(OPS.iter().all(|op| op.starts_with("launch_")));
     }
 

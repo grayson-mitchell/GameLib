@@ -5,8 +5,10 @@
 //! The child is spawned through `ctx.proc` (the `SpecRunner` seam, `SpawnClass::Helper` in the app) as
 //! an argv array, never a shell, with the merged environment replacing the inherited one, its output
 //! capped at [`MAX_BUFFER`] per stream, and a shutdown registrant held for the whole run. A launched
-//! game's wine is not spawned here (Phase 88): the launch path owns its log writer, its tracked
-//! registry and its exit handling. The differences from the TS are in `golden/wine_command/deltas.json`.
+//! game's wine is not spawned here (Phase 88): [`prepare_wine_command`] decides the command (the prefix
+//! check, the environment, the argv) and `gamelib-launch`'s `launch_wine_command` runs it with its own log
+//! writer, tracked registry and exit handling, which closes the three differences from the TS in
+//! `golden/wine_command/deltas.json`.
 
 use super::env::{build_wine_env_vars, setup_env_vars, EnvNote, GameSettingsView, WineEnvPaths};
 use super::prefix::verify_wine_prefix;
@@ -172,8 +174,8 @@ pub(crate) fn umu_supported(ctx: &WineCtx, settings: &GameSettingsView, host: &W
 }
 
 /// Spawns `spec` through the seam, ending it on the app's shutdown token, on the caller's cancel and
-/// when its future is dropped.
-async fn spawn(ctx: &WineCtx, host: &WineHost, mut spec: ProcSpec) -> SpecOutput {
+/// when its future is dropped. Public for the launch variant's `wineserver --wait`.
+pub async fn spawn(ctx: &WineCtx, host: &WineHost, mut spec: ProcSpec) -> SpecOutput {
     let run_token = ctx.engine.shutdown.token().child_token();
     spec.cancel = Some(run_token.clone());
     let mut run = ctx.proc.run(spec, None);
@@ -193,24 +195,49 @@ async fn spawn(ctx: &WineCtx, host: &WineHost, mut spec: ProcSpec) -> SpecOutput
     }
 }
 
-/// Everything `runWineCommand` does after the prefix check: the validity test, the environment merge,
-/// the spawn and the wineserver wait. `verify_wine_prefix` runs this directly (its TS call passed
-/// `skipPrefixCheckIKnowWhatImDoing`).
-pub(crate) async fn run_unchecked(
+/// One wine command, decided and not yet run: what [`prepare_wine_command`] answers and both the run
+/// ([`run_wine_command`]) and the launch variant (`gamelib-launch`, Phase 88) spawn from. Everything the
+/// TS `runWineCommand` settles before it calls the runner: the validity test, the merged environment, umu,
+/// the proton verb, the wrappers and the argv.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PreparedWine {
+    /// What is spawned: the first wrapper, else umu or the wine binary.
+    pub program: String,
+    /// Its arguments: the wrappers after the first, the runner binary, the proton verb, the caller's parts.
+    pub argv: Vec<String>,
+    /// The whole environment the child gets (it replaces the inherited one), in key order.
+    pub env: Vec<(String, String)>,
+    pub cwd: Option<PathBuf>,
+    /// The binary of the `Wine Command:` header line a game log starts with (the spawned program).
+    pub header_bin: String,
+    /// The parts of that line (`argv` joined by a space).
+    pub header_parts: String,
+    /// The parts of the `Running Wine command:` debug line: the caller's parts after the proton verb and
+    /// before the wrappers, joined by a space (the TS logged them at that point).
+    pub debug_parts: String,
+    /// The wine's `wineserver`, when it has one: `wineserver --wait` follows a waited command.
+    pub wineserver: Option<String>,
+    pub wait: bool,
+    /// The settings' wine prefix: the track key's last fallback and the prefix a wait warning names.
+    pub wine_prefix: String,
+}
+
+/// Everything `runWineCommand` decides after the prefix check: the validity test, the environment merge,
+/// umu, the proton verb, the wrappers and the argv. The caller's lists are only read.
+/// `Err` is the TS's early answer (`Invalid wine`, nothing ran).
+fn prepare_unchecked(
     ctx: &WineCtx,
     settings: &GameSettingsView,
     args: WineCommandArgs,
     host: &WineHost,
-) -> WineCommandResult {
-    // Held until this function returns: the exit path waits for a running wine command.
-    let _registrant = ctx.engine.shutdown.register("wine-command");
+) -> Result<PreparedWine, WineCommandResult> {
     let platform = ctx.engine.platform;
     let wine = &settings.wine_version;
 
     if !valid_wine(Some(wine), platform, host.darwin_release.as_deref(), &|p| {
         p.exists()
     }) {
-        return not_run("Invalid wine");
+        return Err(not_run("Invalid wine"));
     }
 
     let proton_verb = args.proton_verb.unwrap_or_else(|| "run".to_string());
@@ -269,6 +296,7 @@ pub(crate) async fn run_unchecked(
     if wine.kind == WineKind::Proton && !umu {
         command_parts.insert(0, proton_verb);
     }
+    let debug_parts = command_parts.join(" ");
     let mut wrappers = options.wrappers;
     let mut bin = runner_bin.clone();
     if !wrappers.is_empty() {
@@ -278,16 +306,31 @@ pub(crate) async fn run_unchecked(
         command_parts.splice(0..0, front);
     }
 
-    let env_pairs: Vec<(String, String)> = env.into_iter().collect();
     let cwd = args
         .start_folder
         .filter(|f| !f.is_empty())
         .map(PathBuf::from);
-    let mut spec = ProcSpec::new("wine-command", bin);
-    spec.argv = command_parts;
-    spec.env = env_pairs.clone();
+    Ok(PreparedWine {
+        header_bin: bin.clone(),
+        header_parts: command_parts.join(" "),
+        program: bin,
+        argv: command_parts,
+        env: env.into_iter().collect(),
+        cwd,
+        debug_parts,
+        wineserver: wine.wineserver.clone().filter(|w| !w.is_empty()),
+        wait: args.wait,
+        wine_prefix: settings.wine_prefix.clone(),
+    })
+}
+
+/// Spawns a prepared command and then, when it asked to wait and was not cancelled, `wineserver --wait`.
+async fn run_prepared(ctx: &WineCtx, prepared: PreparedWine, host: &WineHost) -> WineCommandResult {
+    let mut spec = ProcSpec::new("wine-command", prepared.program);
+    spec.argv = prepared.argv;
+    spec.env = prepared.env.clone();
     spec.replace_env = true;
-    spec.cwd = cwd.clone();
+    spec.cwd = prepared.cwd.clone();
     // A wine command runs as long as the game or installer it hosts: no time limit, ended by the
     // caller's cancel, the app's shutdown or the exit path.
     spec.timeout = None;
@@ -302,13 +345,13 @@ pub(crate) async fn run_unchecked(
         truncated: output.truncated,
     };
 
-    if args.wait && !output.cancelled {
-        if let Some(wineserver) = wine.wineserver.as_deref().filter(|w| !w.is_empty()) {
+    if prepared.wait && !output.cancelled {
+        if let Some(wineserver) = prepared.wineserver {
             let mut wait = ProcSpec::new("wine-command", wineserver);
             wait.argv = vec!["--wait".to_string()];
-            wait.env = env_pairs;
+            wait.env = prepared.env;
             wait.replace_env = true;
-            wait.cwd = cwd;
+            wait.cwd = prepared.cwd;
             wait.timeout = Some(WINESERVER_WAIT);
             wait.max_buffer = MAX_BUFFER;
             if spawn(ctx, host, wait).await.timed_out {
@@ -322,20 +365,39 @@ pub(crate) async fn run_unchecked(
     response
 }
 
-/// Runs one wine command: creates the prefix when it is missing (unless skipped, or crossover), then
-/// validates the wine, builds the environment and runs it (`runWineCommand`).
-pub async fn run_wine_command(
+/// Everything `runWineCommand` does after the prefix check: the validity test, the environment merge,
+/// the spawn and the wineserver wait. `verify_wine_prefix` runs this directly (its TS call passed
+/// `skipPrefixCheckIKnowWhatImDoing`).
+pub(crate) async fn run_unchecked(
     ctx: &WineCtx,
+    settings: &GameSettingsView,
     args: WineCommandArgs,
     host: &WineHost,
 ) -> WineCommandResult {
+    // Held until this function returns: the exit path waits for a running wine command.
+    let _registrant = ctx.engine.shutdown.register("wine-command");
+    match prepare_unchecked(ctx, settings, args, host) {
+        Ok(prepared) => run_prepared(ctx, prepared, host).await,
+        Err(refusal) => refusal,
+    }
+}
+
+/// `runWineCommand` up to the spawn: the prefix is created when it is missing (unless skipped, or
+/// crossover), then the wine is validated and the environment, argv and cwd are decided. `Err` is the
+/// TS's early answer, an empty result naming why nothing ran. Shared by [`run_wine_command`] and the
+/// launch variant of Phase 88 (D-22: extend, never re-port), which spawns the command its own way.
+pub async fn prepare_wine_command(
+    ctx: &WineCtx,
+    args: WineCommandArgs,
+    host: &WineHost,
+) -> Result<PreparedWine, WineCommandResult> {
     // No settings and no default to fall back on is the same refusal as an unusable wine.
     let Some(settings) = args
         .game_settings
         .clone()
         .or_else(|| host.default_settings.clone())
     else {
-        return not_run("Invalid wine");
+        return Err(not_run("Invalid wine"));
     };
 
     if !args.skip_prefix_check && settings.wine_version.kind != WineKind::Crossover {
@@ -347,14 +409,30 @@ pub async fn run_wine_command(
             );
             if std::fs::create_dir_all(&settings.wine_prefix).is_err() {
                 log_error(ctx, "unable to create the wine prefix directory");
-                return not_run("Unable to create the wine prefix");
+                return Err(not_run("Unable to create the wine prefix"));
             }
             if let Err(reason) = verify_wine_prefix(ctx, &settings, host).await {
-                return not_run(&reason);
+                return Err(not_run(&reason));
             }
         }
     }
-    run_unchecked(ctx, &settings, args, host).await
+    prepare_unchecked(ctx, &settings, args, host)
+}
+
+/// Runs one wine command: creates the prefix when it is missing (unless skipped, or crossover), then
+/// validates the wine, builds the environment and runs it (`runWineCommand`).
+pub async fn run_wine_command(
+    ctx: &WineCtx,
+    args: WineCommandArgs,
+    host: &WineHost,
+) -> WineCommandResult {
+    let prepared = match prepare_wine_command(ctx, args, host).await {
+        Ok(prepared) => prepared,
+        Err(refusal) => return refusal,
+    };
+    // Held until this function returns: the exit path waits for a running wine command.
+    let _registrant = ctx.engine.shutdown.register("wine-command");
+    run_prepared(ctx, prepared, host).await
 }
 
 /// The most entries a renderer's `commandParts` may carry (87-33). The TS guard (`assertCommandParts`)

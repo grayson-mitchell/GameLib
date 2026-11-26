@@ -11,7 +11,7 @@
 
 use crate::spawn::spawn_helper_tokio;
 use gamelib_core::process::{
-    BoxFuture, ChunkSink, LineSink, Pipe, ProcSpec, SpecOutput, SpecRunner,
+    BoxFuture, ChunkSink, LineSink, Pipe, PostExit, ProcSpec, SpecOutput, SpecRunner,
 };
 use std::pin::pin;
 use std::process::Stdio;
@@ -226,6 +226,7 @@ async fn drive(
     err_cap: &mut Capture,
     out_tap: Tap<'_>,
     err_tap: Tap<'_>,
+    post_exit: PostExit,
 ) -> (Option<i32>, Option<i32>) {
     let stdin = child.stdin.take();
     let (Some(stdout), Some(stderr)) = (child.stdout.take(), child.stderr.take()) else {
@@ -247,16 +248,25 @@ async fn drive(
             _ = &mut err_f, if !err_done => err_done = true,
         }
     };
-    // The child is gone; take what is already in the pipes, but not forever.
-    let _ = tokio::time::timeout(POST_EXIT_DRAIN, async {
+    // The child is gone; take what is already in the pipes. By default not forever; a spec that asks for
+    // `UntilClosed` waits for every holder of a pipe (its cancel, timeout and the shutdown still end the run).
+    let rest = async {
         if !out_done {
             out_f.await;
         }
         if !err_done {
             err_f.await;
         }
-    })
-    .await;
+    };
+    match post_exit {
+        PostExit::UntilClosed => rest.await,
+        PostExit::Drain => {
+            let _ = tokio::time::timeout(POST_EXIT_DRAIN, rest).await;
+        }
+        PostExit::Grace(grace) => {
+            let _ = tokio::time::timeout(grace, rest).await;
+        }
+    }
     status
         .ok()
         .map_or((None, None), |s| (s.code(), signal_of(&s)))
@@ -354,6 +364,7 @@ async fn run_spec(spec: ProcSpec, feed: Feed, shutdown: CancellationToken) -> Sp
             &mut err_cap,
             out_tap,
             err_tap,
+            spec.post_exit,
         );
         let timeout = async {
             match spec.timeout {
@@ -487,6 +498,49 @@ mod tests {
         assert!(
             !global().labels().contains(&"spec-test-shutdown"),
             "a stopped run must leave nothing registered"
+        );
+    }
+    /// A shell that exits at once while a background `sleep` keeps both pipes open for a second.
+    fn holder(label: &'static str, post_exit: PostExit) -> ProcSpec {
+        let mut spec = ProcSpec::new(label, "/bin/sh");
+        spec.argv = vec!["-c".into(), "sleep 1 & echo out".into()];
+        spec.post_exit = post_exit;
+        spec
+    }
+
+    #[tokio::test]
+    async fn a_grace_resolves_while_a_descendant_still_holds_the_pipes_and_until_closed_waits_for_it(
+    ) {
+        let started = std::time::Instant::now();
+        let out = run_spec(
+            holder(
+                "spec-test-grace",
+                PostExit::Grace(Duration::from_millis(100)),
+            ),
+            Feed::None,
+            Shutdown::new().token(),
+        )
+        .await;
+        assert_eq!(out.code, Some(0), "{out:?}");
+        assert!(
+            started.elapsed() < Duration::from_millis(900),
+            "a 100 ms grace waited {:?}",
+            started.elapsed()
+        );
+
+        let started = std::time::Instant::now();
+        let out = run_spec(
+            holder("spec-test-closed", PostExit::UntilClosed),
+            Feed::None,
+            Shutdown::new().token(),
+        )
+        .await;
+        assert_eq!(out.code, Some(0), "{out:?}");
+        assert!(out.stdout.contains("out"));
+        assert!(
+            started.elapsed() >= Duration::from_millis(900),
+            "UntilClosed returned after {:?}, before the pipe holder ended",
+            started.elapsed()
         );
     }
 }

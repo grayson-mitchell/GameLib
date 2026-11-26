@@ -37,14 +37,28 @@ pub fn safe_name(name: &str) -> String {
 
 /// `<app_folder>/launches/<runner>-<safe app name>.out`.
 pub fn capture_file(app_folder: &Path, runner: RunnerName, app_name: &str) -> PathBuf {
+    capture_file_labelled(app_folder, runner.as_str(), app_name)
+}
+
+/// [`capture_file`] for a run known by a label that is not a store runner (a wine command's `wine`). A
+/// name longer than 100 characters keeps its last 100 (a wine prefix path is a long name).
+pub fn capture_file_labelled(app_folder: &Path, label: &str, name: &str) -> PathBuf {
+    let safe = safe_name(name);
+    let count = safe.chars().count();
+    let tail: String = safe.chars().skip(count.saturating_sub(100)).collect();
     app_folder
         .join("launches")
-        .join(format!("{}-{}.out", runner.as_str(), safe_name(app_name)))
+        .join(format!("{label}-{tail}.out"))
 }
 
 /// [`capture_file`] under the context's app folder.
 pub fn capture_path(ctx: &LaunchCtx, runner: RunnerName, app_name: &str) -> PathBuf {
     capture_file(&ctx.engine.paths.app_folder, runner, app_name)
+}
+
+/// [`capture_file_labelled`] under the context's app folder.
+pub fn capture_path_labelled(ctx: &LaunchCtx, label: &str, name: &str) -> PathBuf {
+    capture_file_labelled(&ctx.engine.paths.app_folder, label, name)
 }
 
 /// Creates the capture file's folder and the file itself, empty: an earlier run's output is truncated away

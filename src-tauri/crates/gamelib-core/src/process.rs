@@ -37,6 +37,20 @@ pub const DEFAULT_MAX_BUFFER: usize = 1024 * 1024;
 /// slices to its sink, so this is also the largest chunk the sink sees.
 pub const DEFAULT_READ_CHUNK: usize = 8 * 1024;
 
+/// How long a run keeps reading a child's pipes after the child itself has exited (a descendant that
+/// inherited a pipe, a wineserver or a daemonised helper, keeps it open long after).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum PostExit {
+    /// A bounded drain (2 s in the app): the default for every caller that does not say otherwise.
+    #[default]
+    Drain,
+    /// The TS `resolveOn: 'exit'`: the pipes get this long after the exit, then the run resolves.
+    Grace(Duration),
+    /// The TS `resolveOn: 'close'`: the run resolves once every holder of a pipe has closed its end, however
+    /// long that takes. The spec's cancel, timeout and the app shutdown still end it.
+    UntilClosed,
+}
+
 /// Everything one engine or wine helper spawn needs that [`ProcessRunner::run`] cannot say: an
 /// environment (added to, or replacing, the inherited one), a working directory, stdin text, an
 /// output cap, a cancellation token and a stable label for the child registry (D-17).
@@ -68,6 +82,9 @@ pub struct ProcSpec {
     /// sink sees. [`DEFAULT_READ_CHUNK`] unless a spec asks for more: the command runner reads in
     /// 64 KiB slices, as Node's pipes hand them over (88.2-07, Pitfall 6).
     pub read_chunk: usize,
+    /// What a run does about a pipe a descendant still holds after the child has exited
+    /// ([`PostExit::Drain`] unless a spec asks otherwise).
+    pub post_exit: PostExit,
 }
 
 impl ProcSpec {
@@ -87,6 +104,7 @@ impl ProcSpec {
             label,
             hide_window: false,
             read_chunk: DEFAULT_READ_CHUNK,
+            post_exit: PostExit::Drain,
         }
     }
 }
@@ -164,5 +182,13 @@ mod tests {
     #[test]
     fn a_new_spec_does_not_hide_its_window() {
         assert!(!ProcSpec::new("process-test", "program").hide_window);
+    }
+
+    #[test]
+    fn a_new_spec_keeps_the_bounded_drain() {
+        assert_eq!(
+            ProcSpec::new("process-test", "program").post_exit,
+            PostExit::Drain
+        );
     }
 }
