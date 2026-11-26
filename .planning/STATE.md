@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: "88.2"
 current_phase_name: Command runner and game processes
 status: executing
-stopped_at: Completed 88.2-09-PLAN.md
-last_updated: "2026-11-26T18:06:05.508Z"
+stopped_at: Completed 88.2-10-PLAN.md
+last_updated: "2026-11-26T18:29:44.205Z"
 last_activity: 2026-11-26
 last_activity_desc: Phase 88.2 execution started
-state_head: 5bcd985effc61510a017531c5d1bc510c0c833df
+state_head: c57eba6c74b9e5154351ad9597ed93c464568c07
 progress:
   total_phases: 25
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-25)
 ## Current Position
 
 Phase: 88.2 (Command runner and game processes) — EXECUTING
-Plan: 10 of 25
+Plan: 11 of 25
 Status: Ready to execute
 Last activity: 2026-11-26 — Phase 88.2 execution started
 Progress: [████████████████░░░░] 204/257 plans ([█████████░] 92%)
@@ -556,6 +556,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 88.2 P07 | 95 min | 2 tasks | 18 files |
 | Phase 88.2 P08 | 35 min | 2 tasks | 9 files |
 | Phase 88.2 P09 | 45 min | 2 tasks | 7 files |
+| Phase 88.2 P10 | 65 min | 2 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -1252,6 +1253,9 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 88.2]: 88.2-08: sanitizers carry their own JSON parse/stringify (JS key order, Number#toString text, UTF-16 strings); serde_json preserve_order stays off. A top-level JSON primitive or nesting past 512 returns the line unchanged (assumption, no vector). NEEDS_SANITIZER deleted; the test-local mask-secret case replays with the writers' raw text blanked (test-local-sanitizer delta).
 - [Phase 88.2]: 88.2-09: the production RunnerErrors is errors: None (call_runner runs error_handler in the background over its own LaunchCtx), not a handler stored in LaunchCtx::new (Arc cycle, stale dialogs and hooks)
 - [Phase 88.2]: 88.2-09: ManagerHooks (game_title, force_uninstall) is keyed by RunnerName; a dismissal is None and answers like No (hook called only for index 1)
+- [Phase 88.2]: A game run is polled (probe::is_alive then GameHandle::group_alive) outside the handle's lock; the registry holds Arc<Mutex<GameHandle>> so 88.2-11 can kill through the handle while the run waits
+- [Phase 88.2]: A game's stdout and stderr share one 0600 capture file under <app_folder>/launches; every tailed chunk is reported as stdout and a game result's stderr is empty
+- [Phase 88.2]: Game runs are registered in the Rust TrackedRegistry, not the helper abort/tracked token tables; abort and kill of a game wire through the registry in 88.2-11
 
 ### Pending Todos
 
@@ -1538,8 +1542,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-26T18:06:02.284Z
-Stopped at: Completed 88.2-09-PLAN.md
+Last session: 2026-11-26T18:29:41.011Z
+Stopped at: Completed 88.2-10-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
