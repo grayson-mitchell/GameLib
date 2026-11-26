@@ -14,6 +14,16 @@ pub fn start_time(pid: u32) -> Option<u64> {
     imp::start_time(pid)
 }
 
+/// `true` while any non-zombie process has process group `pgid`. A group outlives its leader while
+/// any member remains, so this is how a game tree is watched after the leader has gone. `false`
+/// for `pgid <= 1` (those are never a group GameLib created) and, off unix, always.
+pub fn group_alive(pgid: u32) -> bool {
+    match i32::try_from(pgid) {
+        Ok(p) if p > 1 => imp::group_alive(pgid),
+        _ => false,
+    }
+}
+
 #[cfg(target_os = "linux")]
 mod imp {
     /// The part of `/proc/<pid>/stat` after the last ')' (the comm field may itself contain
@@ -38,6 +48,30 @@ mod imp {
             .nth(19)?
             .parse()
             .ok()
+    }
+
+    /// Field 5 (pgrp) is token 2 after the comm field (state is token 0, ppid token 1). Zombies
+    /// (Z) and the dead (X) do not count: a killed member nobody has reaped yet is not alive.
+    pub fn group_alive(pgid: u32) -> bool {
+        let Ok(dir) = std::fs::read_dir("/proc") else {
+            return false;
+        };
+        dir.flatten().any(|entry| {
+            let Some(pid) = entry
+                .file_name()
+                .to_str()
+                .and_then(|n| n.parse::<u32>().ok())
+            else {
+                return false;
+            };
+            let Some(rest) = stat_after_comm(pid) else {
+                return false;
+            };
+            let mut fields = rest.split_whitespace();
+            let state = fields.next();
+            let pgrp = fields.nth(1).and_then(|f| f.parse::<u32>().ok());
+            !matches!(state, Some("Z") | Some("X")) && pgrp == Some(pgid)
+        })
     }
 }
 
@@ -75,6 +109,38 @@ mod imp {
         let info = bsd_info(pid)?;
         Some(info.pbi_start_tvsec * 1_000_000 + info.pbi_start_tvusec)
     }
+
+    /// `PROC_PGRP_ONLY` from `<sys/proc_info.h>` (the `proc_listpids` selector that takes a
+    /// process group id as `typeinfo`); libc 0.2.186 does not export it.
+    const PROC_PGRP_ONLY: u32 = 2;
+
+    /// Lists the pids whose process group is `pgid` and keeps the ones that are not zombies.
+    pub fn group_alive(pgid: u32) -> bool {
+        let unit = std::mem::size_of::<libc::c_int>();
+        // SAFETY: a null buffer with size 0 only asks for the byte count `proc_listpids` needs.
+        let needed = unsafe { libc::proc_listpids(PROC_PGRP_ONLY, pgid, std::ptr::null_mut(), 0) };
+        if needed <= 0 {
+            return false;
+        }
+        // Headroom for members forked between the two calls.
+        let cap = needed as usize / unit + 8;
+        let mut pids: Vec<libc::c_int> = vec![0; cap];
+        // SAFETY: `pids` is `cap * unit` writable bytes and `proc_listpids` writes at most the
+        // size it is given; it returns the number of bytes written (<= 0 on failure).
+        let written = unsafe {
+            libc::proc_listpids(
+                PROC_PGRP_ONLY,
+                pgid,
+                pids.as_mut_ptr() as *mut libc::c_void,
+                (cap * unit) as libc::c_int,
+            )
+        };
+        if written <= 0 {
+            return false;
+        }
+        let count = (written as usize / unit).min(cap);
+        pids[..count].iter().any(|&p| p > 0 && is_alive(p as u32))
+    }
 }
 
 #[cfg(all(unix, not(any(target_os = "linux", target_os = "macos"))))]
@@ -87,6 +153,14 @@ mod imp {
 
     pub fn start_time(_pid: u32) -> Option<u64> {
         None
+    }
+
+    /// `kill(-pgid, 0)` probes the whole group; EPERM means it exists but is not ours to signal.
+    /// A zombie cannot be told apart here, so this can over-report on a reaper-less system.
+    pub fn group_alive(pgid: u32) -> bool {
+        // SAFETY: signal 0 only probes existence; `pgid` was checked to be > 1 by the caller.
+        let r = unsafe { libc::kill(-(pgid as libc::pid_t), 0) };
+        r == 0 || std::io::Error::last_os_error().raw_os_error() == Some(libc::EPERM)
     }
 }
 
@@ -118,6 +192,11 @@ mod imp {
     pub fn start_time(_pid: u32) -> Option<u64> {
         None
     }
+
+    /// Windows has no process groups; a game tree there is a Job (88.2-06).
+    pub fn group_alive(_pgid: u32) -> bool {
+        false
+    }
 }
 
 #[cfg(test)]
@@ -143,5 +222,40 @@ mod tests {
         let pid = child.id();
         child.wait().expect("wait");
         assert!(!is_alive(pid));
+    }
+
+    #[test]
+    fn group_alive_refuses_the_pgids_that_are_never_ours() {
+        for bad in [0, 1, u32::MAX] {
+            assert!(!group_alive(bad), "pgid {bad}");
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_fresh_group_is_alive_and_a_killed_one_is_not() {
+        use std::os::unix::process::CommandExt;
+        let mut child = std::process::Command::new("/bin/sh")
+            .args(["-c", "sleep 30"])
+            .process_group(0)
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn()
+            .expect("spawn /bin/sh");
+        let pgid = child.id();
+        assert!(group_alive(pgid), "a fresh group is alive");
+        crate::kill_tree::kill_process_group(pgid as i32).expect("kill the group");
+        // The killed leader is still a zombie until it is reaped, and a zombie is not alive.
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+        while group_alive(pgid) {
+            assert!(
+                std::time::Instant::now() < deadline,
+                "group still alive after SIGKILL"
+            );
+            std::thread::sleep(std::time::Duration::from_millis(50));
+        }
+        child.wait().expect("reap");
+        assert!(!group_alive(pgid), "an empty group is not alive");
     }
 }

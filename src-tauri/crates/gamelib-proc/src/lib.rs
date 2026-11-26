@@ -17,8 +17,10 @@ pub mod spec;
 
 pub use children::{global, ChildSet, HelperGuard};
 pub use diag::set_diag_sink;
+pub use kill_tree::KillOutcome;
 pub use runner::ProcRunner;
 pub use spawn::{
-    spawn_game, spawn_helper, spawn_helper_tokio, spawn_helper_with_pipes, HelperPipes, SpawnClass,
+    spawn_game, spawn_game_tracked, spawn_helper, spawn_helper_tokio, spawn_helper_with_pipes,
+    GameHandle, HelperPipes, SpawnClass,
 };
 pub use spec::SpecProcRunner;

@@ -3,6 +3,7 @@
 
 use crate::children::{global, HelperGuard};
 use crate::job::JobSlot;
+use crate::probe;
 use std::path::Path;
 use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
 
@@ -141,4 +142,38 @@ pub fn spawn_game(mut cmd: Command, log: Option<&Path>) -> std::io::Result<Child
         }
     }
     cmd.spawn()
+}
+
+/// A running `SpawnClass::Game` child that GameLib can later prove is the same process.
+///
+/// Built by `spawn_game_tracked`, which goes through `spawn_game` unchanged: own session, no Job,
+/// never in the `ChildSet`, never `kill_on_drop`, and no pipe to the game. Dropping the handle
+/// does not touch the game.
+#[derive(Debug)]
+pub struct GameHandle {
+    child: Child,
+    /// The game leader's pid; on unix also its process group id (it is its own session leader).
+    pub pid: u32,
+    /// `probe::start_time(pid)` read right after the spawn: what a later pid-only kill checks
+    /// before it signals anything. `None` where the platform has no cheap stamp.
+    pub stamp: Option<u64>,
+}
+
+/// As `spawn_game`, returning a `GameHandle` that carries the leader's pid and start stamp.
+pub fn spawn_game_tracked(cmd: Command, log: Option<&Path>) -> std::io::Result<GameHandle> {
+    let child = spawn_game(cmd, log)?;
+    let pid = child.id();
+    Ok(GameHandle {
+        child,
+        pid,
+        stamp: probe::start_time(pid),
+    })
+}
+
+impl GameHandle {
+    /// Reaps the leader. Call it only after the game's group is empty (`group_alive()` false on
+    /// unix): until the leader is reaped its pid, and so its pgid, cannot be recycled.
+    pub fn reap(mut self) -> std::io::Result<()> {
+        self.child.wait().map(|_| ())
+    }
 }

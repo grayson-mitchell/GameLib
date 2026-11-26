@@ -1,16 +1,33 @@
 //! Unix process-group termination. Windows has no group-signal equivalent; its tree kill is the
 //! per-helper Job Object in `job.rs`, so this module is empty there.
 
+/// How a stamp-checked game tree kill ended.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum KillOutcome {
+    /// The tree was signalled and its group is now empty (or was SIGKILLed after the grace).
+    Killed,
+    /// The pid is alive but its start stamp is not the recorded one: pid reuse. Nothing was
+    /// signalled.
+    NotOurs,
+    /// The pid (or, for an own handle, the whole group) is not alive. Nothing was signalled.
+    Gone,
+}
+
 #[cfg(unix)]
 pub(crate) use unix::signal_group;
 #[cfg(unix)]
-pub use unix::{kill_process_group, terminate_group};
+pub use unix::{kill_game_tree, kill_process_group, terminate_group};
 
 #[cfg(unix)]
 mod unix {
+    use super::KillOutcome;
     use crate::diag::diag;
+    use crate::probe;
     use std::process::Child;
     use std::time::{Duration, Instant};
+
+    /// How long a SIGKILLed group gets to empty before the kill stops waiting for it.
+    const SIGKILL_SETTLE: Duration = Duration::from_secs(1);
 
     /// Sends `sig` to every member of group `pgid`.
     ///
@@ -84,6 +101,62 @@ mod unix {
         }
     }
 
+    /// Ends the whole tree of process group `pgid`, a group the caller has already proven is the
+    /// one it means (an own unreaped leader, or a pid whose start stamp matched): SIGTERM to the
+    /// group, poll `probe::group_alive` every 50 ms up to `grace`, SIGKILL if members remain, then
+    /// wait a short bounded time for the group to empty. Answers `Gone` without signalling when the
+    /// group is already empty, since an empty group's id may have been recycled.
+    ///
+    /// Every signal goes through `signal_group`, so `pgid <= 1` is refused (and answers `Gone`).
+    pub(crate) fn terminate_known_group(pgid: i32, grace: Duration) -> KillOutcome {
+        // `pgid <= 1` is not a group this crate created: `group_alive` answers false for it, so
+        // it is `Gone` here and never reaches `signal_group`.
+        let alive = |pgid: i32| probe::group_alive(pgid as u32);
+        if !alive(pgid) {
+            return KillOutcome::Gone;
+        }
+        if let Err(e) = signal_group(pgid, libc::SIGTERM) {
+            log_signal_failure("SIGTERM", pgid, &e);
+        }
+        let deadline = Instant::now() + grace;
+        while Instant::now() < deadline && alive(pgid) {
+            std::thread::sleep(Duration::from_millis(50));
+        }
+        if alive(pgid) {
+            if let Err(e) = kill_process_group(pgid) {
+                log_signal_failure("SIGKILL", pgid, &e);
+            }
+            let settle = Instant::now() + SIGKILL_SETTLE;
+            while Instant::now() < settle && alive(pgid) {
+                std::thread::sleep(Duration::from_millis(20));
+            }
+        }
+        KillOutcome::Killed
+    }
+
+    /// Kills the tree of a game GameLib recorded as `pid` plus start `stamp` (`probe::start_time`
+    /// at spawn), for the case where GameLib holds no `Child` for it (re-adoption after a
+    /// restart, quit-kill).
+    ///
+    /// Prohibition 5 at the mechanism: nothing is signalled unless the pid's start stamp equals
+    /// `stamp`, so a recycled pid is never touched. A Game leader is its own session and group
+    /// leader (`setsid`), so its pgid is its pid. The check and the signal are two steps; the
+    /// window between them is the stamp's own resolution (microseconds on macOS, clock ticks on
+    /// Linux) against a pid that must also be recycled inside it.
+    pub fn kill_game_tree(pid: u32, stamp: u64, grace: Duration) -> KillOutcome {
+        if !probe::is_alive(pid) {
+            return KillOutcome::Gone;
+        }
+        if probe::start_time(pid) != Some(stamp) {
+            return KillOutcome::NotOurs;
+        }
+        match i32::try_from(pid) {
+            Ok(pgid) => terminate_known_group(pgid, grace),
+            // A pid that does not fit an i32 cannot be a group this crate could signal.
+            Err(_) => KillOutcome::NotOurs,
+        }
+    }
+
     #[cfg(test)]
     mod tests {
         use super::*;
@@ -91,6 +164,34 @@ mod unix {
         use std::io::{BufRead, BufReader, Read};
         use std::os::unix::process::CommandExt;
         use std::process::{Command, Stdio};
+
+        #[test]
+        fn kill_game_tree_on_a_reaped_pid_is_gone_and_signals_nothing() {
+            let mut child = Command::new("/bin/sh")
+                .args(["-c", "exit 0"])
+                .stdin(Stdio::null())
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .spawn()
+                .expect("spawn /bin/sh");
+            let pid = child.id();
+            child.wait().expect("reap");
+            assert_eq!(
+                kill_game_tree(pid, 1, Duration::from_millis(100)),
+                KillOutcome::Gone
+            );
+        }
+
+        #[test]
+        fn terminate_known_group_refuses_the_pgids_that_are_never_ours() {
+            for bad in [0, 1, -1] {
+                assert_eq!(
+                    terminate_known_group(bad, Duration::from_millis(10)),
+                    KillOutcome::Gone,
+                    "pgid {bad}"
+                );
+            }
+        }
 
         #[test]
         fn kill_process_group_rejects_non_positive_and_init_pgids() {

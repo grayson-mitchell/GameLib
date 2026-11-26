@@ -21,7 +21,9 @@
 //!   anything else, exactly as the shell's `fn main` does (plan 83-08), because the reaper is this
 //!   same executable re-exec'd.
 //!
-//! `parent` flags: `--spec-tree` runs one `spec-tree` child through `SpecProcRunner` (on a background
+//! `parent` flags: `--game-stamp <path>` spawns the game through `spawn_game_tracked` and writes one
+//! line `<pid> <stamp>` to the path (before the manifest is printed), the record a later stamp-checked
+//! kill is given. `--spec-tree` runs one `spec-tree` child through `SpecProcRunner` (on a background
 //! runtime thread, so the run stays in flight) and adds its pid to `helpers` and its grandchild's to
 //! `grandchildren`. `--no-reaper` skips starting the reaper (the negative control: a SIGKILL of the
 //! parent must then leave its helpers alive). `--leak-pipe` (unix) adds a fourth helper holding a
@@ -32,7 +34,8 @@
 
 use gamelib_core::process::{ProcSpec, SpecRunner};
 use gamelib_proc::{
-    global, reaper, spawn_game, spawn_helper, spawn_helper_with_pipes, SpecProcRunner,
+    global, reaper, spawn_game, spawn_game_tracked, spawn_helper, spawn_helper_with_pipes,
+    SpecProcRunner,
 };
 use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf;
@@ -263,7 +266,21 @@ fn parent(args: &[String]) {
 
     let game_pids_arg = game_pids.to_string_lossy().into_owned();
     let game_cmd = self_command("game", &["--game-pids", &game_pids_arg]);
-    let game = spawn_game(game_cmd, Some(&game_log)).expect("spawn game");
+    // The handle (or child) is held until exit; dropping a `Child` never kills it, but holding it
+    // keeps the unreaped-leader shape the shell has.
+    let (game_pid, _game_hold): (u32, Box<dyn std::any::Any>) = if has_flag(args, "--game-stamp") {
+        let handle = spawn_game_tracked(game_cmd, Some(&game_log)).expect("spawn tracked game");
+        let stamp = handle.stamp.expect("a start stamp for the game leader");
+        std::fs::write(
+            flag(args, "--game-stamp"),
+            format!("{} {stamp}\n", handle.pid),
+        )
+        .expect("write game stamp");
+        (handle.pid, Box::new(handle))
+    } else {
+        let game = spawn_game(game_cmd, Some(&game_log)).expect("spawn game");
+        (game.id(), Box::new(game))
+    };
     let game_child = read_pid_file(&game_pids);
 
     // `mut` and `vec!` are only needed by the unix-only leaky helper below.
@@ -300,8 +317,7 @@ fn parent(args: &[String]) {
     let (helpers_json, grandchildren_json) = (join(&helpers), join(&grandchildren));
     let reaper_json = reaper_pid.map_or("null".to_string(), |p| p.to_string());
     let manifest = format!(
-        r#"{{"helpers":[{helpers_json}],"grandchildren":[{grandchildren_json}],"games":[{},{game_child}],"reaper":{reaper_json}}}"#,
-        game.id()
+        r#"{{"helpers":[{helpers_json}],"grandchildren":[{grandchildren_json}],"games":[{game_pid},{game_child}],"reaper":{reaper_json}}}"#
     );
     let mut out = std::io::stdout();
     writeln!(out, "{manifest}").expect("write manifest");

@@ -7,6 +7,8 @@
 //! accumulates strays.
 
 use gamelib_proc::probe::is_alive;
+#[cfg(unix)]
+use gamelib_proc::{kill_tree::kill_game_tree, KillOutcome};
 use gamelib_testutil::FakeHome;
 use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf;
@@ -71,6 +73,8 @@ struct Paths {
     standin_err: PathBuf,
     /// Where the Node stand-in sidecar writes its two children's pids.
     node_pids: PathBuf,
+    /// Where the stand-in writes the game's `<pid> <stamp>` record (`--game-stamp`).
+    game_stamp: PathBuf,
 }
 
 impl Paths {
@@ -80,6 +84,7 @@ impl Paths {
             game_pids: home.root().join("game-pids.txt"),
             standin_err: home.root().join("standin.err"),
             node_pids: home.root().join("node-pids.json"),
+            game_stamp: home.root().join("game-stamp.txt"),
         }
     }
 }
@@ -534,4 +539,57 @@ fn graceful_quit_kills_spec_child_and_grandchild() {
         !is_alive(spec_child) && !is_alive(spec_grandchild)
     });
     assert_helpers_die_and_game_survives(&run, &paths);
+}
+
+/// The game's `<pid> <stamp>` record the stand-in wrote for `--game-stamp`.
+#[cfg(unix)]
+fn read_game_stamp(paths: &Paths) -> (u32, u64) {
+    let text = std::fs::read_to_string(&paths.game_stamp).expect("the stand-in wrote a game stamp");
+    let mut fields = text.split_whitespace();
+    let pid = fields
+        .next()
+        .and_then(|f| f.parse().ok())
+        .expect("game pid");
+    let stamp = fields
+        .next()
+        .and_then(|f| f.parse().ok())
+        .expect("game stamp");
+    (pid, stamp)
+}
+
+/// SC2, the concurrency edge: a SIGKILL of the parent leaves the game and its grandchild alive (a
+/// Game is never in the reaper's set), and a stamp-checked kill from a different process (this
+/// test) then removes both. Liveness is probed from outside with `probe::is_alive`.
+#[cfg(unix)]
+#[test]
+fn sigkill_spares_game_then_stamped_kill_removes_its_tree() {
+    let home = FakeHome::new("gamelib-proc-orphans");
+    let paths = Paths::new(&home);
+    let stamp_path = paths.game_stamp.to_string_lossy().into_owned();
+    let mut run = Run::start_with(&home, &paths, &["--game-stamp", &stamp_path]);
+    let games = run.pids("games");
+    let _strays = Strays(games.clone());
+    let (pid, stamp) = read_game_stamp(&paths);
+    assert_eq!(games.len(), 2, "the game and its game-child");
+    assert_eq!(games[0], pid, "the stamp record names the game leader");
+    for g in &games {
+        assert!(is_alive(*g), "game process {g} alive before the kill");
+    }
+
+    run.kill_parent();
+    run.wait_for_parent_exit();
+    // The game and its grandchild survive the parent, and the game keeps writing to its log.
+    let before = file_len(&paths.game_log);
+    wait_until("the game to keep writing to its log", || {
+        file_len(&paths.game_log) > before
+    });
+    for g in &games {
+        assert!(is_alive(*g), "game process {g} must survive the parent");
+    }
+
+    let outcome = kill_game_tree(pid, stamp, Duration::from_millis(1500));
+    assert_eq!(outcome, KillOutcome::Killed);
+    wait_until("the game and its grandchild to die", || {
+        games.iter().all(|g| !is_alive(*g))
+    });
 }
