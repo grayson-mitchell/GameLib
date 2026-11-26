@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: "88.2"
 current_phase_name: Command runner and game processes
 status: executing
-stopped_at: Completed 88.2-08-PLAN.md
-last_updated: "2026-11-26T17:53:48.814Z"
+stopped_at: Completed 88.2-09-PLAN.md
+last_updated: "2026-11-26T18:06:05.508Z"
 last_activity: 2026-11-26
 last_activity_desc: Phase 88.2 execution started
-state_head: 8dc8cbebe47a2087bbc88757cbfd73a501158357
+state_head: 5bcd985effc61510a017531c5d1bc510c0c833df
 progress:
   total_phases: 25
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-25)
 ## Current Position
 
 Phase: 88.2 (Command runner and game processes) — EXECUTING
-Plan: 9 of 25
+Plan: 10 of 25
 Status: Ready to execute
 Last activity: 2026-11-26 — Phase 88.2 execution started
 Progress: [████████████████░░░░] 204/257 plans ([█████████░] 92%)
@@ -555,6 +555,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 88.2 P06 | 40 min | 3 tasks | 7 files |
 | Phase 88.2 P07 | 95 min | 2 tasks | 18 files |
 | Phase 88.2 P08 | 35 min | 2 tasks | 9 files |
+| Phase 88.2 P09 | 45 min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -1249,6 +1250,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 88.2]: 88.2-06: GameJob.create_for refuses a pre-existing Job of the same name; the Windows leader-only kill checks the stamp on the handle it terminates; Windows kill_game_tree keeps Gone for a dead leader (88.2-19 to decide whether to try the Job)
 - [Phase 88.2]: 88.2-07: SpecOutput carries the ending signal and ProcSpec a read size (additive); the runner's abort and tracked tables give back only the entry the run registered; the caller env arrives as ordered pairs; the shared part of the runner.call.launch cases replays through the helper spawn until 88.2-10
 - [Phase 88.2]: 88.2-08: sanitizers carry their own JSON parse/stringify (JS key order, Number#toString text, UTF-16 strings); serde_json preserve_order stays off. A top-level JSON primitive or nesting past 512 returns the line unchanged (assumption, no vector). NEEDS_SANITIZER deleted; the test-local mask-secret case replays with the writers' raw text blanked (test-local-sanitizer delta).
+- [Phase 88.2]: 88.2-09: the production RunnerErrors is errors: None (call_runner runs error_handler in the background over its own LaunchCtx), not a handler stored in LaunchCtx::new (Arc cycle, stale dialogs and hooks)
+- [Phase 88.2]: 88.2-09: ManagerHooks (game_title, force_uninstall) is keyed by RunnerName; a dismissal is None and answers like No (hook called only for index 1)
 
 ### Pending Todos
 
@@ -1535,8 +1538,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-26T17:53:45.577Z
-Stopped at: Completed 88.2-08-PLAN.md
+Last session: 2026-11-26T18:06:02.284Z
+Stopped at: Completed 88.2-09-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
