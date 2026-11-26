@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: "88.2"
 current_phase_name: Command runner and game processes
 status: executing
-stopped_at: Completed 88.2-10-PLAN.md
-last_updated: "2026-11-26T18:29:44.205Z"
+stopped_at: Completed 88.2-11-PLAN.md
+last_updated: "2026-11-26T18:49:36.848Z"
 last_activity: 2026-11-26
 last_activity_desc: Phase 88.2 execution started
-state_head: c57eba6c74b9e5154351ad9597ed93c464568c07
+state_head: ef55fd74c03f5dcf37436b52da2615f4e8e854d4
 progress:
   total_phases: 25
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-25)
 ## Current Position
 
 Phase: 88.2 (Command runner and game processes) — EXECUTING
-Plan: 11 of 25
+Plan: 12 of 25
 Status: Ready to execute
 Last activity: 2026-11-26 — Phase 88.2 execution started
 Progress: [████████████████░░░░] 204/257 plans ([█████████░] 92%)
@@ -557,6 +557,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 88.2 P08 | 35 min | 2 tasks | 9 files |
 | Phase 88.2 P09 | 45 min | 2 tasks | 7 files |
 | Phase 88.2 P10 | 65 min | 2 tasks | 11 files |
+| Phase 88.2 P11 | 75 min | 2 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -1256,6 +1257,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 88.2]: A game run is polled (probe::is_alive then GameHandle::group_alive) outside the handle's lock; the registry holds Arc<Mutex<GameHandle>> so 88.2-11 can kill through the handle while the run waits
 - [Phase 88.2]: A game's stdout and stderr share one 0600 capture file under <app_folder>/launches; every tailed chunk is reported as stdout and a game result's stderr is empty
 - [Phase 88.2]: Game runs are registered in the Rust TrackedRegistry, not the helper abort/tracked token tables; abort and kill of a game wire through the registry in 88.2-11
+- [Phase 88.2]: 88.2-11: a game is killed only through its own GameHandle::kill_tree under the handle lock (killed_by_us set before, ended checked after the run's reap); helpers are ended through their cancel token (SpecRunner exposes no pid, so ChildSet::terminate_one is unreachable); the kill ops bypass guarded's shutdown cut-off
+- [Phase 88.2]: 88.2-11: golden_runner replays the 24 runner.call.launch cases through a scripted GameSpawner (a real stub process) under the named game-merged-streams delta
 
 ### Pending Todos
 
@@ -1542,8 +1545,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-26T18:29:41.011Z
-Stopped at: Completed 88.2-10-PLAN.md
+Last session: 2026-11-26T18:49:33.533Z
+Stopped at: Completed 88.2-11-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
