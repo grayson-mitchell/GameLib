@@ -14,9 +14,9 @@ pub enum KillOutcome {
 }
 
 #[cfg(unix)]
-pub(crate) use unix::signal_group;
-#[cfg(unix)]
 pub use unix::{kill_game_tree, kill_process_group, terminate_group};
+#[cfg(unix)]
+pub(crate) use unix::{signal_group, terminate_known_group};
 
 #[cfg(unix)]
 mod unix {

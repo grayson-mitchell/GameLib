@@ -3,6 +3,7 @@
 
 use crate::children::{global, HelperGuard};
 use crate::job::JobSlot;
+use crate::kill_tree::KillOutcome;
 use crate::probe;
 use std::path::Path;
 use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
@@ -155,7 +156,8 @@ pub struct GameHandle {
     /// The game leader's pid; on unix also its process group id (it is its own session leader).
     pub pid: u32,
     /// `probe::start_time(pid)` read right after the spawn: what a later pid-only kill checks
-    /// before it signals anything. `None` where the platform has no cheap stamp.
+    /// before it signals anything. `None` where the platform has no cheap stamp, and for a game
+    /// that had already exited by the time it was read.
     pub stamp: Option<u64>,
 }
 
@@ -171,6 +173,63 @@ pub fn spawn_game_tracked(cmd: Command, log: Option<&Path>) -> std::io::Result<G
 }
 
 impl GameHandle {
+    /// Blocks until the leader has exited WITHOUT reaping it (unix: `waitid` with `WNOWAIT`), so
+    /// the leader stays a zombie and its pid, and so its process group id, cannot be recycled
+    /// while the handle can still signal the group. The handle never needs a stamp read for that:
+    /// it owns the unreaped leader. (Measured: Linux's `start_time` still reads the zombie, macOS's
+    /// `proc_pidinfo` does not, so a pid-only kill of a game whose leader has exited answers
+    /// `Gone` there.) Retried on EINTR. Off unix there is no pid recycling to guard against while
+    /// the handle is held, and this is a plain `wait`.
+    pub fn wait_leader_exit(&mut self) -> std::io::Result<()> {
+        #[cfg(unix)]
+        {
+            loop {
+                // SAFETY: an all-zero `siginfo_t` is valid; `waitid` fills it in for a child of
+                // this process, and `WNOWAIT` leaves that child's exit status to be reaped later.
+                let mut info: libc::siginfo_t = unsafe { std::mem::zeroed() };
+                let r = unsafe {
+                    libc::waitid(
+                        libc::P_PID,
+                        self.pid as libc::id_t,
+                        &mut info,
+                        libc::WEXITED | libc::WNOWAIT,
+                    )
+                };
+                if r == 0 {
+                    return Ok(());
+                }
+                let err = std::io::Error::last_os_error();
+                if err.kind() != std::io::ErrorKind::Interrupted {
+                    return Err(err);
+                }
+            }
+        }
+        #[cfg(not(unix))]
+        {
+            self.child.wait().map(|_| ())
+        }
+    }
+
+    /// Whether any process of the game's group (the leader's own session and group) is still
+    /// running. The leader's zombie does not count, so this is the answer after the leader has
+    /// exited.
+    #[cfg(unix)]
+    pub fn group_alive(&self) -> bool {
+        probe::group_alive(self.pid)
+    }
+
+    /// Ends the whole game tree through this handle: SIGTERM to the group, poll `group_alive`,
+    /// SIGKILL if members remain after `grace`. No stamp read: the handle owns the leader and,
+    /// unless it was reaped, the pid cannot have been recycled (see `wait_leader_exit`). `Gone`
+    /// when the group is already empty.
+    #[cfg(unix)]
+    pub fn kill_tree(&mut self, grace: std::time::Duration) -> KillOutcome {
+        match i32::try_from(self.pid) {
+            Ok(pgid) => crate::kill_tree::terminate_known_group(pgid, grace),
+            Err(_) => KillOutcome::Gone,
+        }
+    }
+
     /// Reaps the leader. Call it only after the game's group is empty (`group_alive()` false on
     /// unix): until the leader is reaped its pid, and so its pgid, cannot be recycled.
     pub fn reap(mut self) -> std::io::Result<()> {

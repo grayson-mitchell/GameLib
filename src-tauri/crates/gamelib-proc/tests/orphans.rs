@@ -593,3 +593,104 @@ fn sigkill_spares_game_then_stamped_kill_removes_its_tree() {
         games.iter().all(|g| !is_alive(*g))
     });
 }
+
+/// The kill is stamp-checked (prohibition 5 at the mechanism): a stamp that is not the leader's
+/// start stamp, the shape of a recycled pid, answers `NotOurs` and signals nothing.
+#[cfg(unix)]
+#[test]
+fn stamped_kill_with_a_wrong_stamp_signals_nothing() {
+    let home = FakeHome::new("gamelib-proc-orphans");
+    let paths = Paths::new(&home);
+    let stamp_path = paths.game_stamp.to_string_lossy().into_owned();
+    let mut run = Run::start_with(&home, &paths, &["--game-stamp", &stamp_path]);
+    let games = run.pids("games");
+    let _strays = Strays(games.clone());
+    let (pid, stamp) = read_game_stamp(&paths);
+
+    run.kill_parent();
+    run.wait_for_parent_exit();
+    let outcome = kill_game_tree(pid, stamp + 1, Duration::from_millis(1500));
+    assert_eq!(outcome, KillOutcome::NotOurs);
+    // Alive is not enough (a stopped process is "alive"): the game must still be writing too.
+    let before = file_len(&paths.game_log);
+    wait_until("the game to keep writing after the refused kill", || {
+        file_len(&paths.game_log) > before
+    });
+    for g in &games {
+        assert!(
+            is_alive(*g),
+            "game process {g} must survive a wrong-stamp kill"
+        );
+    }
+}
+
+/// The own-handle path: the test spawns a `game-tree` game through `spawn_game_tracked`, whose
+/// leader exits at once and leaves one grandchild. `wait_leader_exit` must leave the leader an
+/// unreaped zombie (so its pid and pgid cannot be recycled), and `kill_tree` must still reach the
+/// grandchild through the surviving group. That the leader was never reaped is proved by `reap`
+/// succeeding at the end (a reaped child is ECHILD). This is the flagged assumption about
+/// `waitid(WNOWAIT)` on this OS.
+#[cfg(unix)]
+#[test]
+fn own_handle_kill_reaches_a_grandchild_after_the_leader_exits() {
+    use gamelib_proc::probe::group_alive;
+    #[cfg(target_os = "linux")]
+    use gamelib_proc::probe::start_time;
+    use gamelib_proc::spawn_game_tracked;
+
+    let home = FakeHome::new("gamelib-proc-orphans");
+    let paths = Paths::new(&home);
+    let mut cmd = Command::new(env!("CARGO_BIN_EXE_gamelib-proc-standin"));
+    cmd.arg("game-tree")
+        .arg("--game-pids")
+        .arg(&paths.game_pids);
+    home.apply(&mut cmd);
+    let mut game = spawn_game_tracked(cmd, None).expect("spawn game-tree");
+    let pid = game.pid;
+    let mut grandchild = None;
+    wait_until("the game to record its child", || {
+        grandchild = std::fs::read_to_string(&paths.game_pids)
+            .ok()
+            .and_then(|t| t.trim().parse::<u32>().ok());
+        grandchild.is_some()
+    });
+    let grandchild = grandchild.expect("the grandchild's pid");
+    // Not the leader: it is reaped by `reap` below, after which its pid may belong to anyone.
+    let _strays = Strays(vec![grandchild]);
+    assert!(
+        is_alive(grandchild),
+        "grandchild alive before the leader exits"
+    );
+
+    game.wait_leader_exit()
+        .expect("wait for the leader without reaping it");
+    // Measured platform fact, not a requirement of the handle (which owns the unreaped leader and
+    // needs no stamp): Linux still reads a zombie's start stamp from /proc, macOS `proc_pidinfo`
+    // cannot read a zombie at all. The stamp may also be `None` for a game that had already
+    // exited when it was read.
+    #[cfg(target_os = "linux")]
+    if let Some(stamp) = game.stamp {
+        assert_eq!(
+            start_time(pid),
+            Some(stamp),
+            "the unreaped leader still reads its stamp"
+        );
+    }
+    assert!(
+        !is_alive(pid),
+        "the leader has exited (a zombie is not alive)"
+    );
+    assert!(game.group_alive(), "the grandchild keeps the group alive");
+    assert!(group_alive(pid));
+    assert!(
+        is_alive(grandchild),
+        "grandchild alive after the leader exited"
+    );
+
+    let outcome = game.kill_tree(Duration::from_millis(1500));
+    assert_eq!(outcome, KillOutcome::Killed);
+    wait_until("the grandchild to die", || !is_alive(grandchild));
+    assert!(!game.group_alive(), "the group is empty after the kill");
+    game.reap()
+        .expect("reap the leader once its group is empty");
+}

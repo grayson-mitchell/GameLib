@@ -12,6 +12,9 @@
 //!   50 ms forever. Its stdout is a file or null, which is the Pitfall 5 point: the writes must
 //!   keep succeeding after the parent is gone.
 //! - `game-child`: idle.
+//! - `game-tree --game-pids <path>`: a game whose leader exits at once. Spawns one `game-child` with
+//!   a plain std `Command` (so it shares the leader's session and group), records its pid in the
+//!   file, then exits while the child idles: a group that outlives its leader.
 //! - `spec-tree`: the winetricks shape. Waits for `go` on stdin, spawns one `idle` grandchild with a
 //!   plain std `Command` (so it shares the child's group or Job), prints its own pid and the
 //!   grandchild's as two lines on stdout, then idles. `parent --spec-tree` runs it through
@@ -52,6 +55,7 @@ fn main() {
         Some("spec-tree") => spec_tree(),
         Some("lines") => lines(),
         Some("game") => game(&args[1..]),
+        Some("game-tree") => game_tree(&args[1..]),
         Some("parent") => parent(&args[1..]),
         _ => {
             eprintln!(
@@ -221,6 +225,18 @@ fn game(args: &[String]) -> ! {
         let _ = out.flush();
         std::thread::sleep(Duration::from_millis(50));
     }
+}
+
+/// A game whose leader exits as soon as it has recorded its child. The child is deliberately never
+/// waited for: it idles until something kills it.
+#[allow(clippy::zombie_processes)]
+fn game_tree(args: &[String]) -> ! {
+    let pids_path = flag(args, "--game-pids");
+    let child = self_command("game-child", &[])
+        .spawn()
+        .expect("spawn game child");
+    std::fs::write(&pids_path, format!("{}\n", child.id())).expect("write game child pid");
+    std::process::exit(0);
 }
 
 /// Polls `path` until it holds a pid, bounded.
