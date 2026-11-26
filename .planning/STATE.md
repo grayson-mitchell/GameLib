@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: "88.2"
 current_phase_name: Command runner and game processes
 status: executing
-stopped_at: Completed 88.2-11-PLAN.md
-last_updated: "2026-11-26T18:49:36.848Z"
+stopped_at: Completed 88.2-12-PLAN.md
+last_updated: "2026-11-26T20:25:34.770Z"
 last_activity: 2026-11-26
 last_activity_desc: Phase 88.2 execution started
-state_head: ef55fd74c03f5dcf37436b52da2615f4e8e854d4
+state_head: bf5cc0c10b5bfe01259ca916245e6004bea969e0
 progress:
   total_phases: 25
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-25)
 ## Current Position
 
 Phase: 88.2 (Command runner and game processes) — EXECUTING
-Plan: 12 of 25
+Plan: 13 of 25
 Status: Ready to execute
 Last activity: 2026-11-26 — Phase 88.2 execution started
 Progress: [████████████████░░░░] 204/257 plans ([█████████░] 92%)
@@ -558,6 +558,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 88.2 P09 | 45 min | 2 tasks | 7 files |
 | Phase 88.2 P10 | 65 min | 2 tasks | 11 files |
 | Phase 88.2 P11 | 75 min | 2 tasks | 11 files |
+| Phase 88.2 P12 | 94 min | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -1259,6 +1260,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 88.2]: Game runs are registered in the Rust TrackedRegistry, not the helper abort/tracked token tables; abort and kill of a game wire through the registry in 88.2-11
 - [Phase 88.2]: 88.2-11: a game is killed only through its own GameHandle::kill_tree under the handle lock (killed_by_us set before, ended checked after the run's reap); helpers are ended through their cancel token (SpecRunner exposes no pid, so ChildSet::terminate_one is unreachable); the kill ops bypass guarded's shutdown cut-off
 - [Phase 88.2]: 88.2-11: golden_runner replays the 24 runner.call.launch cases through a scripted GameSpawner (a real stub process) under the named game-merged-streams delta
+- [Phase 88.2]: 88.2-12: ProcSpec.post_exit (Drain default, Grace, UntilClosed) gives the helper wine command the TS resolveOn close (every pipe holder) and exit (+250 ms grace); launch_wine_command shares prepare_wine_command with run_wine_command (87 deltas.json untouched), game arm = capture file + registry { wine, key }, wineserver --wait always a 30-minute Helper — close needed a real wait for pipe holders the 2 s drain never gave; the launch replay compares the TS caller-list as the argv, so no wine_command delta is applied
 
 ### Pending Todos
 
@@ -1545,8 +1547,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-26T18:49:33.533Z
-Stopped at: Completed 88.2-11-PLAN.md
+Last session: 2026-11-26T20:25:31.510Z
+Stopped at: Completed 88.2-12-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
