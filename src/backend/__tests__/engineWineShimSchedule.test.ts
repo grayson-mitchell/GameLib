@@ -294,7 +294,9 @@ const DEADLINE_SHIM_IMPORTERS: readonly string[] = [
 const COMMAND_RUNNER_IMPORTERS: readonly string[] = [
   'src/backend/services/types.ts',
   'src/backend/sidecar/bootstrap.ts',
-  'src/backend/storeManagers/steam/bridge/bottleDllOverrides.ts'
+  'src/backend/storeManagers/steam/bridge/bottleDllOverrides.ts',
+  // 88.2-01: the launch oracle's runner trace drives the real runner (a type import of its deps); it goes with the twin.
+  'src/backend/testUtils/launchOracle/runnerTrace.ts'
 ]
 
 /**
@@ -1162,6 +1164,20 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     callers: LAUNCH_UTILS_SHIM_IMPORTERS,
     // the Steam bottle provisioning leaves in 96
     deletedBy: 96
+  },
+  // 88.2-15 (D-02, D-19): the runner command transport. `runnerCall` is `callRunner`'s helper path as one streaming call over
+  // `launch_runner_call`; the output and spawn frames the shell writes ahead of the reply reach the stream that asked
+  // through `registerRunnerOutputListener` (named in `wiring`, one owner). Nothing imports the file yet: the adapter over these
+  // shims (88.2-16) and its boot wiring (88.2-21) are the callers, so `callers` is empty until then. The managers' runner calls
+  // leave in 92, which moves legendary, gog and nile into Rust.
+  {
+    name: 'runnerCall',
+    file: 'src/backend/launchrust/runner.ts',
+    shape: 'shim',
+    channel: 'RUST_LAUNCH_RUNNER_CALL',
+    wiring: ['registerRunnerOutputListener'],
+    callers: [],
+    deletedBy: 92
   },
   // 88-13 (87 D-24): the synchronous known-fix twins, for callers 88 cannot make async. The launcher's `installFixes`
   // and `getKnownFixesEnvVariables` read the tier-1 fix inline until 88.1-17 deleted them; the Steam bridge keeps its own

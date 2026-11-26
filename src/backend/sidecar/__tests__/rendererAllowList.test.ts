@@ -128,7 +128,10 @@ describe('renderer channel allow-list', () => {
       // 87-42 (T-87-41): Rust to sidecar only; the renderer cannot send it.
       'engineSelectionChanged',
       // 87-54 (T-87-55): Rust to sidecar only; the renderer cannot fire a bridge deadline.
-      'engineDeadlineFired'
+      'engineDeadlineFired',
+      // 88.2-15 (T-88.2-23): Rust to sidecar only; the renderer cannot pose as a runner's output.
+      'runnerOutput',
+      'runnerSpawned'
     ]) {
       expect(l.has(n)).toBe(false)
     }
@@ -148,6 +151,16 @@ describe('renderer channel allow-list', () => {
     expect(entry?.caller).toBe('shell')
     expect(allowed.has('engineDeadlineFired')).toBe(false)
     expect(preloadChannels().has('engineDeadlineFired')).toBe(false)
+  })
+
+  test('runnerOutput and runnerSpawned are shell-originated send channels the renderer cannot reach (T-88.2-23)', () => {
+    for (const name of ['runnerOutput', 'runnerSpawned']) {
+      const entry = channelSchemas[name]
+      expect(entry?.kind).toBe('send')
+      expect(entry?.caller).toBe('shell')
+      expect(allowed.has(name)).toBe(false)
+      expect(preloadChannels().has(name)).toBe(false)
+    }
   })
 
   test('a push-only name never opens the renderer direction', () => {

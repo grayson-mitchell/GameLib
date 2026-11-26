@@ -236,6 +236,23 @@ const engineDeadlineFired = z.strictObject({
   reason: z.literal('no-game-process')
 })
 
+// Phase 88.2 (88.2-15, D-02): output of a runner call that watches its stream, and the spawn of its child. The shell sends
+// them on the sidecar's stdin before the call's reply, so they reach the stream that asked in order; `seq` numbers a
+// stream's chunks from 0 and the stream table delivers by it. `chunk` is bounded by the largest read of a child (64 KiB)
+// and the tail of a game's capture file with room to spare, so a legitimate frame is never refused for its size. Never
+// renderer-reachable.
+const runnerStreamId = nonEmptyString(256)
+const runnerOutputFrame = z.strictObject({
+  streamId: runnerStreamId,
+  seq: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
+  pipe: z.enum(['stdout', 'stderr']),
+  chunk: z.string().max(4 * 1024 * 1024)
+})
+const runnerSpawnedFrame = z.strictObject({
+  streamId: runnerStreamId,
+  pid: z.number().int().positive().max(0xffffffff)
+})
+
 const noArgs = z.tuple([])
 
 export const sidecarInternalInvokeArgs = {
@@ -261,7 +278,10 @@ export const sidecarInternalSendArgs = {
   // Shell-originated: Rust's engine registry changed by itself (87-42). Never renderer-reachable.
   engineSelectionChanged: z.tuple([engineSelectionChanged]),
   // Shell-originated: a Steam bridge launch's deadline fired in Rust (87-54). Never renderer-reachable.
-  engineDeadlineFired: z.tuple([engineDeadlineFired])
+  engineDeadlineFired: z.tuple([engineDeadlineFired]),
+  // Shell-originated: a runner call's output chunk and its child's spawn (88.2-15). Never renderer-reachable.
+  runnerOutput: z.tuple([runnerOutputFrame]),
+  runnerSpawned: z.tuple([runnerSpawnedFrame])
 }
 
 /** Channels only the Rust shell invokes; the 67-19 relay allow-list excludes them. */
@@ -276,8 +296,15 @@ export const sidecarInternalCallers = {
   storeMirrorEvent: 'shell',
   steamPollStateEvent: 'shell',
   engineSelectionChanged: 'shell',
-  engineDeadlineFired: 'shell'
+  engineDeadlineFired: 'shell',
+  runnerOutput: 'shell',
+  runnerSpawned: 'shell'
 } as const
 
 /** One Rust steampoll state event, as validated off the wire. */
 export type SteamPollStateEvent = z.infer<typeof steamPollStateEvent>
+
+/** One `runnerOutput` frame, as validated off the wire. */
+export type RunnerOutputFrame = z.infer<typeof runnerOutputFrame>
+/** One `runnerSpawned` frame, as validated off the wire. */
+export type RunnerSpawnedFrame = z.infer<typeof runnerSpawnedFrame>

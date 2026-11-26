@@ -149,6 +149,34 @@ const sendTable: FixtureTable<typeof sidecarInternalSendArgs> = {
       [{ key: '620', reason: 'no-game-process', extra: 1 }]
     ]
   },
+  // 88.2-15: a runner call's output chunk and its child's spawn, sent by the shell ahead of the call's reply
+  runnerOutput: {
+    valid: [
+      [{ streamId: 'runner-stream-1', seq: 0, pipe: 'stdout', chunk: 'hi\n' }],
+      [{ streamId: 's', seq: 41, pipe: 'stderr', chunk: '' }]
+    ],
+    invalid: [
+      [],
+      [{ streamId: '', seq: 0, pipe: 'stdout', chunk: 'x' }],
+      [{ streamId: 's', seq: -1, pipe: 'stdout', chunk: 'x' }],
+      [{ streamId: 's', seq: 0.5, pipe: 'stdout', chunk: 'x' }],
+      [{ streamId: 's', seq: 0, pipe: 'stdin', chunk: 'x' }],
+      [{ streamId: 's', seq: 0, pipe: 'stdout' }],
+      [{ streamId: 's', seq: 0, pipe: 'stdout', chunk: 'x', extra: 1 }]
+    ]
+  },
+  runnerSpawned: {
+    valid: [[{ streamId: 'runner-stream-1', pid: 4242 }]],
+    invalid: [
+      [],
+      [{ streamId: '', pid: 4242 }],
+      [{ streamId: 's', pid: 0 }],
+      [{ streamId: 's', pid: -1 }],
+      [{ streamId: 's', pid: 1.5 }],
+      [{ streamId: 's' }],
+      [{ streamId: 's', pid: 4242, extra: 1 }]
+    ]
+  },
   // 73-11: Rust depot job events (flattened kind tag)
   depotJobEvent: {
     valid: [
@@ -268,7 +296,7 @@ describe('sidecarInternal schemas', () => {
   runFixtureTable(sidecarInternalInvokeArgs, invokeTable)
   runFixtureTable(sidecarInternalSendArgs, sendTable)
 
-  it('registers the twelve channels with the right kind and caller', () => {
+  it('registers the fourteen channels with the right kind and caller', () => {
     const shell = [
       'health',
       'trayResolveRunner',
@@ -280,7 +308,9 @@ describe('sidecarInternal schemas', () => {
       'storeMirrorEvent',
       'steamPollStateEvent',
       'engineSelectionChanged',
-      'engineDeadlineFired'
+      'engineDeadlineFired',
+      'runnerOutput',
+      'runnerSpawned'
     ]
     for (const k of Object.keys(sidecarInternalInvokeArgs)) {
       expect(defined(channelSchemas[k], k).kind).toBe('invoke')
@@ -297,6 +327,6 @@ describe('sidecarInternal schemas', () => {
     expect(
       Object.keys(sidecarInternalInvokeArgs).length +
         Object.keys(sidecarInternalSendArgs).length
-    ).toBe(12)
+    ).toBe(14)
   })
 })

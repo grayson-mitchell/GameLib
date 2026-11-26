@@ -79,7 +79,8 @@ describe('rustInvokeArgs', () => {
     // Phase 88.1 plan 19: 216 -> 207, the nine channels no TS caller reaches any more (wine_runtime_is_installed,
     // wine_runtime_download, wine_manager_install, wine_manager_list, wine_winetricks_list_installed,
     // engine_launch_arm_deadline, knownfix_apply_profile_registry, knownfix_profile_overlay_env and wine_manager_refresh).
-    expect(RUST_INVOKE_CHANNELS).toHaveLength(207)
+    // Phase 88.2 plan 15: 207 -> 208, launch_runner_call.
+    expect(RUST_INVOKE_CHANNELS).toHaveLength(208)
   })
 
   it('parses the store-embed wire fixtures', () => {

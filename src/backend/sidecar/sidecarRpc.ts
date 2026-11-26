@@ -81,6 +81,7 @@ import {
   RUST_LAUNCH_PREPARE_WINE_BEGIN,
   RUST_LAUNCH_PREPARE_WINE_FINISH,
   RUST_LAUNCH_CHECK_WINE_BEFORE_LAUNCH,
+  RUST_LAUNCH_RUNNER_CALL,
   RUST_LAUNCH_VERIFY_WINE_PREFIX,
   RUST_DIALOG_MESSAGE,
   RUST_DIALOG_OPEN,
@@ -244,6 +245,12 @@ const RUST_INVOKE_TIMEOUT_MS = 60_000
  * archive of hundreds of megabytes. The dialog waits for the person and the install carries its own cancel; the app
  * shutdown ends both (T-88.1-41). `launch_epic_service_offline` makes one status request with the engine fetch's own
  * timeout and stays bounded.
+ *
+ * Twenty-third (Phase 88.2, 88.2-15): `launch_runner_call` runs one store CLI command (legendary, gogdl, nile, comet, a sideload
+ * script) to its end, as long as the install, update, repair or game it hosts takes; the TS `callRunner` it replaces had no
+ * timeout either. Rust bounds the run by its abort id, `launch_runner_kill` on the stream id and the app shutdown (the
+ * registrant and the shutdown token), so no entry can outlive the sidecar. `launch_runner_kill` and `launch_runner_abort` are
+ * lookups that end a run and stay bounded.
  */
 const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_DIALOG_OPEN,
@@ -291,7 +298,8 @@ const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_LAUNCH_PREPARE,
   RUST_LAUNCH_PREPARE_WINE_BEGIN,
   RUST_LAUNCH_PREPARE_WINE_FINISH,
-  RUST_LAUNCH_CHECK_WINE_BEFORE_LAUNCH
+  RUST_LAUNCH_CHECK_WINE_BEFORE_LAUNCH,
+  RUST_LAUNCH_RUNNER_CALL
 ]
 
 /**

@@ -163,6 +163,7 @@ import {
   RUST_LAUNCH_PREPARE_WINE_BEGIN,
   RUST_LAUNCH_PREPARE_WINE_FINISH,
   RUST_LAUNCH_CHECK_WINE_BEFORE_LAUNCH,
+  RUST_LAUNCH_RUNNER_CALL,
   RUST_LAUNCH_SETUP_ENV_VARS,
   RUST_LAUNCH_SETUP_WINE_ENV_VARS,
   RUST_LAUNCH_SETUP_WRAPPER_ENV_VARS,
@@ -359,6 +360,29 @@ const flowArg = z.tuple([z.object({ flowId: z.string() }).strict()])
 const wineInstallation = z
   .unknown()
   .meta({ title: 'wine', 'x-rust-value': true })
+
+/**
+ * One log writer of a runner call, as `LogWriter.handOff()` answers it: the typed target (the `LogFrameTarget` shape, a
+ * closed `kind` and never a path; `runner` for a `runner` or `game` target, `appName` and `type` for a `game` one), whether
+ * its logs are disabled and whether the writer's first accepted entry must rotate the file. The crate checks the target
+ * the way the log writer does and drops one it refuses.
+ */
+const runnerLogHandOff = z
+  .object({
+    target: z
+      .object({
+        kind: z.enum(['general', 'gogRedist', 'runner', 'game']),
+        appName: z.string().optional(),
+        runner: z.string().optional(),
+        type: z
+          .enum(['launch', 'install', 'import', 'repair', 'update', 'setup'])
+          .optional()
+      })
+      .strict(),
+    disabled: z.boolean().optional(),
+    rotate: z.boolean().optional()
+  })
+  .strict()
 
 /**
  * The game settings a known-fix op acts on, opaque to the generated Rust decode (`x-rust-value`): the crate
@@ -1299,6 +1323,46 @@ export const rustInvokeArgs = {
         wineVersion: wineInstallation,
         verboseLogs: z.boolean().optional(),
         disableLogs: z.boolean().optional()
+      })
+      .strict()
+  ]),
+  // Phase 88.2 (SVC-03, 88.2-15, D-02, D-19): a runner command, helper class, as one streaming call. One strict object. `env` is
+  // the caller's variables as `[key, value]` pairs (a JSON object would lose their order, which the logged command line lists
+  // them in); `logTargets` are the caller's log writers as typed targets (never a path), the runner's own last, each with
+  // whether its logs are disabled and whether its rotation is still owed; `streamId` names the `runnerOutput` frames of a
+  // call with `observe`. The shell appends the process environment and `PATH` itself (T-88.1-14), and the crate decodes
+  // the object strictly again.
+  [RUST_LAUNCH_RUNNER_CALL]: z.tuple([
+    z
+      .object({
+        streamId: z.string().optional(),
+        commandParts: z.array(z.string().meta({ title: 'part' })),
+        runner: z
+          .object({
+            name: z.enum(['gog', 'legendary', 'nile', 'sideload', 'steam']),
+            bin: z.string(),
+            dir: z.string().optional(),
+            logPrefix: z.string()
+          })
+          .strict(),
+        env: z
+          .array(
+            z
+              .array(z.string().meta({ title: 'item' }))
+              .length(2)
+              .meta({ title: 'pair' })
+          )
+          .optional(),
+        wrappers: z.array(z.string().meta({ title: 'word' })).optional(),
+        logMessagePrefix: z.string().optional(),
+        logTargets: z.array(runnerLogHandOff).optional(),
+        logSanitizer: z.enum(['gogAuth', 'nileAuth']).optional(),
+        abortId: z.string().optional(),
+        trackKey: z.string().optional(),
+        cwd: z.string().optional(),
+        skipErrorHandler: z.boolean().optional(),
+        observe: z.boolean().optional(),
+        spawnClass: z.enum(['helper', 'game']).optional()
       })
       .strict()
   ])

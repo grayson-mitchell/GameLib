@@ -511,6 +511,64 @@ pub(crate) fn rpc_launch_check_wine_before_launch(args: &[Value]) -> Result<Valu
     check_wine_before_launch_over(launch_ctx(), args, wine_dispatch::wine_run_host)
 }
 
+/// What the shell knows of its own process that a runner call needs and the sidecar must not send (T-88.1-14): the
+/// environment the child inherits as a map (a variable that is not UTF-8 is left out, as the crate's snapshot holds
+/// text) and the `PATH` the PowerShell probe searches (empty when it is unset or not UTF-8). The sidecar is this
+/// shell's child, so its environment is this one's. `vars` and `path` are what this process reads, so a test can
+/// drive both.
+fn runner_host_over(
+    vars: impl Iterator<Item = (std::ffi::OsString, std::ffi::OsString)>,
+    path: Option<std::ffi::OsString>,
+) -> Value {
+    let env: serde_json::Map<String, Value> = vars
+        .filter_map(|(key, value)| {
+            Some((
+                key.into_string().ok()?,
+                Value::String(value.into_string().ok()?),
+            ))
+        })
+        .collect();
+    serde_json::json!({
+        "env": env,
+        "path": path.and_then(|path| path.into_string().ok()).unwrap_or_default(),
+    })
+}
+
+/// [`runner_host_over`] over this process: its environment and its `PATH` (`var_os` finds `Path` on Windows).
+fn runner_host() -> Value {
+    runner_host_over(std::env::vars_os(), std::env::var_os("PATH"))
+}
+
+/// The body of the `launch_runner_call` arm over a given context and host: the generated decode (one object, the
+/// runner one of the five names) and an arity check first, so a bad call is rejected the same fixed `<op>:bad-args`
+/// literal before and after the install and never echoes the sidecar's value, then the crate over `[call, host]`,
+/// which decodes the object strictly again. `host` is the shell's own facts (T-88.1-14), taken only once the context
+/// is there.
+fn runner_call_over(
+    ctx: Option<&Arc<LaunchCtx>>,
+    args: &[Value],
+    host: impl FnOnce() -> Value,
+) -> Result<Value, String> {
+    LaunchRunnerCallArgs::from_args(args)?;
+    if args.len() != 1 {
+        return Err("launch_runner_call:bad-args".to_string());
+    }
+    let ctx = ctx.ok_or_else(|| "launch_runner_call:not-ready".to_string())?;
+    rpc_launch_op(Some(ctx), "launch_runner_call", &[args[0].clone(), host()])
+}
+
+/// The `launch_runner_call` `rustInvoke` arm (88.2-15, D-02, D-19): a runner command, helper class, run to its end and
+/// answered as the TS `ExecResult`. The call runs here, on the dispatcher's worker thread for this one request (every
+/// `rustInvoke` runs on its own spawned thread, so a long run never holds the reader or another call), and a call
+/// that observes the stream writes its `runnerOutput` and `runnerSpawned` frames to the sidecar's stdin from that
+/// thread before this arm returns, so they reach the sidecar ahead of the reply on the one ordered pipe. The shell
+/// appends [`runner_host`]. A runner command runs as long as an install or a game, so the sidecar lists the channel as
+/// unbounded (`UNBOUNDED_RUST_CHANNELS`); the abort id, `launch_runner_kill`, the crate's `guarded` registrant and the
+/// shutdown token end it.
+pub(crate) fn rpc_launch_runner_call(args: &[Value]) -> Result<Value, String> {
+    runner_call_over(launch_ctx(), args, runner_host)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1193,5 +1251,107 @@ mod tests {
             gamelib_launch::prepare::dialogs::ask(&ctx, "title", "message", &buttons),
             None
         );
+    }
+
+    /// A runner call as the sidecar sends it: a `/bin/sh` that prints and exits.
+    fn runner_call_args(script: &str) -> Value {
+        json!({
+            "commandParts": ["-c", script],
+            "runner": {"name": "sideload", "bin": "/bin/sh", "logPrefix": "Sideload"},
+            "env": [["ZED", "1"], ["ALPHA", "2"]]
+        })
+    }
+
+    #[test]
+    fn the_runner_host_is_the_shells_environment_as_a_map_and_its_path() {
+        use std::ffi::OsString;
+        let vars = vec![
+            (OsString::from("A"), OsString::from("1")),
+            (OsString::from("PATH"), OsString::from("/bin:/usr/bin")),
+        ];
+        assert_eq!(
+            runner_host_over(vars.into_iter(), Some(OsString::from("/bin:/usr/bin"))),
+            json!({"env": {"A": "1", "PATH": "/bin:/usr/bin"}, "path": "/bin:/usr/bin"})
+        );
+        // No PATH is the empty text, and a variable that is not UTF-8 is left out.
+        assert_eq!(
+            runner_host_over(std::iter::empty(), None),
+            json!({"env": {}, "path": ""})
+        );
+        #[cfg(unix)]
+        {
+            use std::os::unix::ffi::OsStringExt;
+            let bad = OsString::from_vec(vec![0x66, 0xff]);
+            let vars = vec![(OsString::from("BAD"), bad.clone())];
+            assert_eq!(
+                runner_host_over(vars.into_iter(), Some(bad)),
+                json!({"env": {}, "path": ""})
+            );
+        }
+        // This process's own host carries what the process holds.
+        let host = runner_host();
+        assert!(host["env"].is_object());
+        assert!(host["path"].is_string());
+    }
+
+    #[test]
+    fn the_runner_call_arm_is_not_ready_before_the_install_and_rejects_a_wrong_call_the_same_way_after(
+    ) {
+        let home = FakeHome::new("launch-shell-");
+        let ctx = ctx_over(&home);
+        let secret = "/Users/someone/secret-profile-path";
+        assert_eq!(
+            runner_call_over(None, &[runner_call_args("true")], host),
+            Err("launch_runner_call:not-ready".to_string())
+        );
+        let mut stray_runner = runner_call_args("true");
+        stray_runner["runner"]["name"] = json!("epic");
+        let mut bad_target = runner_call_args("true");
+        bad_target["logTargets"] = json!([{"target": {"kind": secret}}]);
+        let wrong: Vec<Vec<Value>> = vec![
+            vec![],
+            vec![json!(secret)],
+            vec![json!({"commandParts": secret})],
+            vec![runner_call_args("true"), json!(secret)],
+            vec![stray_runner],
+            vec![bad_target],
+        ];
+        for args in wrong {
+            for ctx in [None, Some(&ctx)] {
+                let err = runner_call_over(ctx, &args, host).unwrap_err();
+                assert_eq!(err, "launch_runner_call:bad-args", "{args:?}");
+                assert!(!err.contains(secret), "{args:?}");
+            }
+        }
+        // An unknown key and a pair that is not two items pass the generated decode and are the crate's to refuse, which
+        // needs the context: the same fixed literal, never echoing what was sent.
+        let mut extra = runner_call_args("true");
+        extra["extra"] = json!(secret);
+        let mut short_pair = runner_call_args("true");
+        short_pair["env"] = json!([["ONLY-KEY"]]);
+        for args in [extra, short_pair] {
+            let err = runner_call_over(Some(&ctx), &[args], host).unwrap_err();
+            assert_eq!(err, "launch_runner_call:bad-args");
+            assert!(!err.contains(secret));
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn the_runner_call_arm_runs_the_call_over_the_shells_host_and_answers_the_exec_result() {
+        let home = FakeHome::new("launch-shell-");
+        let ctx = ctx_over(&home);
+        // The child sees the shell's variables (the host) and the caller's own, which win.
+        let got = runner_call_over(
+            Some(&ctx),
+            &[runner_call_args("printf '%s-%s' \"$HOST_ONLY\" \"$ZED\"")],
+            || json!({"env": {"HOST_ONLY": "h", "ZED": "host", "PATH": "/usr/bin:/bin"}, "path": "/usr/bin:/bin"}),
+        )
+        .unwrap();
+        assert_eq!(got["stdout"], json!("h-1"), "{got}");
+        assert!(got.get("error").is_none(), "{got}");
+        // A non-zero exit is the answer's `error`, not an `Err`.
+        let failed = runner_call_over(Some(&ctx), &[runner_call_args("exit 3")], host).unwrap();
+        assert!(failed["error"].is_string(), "{failed}");
     }
 }

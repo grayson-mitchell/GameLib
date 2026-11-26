@@ -224,6 +224,7 @@ pub(crate) enum RustInvokeChannel {
     LaunchPrepareWineBegin,
     LaunchPrepareWineFinish,
     LaunchCheckWineBeforeLaunch,
+    LaunchRunnerCall,
     ShortcutsExist,
     ShortcutsAdd,
     ShortcutsRemove,
@@ -435,6 +436,7 @@ impl RustInvokeChannel {
         RustInvokeChannel::LaunchPrepareWineBegin,
         RustInvokeChannel::LaunchPrepareWineFinish,
         RustInvokeChannel::LaunchCheckWineBeforeLaunch,
+        RustInvokeChannel::LaunchRunnerCall,
         RustInvokeChannel::ShortcutsExist,
         RustInvokeChannel::ShortcutsAdd,
         RustInvokeChannel::ShortcutsRemove,
@@ -646,6 +648,7 @@ impl RustInvokeChannel {
             "launch_prepare_wine_begin" => Some(RustInvokeChannel::LaunchPrepareWineBegin),
             "launch_prepare_wine_finish" => Some(RustInvokeChannel::LaunchPrepareWineFinish),
             "launch_check_wine_before_launch" => Some(RustInvokeChannel::LaunchCheckWineBeforeLaunch),
+            "launch_runner_call" => Some(RustInvokeChannel::LaunchRunnerCall),
             "shortcuts_exist" => Some(RustInvokeChannel::ShortcutsExist),
             "shortcuts_add" => Some(RustInvokeChannel::ShortcutsAdd),
             "shortcuts_remove" => Some(RustInvokeChannel::ShortcutsRemove),
@@ -859,6 +862,7 @@ impl RustInvokeChannel {
             RustInvokeChannel::LaunchPrepareWineBegin => "launch_prepare_wine_begin",
             RustInvokeChannel::LaunchPrepareWineFinish => "launch_prepare_wine_finish",
             RustInvokeChannel::LaunchCheckWineBeforeLaunch => "launch_check_wine_before_launch",
+            RustInvokeChannel::LaunchRunnerCall => "launch_runner_call",
             RustInvokeChannel::ShortcutsExist => "shortcuts_exist",
             RustInvokeChannel::ShortcutsAdd => "shortcuts_add",
             RustInvokeChannel::ShortcutsRemove => "shortcuts_remove",
@@ -4447,6 +4451,142 @@ impl LaunchCheckWineBeforeLaunchArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let first = args.first().ok_or_else(|| "launch_check_wine_before_launch:bad-args".to_string())?;
         serde_json::from_value(first.clone()).map_err(|_| "launch_check_wine_before_launch:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct LaunchRunnerCallArgs {
+    #[serde(rename = "streamId")]
+    #[serde(default)]
+    pub(crate) stream_id: Option<String>,
+    #[serde(rename = "commandParts")]
+    pub(crate) command_parts: Vec<String>,
+    pub(crate) runner: LaunchRunnerCallArgsRunner,
+    #[serde(default)]
+    pub(crate) env: Option<Vec<Vec<String>>>,
+    #[serde(default)]
+    pub(crate) wrappers: Option<Vec<String>>,
+    #[serde(rename = "logMessagePrefix")]
+    #[serde(default)]
+    pub(crate) log_message_prefix: Option<String>,
+    #[serde(rename = "logTargets")]
+    #[serde(default)]
+    pub(crate) log_targets: Option<Vec<LaunchRunnerCallArgsLogTargetsItem>>,
+    #[serde(rename = "logSanitizer")]
+    #[serde(default)]
+    pub(crate) log_sanitizer: Option<LaunchRunnerCallArgsLogSanitizer>,
+    #[serde(rename = "abortId")]
+    #[serde(default)]
+    pub(crate) abort_id: Option<String>,
+    #[serde(rename = "trackKey")]
+    #[serde(default)]
+    pub(crate) track_key: Option<String>,
+    #[serde(default)]
+    pub(crate) cwd: Option<String>,
+    #[serde(rename = "skipErrorHandler")]
+    #[serde(default)]
+    pub(crate) skip_error_handler: Option<bool>,
+    #[serde(default)]
+    pub(crate) observe: Option<bool>,
+    #[serde(rename = "spawnClass")]
+    #[serde(default)]
+    pub(crate) spawn_class: Option<LaunchRunnerCallArgsSpawnClass>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+pub(crate) enum LaunchRunnerCallArgsRunnerName {
+    #[serde(rename = "gog")]
+    Gog,
+    #[serde(rename = "legendary")]
+    Legendary,
+    #[serde(rename = "nile")]
+    Nile,
+    #[serde(rename = "sideload")]
+    Sideload,
+    #[serde(rename = "steam")]
+    Steam,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct LaunchRunnerCallArgsRunner {
+    pub(crate) name: LaunchRunnerCallArgsRunnerName,
+    pub(crate) bin: String,
+    #[serde(default)]
+    pub(crate) dir: Option<String>,
+    #[serde(rename = "logPrefix")]
+    pub(crate) log_prefix: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+pub(crate) enum LaunchRunnerCallArgsLogTargetsItemTargetKind {
+    #[serde(rename = "general")]
+    General,
+    #[serde(rename = "gogRedist")]
+    GogRedist,
+    #[serde(rename = "runner")]
+    Runner,
+    #[serde(rename = "game")]
+    Game,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+pub(crate) enum LaunchRunnerCallArgsLogTargetsItemTargetType {
+    #[serde(rename = "launch")]
+    Launch,
+    #[serde(rename = "install")]
+    Install,
+    #[serde(rename = "import")]
+    Import,
+    #[serde(rename = "repair")]
+    Repair,
+    #[serde(rename = "update")]
+    Update,
+    #[serde(rename = "setup")]
+    Setup,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct LaunchRunnerCallArgsLogTargetsItemTarget {
+    pub(crate) kind: LaunchRunnerCallArgsLogTargetsItemTargetKind,
+    #[serde(rename = "appName")]
+    #[serde(default)]
+    pub(crate) app_name: Option<String>,
+    #[serde(default)]
+    pub(crate) runner: Option<String>,
+    #[serde(rename = "type")]
+    #[serde(default)]
+    pub(crate) type_: Option<LaunchRunnerCallArgsLogTargetsItemTargetType>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct LaunchRunnerCallArgsLogTargetsItem {
+    pub(crate) target: LaunchRunnerCallArgsLogTargetsItemTarget,
+    #[serde(default)]
+    pub(crate) disabled: Option<bool>,
+    #[serde(default)]
+    pub(crate) rotate: Option<bool>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+pub(crate) enum LaunchRunnerCallArgsLogSanitizer {
+    #[serde(rename = "gogAuth")]
+    GogAuth,
+    #[serde(rename = "nileAuth")]
+    NileAuth,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+pub(crate) enum LaunchRunnerCallArgsSpawnClass {
+    #[serde(rename = "helper")]
+    Helper,
+    #[serde(rename = "game")]
+    Game,
+}
+
+impl LaunchRunnerCallArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "launch_runner_call:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "launch_runner_call:bad-args".to_string())
     }
 }
 

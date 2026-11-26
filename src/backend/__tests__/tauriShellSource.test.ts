@@ -524,7 +524,8 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     // Phase 88.1 plan 19: 216 -> 207, the nine channels no TS caller reaches any more (wine_runtime_is_installed,
     // wine_runtime_download, wine_manager_install, wine_manager_list, wine_winetricks_list_installed,
     // engine_launch_arm_deadline, knownfix_apply_profile_registry, knownfix_profile_overlay_env and wine_manager_refresh).
-    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(207)
+    // Phase 88.2 plan 15: 207 -> 208, launch_runner_call.
+    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(208)
     expect(router).not.toContain('_ =>')
   })
 
@@ -1100,6 +1101,9 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       // Phase 88.1 plan 14: `checkWineBeforeLaunch`, the wine self-heal (its shim is `launchrust/launchUtils.ts`). PROVEN: `launch_dispatch::tests` drives the arm's decode,
       // not-ready and the dismissal of a context with no dialog source; `gamelib-launch`'s `utils_pieces.rs` replays golden/check_wine.
       'launch_check_wine_before_launch',
+      // Phase 88.2 plan 15: a runner command, helper class, as one streaming call (its shim is `launchrust/runner.ts`). PROVEN: `launch_dispatch::tests` drives the arm's decode,
+      // not-ready, the host facts the shell builds and a real `/bin/sh` call; `gamelib-launch`'s `golden_runner.rs` and `runner_real.rs` drive the crate.
+      'launch_runner_call',
       // Phase 94 plan 11: the shortcut exists check (`shortcutsResolvers.ts` resolver). PROVEN: `shortcuts_dispatch::tests`
       // drives the arm's decode, not-ready and a real exists answer on a FakeHome; `golden_paths.rs` replays the TS goldens.
       'shortcuts_exist',

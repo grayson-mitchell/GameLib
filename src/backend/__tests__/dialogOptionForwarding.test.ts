@@ -277,7 +277,10 @@ describe('sidecarRpc UNBOUNDED_RUST_CHANNELS covers every human-gated dialog cha
     'RUST_LAUNCH_PREPARE_WINE_FINISH',
     // Phase 88.1 plan 16: launch_check_wine_before_launch asks the user a question through a native dialog (a human answers,
     // no limit) and may download a default wine; the shutdown ends both. Not a dialog-open channel of its own.
-    'RUST_LAUNCH_CHECK_WINE_BEFORE_LAUNCH'
+    'RUST_LAUNCH_CHECK_WINE_BEFORE_LAUNCH',
+    // Phase 88.2 plan 15: launch_runner_call runs one store CLI command to its end, as long as the install or game it hosts takes
+    // (the TS callRunner it replaces had no timeout); ended by its abort id, launch_runner_kill or the shutdown. Not a dialog channel.
+    'RUST_LAUNCH_RUNNER_CALL'
   ]
 
   test('contains exactly the dialog, depot, Rust CM, safety remove, wine runtime download and wine manager channels', () => {

@@ -1559,6 +1559,19 @@ export const RUST_LAUNCH_PREPARE_WINE_FINISH =
  */
 export const RUST_LAUNCH_CHECK_WINE_BEFORE_LAUNCH =
   'launch_check_wine_before_launch' as const
+/**
+ * Phase 88.2 (SVC-03, 88.2-15, D-02, D-19): `callRunner`, helper class, as one streaming call. `launch_runner_call` takes
+ * `[args]` (`{ streamId?, commandParts, runner, env?, wrappers?, logMessagePrefix?, logTargets?, logSanitizer?, abortId?,
+ * trackKey?, cwd?, skipErrorHandler?, observe?, spawnClass? }`: `env` is a list of `[key, value]` pairs, because a JSON
+ * object loses the caller's order, and `logTargets` are the caller's log writers as typed targets, the runner's own last;
+ * the shell appends the process environment and `PATH` itself, T-88.1-14) and answers the TS `ExecResult` `{ stdout,
+ * stderr, fullCommand, error?, abort? }`. A call with `observe: true` is sent the output as it arrives: the shell writes
+ * `runnerOutput` `[{ streamId, seq, pipe, chunk }]` and `runnerSpawned` `[{ streamId, pid }]` frames on the sidecar's
+ * stdin before the reply (one ordered pipe), and `registerRunnerOutputListener` in `launchrust/runner.ts` hands each to
+ * the stream that asked. A runner command runs for as long as an install or a game takes, so the channel is unbounded
+ * (`UNBOUNDED_RUST_CHANNELS`); the abort id, `launch_runner_kill` and the app shutdown end it.
+ */
+export const RUST_LAUNCH_RUNNER_CALL = 'launch_runner_call' as const
 export const RUST_ENGINE_STATE_RECORD_DECISION =
   'engine_state_record_decision' as const
 export const RUST_ENGINE_STATE_PUBLISH_OVERLAY_NOTICE =
@@ -2005,6 +2018,7 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_LAUNCH_PREPARE_WINE_BEGIN,
   RUST_LAUNCH_PREPARE_WINE_FINISH,
   RUST_LAUNCH_CHECK_WINE_BEFORE_LAUNCH,
+  RUST_LAUNCH_RUNNER_CALL,
   RUST_SHORTCUTS_EXIST,
   RUST_SHORTCUTS_ADD,
   RUST_SHORTCUTS_REMOVE,
