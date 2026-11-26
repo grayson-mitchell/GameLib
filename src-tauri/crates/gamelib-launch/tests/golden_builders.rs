@@ -1,6 +1,6 @@
 //! The Rust replay of the launch builder goldens 88.1-01 recorded from the TypeScript:
 //!
-//! - `golden/builders` (115 cases): `setupWrapperEnvVars`, `setupWrappers` pairwise, npm shlex split and
+//! - `golden/builders` (124 cases): `setupWrapperEnvVars`, `setupWrappers` pairwise, npm shlex split and
 //!   join vectors, the tier-1 known-fix env over seeded layers, `removeQuoteIfNecessary`,
 //!   `isMacSonomaOrHigher` with its log lines, the `setupWineEnvVars` library-folder incident cases and
 //!   `setupEnvVars` over settings that carry no wine on Windows (88.1-21, CR-01);
@@ -35,8 +35,8 @@ use gamelib_testutil::FakeHome;
 use gamelib_wine::ctx::WineCtx;
 use serde_json::{json, Value};
 
-/// `golden/builders` holds 115 cases, the MANIFEST floor; a later edit may raise this, never lower it.
-const BUILDERS_FLOOR: usize = 115;
+/// `golden/builders` holds 124 cases, the MANIFEST floor; a later edit may raise this, never lower it.
+const BUILDERS_FLOOR: usize = 124;
 /// `golden/gamescope` holds 65 cases, the MANIFEST floor.
 const GAMESCOPE_FLOOR: usize = 65;
 

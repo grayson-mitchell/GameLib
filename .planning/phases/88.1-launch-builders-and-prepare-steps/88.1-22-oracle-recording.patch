@@ -1,5 +1,5 @@
 diff --git a/src/backend/__tests__/oracle/launchBuilders.oracle.test.ts b/src/backend/__tests__/oracle/launchBuilders.oracle.test.ts
-index f2b8b867c..0585c43b9 100644
+index f2b8b867c..f6fcd0532 100644
 --- a/src/backend/__tests__/oracle/launchBuilders.oracle.test.ts
 +++ b/src/backend/__tests__/oracle/launchBuilders.oracle.test.ts
 @@ -67,7 +67,11 @@ import {
@@ -20,7 +20,7 @@ index f2b8b867c..0585c43b9 100644
  const SLICE = 'builders'
  /** The case count this plan committed; a later edit may raise it, never lower it. */
 -const BUILDERS_FLOOR = 113
-+const BUILDERS_FLOOR = 115
++const BUILDERS_FLOOR = 124
  
  const mode = engineWineOracleMode()
  
@@ -45,7 +45,7 @@ index f2b8b867c..0585c43b9 100644
    call: Op
  }
  
-@@ -472,6 +483,34 @@ function wineLibFolderCases(): BuilderCase[] {
+@@ -472,6 +483,110 @@ function wineLibFolderCases(): BuilderCase[] {
    ]
  }
  
@@ -56,6 +56,81 @@ index f2b8b867c..0585c43b9 100644
 +    ...s,
 +    wineVersion: { ...s.wineVersion, legacy: 1 }
 +  }) as unknown as WineSettingsInput
++
++/** 88.1-22: setupEnvVars on every platform, a legacy key, and a Windows wine env, recorded from the pre-port TS. */
++function envVarsPlatformCases(): BuilderCase[] {
++  const recordedAt = '51329e5d648b308756ec03220b970dbe1edb3361'
++  // The shape of a Windows Epic game's settings: no wineVersion.
++  const store = {
++    nvidiaPrime: true,
++    showFps: true,
++    enviromentOptions: [
++      { key: 'DXVK_ASYNC', value: '"1"' },
++      { key: 'PLAIN', value: 'a b' }
++    ],
++    wrapperOptions: [],
++    launcherArgs: '',
++    winePrefix: ''
++  }
++  const envCase = (
++    id: string,
++    platform: OraclePlatform,
++    settings: Record<string, unknown>,
++    installPath: string | null
++  ): BuilderCase => ({
++    id,
++    platform,
++    recordedAt,
++    call: { op: 'envVars', settings, installPath }
++  })
++  return [
++    envCase(
++      'env-vars-windows-store-settings',
++      'windows',
++      store,
++      'C:\\Games\\App'
++    ),
++    envCase(
++      'env-vars-windows-empty-wine-version',
++      'windows',
++      { wineVersion: {} },
++      null
++    ),
++    envCase('env-vars-linux-empty-settings', 'linux', {}, null),
++    envCase('env-vars-linux-store-settings', 'linux', store, '/games/app'),
++    envCase('env-vars-mac-empty-settings', 'mac', {}, null),
++    envCase('env-vars-mac-store-settings', 'mac', store, '/Games/App'),
++    envCase(
++      'env-vars-linux-user-ld-preload',
++      'linux',
++      { enviromentOptions: [{ key: 'LD_PRELOAD', value: 'libshim.so' }] },
++      null
++    ),
++    envCase(
++      'env-vars-legacy-key-in-wine-version',
++      'linux',
++      {
++        wineVersion: {
++          type: 'wine',
++          bin: '/pins/bin/wine',
++          name: 'Wine-9',
++          wineserver: '/pins/bin/wineserver',
++          legacy: 1
++        }
++      },
++      null
++    ),
++    {
++      id: 'wine-env-windows-wine-with-libs',
++      platform: 'windows',
++      recordedAt,
++      call: {
++        op: 'wineEnv',
++        settings: wineSettings('/pins/lib', '/pins/lib32')
++      }
++    }
++  ]
++}
 +
 +function gapClosureCases(): BuilderCase[] {
 +  return [
@@ -73,14 +148,15 @@ index f2b8b867c..0585c43b9 100644
 +        op: 'wineEnv',
 +        settings: legacyWine(wineSettings('/pins/lib', '/pins/lib32'))
 +      }
-+    }
++    },
++    ...envVarsPlatformCases()
 +  ]
 +}
 +
  function builderCases(): BuilderCase[] {
    return [
      ...wrapperEnvVarsCases(),
-@@ -480,7 +519,8 @@ function builderCases(): BuilderCase[] {
+@@ -480,7 +595,8 @@ function builderCases(): BuilderCase[] {
      ...knownFixCases(),
      ...removeQuoteCases(),
      ...sonomaCases(),
@@ -90,7 +166,7 @@ index f2b8b867c..0585c43b9 100644
    ]
  }
  
-@@ -532,6 +572,11 @@ function runCall(
+@@ -532,6 +648,11 @@ function runCall(
        return isMacSonomaOrHigher()
      case 'wineEnv':
        return launcher.setupWineEnvVars(call.settings as unknown as GameSettings)

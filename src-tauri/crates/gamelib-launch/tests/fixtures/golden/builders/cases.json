@@ -1403,5 +1403,172 @@
         "preferSystemLibs": false
       }
     }
+  },
+  {
+    "id": "env-vars-windows-store-settings",
+    "platform": "windows",
+    "recordedAt": "51329e5d648b308756ec03220b970dbe1edb3361",
+    "call": {
+      "op": "envVars",
+      "settings": {
+        "nvidiaPrime": true,
+        "showFps": true,
+        "enviromentOptions": [
+          {
+            "key": "DXVK_ASYNC",
+            "value": "\"1\""
+          },
+          {
+            "key": "PLAIN",
+            "value": "a b"
+          }
+        ],
+        "wrapperOptions": [],
+        "launcherArgs": "",
+        "winePrefix": ""
+      },
+      "installPath": "C:\\Games\\App"
+    }
+  },
+  {
+    "id": "env-vars-windows-empty-wine-version",
+    "platform": "windows",
+    "recordedAt": "51329e5d648b308756ec03220b970dbe1edb3361",
+    "call": {
+      "op": "envVars",
+      "settings": {
+        "wineVersion": {}
+      },
+      "installPath": null
+    }
+  },
+  {
+    "id": "env-vars-linux-empty-settings",
+    "platform": "linux",
+    "recordedAt": "51329e5d648b308756ec03220b970dbe1edb3361",
+    "call": {
+      "op": "envVars",
+      "settings": {},
+      "installPath": null
+    }
+  },
+  {
+    "id": "env-vars-linux-store-settings",
+    "platform": "linux",
+    "recordedAt": "51329e5d648b308756ec03220b970dbe1edb3361",
+    "call": {
+      "op": "envVars",
+      "settings": {
+        "nvidiaPrime": true,
+        "showFps": true,
+        "enviromentOptions": [
+          {
+            "key": "DXVK_ASYNC",
+            "value": "\"1\""
+          },
+          {
+            "key": "PLAIN",
+            "value": "a b"
+          }
+        ],
+        "wrapperOptions": [],
+        "launcherArgs": "",
+        "winePrefix": ""
+      },
+      "installPath": "/games/app"
+    }
+  },
+  {
+    "id": "env-vars-mac-empty-settings",
+    "platform": "mac",
+    "recordedAt": "51329e5d648b308756ec03220b970dbe1edb3361",
+    "call": {
+      "op": "envVars",
+      "settings": {},
+      "installPath": null
+    }
+  },
+  {
+    "id": "env-vars-mac-store-settings",
+    "platform": "mac",
+    "recordedAt": "51329e5d648b308756ec03220b970dbe1edb3361",
+    "call": {
+      "op": "envVars",
+      "settings": {
+        "nvidiaPrime": true,
+        "showFps": true,
+        "enviromentOptions": [
+          {
+            "key": "DXVK_ASYNC",
+            "value": "\"1\""
+          },
+          {
+            "key": "PLAIN",
+            "value": "a b"
+          }
+        ],
+        "wrapperOptions": [],
+        "launcherArgs": "",
+        "winePrefix": ""
+      },
+      "installPath": "/Games/App"
+    }
+  },
+  {
+    "id": "env-vars-linux-user-ld-preload",
+    "platform": "linux",
+    "recordedAt": "51329e5d648b308756ec03220b970dbe1edb3361",
+    "call": {
+      "op": "envVars",
+      "settings": {
+        "enviromentOptions": [
+          {
+            "key": "LD_PRELOAD",
+            "value": "libshim.so"
+          }
+        ]
+      },
+      "installPath": null
+    }
+  },
+  {
+    "id": "env-vars-legacy-key-in-wine-version",
+    "platform": "linux",
+    "recordedAt": "51329e5d648b308756ec03220b970dbe1edb3361",
+    "call": {
+      "op": "envVars",
+      "settings": {
+        "wineVersion": {
+          "type": "wine",
+          "bin": "/pins/bin/wine",
+          "name": "Wine-9",
+          "wineserver": "/pins/bin/wineserver",
+          "legacy": 1
+        }
+      },
+      "installPath": null
+    }
+  },
+  {
+    "id": "wine-env-windows-wine-with-libs",
+    "platform": "windows",
+    "recordedAt": "51329e5d648b308756ec03220b970dbe1edb3361",
+    "call": {
+      "op": "wineEnv",
+      "settings": {
+        "wineVersion": {
+          "type": "wine",
+          "bin": "/pins/bin/wine",
+          "name": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "wineserver": "/pins/bin/wineserver",
+          "lib": "/pins/lib",
+          "lib32": "/pins/lib32"
+        },
+        "winePrefix": "/pins/prefix",
+        "wineCrossoverBottle": "GameLibSteamBridge-1",
+        "enviromentOptions": [],
+        "preferSystemLibs": false
+      }
+    }
   }
 ]
