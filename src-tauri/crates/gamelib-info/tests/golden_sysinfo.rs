@@ -366,11 +366,19 @@ fn expected_bin(home: &str, name: &str, platform: &str, arch: &str) -> String {
     } else {
         name.to_string()
     };
-    if platform == "mac" && name != "comet" {
-        format!("{home}/public/bin/{arch}/{node}/{file}/{file}")
+    // Joined as the crate joins them, so the separators are the host's own: a `/` literal here would not
+    // match the backslashes a Windows join gives (the Windows leg of 88.1-20's CI).
+    let base = Path::new(home)
+        .join("public")
+        .join("bin")
+        .join(arch)
+        .join(node);
+    let path = if platform == "mac" && name != "comet" {
+        base.join(&file).join(&file)
     } else {
-        format!("{home}/public/bin/{arch}/{node}/{file}")
-    }
+        base.join(&file)
+    };
+    path.to_string_lossy().into_owned()
 }
 
 /// The runner binaries the crate resolves for a scenario, over a bundled directory in which every file
