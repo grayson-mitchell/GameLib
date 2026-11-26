@@ -7,9 +7,11 @@
 //! difference here is the runner's, not the pipe's. Read boundaries are an OS artefact (the
 //! `chunk-boundaries` delta) and `runner_real.rs` covers them with real children.
 //!
-//! The cases whose recorded options carry a log sanitizer (`NEEDS_SANITIZER`) replay in 88.2-08, which adds
-//! the sanitizers; the redaction and sanitizer vectors replay there too. A count floor lives here next to the
-//! replay (equal to the cases it compares), so editing the JSON alone cannot lower the bar.
+//! The one case whose recorded options carry a log sanitizer hands `callRunner` a function local to the TS
+//! test (`mask-secret`), which neither named sanitizer reproduces: it replays with no sanitizer and is
+//! compared on everything except the text of the raw entries written to the log writers (the
+//! `test-local-sanitizer` delta). The named sanitizers replay in `golden_redaction.rs`. A count floor lives
+//! here next to the replay (equal to the cases it compares), so editing the JSON alone cannot lower the bar.
 //!
 //! The 24 cases recorded under the `runner.call.launch` site belong to the game class. The shared part of
 //! the function (preamble, logs, results) is the same code, so they replay here through the helper spawn
@@ -36,6 +38,7 @@ use gamelib_launch::runner::call_runner::{
     SpawnClassArg,
 };
 use gamelib_launch::runner::redact::get_runner_call_without_credentials;
+use gamelib_launch::runner::sanitize::LogSanitizer;
 use gamelib_launch::runner::stream::{LaunchLogSink, LogHandOff, OutputSink};
 use gamelib_launch::runner::{RunnerErrors, RunnerEvent, RunnerName, RunnerTables};
 use gamelib_log::frame::FrameTarget;
@@ -46,14 +49,12 @@ use gamelib_wine::ctx::WineCtx;
 use serde::Deserialize;
 use serde_json::{json, Value};
 
-/// The cases this file compares. `golden/runner` holds 93; the one case whose options carry a log
-/// sanitizer replays in 88.2-08. A later edit may raise this, never lower it.
-const RUNNER_FLOOR: usize = 92;
+/// The cases this file compares: all 93 of `golden/runner`. A later edit may raise this, never lower it.
+const RUNNER_FLOOR: usize = 93;
 
-/// Cases whose recorded options carry a log sanitizer: skipped here by name, replayed in 88.2-08.
-const NEEDS_SANITIZER: [&str; 1] = [
-    "commandRunner--layer-2-callrunner-characterization-66-1-mh-4-layer-2-applies-logsanitizer-to-the-writers-but-hands-onoutput-the-raw-chunk",
-];
+/// What the raw text written to a log writer is blanked to, on both sides, in a case that carries a
+/// test-local sanitizer.
+const SANITIZED_TEXT: &str = "<sanitized>";
 
 /// What `Math.random()` pinned to in the TS cases, so the abort id of a call with no app name is this.
 const TS_RANDOM_ID: &str = "0.4242";
@@ -563,6 +564,32 @@ fn id_class(id: &str) -> String {
     }
 }
 
+/// The TS case options name a sanitizer by string. The two named ones are the product's; any other is a
+/// function local to the TS test, which the Rust runner has no way to take (the `test-local-sanitizer` delta).
+fn named_sanitizer(name: Option<&str>) -> Option<LogSanitizer> {
+    match name {
+        Some("gogAuth") => Some(LogSanitizer::GogAuth),
+        Some("nileAuth") => Some(LogSanitizer::NileAuth),
+        _ => None,
+    }
+}
+
+/// Whether a call of the case carries a sanitizer that no named one reproduces.
+fn test_local_sanitizer(case: &Case) -> bool {
+    case.calls.iter().any(|c| {
+        c.options.sanitizer.is_some() && named_sanitizer(c.options.sanitizer.as_deref()).is_none()
+    })
+}
+
+/// Blanks the `raw` text of every raw entry (the writers' chunk text), keeping everything else.
+fn blank_raw(frames: &mut [Value]) {
+    for frame in frames {
+        if let Some(raw) = frame.get_mut("raw") {
+            *raw = Value::String(SANITIZED_TEXT.to_string());
+        }
+    }
+}
+
 fn replay_direct(case: &Case, direct: &Direct, rig: &Rig, expected: &Path) -> Result<(), String> {
     let command: Vec<String> = match &direct.command {
         Value::Array(items) => items
@@ -637,9 +664,6 @@ fn replay(case: &Case, rig: &Rig) -> Result<(), String> {
     let mut built: Vec<(usize, RunnerCallArgs, Option<Arc<StreamRecorder>>)> = Vec::new();
     for call in &case.calls {
         let o = &call.options;
-        if o.sanitizer.is_some() {
-            return Err(format!("{}: carries a sanitizer", case.id));
-        }
         let name = call.runner.name;
         let mut log_targets: Vec<LogHandOff> = (0..o.extra_writers)
             .map(|_| LogHandOff {
@@ -678,7 +702,7 @@ fn replay(case: &Case, rig: &Rig) -> Result<(), String> {
             wrappers: Vec::new(),
             log_message_prefix: o.log_message_prefix.clone(),
             log_targets,
-            log_sanitizer: None,
+            log_sanitizer: named_sanitizer(o.sanitizer.as_deref()),
             abort_id: o.abort_id.clone(),
             track_key: o.track_key.clone(),
             cwd: o.cwd.as_deref().map(|c| rig.expand(c)),
@@ -1014,7 +1038,21 @@ fn replay(case: &Case, rig: &Rig) -> Result<(), String> {
     let want_frames = read_json(&expected.join("logFrames.json"));
     let want_frames = want_frames.as_array().cloned().unwrap_or_default();
     let got_frames = lock(&sink.frames).clone();
-    let got_frames: Vec<Value> = got_frames.iter().map(norm).collect();
+    let mut got_frames: Vec<Value> = got_frames.iter().map(norm).collect();
+    let mut want_frames = want_frames;
+    if test_local_sanitizer(case) {
+        // `test-local-sanitizer`: the golden holds the text the TS test's own function made of each chunk, and
+        // Rust (which has no such function) wrote the chunk as it came; only that text is not compared.
+        for frame in &want_frames {
+            if let Some(raw) = frame.get("raw").and_then(Value::as_str) {
+                if raw.contains("SECRET") {
+                    return Err(format!("{id}: the golden writer text still holds SECRET"));
+                }
+            }
+        }
+        blank_raw(&mut got_frames);
+        blank_raw(&mut want_frames);
+    }
     if got_frames != want_frames {
         return Err(format!(
             "{id}: log frames are {got_frames:?}, want {want_frames:?}"
@@ -1064,34 +1102,17 @@ fn replay(case: &Case, rig: &Rig) -> Result<(), String> {
 #[test]
 fn golden_runner_replays_every_case() {
     let cases = load_cases();
-    let names: BTreeSet<&str> = cases.iter().map(|c| c.id.as_str()).collect();
-    for skipped in NEEDS_SANITIZER {
-        assert!(
-            names.contains(skipped),
-            "NEEDS_SANITIZER names a case that is not recorded: {skipped}"
-        );
-    }
     // A call site with no class fails by name, before anything runs.
     for case in &cases {
         class_of(&case.call_site);
     }
     let mut compared = 0usize;
+    let mut test_local = 0usize;
     let mut failures = Vec::new();
     for case in &cases {
-        let carries_sanitizer = case.calls.iter().any(|c| c.options.sanitizer.is_some());
-        if NEEDS_SANITIZER.contains(&case.id.as_str()) {
-            assert!(
-                carries_sanitizer,
-                "{} is listed as needing a sanitizer but carries none",
-                case.id
-            );
-            continue;
+        if test_local_sanitizer(case) {
+            test_local += 1;
         }
-        assert!(
-            !carries_sanitizer,
-            "{} carries a sanitizer but is not in NEEDS_SANITIZER",
-            case.id
-        );
         let rig = Rig::new();
         match replay(case, &rig) {
             Ok(()) => compared += 1,
@@ -1110,6 +1131,11 @@ fn golden_runner_replays_every_case() {
             .collect::<Vec<_>>()
             .join("\n")
     );
+    // A delta no case uses is itself an error.
+    assert!(
+        test_local >= 1,
+        "no case carries a test-local sanitizer, so the test-local-sanitizer delta is unused"
+    );
     check_floor("golden/runner", compared, RUNNER_FLOOR).unwrap();
     println!("compared {compared} floor {RUNNER_FLOOR}");
 }
@@ -1124,13 +1150,19 @@ fn an_empty_or_shrunken_case_list_fails_the_floor() {
 #[test]
 fn the_manifest_count_is_at_least_the_floor() {
     let manifest = read_json(&fixtures().join("golden/runner/MANIFEST.json"));
-    assert!(manifest["count"].as_u64().unwrap_or(0) as usize > RUNNER_FLOOR);
+    assert!(manifest["count"].as_u64().unwrap_or(0) as usize >= RUNNER_FLOOR);
 }
 
 #[test]
 fn deltas_json_names_each_delta_with_a_reason() {
     let deltas = read_json(&fixtures().join("golden/runner/deltas.json"));
-    for name in ["random-abort-id", "chunk-boundaries", "spawn-error-text"] {
+    for name in [
+        "random-abort-id",
+        "chunk-boundaries",
+        "spawn-error-text",
+        "windows-path-separator",
+        "test-local-sanitizer",
+    ] {
         let reason = deltas[name].as_str().unwrap_or_default();
         assert!(reason.len() > 20, "delta {name} has no reason");
     }

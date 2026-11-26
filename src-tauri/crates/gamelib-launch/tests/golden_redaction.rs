@@ -7,7 +7,8 @@
 //! `sanitize-*` vector is run through the sanitizer it is named for. A count floor lives here next to the
 //! replay, so editing `vectors.json` alone cannot lower the bar.
 //!
-//! This is the tracer: two vectors, one of each kind, at floor 2. The rest follow in the next task.
+//! The manifest (`MANIFEST.json`, count and floor of the file as recorded) is checked against the list and
+//! against the floor here, so a vector dropped from the file fails the replay by name of the count.
 
 use std::collections::BTreeMap;
 use std::fmt;
@@ -19,18 +20,12 @@ use serde::de::{MapAccess, Visitor};
 use serde::{Deserialize, Deserializer};
 use serde_json::Value;
 
-/// The vectors this replay compares. A later edit may raise this, never lower it.
-const REDACTION_FLOOR: usize = 2;
+/// The vectors this replay compares: all of `golden/redaction` (54 redaction, 34 sanitizer). A later edit
+/// may raise this, never lower it.
+const REDACTION_FLOOR: usize = 88;
 
-/// The vectors replayed so far (the tracer's two).
-const TRACER: [&str; 2] = ["redact-code-plain", "sanitize-gog-all-keys"];
-
-fn selected(name: &str) -> bool {
-    TRACER.contains(&name)
-}
-
-fn vectors_path() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/golden/redaction/vectors.json")
+fn redaction_dir() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/golden/redaction")
 }
 
 fn check_floor(what: &str, count: usize, floor: usize) -> Result<(), String> {
@@ -93,7 +88,7 @@ struct Vector {
 }
 
 fn load_vectors() -> Vec<Vector> {
-    let path = vectors_path();
+    let path = redaction_dir().join("vectors.json");
     let bytes = std::fs::read(&path).unwrap_or_else(|e| panic!("{path:?}: {e}"));
     serde_json::from_slice(&bytes).unwrap_or_else(|e| panic!("{path:?}: {e}"))
 }
@@ -159,12 +154,49 @@ fn answer(vector: &Vector) -> Result<String, String> {
     }
 }
 
+#[derive(Debug, Deserialize)]
+struct Manifest {
+    count: usize,
+    floor: usize,
+}
+
+#[test]
+fn the_manifest_matches_the_list_and_the_floor() {
+    let path = redaction_dir().join("MANIFEST.json");
+    let bytes = std::fs::read(&path).unwrap_or_else(|e| panic!("{path:?}: {e}"));
+    let manifest: Manifest =
+        serde_json::from_slice(&bytes).unwrap_or_else(|e| panic!("{path:?}: {e}"));
+    let vectors = load_vectors();
+    assert_eq!(manifest.count, vectors.len(), "MANIFEST count");
+    assert_eq!(manifest.floor, REDACTION_FLOOR, "MANIFEST floor");
+    let names: std::collections::BTreeSet<&str> = vectors.iter().map(|v| v.name.as_str()).collect();
+    assert_eq!(names.len(), vectors.len(), "vector names are unique");
+    // Every flag of the eight has a plain and a PowerShell vector that answers `<redacted>`.
+    for flag in gamelib_launch::runner::redact::SENSITIVE_FLAGS {
+        let plain = vectors.iter().any(|v| {
+            matches!(&v.input.command, Some(Value::Array(a)) if a.iter().any(|p| p == flag))
+                && v.input.runner_path.as_deref() != Some("powershell")
+                && v.output.contains("<redacted>")
+        });
+        let powershell = vectors.iter().any(|v| {
+            v.input.runner_path.as_deref() == Some("powershell")
+                && v.input
+                    .command
+                    .as_ref()
+                    .is_some_and(|c| c.to_string().contains(flag))
+                && v.output.contains("<redacted>")
+        });
+        assert!(plain, "no plain vector redacts {flag}");
+        assert!(powershell, "no PowerShell vector redacts {flag}");
+    }
+}
+
 #[test]
 fn golden_redaction_replays_every_vector() {
     let vectors = load_vectors();
     let mut compared = 0usize;
     let mut failures = Vec::new();
-    for vector in vectors.iter().filter(|v| selected(&v.name)) {
+    for vector in vectors.iter() {
         match answer(vector) {
             Ok(got) if got == vector.output => compared += 1,
             Ok(got) => failures.push(format!(
