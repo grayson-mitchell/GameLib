@@ -46,7 +46,7 @@ use serde_json::Value;
 
 /// Every case of `golden/error_handler`: 99 `errorHandler` and 9 `askForceUninstall`. A later edit may raise
 /// this, never lower it.
-const ERROR_HANDLER_FLOOR: usize = 5;
+const ERROR_HANDLER_FLOOR: usize = 108;
 
 fn golden_dir() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/golden/error_handler")
@@ -161,11 +161,6 @@ fn runtime() -> tokio::runtime::Runtime {
         .enable_all()
         .build()
         .expect("runtime")
-}
-
-/// Which cases this replay runs. Every case of the golden.
-fn in_slice(id: &str) -> bool {
-    id.ends_with("-deleted-folder-answered-yes")
 }
 
 /// The documented differences that a case used.
@@ -343,7 +338,7 @@ fn golden_error_handler_replays_every_case() {
     let floor = manifest["floor"].as_u64().expect("manifest floor") as usize;
     assert_eq!(cases.len(), count, "cases.json and MANIFEST.json disagree");
     assert!(
-        floor <= ERROR_HANDLER_FLOOR || count != ERROR_HANDLER_FLOOR, // TRACER-ONLY
+        floor <= ERROR_HANDLER_FLOOR,
         "the manifest floor {floor} is above this replay's {ERROR_HANDLER_FLOOR}"
     );
     let folders = std::fs::read_dir(golden_dir().join("expected"))
@@ -355,10 +350,6 @@ fn golden_error_handler_replays_every_case() {
     let mut compared = 0usize;
     let mut failures = Vec::new();
     for case in cases {
-        let id = case["id"].as_str().unwrap_or_default();
-        if !in_slice(id) {
-            continue;
-        }
         match compare(case, &mut used) {
             Ok(()) => compared += 1,
             Err(e) => failures.push(e),
@@ -375,8 +366,10 @@ fn golden_error_handler_replays_every_case() {
         compared >= ERROR_HANDLER_FLOOR,
         "error_handler: scanned {compared}, below the floor of {ERROR_HANDLER_FLOOR}"
     );
-    assert!(
-        used.0.contains("main-window-raises"),
-        "no case used the difference main-window-raises"
-    );
+    for delta in ["main-window-raises", "dismissal-is-none"] {
+        assert!(
+            used.0.contains(delta),
+            "no case used the difference {delta}"
+        );
+    }
 }

@@ -46,6 +46,7 @@ use tokio::runtime::{Builder, Handle, Runtime};
 
 /// Ops reachable from the shell and the CLI. Keep sorted; each plan adds its own.
 pub const OPS: &[&str] = &[
+    "launch_ask_force_uninstall",
     "launch_check_wine_before_launch",
     "launch_epic_service_offline",
     "launch_known_fix_env",
@@ -159,6 +160,23 @@ async fn route(op: &str, args: &[Value], ctx: &LaunchCtx) -> Result<Value, Strin
                 .await
                 .map_err(|reason| format!("{op}:{reason}"))?;
             result_of(serde_json::to_value(reply))
+        }
+        // `askForceUninstall` (88.2-09). Arguments `[{ runner, appName }]`. Asks whether to remove a game whose
+        // folder is gone from the installed list and, on "Yes", removes it through the manager hook. Answers the
+        // index of the clicked button, or `null` for a dismissal (answered like "No": nothing is removed). It
+        // waits on the user, so its shim lists the channel as unbounded.
+        "launch_ask_force_uninstall" => {
+            let [ask @ Value::Object(_)] = args else {
+                return Err(bad());
+            };
+            let ask: AskForceUninstallArgs =
+                serde_json::from_value(ask.clone()).map_err(|_| bad())?;
+            if !bounded_name(&ask.app_name) {
+                return Err(bad());
+            }
+            let answer =
+                runner::error_handler::ask_force_uninstall(ctx, ask.runner, &ask.app_name).await;
+            result_of(serde_json::to_value(answer))
         }
         // `callRunner`, helper class (88.2-07). Arguments `[args, host]`: the call (`RunnerCallArgs`) and the
         // process facts the shell read (`RunnerHost`: the environment the child inherits and the `PATH`).
@@ -288,6 +306,14 @@ fn tools_host_arg(host: &Value) -> Option<ToolsHost> {
 /// An app name, app id or label: 1 to 256 UTF-16 units (the bound the known-fix ops hold names to).
 fn bounded_name(name: &str) -> bool {
     !name.is_empty() && name.encode_utf16().count() <= 256
+}
+
+/// The object argument of `launch_ask_force_uninstall`.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct AskForceUninstallArgs {
+    runner: runner::RunnerName,
+    app_name: String,
 }
 
 /// The object argument of `launch_setup_wrapper_env_vars`.
@@ -557,9 +583,75 @@ mod tests {
     }
 
     #[test]
-    fn the_twelve_launch_ops_are_in_the_table() {
-        assert_eq!(OPS.len(), 12);
+    fn the_thirteen_launch_ops_are_in_the_table() {
+        assert_eq!(OPS.len(), 13);
         assert!(OPS.iter().all(|op| op.starts_with("launch_")));
+    }
+
+    #[tokio::test]
+    async fn the_ask_force_uninstall_op_answers_the_index_and_removes_only_on_yes() {
+        use crate::hooks::testing::{HookCall, RecordingHooks};
+        use crate::prepare::dialogs::testing::ScriptedDialogs;
+        use crate::runner::RunnerName;
+        let home = FakeHome::new("launch-lib-");
+        let hooks = Arc::new(RecordingHooks::new().with_title(Ok("Alpha".to_string())));
+        let dialogs = Arc::new(ScriptedDialogs::new(vec![Some(1), Some(0), None]));
+        let ctx = ctx(&home)
+            .with_dialogs(dialogs.clone())
+            .with_hooks(hooks.clone());
+        let args = [json!({"runner": "gog", "appName": "AppA"})];
+        let answers = [
+            dispatch("launch_ask_force_uninstall", &args, &ctx).await,
+            dispatch("launch_ask_force_uninstall", &args, &ctx).await,
+            dispatch("launch_ask_force_uninstall", &args, &ctx).await,
+        ];
+        assert_eq!(answers, [Ok(json!(1)), Ok(json!(0)), Ok(Value::Null)]);
+        let removed: Vec<HookCall> = hooks
+            .calls()
+            .into_iter()
+            .filter(|c| matches!(c, HookCall::ForceUninstall { .. }))
+            .collect();
+        assert_eq!(
+            removed,
+            [HookCall::ForceUninstall {
+                runner: RunnerName::Gog,
+                app_name: "AppA".to_string()
+            }],
+            "only the Yes answer removes the game"
+        );
+        assert!(dialogs.asked().iter().all(|a| a.title == "Alpha"));
+        for bad in [
+            json!({"runner": "nope", "appName": "AppA"}),
+            json!({"runner": "gog", "appName": ""}),
+            json!({"runner": "gog", "appName": "AppA", "extra": 1}),
+            json!({"runner": "gog"}),
+        ] {
+            assert_eq!(
+                dispatch("launch_ask_force_uninstall", &[bad], &ctx)
+                    .await
+                    .unwrap_err(),
+                "launch_ask_force_uninstall:bad-args"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn a_headless_context_answers_the_ask_as_a_dismissal_and_removes_nothing() {
+        use crate::hooks::testing::RecordingHooks;
+        let home = FakeHome::new("launch-lib-");
+        let hooks = Arc::new(RecordingHooks::new());
+        let ctx = ctx(&home).with_hooks(hooks.clone());
+        let answer = dispatch(
+            "launch_ask_force_uninstall",
+            &[json!({"runner": "legendary", "appName": "AppA"})],
+            &ctx,
+        )
+        .await;
+        assert_eq!(answer, Ok(Value::Null));
+        assert!(hooks
+            .calls()
+            .iter()
+            .all(|c| !matches!(c, crate::hooks::testing::HookCall::ForceUninstall { .. })));
     }
 
     #[tokio::test]
