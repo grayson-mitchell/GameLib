@@ -1,8 +1,9 @@
 //! The Rust replay of the launch builder goldens 88.1-01 recorded from the TypeScript:
 //!
-//! - `golden/builders` (113 cases): `setupWrapperEnvVars`, `setupWrappers` pairwise, npm shlex split and
+//! - `golden/builders` (114 cases): `setupWrapperEnvVars`, `setupWrappers` pairwise, npm shlex split and
 //!   join vectors, the tier-1 known-fix env over seeded layers, `removeQuoteIfNecessary`,
-//!   `isMacSonomaOrHigher` with its log lines, and the `setupWineEnvVars` library-folder incident cases;
+//!   `isMacSonomaOrHigher` with its log lines, the `setupWineEnvVars` library-folder incident cases and
+//!   `setupEnvVars` over settings that carry no wine on Windows (88.1-21, CR-01);
 //! - `golden/gamescope` (65 cases): `buildGameScopeCommand` rows and the `gamescope --help` probe over a
 //!   scripted spawn seam.
 //!
@@ -34,14 +35,15 @@ use gamelib_testutil::FakeHome;
 use gamelib_wine::ctx::WineCtx;
 use serde_json::{json, Value};
 
-/// `golden/builders` holds 113 cases, the MANIFEST floor; a later edit may raise this, never lower it.
-const BUILDERS_FLOOR: usize = 113;
+/// `golden/builders` holds 114 cases, the MANIFEST floor; a later edit may raise this, never lower it.
+const BUILDERS_FLOOR: usize = 114;
 /// `golden/gamescope` holds 65 cases, the MANIFEST floor.
 const GAMESCOPE_FLOOR: usize = 65;
 
 /// Every `call.op` of `golden/builders` this file replays. The test fails when `cases.json` holds a kind
 /// that is not listed, so a new kind cannot be counted without being compared.
-const HANDLED_KINDS: [&str; 8] = [
+const HANDLED_KINDS: [&str; 9] = [
+    "envVars",
     "knownFixEnv",
     "removeQuote",
     "shlexJoin",
@@ -408,6 +410,15 @@ fn run_builders_case(case: &Value) -> (Value, Value) {
         }
         "removeQuote" => json!(remove_quote_if_necessary(call["value"].as_str().unwrap())),
         "sonoma" => json!(is_mac_sonoma_or_higher(ctx, call["release"].as_str())),
+        "envVars" => {
+            let op = "launch_setup_env_vars";
+            let args = [
+                call["settings"].clone(),
+                call["installPath"].clone(),
+                rig.host(None),
+            ];
+            answer_of(op, rt.block_on(dispatch(op, &args, ctx)))
+        }
         "wineEnv" => {
             let op = "launch_setup_wine_env_vars";
             let args = [call["settings"].clone(), Value::Null, rig.host(None)];

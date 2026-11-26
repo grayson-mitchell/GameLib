@@ -1370,5 +1370,15 @@
         "preferSystemLibs": false
       }
     }
+  },
+  {
+    "id": "env-vars-windows-empty-settings",
+    "platform": "windows",
+    "recordedAt": "51329e5d648b308756ec03220b970dbe1edb3361",
+    "call": {
+      "op": "envVars",
+      "settings": {},
+      "installPath": null
+    }
   }
 ]

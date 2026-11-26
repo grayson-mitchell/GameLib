@@ -1,0 +1,88 @@
+diff --git a/src/backend/__tests__/oracle/launchBuilders.oracle.test.ts b/src/backend/__tests__/oracle/launchBuilders.oracle.test.ts
+index f2b8b867c..6fa2d60c2 100644
+--- a/src/backend/__tests__/oracle/launchBuilders.oracle.test.ts
++++ b/src/backend/__tests__/oracle/launchBuilders.oracle.test.ts
+@@ -67,7 +67,11 @@ import {
+   withInjected
+ } from 'backend/testUtils/launchOracle/probes'
+ import * as logger from 'backend/logger'
+-import { createLauncher, setupWrapperEnvVars } from 'backend/launcher'
++import {
++  createLauncher,
++  setupEnvVars,
++  setupWrapperEnvVars
++} from 'backend/launcher'
+ import { isMacSonomaOrHigher, removeQuoteIfNecessary } from 'backend/utils'
+ import type { GameSettings, Runner, WrapperVariable } from 'common/types'
+ import { fix } from './knownFixReader.cases'
+@@ -75,7 +79,7 @@ import { fix } from './knownFixReader.cases'
+ const CRATE = 'gamelib-launch'
+ const SLICE = 'builders'
+ /** The case count this plan committed; a later edit may raise it, never lower it. */
+-const BUILDERS_FLOOR = 113
++const BUILDERS_FLOOR = 114
+ 
+ const mode = engineWineOracleMode()
+ 
+@@ -109,6 +113,11 @@ type Op =
+   | { op: 'removeQuote'; value: string }
+   | { op: 'sonoma'; release: string }
+   | { op: 'wineEnv'; settings: WineSettingsInput }
++  | {
++      op: 'envVars'
++      settings: Record<string, unknown>
++      installPath: string | null
++    }
+ 
+ interface BuilderCase {
+   id: string
+@@ -118,6 +127,8 @@ interface BuilderCase {
+   title?: string
+   /** The pairwise row a generated case stands for. */
+   axes?: Row
++  /** The commit whose TypeScript recorded a gap-closure case (88.1-21). */
++  recordedAt?: string
+   call: Op
+ }
+ 
+@@ -472,6 +483,18 @@ function wineLibFolderCases(): BuilderCase[] {
+   ]
+ }
+ 
++/** 88.1-21 (CR-01): setupEnvVars over settings that carry no wine, on Windows, recorded from the pre-port TS. */
++function gapClosureCases(): BuilderCase[] {
++  return [
++    {
++      id: 'env-vars-windows-empty-settings',
++      platform: 'windows',
++      recordedAt: '51329e5d648b308756ec03220b970dbe1edb3361',
++      call: { op: 'envVars', settings: {}, installPath: null }
++    }
++  ]
++}
++
+ function builderCases(): BuilderCase[] {
+   return [
+     ...wrapperEnvVarsCases(),
+@@ -480,7 +503,8 @@ function builderCases(): BuilderCase[] {
+     ...knownFixCases(),
+     ...removeQuoteCases(),
+     ...sonomaCases(),
+-    ...wineLibFolderCases()
++    ...wineLibFolderCases(),
++    ...gapClosureCases()
+   ]
+ }
+ 
+@@ -532,6 +556,11 @@ function runCall(
+       return isMacSonomaOrHigher()
+     case 'wineEnv':
+       return launcher.setupWineEnvVars(call.settings as unknown as GameSettings)
++    case 'envVars':
++      return setupEnvVars(
++        call.settings as unknown as GameSettings,
++        call.installPath ?? undefined
++      )
+   }
+ }
+ 
