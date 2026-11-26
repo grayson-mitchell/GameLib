@@ -1178,6 +1178,9 @@ async fn removal_unlinks_a_grid_link_and_never_touches_what_it_points_at() {
     let grid = config.join("grid");
     fs::create_dir_all(&grid).expect("a grid folder");
     let link = grid.join(format!("{short}p.jpg"));
+    // The recorded template already holds a file under this name (CI: File exists); the test needs the
+    // name to be a link out of the grid, so whatever is there goes first.
+    let _ = fs::remove_file(&link);
     #[cfg(unix)]
     let made = std::os::unix::fs::symlink(&outside, &link);
     #[cfg(windows)]
