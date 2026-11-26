@@ -308,6 +308,81 @@ within suites (pairs straddling suites are not enumerated); the Linux `stub_game
 temporary cfg on macOS) and its first real run is the ubuntu leg; the Windows sysinfo and DNS code is only cross-clippy'd, and option A (the
 in-repo UDP TXT query, operator-chosen) has no TCP fallback and is IPv4-only on Windows resolvers.
 
+## CI proof (88.1)
+
+Measured by plan 88.1-20 Task 3, 2026-11-26, after the operator chose `push` in Task 2 (push now; follow-up fix commits for CI-only failures
+allowed without asking again). The operator saw that the push was a fast-forward of 234 commits to origin/main (67 of them 88.1's, the rest from
+other sessions: phase 94 Humble and shortcuts, phase 87 gap closure, phase 88 closeout, quick tasks) and that `pnpm test:ci` is red only on four
+known-unrelated suites (`genI18nGateScope`, `loginWindowSeamPredicateRemoved`, `valveClient`, `iconGeometry.oracle`). The open-time check ran
+immediately before the first push: `git fetch origin`, origin/main (`c5ae345ae`) an ancestor of HEAD, and `git diff --name-only ab7876c01 HEAD`
+listing only `.planning/phases/88-launch-pipeline/88-VALIDATION.md`. Every push was a plain `git push origin main` through `.husky/pre-push`
+(no `--no-verify`, no force) and a fast-forward each time.
+
+The first push did not go out: the hook's `backend-di-ceilings` and `gameinfo-narrowing-ceiling` steps and its `i18n --fail-on-update` step were
+red at P (see the first row of the fix table). Six more fixes followed, each found by a CI leg and each in its own commit. The candidate head the
+proof ends on is P', and every row below ran at that one head (the two later commits on main are `.planning/` only).
+
+P': 940bd9e73ca27cc7ac12e7c4e00e00ce07a1f42c
+
+| Workflow | Leg | Run id | Conclusion |
+|----------|-----|--------|------------|
+| rust-test.yml | windows-latest | 45735482194 | success |
+| rust-test.yml | macos-latest | 45735482194 | success |
+| rust-test.yml | ubuntu-latest | 45735482194 | success |
+| codecheck.yml | ubuntu-latest | 45735482187 | success |
+| test.yml | ubuntu-latest | 45735482245 | failure |
+| lint.yml | ubuntu-latest | 45735482181 | success |
+
+stub_gamescope ubuntu-latest: 1 passed
+
+The three rust-test.yml legs are the three jobs of the one run 45735482194 (job ids 139627565641 windows, 139627565955 macos, 139627566093 ubuntu)
+at P'. The multi-crate `cargo test` step, `cargo test (Tauri shell crate)` and the per-platform `cargo clippy` ratchet (macOS, Windows) are green on all
+legs they run on. The test.yml row is `failure` and is NOT claimed green: it is the same state the operator accepted in Task 2. At P' the Jest job
+ran 1103 suites green and two red: `meta/__tests__/loginWindowSeamPredicateRemoved.test.ts` (one of the four known-unrelated suites) and
+`meta/__tests__/callbackRegistryHost.test.ts`, an intermittent failure of the C host harness for the Steam bridge shim (`FAIL buffer_zeroed left ==
+0:803`, and 54 more assertions that read the harness's stdout); it failed at 2064a6aca and 940bd9e73 and passed at 5b309e6f1 and 1c8d73a65, on code
+no 88.1 commit touches. Nothing in either is an 88.1 test, and every 88.1 Jest suite passed at P'. `Supply-chain audit` (`cargo-deny`) is red on every
+push of this branch (45735482190 at P'; it was red at `c5ae345ae` too, see the 88 section) and is not one of this plan's workflows.
+
+88.1 replay binaries observed running in each rust-test.yml leg's log (`Running tests/<name>.rs` followed by `test result`, 0 failed). Counts differ
+because `stub_gamescope` is `#![cfg(target_os = "linux")]` and `golden_launch` is Unix-only by its own header (recorded paths are POSIX; a non-unix run
+prints the skip by name), so the Windows leg runs `golden_launch` as 0 tests and macOS and Windows run `stub_gamescope` as 0 tests; `sysinfo_host` has one
+more Linux-only test:
+
+| Binary | windows-latest | macos-latest | ubuntu-latest |
+|--------|----------------|--------------|---------------|
+| golden_builders | ok, 5 passed | ok, 5 passed | ok, 5 passed |
+| golden_launch | ok, 0 passed (Unix only) | ok, 8 passed | ok, 8 passed |
+| utils_pieces | ok, 6 passed | ok, 6 passed | ok, 6 passed |
+| golden_sysinfo | ok, 3 passed | ok, 3 passed | ok, 3 passed |
+| sysinfo_host | ok, 5 passed | ok, 5 passed | ok, 6 passed |
+| stub_gamescope | ok, 0 passed (Linux only) | ok, 0 passed (Linux only) | ok, 1 passed |
+
+So the 88.1 spawn-trace goldens replay on two OSes (macOS and Linux) and the builder, utils-pieces and system-information replays on all three; the
+Linux stub-gamescope smoke ran for the first time on Linux in this CI and passed.
+
+Commits between P (`ab7876c01`) and P', all in this plan. None changes shipped behaviour: they are baselines, one catalogue key order, one
+workflow flag, test code and one lint in a test module. `git diff --name-only P P'` outside `.planning/` lists `.github/workflows/rust-test.yml`, seven
+`meta/backendDiCeilings` shards, `meta/gameInfoNarrowingBaseline.json`, `public/locales/en/gamelib.json` and in Rust `gamelib-info`
+(`sysinfo/versions.rs`, `tests/golden_sysinfo.rs`), `gamelib-launch` (`src/lib.rs`, `src/prepare/wine_path.rs`), `gamelib-shortcuts`
+(`tests/golden_steam.rs`) and `src-tauri/src/launch_dispatch.rs`:
+
+| Commit | What the hook or CI found | Fix |
+|--------|---------------------------|-----|
+| dc7aabdde | pre-push `backend-di-ceilings`: 88.1's builder ports shrank nine `jestMock` counts, grew two and added `launcher.crossoverEnv.test.ts`; 87-73, 87-76 and quick r0j added three frontend test sites; one entry went stale. `gameinfo-narrowing-ceiling`: `launcher.ts`'s four sites became `launchAdapters.ts`'s three (88.1-16). `i18n --fail-on-update`: 87-75's `inUse` key was out of order | baselines re-frozen by hand (the contract has no update flag); one key moved |
+| d50bdf9fe | Windows `cargo test` did not compile `gamelib-launch`'s lib tests: `wine_path.rs` called `std::os::unix` unguarded (88.1-13) | `#[cfg(unix)]` on the chmod |
+| 5b309e6f1 | ubuntu and macOS `golden_steam`: `removal_unlinks_a_grid_link...` got `File exists` (quick-261125-uzz's template now holds the file the test links). Not 88.1; it masked the later steps on those two legs. Reproduces locally with `CI=1`; without it the test skips | the test removes the name before linking |
+| 2064a6aca | Windows `gamelib-info`: `the_arch_binary_falls_back...` matched `/x64/` in a joined path (88.1-10); macOS clippy ratchet: `cloned_ref_to_slice_refs` 3 against a ceiling of 2, the third in 88.1-08's `launch_dispatch.rs` test | match by path component; `std::slice::from_ref` |
+| 1c8d73a65, e80b08cce | Windows `golden_sysinfo`: the 90 of 94 cases differed by path separators, first the runner paths built with `/` literals, then the recorded `/pins/bin/comet` that a Windows join makes `/pins/bin\comet` (88.1-10) | expected path built with `Path::join`; program paths compared with one separator. `rust-test.yml` also gained `--no-fail-fast` on the multi-crate step, so one red crate stops hiding the Windows failures behind it |
+| 940bd9e73 | Windows `gamelib-launch`: the `launch_prepare` log assertion looked for `GamesConfig/app1.json` in JSON text where the Windows path has doubled backslashes (88.1-11) | the assertion normalises the separator |
+
+A flaky `gamelib-depot` test binary, `steam_api_pin` (three `live_fetch_*` tests returning `deadline` on the macOS runner after 30 s), failed the macOS leg once at
+3eba9dfb8 and passed at the next push with no change to that crate. It is not an 88.1 test and was not touched.
+
+Not claimed: the Windows leg runs no `golden_launch` replay, so the Windows spawn traces are proven only through the builder and utils-pieces goldens and the
+`launch_prepare` unit tests, not by trace replay. The "Items the sub-phase leaves open" above stand, except that the Linux `stub_gamescope` smoke has now run
+on Linux (1 passed) and the Windows sysinfo code now compiles and passes its tests on `windows-latest` (it is still not run against a real Windows resolver).
+
 ---
 
 ## Validation Sign-Off

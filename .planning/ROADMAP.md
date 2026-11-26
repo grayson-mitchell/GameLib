@@ -950,7 +950,7 @@ Plans:
   2. Anti-cheat at launch, `check_wine_before_launch`, `download_default_wine` (D-28), `isMacSonomaOrHigher`, `isEpicServiceOffline`, `removeQuoteIfNecessary` and system info behave as before
   3. The builder TS, `gamescopeCommand.ts`, `utils/systeminfo` and the replaced `utils.ts` rows are deleted; closes on goldens, three-OS CI and a Linux stub-gamescope smoke
 
-**Plans:** 19/20 plans executed in 15 waves; planned 2026-11-25 (goldens are recorded from the TS before each Rust slice, D-25)
+**Plans:** 20/20 plans executed in 15 waves; planned 2026-11-25 (goldens are recorded from the TS before each Rust slice, D-25)
 
 Plans:
 **Wave 1**
@@ -1001,7 +1001,7 @@ Plans:
 - [x] 88.1-19-PLAN.md — Retire the dead rustInvoke channels; the survivor check; the Discord package and the dead-code ratchet
 
 **Wave 15** *(blocked on Wave 14 completion)*
-- [ ] 88.1-20-PLAN.md — Clean-worktree proof, push checkpoint and three-OS CI with the Linux stub-gamescope smoke (D-30: no signed build)
+- [x] 88.1-20-PLAN.md — Clean-worktree proof, push checkpoint and three-OS CI with the Linux stub-gamescope smoke (D-30: no signed build)
 
 **Cross-cutting constraints:** <!-- gsd:generated -->
 - Flagged assumption (spec-less edge probe): SVC-03's edge-coverage row is `unclassified` and unresolved; the D-14 matrix stands in for edge coverage and is not claimed as a verified edge

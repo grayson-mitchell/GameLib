@@ -543,6 +543,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 88.1 P17 | 45min | 1 tasks | 27 files |
 | Phase 88.1 P18 | 50min | 1 tasks | 52 files |
 | Phase 88.1 P19 | ~1h | 2 tasks | 22 files |
+| Phase 88.1 P20 | 5h | 3 tasks | 18 files |
 
 ## Accumulated Context
 
@@ -1223,6 +1224,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 88.1]: 88.1-18: InfoCaches is the empty record Record<string, never> and the info-caches step builds {}; HowLongToBeat was already Rust's, so the member stays only as a seam
 - [Phase 88.1]: 88.1-18: clearCache no longer empties the pci.ids name caches (Rust owns them, no clear verb); the fromVersionChange parameter is removed
 - [Phase 88.1]: 88.1-19: wine_manager_refresh deleted as a ninth channel with its updateWineVersionInfos shim; interim glue (launchAdapters.ts, knownFixLaunchReply.ts) is a named table in buildersSurvivors, not SCHEDULE rows
+- [Phase 88.1]: 88.1-20: operator chose push; 88.1 is proven on three OSes at 940bd9e73 (Rust legs green, Linux stub_gamescope 1 passed); test.yml recorded as failure on the known-unrelated suites, not fixed
 
 ### Pending Todos
 
