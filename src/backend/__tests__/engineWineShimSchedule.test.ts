@@ -291,7 +291,15 @@ const DEADLINE_SHIM_IMPORTERS: readonly string[] = [
   'src/backend/storeManagers/steam/engine/bridgeDeadline.ts',
   'src/backend/storeManagers/steam/gameBridgeWineLaunch.ts'
 ]
+// 88.2-16: the importers of `launchrust/runner.ts`, every one counted per file. The adapter calls `runnerCall`; it is the
+// only one until the boot wiring (88.2-21) registers the listener and builds the kill-aware stream table.
+const RUNNER_SHIM_IMPORTERS: readonly string[] = [
+  'src/backend/runnerAdapter.ts'
+]
+
 const COMMAND_RUNNER_IMPORTERS: readonly string[] = [
+  // 88.2-16: the adapter keeps `RunnerProps` (a type import) so its `callRunner` has the twin's signature; it replaces the twin.
+  'src/backend/runnerAdapter.ts',
   'src/backend/services/types.ts',
   'src/backend/sidecar/bootstrap.ts',
   'src/backend/storeManagers/steam/bridge/bottleDllOverrides.ts',
@@ -1167,16 +1175,16 @@ export const SCHEDULE: readonly ScheduleRow[] = [
   },
   // 88.2-15 (D-02, D-19): the runner command transport. `runnerCall` is `callRunner`'s helper path as one streaming call over
   // `launch_runner_call`; the output and spawn frames the shell writes ahead of the reply reach the stream that asked
-  // through `registerRunnerOutputListener` (named in `wiring`, one owner). Nothing imports the file yet: the adapter over these
-  // shims (88.2-16) and its boot wiring (88.2-21) are the callers, so `callers` is empty until then. The managers' runner calls
-  // leave in 92, which moves legendary, gog and nile into Rust.
+  // through `registerRunnerOutputListener` (named in `wiring`, one owner). The adapter over these shims (88.2-16,
+  // `runnerAdapter.ts`) is the one importer; its boot wiring is 88.2-21. The managers' runner calls leave in 92, which moves
+  // legendary, gog and nile into Rust.
   {
     name: 'runnerCall',
     file: 'src/backend/launchrust/runner.ts',
     shape: 'shim',
     channel: 'RUST_LAUNCH_RUNNER_CALL',
     wiring: ['registerRunnerOutputListener'],
-    callers: [],
+    callers: RUNNER_SHIM_IMPORTERS,
     deletedBy: 92
   },
   // 88.2-15: ending a runner run. `runnerKill` is the spawned handle's `kill()` and spawnAsync's abort (both go with the shell
@@ -1187,7 +1195,7 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     file: 'src/backend/launchrust/runner.ts',
     shape: 'shim',
     channel: 'RUST_LAUNCH_RUNNER_KILL',
-    callers: [],
+    callers: RUNNER_SHIM_IMPORTERS,
     deletedBy: 98
   },
   {
@@ -1195,7 +1203,7 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     file: 'src/backend/launchrust/runner.ts',
     shape: 'shim',
     channel: 'RUST_LAUNCH_RUNNER_ABORT',
-    callers: [],
+    callers: RUNNER_SHIM_IMPORTERS,
     deletedBy: 93
   },
   // 88-13 (87 D-24): the synchronous known-fix twins, for callers 88 cannot make async. The launcher's `installFixes`

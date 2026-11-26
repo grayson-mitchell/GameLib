@@ -453,4 +453,62 @@ describe('LogWriter facade over the forwarder', () => {
     await index.flushLogForwarder()
     expect(batchesFor(frames, 'game')).toHaveLength(1)
   })
+  // 88.2-16 (D-02, D-30): a runner call hands its writers to Rust, and the TS facade stays the only rotator.
+  describe('handOff', () => {
+    it('answers the target and the disabled flag, claiming the owed rotation once', async () => {
+      const { index, LogWriter, frames } = load()
+      const w = new LogWriter(GAME, false)
+      expect(w.handOff()).toEqual({
+        target: GAME,
+        disabled: false,
+        rotate: true
+      })
+      expect(w.handOff()).toEqual({
+        target: GAME,
+        disabled: false,
+        rotate: false
+      })
+      // The hand-off spent the rotation: a later write carries none.
+      await w.writeString('after\n')
+      await index.flushLogForwarder()
+      for (const b of batchesFor(frames, 'game')) expect(b.rotate).toBe(false)
+    })
+
+    it('does not claim a rotation a write already took', async () => {
+      const { LogWriter } = load()
+      const w = new LogWriter(GAME, false)
+      await w.writeString('first\n')
+      expect(w.handOff()).toMatchObject({ rotate: false })
+    })
+
+    it('a general target never rotates', () => {
+      const { LogWriter } = load()
+      expect(new LogWriter({ kind: 'general' }, false).handOff()).toEqual({
+        target: { kind: 'general' },
+        disabled: false,
+        rotate: false
+      })
+    })
+
+    it('a disabled writer is handed off disabled and keeps its rotation owed', () => {
+      const { LogWriter } = load()
+      const w = new LogWriter(GAME, true)
+      expect(w.handOff()).toEqual({
+        target: GAME,
+        disabled: true,
+        rotate: false
+      })
+      expect(w.handOff()).toMatchObject({ rotate: false })
+    })
+
+    it('answers null for a refused writer and for a closed one', async () => {
+      const { LogWriter } = load()
+      expect(
+        new LogWriter({ kind: 'runner', runner: 'bogus' }, false).handOff()
+      ).toBeNull()
+      const closed = new LogWriter(GAME, false)
+      await closed.close()
+      expect(closed.handOff()).toBeNull()
+    })
+  })
 })

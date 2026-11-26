@@ -54,6 +54,17 @@ function describeTarget(target: LogFrameTarget): string {
 
 const END_OF_LOG = '============= End of log ============='
 
+/**
+ * One writer as a runner call hands it to Rust (88.2-16, D-02): the wire shape of an element of the call's `logTargets`.
+ * `disabled` is the writer's own switch, and `rotate` is true exactly once per writer, on the hand-off that takes over the
+ * rotation this facade still owed.
+ */
+export interface LogHandOff {
+  target: LogFrameTarget
+  disabled: boolean
+  rotate: boolean
+}
+
 export default class LogWriter {
   readonly #target: LogFrameTarget
   /** Whether logs are disabled: a call without `forceLog` sends nothing. */
@@ -88,6 +99,23 @@ export default class LogWriter {
     const rotate = this.#rotatePending
     this.#rotatePending = false
     return rotate
+  }
+
+  /**
+   * Hands this writer to Rust for the length of one runner call (88.2-16, D-02, D-30): the TS facade stays the only rotator
+   * until 88.3, so the rotation this writer still owes is claimed here, synchronously, exactly as the first accepted entry
+   * would claim it, and Rust rotates the file once. A writer that is disabled sends nothing and never rotates (the `rotate`
+   * stays owed for a later forced write), as does one that is closed or that Rust would refuse: the latter two answer null
+   * and are not handed off, because a runner call writes to a closed or refused writer nothing the TS did not.
+   */
+  public handOff(): LogHandOff | null {
+    if (this.#closed || this.#refused) return null
+    const disabled = this.#logsDisabled
+    return {
+      target: this.#target,
+      disabled,
+      rotate: disabled ? false : this.#claimRotate()
+    }
   }
 
   /**
