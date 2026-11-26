@@ -361,8 +361,15 @@ impl Run {
         if self.skip_error_handler {
             return;
         }
-        if let Some(handler) = &self.ctx.errors {
-            handler.handle(error, &self.app_name, self.runner);
+        match &self.ctx.errors {
+            Some(handler) => handler.handle(error, &self.app_name, self.runner),
+            // No recorder: the production handler, which tells the user (88.2-09).
+            None => super::error_handler::handle_in_background(
+                &self.ctx,
+                error,
+                &self.app_name,
+                self.runner,
+            ),
         }
     }
 

@@ -1,10 +1,11 @@
 //! The command runner's helper path (88.2-07, D-02, D-21): `callRunner` ported from `commandRunner.ts`.
 //! [`redact`] is the credential redaction, [`sanitize`] the named auth log sanitizers, [`stream`] the log hand-off, the sinks and the chunk window,
-//! [`call_runner`] the run itself, and this file holds the state a context keeps across calls: the
+//! [`call_runner`] the run itself, [`error_handler`] the runner's `errorHandler` and `askForceUninstall`, and this file holds the state a context keeps across calls: the
 //! in-flight table, the abort table and the PowerShell probe ([`RunnerTables`]), and the seam the
 //! runner's `errorHandler` is reached through ([`RunnerErrors`]).
 
 pub mod call_runner;
+pub mod error_handler;
 pub mod redact;
 pub mod sanitize;
 pub mod stream;
@@ -47,7 +48,8 @@ impl RunnerName {
 }
 
 /// The runner's `errorHandler` (`handleError` in the TS: it reads a run's output for known failures and
-/// tells the user). Called fire and forget, exactly where the TS called it; 88.2-09 supplies the real one.
+/// tells the user). Called fire and forget, exactly where the TS called it. A context with none runs
+/// [`error_handler::error_handler`] (88.2-09); this seam is how a test records the calls instead.
 pub trait RunnerErrors: Send + Sync {
     /// `error` is the joined output of a finished run or the message of a failed one.
     fn handle(&self, error: &str, app_name: &str, runner: RunnerName);

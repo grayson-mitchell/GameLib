@@ -9,6 +9,7 @@ use gamelib_info::ctx::InfoCtx;
 use gamelib_knownfix::ctx::KnownFixCtx;
 use gamelib_wine::ctx::WineCtx;
 
+use crate::hooks::ManagerHooks;
 use crate::prepare::deps::WineManagerFacts;
 use crate::prepare::dialogs::LaunchDialogs;
 use crate::runner::stream::{GamelibLogSink, LaunchLogSink};
@@ -41,8 +42,14 @@ pub struct LaunchCtx {
     pub log_sink: Arc<dyn LaunchLogSink>,
     /// What the runner keeps across calls: the in-flight table, the abort table and the PowerShell probe.
     pub runner: Arc<RunnerTables>,
-    /// The runner's `errorHandler` (88.2-09 supplies the real one). `None`: a run's output is not read for errors.
+    /// The runner's `errorHandler` seam. `None` is the production handler (88.2-09,
+    /// [`crate::runner::error_handler`]), which reads this context's dialogs, hooks and UI when a run's output
+    /// says something the user should hear; a test sets a recorder through [`LaunchCtx::with_errors`].
     pub errors: Option<Arc<dyn RunnerErrors>>,
+    /// What only the TS library managers can answer (88.2-09, D-26): a game's title and `forceUninstall`. The
+    /// shell sets the sidecar-backed one; the CLI and a headless run leave it `None`, and every hook is then
+    /// unavailable (a title falls back to the app name, a forced uninstall does not happen).
+    pub hooks: Option<Arc<dyn ManagerHooks>>,
 }
 
 impl LaunchCtx {
@@ -63,6 +70,7 @@ impl LaunchCtx {
             log_sink,
             runner: Arc::new(RunnerTables::new()),
             errors: None,
+            hooks: None,
         }
     }
 
@@ -75,6 +83,12 @@ impl LaunchCtx {
     /// The same context with the runner's error handler.
     pub fn with_errors(mut self, errors: Arc<dyn RunnerErrors>) -> LaunchCtx {
         self.errors = Some(errors);
+        self
+    }
+
+    /// The same context with the TS managers' hooks.
+    pub fn with_hooks(mut self, hooks: Arc<dyn ManagerHooks>) -> LaunchCtx {
+        self.hooks = Some(hooks);
         self
     }
 
