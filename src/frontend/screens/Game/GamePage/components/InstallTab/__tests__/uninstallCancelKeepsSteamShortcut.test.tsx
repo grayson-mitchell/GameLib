@@ -38,12 +38,16 @@ import IntegrationRows from '../IntegrationRows'
  * jsdom has no layout, so every rect is stubbed to a non-zero box: without it the
  * real `doTab` finds no focusable element and the hack would be a no-op.
  *
- * Status: green at HEAD. RF3 was seen once live and is NOT reproduced here, so
- * this pins the contract (a close path never reaches the Show in Steam row, T-87-143)
- * rather than proving a fix. The positive control shows the harness can see a
- * removal. What jsdom cannot model (a second click event, key repeat, WebKit's
- * hit-testing and focus) is the open part of the investigation in
+ * Status: the first describe is green at HEAD. RF3 was seen once live and is NOT
+ * reproduced here, so it pins the contract (a close path never reaches the Show in
+ * Steam row, T-87-143) rather than proving a fix. The positive control shows the
+ * harness can see a removal. What jsdom cannot model (a second click event, key
+ * repeat, WebKit's hit-testing and focus) is the open part of the investigation in
  * `.planning/debug/rf3-cancel-removes-shortcut.md`.
+ *
+ * The second describe is the hardening the user chose when the live probe (11
+ * Cancels, mouse) did not reproduce it. First, provenance logging: one line on
+ * every add/remove from the Show in Steam row, naming the event that did it.
  */
 
 jest.mock('react-i18next', () => ({
@@ -96,7 +100,8 @@ const api = {
   requestGameSettings: jest.fn(),
   getPerGameBottleName: jest.fn(),
   getSteamDeleteRoute: jest.fn(),
-  logError: jest.fn()
+  logError: jest.fn(),
+  logInfo: jest.fn()
 }
 
 let rectSpy: jest.SpyInstance
@@ -246,5 +251,69 @@ describe('RF3: the uninstall dialog closes without touching the Steam shortcut',
 
     await act(() => new Promise((resolve) => setTimeout(resolve, 600)))
     expectNoSteamChange()
+  })
+})
+
+// A dialog's close starts a 500 ms stale-click window on switch rows. Every test
+// that closes a dialog settles past it, so the next test starts outside it.
+const settle = () =>
+  act(() => new Promise((resolve) => setTimeout(resolve, 600)))
+
+const loggedLines = () => api.logInfo.mock.calls.map(([line]) => String(line))
+const steamActivationLines = () =>
+  loggedLines().filter((line) =>
+    line.startsWith('[Shortcuts] Show in Steam activation:')
+  )
+
+async function closeUninstallDialogWithNo(
+  user: ReturnType<typeof userEvent.setup>
+) {
+  await openUninstallDialog(user)
+  await user.click(noButton())
+  await waitFor(() =>
+    expect(screen.queryByRole('button', { name: 'No' })).toBeNull()
+  )
+}
+
+describe('RF3 hardening: provenance logging', () => {
+  it('logs one provenance line for a pointer click that removes the shortcut', async () => {
+    const user = userEvent.setup()
+    await renderPageWithShortcutOn()
+    await user.click(steamRow())
+    await waitFor(() => expect(api.removeFromSteam).toHaveBeenCalledTimes(1))
+    const lines = steamActivationLines()
+    expect(lines).toHaveLength(1)
+    expect(lines[0]).toMatch(
+      /^\[Shortcuts\] Show in Steam activation: action=remove event=click trusted=(true|false) detail=1 key=- repeat=false sinceDialogCloseMs=(none|\d+) appName=trash-goblin runner=legendary$/
+    )
+  })
+
+  it('logs the key, repeat flag and event type for a keyboard activation', async () => {
+    await renderPageWithShortcutOn()
+    fireEvent.keyDown(steamRow(), { key: 'Enter' })
+    await waitFor(() => expect(api.removeFromSteam).toHaveBeenCalledTimes(1))
+    const lines = steamActivationLines()
+    expect(lines).toHaveLength(1)
+    expect(lines[0]).toMatch(
+      /action=remove event=keydown trusted=(true|false) detail=0 key=Enter repeat=false /
+    )
+  })
+
+  it('reports the ms since the last dialog closed, and an add reads action=add', async () => {
+    const user = userEvent.setup()
+    api.isAddedToSteam.mockResolvedValue(false)
+    render(<Page />)
+    await waitFor(() =>
+      expect(steamRow().getAttribute('aria-checked')).toBe('false')
+    )
+    await closeUninstallDialogWithNo(user)
+    await settle()
+    await user.click(steamRow())
+    await waitFor(() => expect(api.addToSteam).toHaveBeenCalledTimes(1))
+    const line = steamActivationLines()[0] ?? ''
+    expect(line).toContain('action=add event=click')
+    const since = /sinceDialogCloseMs=(\d+)/.exec(line)
+    expect(since).not.toBeNull()
+    expect(Number(since?.[1])).toBeGreaterThanOrEqual(500)
   })
 })

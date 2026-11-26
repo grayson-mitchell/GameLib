@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { Runner } from 'common/types'
 import { reportRowActionFailure } from './rowAction'
+import { logShowInSteamActivation, type RowActivation } from './rowActivation'
 
 /**
  * Phase 100 (D-01, D-12, D-18): the Show in Steam switch's state and handler,
@@ -41,7 +42,14 @@ export function useSteamShortcut(
     }
   }, [enabled, appName, runner])
 
-  async function handleAddToSteam() {
+  // RF3: `activation` says what pressed the row; the Retry link passes none.
+  async function handleAddToSteam(activation?: RowActivation) {
+    logShowInSteamActivation({
+      appName,
+      runner,
+      action: addedToSteam ? 'remove' : 'add',
+      activation
+    })
     setSteamFailed(false)
     setSteamRefresh(true)
     try {

@@ -46,7 +46,8 @@ describe('long-running invoke call sites release their busy state on rejection',
   test('useSteamShortcut handleAddToSteam clears steamRefresh in a finally block', () => {
     const body = blockAfter(
       read('screens/Game/GamePage/actions/useSteamShortcut.ts'),
-      'async function handleAddToSteam()'
+      // RF3 gave it an optional `activation` (what pressed the row) for the log.
+      'async function handleAddToSteam(activation?: RowActivation)'
     )
     expect(body).toContain('window.api')
     expect(blockAfter(body, 'finally')).toContain('setSteamRefresh(false)')

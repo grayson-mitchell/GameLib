@@ -255,7 +255,10 @@ describe('Install tab source gates', () => {
   it('Show in Steam never opens a dialog and gates on canAddSteamShortcut, not on is_installed (D-01, D-12, D-18)', () => {
     const hook = read(ACTIONS_DIR, 'useSteamShortcut.ts')
     expect(hook).not.toContain('showDialogModal')
-    expect(hook).toContain('async function handleAddToSteam()')
+    // RF3 gave it an optional `activation` (what pressed the row) for the log.
+    expect(hook).toContain(
+      'async function handleAddToSteam(activation?: RowActivation)'
+    )
     expect(hook).toContain('reportRowActionFailure')
     const code = read(TAB_DIR, 'IntegrationRows.tsx')
     expect(code).toContain("hasCapability(runner, 'canAddSteamShortcut')")

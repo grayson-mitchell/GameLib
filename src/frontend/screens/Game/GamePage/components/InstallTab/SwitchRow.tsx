@@ -1,5 +1,6 @@
-import type { KeyboardEvent } from 'react'
+import type { KeyboardEvent, MouseEvent } from 'react'
 import classNames from 'classnames'
+import { activationOf, type RowActivation } from '../../actions/rowActivation'
 
 interface RowFailureProps {
   message: string
@@ -21,7 +22,8 @@ interface SwitchRowProps {
   disabled?: boolean
   disabledReason?: string
   failure?: RowFailureProps
-  onToggle: () => void
+  /** Gets where the press came from (RF3); a handler that does not care ignores it. */
+  onToggle: (activation: RowActivation) => void
 }
 
 /**
@@ -85,15 +87,20 @@ export function SwitchRow({
 }: SwitchRowProps) {
   const inert = Boolean(busy || disabled)
 
-  const toggle = () => {
+  const toggle = (activation: RowActivation) => {
     if (inert) return
-    onToggle()
+    onToggle(activation)
+  }
+
+  // `event` is optional: the row's unit tests call the handlers with none.
+  const onClick = (event?: MouseEvent<HTMLDivElement>) => {
+    toggle(activationOf('click', event))
   }
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key !== ' ' && event.key !== 'Enter') return
     event.preventDefault()
-    toggle()
+    toggle(activationOf('keydown', event))
   }
 
   return (
@@ -108,7 +115,7 @@ export function SwitchRow({
         aria-describedby={description ? `${id}-desc` : undefined}
         tabIndex={0}
         title={disabled ? disabledReason : undefined}
-        onClick={toggle}
+        onClick={onClick}
         onKeyDown={onKeyDown}
       >
         <span className="switchRow__label" id={`${id}-label`}>
