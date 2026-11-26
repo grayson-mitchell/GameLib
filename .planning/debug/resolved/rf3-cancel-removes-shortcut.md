@@ -1,5 +1,5 @@
 ---
-status: awaiting_human_verify
+status: resolved
 trigger: "RF3 — uninstall dialog Cancel removed the Steam shortcut (87-74 halted; see its SUMMARY \"Next steps\")"
 created: 2026-11-26
 updated: 2026-11-26
@@ -35,7 +35,7 @@ goal: find_and_fix
 hypothesis: the renderer's Show in Steam row (`SwitchRow` `onClick`/`onKeyDown`) received a second activation (a second click event landing on the row after the dialog unmounted, or an Enter/Space keydown on a focus-restored row) that is NOT the single click on No. H1/H2/H3/H4 are eliminated by code and log evidence; the jsdom test shows a single click on No is inert. Not yet proven which second event it was.
 test: the live probe (11 Cancels, mouse, no controller) did not reproduce, so the user chose "Log + harden" (2026-11-26). Done and committed: provenance logging on every add/remove from the Show in Steam row, a held-key guard and a 500 ms stale-pointer-click guard on `SwitchRow`, each with a jsdom test that is red without it (see Evidence). The next test is live: 87-RERUN-2 item 6 on a build that contains these commits, read through the new log line.
 expecting: with the guards in, a stray second click after a dialog closes logs `[Frontend] [SwitchRow] ignored a pointer click on installTabShowInSteam: ... sinceDialogCloseMs=<n>` and removes nothing; any add/remove from the row logs `[Frontend] [Shortcuts] Show in Steam activation: ...` naming its event. If a removal still happens, that line names the event and the root cause is then proven (or the activation line is absent and a non-renderer path exists, contradicting every finding here).
-next_action: awaiting human verification. Nothing more to code. 87-RERUN-2 item 6 is the live check, and it only sees the new lines if gap build 2 is cut from a tree that contains bb14bf27d..149b6cc26 (see the last Evidence entry). The session stays open; do not archive until the user confirms.
+next_action: none; closed 2026-11-26 after the dev-build check. 87-RERUN-2 item 6 can still read the new lines.
 
 ## Evidence
 
@@ -131,6 +131,11 @@ next_action: awaiting human verification. Nothing more to code. 87-RERUN-2 item 
   checked: how 87-RERUN-2 item 6 should verify, and whether to edit the UAT file
   found: `87-RERUN-2-HUMAN-UAT.md` item 6 (`### 6.`) already scores "no Steam shortcut removal line during Cancel" (`was successfully removed from Steam`, `[Shortcuts]`). The UAT file was NOT edited: item 6's `expected:` is a frozen contract with a structural-reachability review and a log-line table whose CONDITIONAL rows are re-checked by 87-79 against the gap build 2 source (`release/v0.13.2`), and that branch does not exist yet (only `release/v0.13` and `release/v0.13.1`). A new literal added to `expected:` would be asserted against a build that may not carry it, which is the green-check-proving-nothing shape; it would also need a new table row and a Test 4 absence row. The UAT shape rules would allow an inline `expected:` extension, but the reachability review would not stay true.
   implication: for the operator and the orchestrator. The new lines exist only in a build cut from a tree containing `bb14bf27d`, `6d7c1485c`, `ae0f0ecce`, `7339ef23a` (all on main now). If 87-78 cuts `release/v0.13.2` from main after these, item 6 can be read with them: with Show in Steam on, Cancel in the uninstall dialog, then grep gamelib.log for (1) `was successfully removed from Steam` (expect none, the existing check), (2) `[Frontend] [Shortcuts] Show in Steam activation:` (expect none during Cancel; any line during the removal step is the later, intended toggle), (3) `[Frontend] [SwitchRow] ignored a pointer click on installTabShowInSteam` (expect none normally; one is the first proof that a stale second click arrives, which scores item 6 pass and closes this session's root cause as hop 9). If the build under test predates these commits, item 6 can only be read by the old signals and the cause stays unproven. Adding the new lines to the UAT's table is a separate decision for the orchestrator or 87-79.
+
+- timestamp: 2026-11-26
+  checked: dev-build check after the guards (`pnpm tauri:dev` at 0888506b0). The user turned Show in Steam off, then on, then did Uninstall… and No three times. `gamelib.log` 19:14.
+  found: two `[Shortcuts] Show in Steam activation:` lines (action=remove, then action=add; event=click, trusted=true, detail=1, sinceDialogCloseMs=none). No activation line and no `[SwitchRow] ignored a pointer click` line during the three Cancels. The backend "successfully removed/added" text goes only to the frontend notification, not to gamelib.log.
+  implication: the provenance logging works live, and Cancel stays inert. Closed as not reproduced, guarded and logged; T-87-143 is mitigated, but the cause in re-run 1 is unproven.
 
 ## Eliminated
 
