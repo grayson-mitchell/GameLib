@@ -1029,7 +1029,7 @@ Plans:
   3. The quit dialog gains a "game running" condition (D-27, a recorded behaviour change) read from the Rust running-game registry
   4. `commandRunner.ts` is deleted; closes on goldens, three-OS CI and a stub-game smoke (launch, quit-kill, survival of parent SIGKILL)
 
-**Plans:** 16/25 plans executed in 18 waves; planned 2026-11-26, re-sliced the same day so every plan fits the 100k smart-zone budget and stays below 15 files (goldens are recorded from the TS before each Rust slice, D-25; the quit prompt lands before games become Game-class)
+**Plans:** 17/25 plans executed in 18 waves; planned 2026-11-26, re-sliced the same day so every plan fits the 100k smart-zone budget and stays below 15 files (goldens are recorded from the TS before each Rust slice, D-25; the quit prompt lands before games become Game-class)
 
 Plans:
 **Wave 1**
@@ -1071,7 +1071,7 @@ Plans:
 - [x] 88.2-16-PLAN.md — The commandRunner-shaped adapter, the log-writer hand-off and the abort forwarding
 
 **Wave 12** *(blocked on Wave 11 completion)*
-- [ ] 88.2-17-PLAN.md — Wine command, winepath, script, spawnAsync, tracked-kill and games-running channels and shims
+- [x] 88.2-17-PLAN.md — Wine command, winepath, script, spawnAsync, tracked-kill and games-running channels and shims
 
 **Wave 13** *(blocked on Wave 12 completion)*
 - [ ] 88.2-18-PLAN.md — ManagerHooks transport, shell half: `SidecarManagerHooks`, `launchManagerCall` long-running, fail-safe at sidecar EOF
