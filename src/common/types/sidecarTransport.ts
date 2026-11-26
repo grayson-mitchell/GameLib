@@ -1585,6 +1585,33 @@ export const RUST_LAUNCH_RUNNER_KILL = 'launch_runner_kill' as const
  * id no run holds; the run then answers its call `{ abort: true }`. A lookup and a signal, so it stays bounded.
  */
 export const RUST_LAUNCH_RUNNER_ABORT = 'launch_runner_abort' as const
+/**
+ * Phase 88.2 (SVC-03, 88.2-17, D-02, D-19): `runWineCommand`, launch variant, as one streaming call. `launch_wine_command` takes
+ * `[args]` (`{ streamId?, gameSettings?, commandParts, wait?, protonVerb?, installFolderName?, gameInstallPath?, options?,
+ * startFolder?, skipPrefixCheckIKnowWhatImDoing?, ignoreLogging?, resolveOnExit?, logTargets?, logMessagePrefix?, observe?,
+ * spawnClass? }`: `options` is only `{ env?, wrappers?, trackKey? }` (the functions and log writers of the TS options travel as
+ * `streamId`, `observe` and `logTargets`); the shell appends the wine host facts (the process environment and the Darwin
+ * release) itself, T-88.1-14) and answers `{ stdout, stderr, code? }` (`code` is absent when nothing ran, an invalid wine).
+ * A call with `observe: true` is sent `runnerOutput` and `runnerSpawned` frames before the reply, as `launch_runner_call` is.
+ * A wine command runs as long as the game or installer it hosts, so the channel is unbounded (`UNBOUNDED_RUST_CHANNELS`); a
+ * tracked kill and the app shutdown end it.
+ */
+export const RUST_LAUNCH_WINE_COMMAND = 'launch_wine_command' as const
+/**
+ * Phase 88.2 (SVC-03, 88.2-17, D-02, D-19): `getWinePath`. `launch_wine_path` takes `[args]` (`{ path, gameSettings, variant? }`,
+ * the variant `'win'` or `'unix'`, `'unix'` when absent; the shell appends the wine host facts) and answers the translated path
+ * as text, `""` when `winepath` printed nothing. It runs a wine command, so the channel is unbounded.
+ */
+export const RUST_LAUNCH_WINE_PATH = 'launch_wine_path' as const
+/**
+ * Phase 88.2 (SVC-03, 88.2-17, D-02, D-19): `runScriptForGame`, a game's before or after launch script. `launch_script_run` takes
+ * `[args]` (`{ scriptPath, stage, appName, executable?, prefix?, runner, title, installPath?, settingsJson, infoJson,
+ * verbose?, logTarget? }`: `settingsJson` and `infoJson` are `JSON.stringify(gameSettings)` and `JSON.stringify(gameInfo)`,
+ * handed to the script verbatim; the shell appends the process environment) and answers `true` once the script has exited,
+ * whatever its code. A script that could not be started is an error carrying the OS's text, which the dispatch error passes
+ * through. A script runs as long as the user wrote it to, so the channel is unbounded.
+ */
+export const RUST_LAUNCH_SCRIPT_RUN = 'launch_script_run' as const
 export const RUST_ENGINE_STATE_RECORD_DECISION =
   'engine_state_record_decision' as const
 export const RUST_ENGINE_STATE_PUBLISH_OVERLAY_NOTICE =
@@ -2034,6 +2061,9 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_LAUNCH_RUNNER_CALL,
   RUST_LAUNCH_RUNNER_KILL,
   RUST_LAUNCH_RUNNER_ABORT,
+  RUST_LAUNCH_WINE_COMMAND,
+  RUST_LAUNCH_WINE_PATH,
+  RUST_LAUNCH_SCRIPT_RUN,
   RUST_SHORTCUTS_EXIST,
   RUST_SHORTCUTS_ADD,
   RUST_SHORTCUTS_REMOVE,

@@ -1206,6 +1206,35 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     callers: RUNNER_SHIM_IMPORTERS,
     deletedBy: 93
   },
+  // 88.2-17 (D-02, D-19): the rest of the runner transport. `wineCommandRun` is `runWineCommand` (the wine command core with the
+  // game and helper spawn classes) and goes with the Steam bridge's wine launch, which 97 moves into Rust; `winePathGet` is
+  // `getWinePath`, which the store managers' wine path use leaves with their move in 92; `scriptRun` is `runScriptForGame`, the
+  // launcher's before and after scripts, which the Rust launcher (88.3) runs itself. Same file as `runnerCall`, so the same
+  // `callers`: the adapter (88.2-16, 88.2-17) is the one importer until the boot wiring (88.2-21).
+  {
+    name: 'wineCommandRun',
+    file: 'src/backend/launchrust/runner.ts',
+    shape: 'shim',
+    channel: 'RUST_LAUNCH_WINE_COMMAND',
+    callers: RUNNER_SHIM_IMPORTERS,
+    deletedBy: 97
+  },
+  {
+    name: 'winePathGet',
+    file: 'src/backend/launchrust/runner.ts',
+    shape: 'shim',
+    channel: 'RUST_LAUNCH_WINE_PATH',
+    callers: RUNNER_SHIM_IMPORTERS,
+    deletedBy: 92
+  },
+  {
+    name: 'scriptRun',
+    file: 'src/backend/launchrust/runner.ts',
+    shape: 'shim',
+    channel: 'RUST_LAUNCH_SCRIPT_RUN',
+    callers: RUNNER_SHIM_IMPORTERS,
+    deletedBy: 88.3
+  },
   // 88-13 (87 D-24): the synchronous known-fix twins, for callers 88 cannot make async. The launcher's `installFixes`
   // and `getKnownFixesEnvVariables` read the tier-1 fix inline until 88.1-17 deleted them; the Steam bridge keeps its own
   // reads until 97. `withKnownFixEnv` builds the settings storeManagerCommon launches with, which the sideload and

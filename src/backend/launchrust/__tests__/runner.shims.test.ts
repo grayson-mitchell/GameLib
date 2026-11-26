@@ -10,7 +10,10 @@ import { sidecarInternalSendArgs } from 'common/types/ipc/sidecarInternal'
 import {
   RUST_LAUNCH_RUNNER_ABORT,
   RUST_LAUNCH_RUNNER_CALL,
-  RUST_LAUNCH_RUNNER_KILL
+  RUST_LAUNCH_RUNNER_KILL,
+  RUST_LAUNCH_SCRIPT_RUN,
+  RUST_LAUNCH_WINE_COMMAND,
+  RUST_LAUNCH_WINE_PATH
 } from 'common/types/sidecarTransport'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import { createIpcRegistry } from 'backend/sidecar/ipcRegistry'
@@ -21,9 +24,16 @@ import {
   registerRunnerOutputListener,
   runnerAbort,
   runnerCall,
-  runnerKill
+  runnerKill,
+  scriptRun,
+  winePathGet,
+  wineCommandRun
 } from '../runner'
-import type { RunnerCallRequest } from '../runner'
+import type {
+  RunnerCallRequest,
+  ScriptRunRequest,
+  WineCommandRequest
+} from '../runner'
 
 function fakeTransport(answer: unknown): RustInvokeDeps & {
   calls: Array<[string, unknown[]]>
@@ -372,5 +382,93 @@ describe('the spawned handle', () => {
     expect(handles[0]?.kill()).toBe(true)
     // Let the rejected promise settle; the process would fail on an unhandled one.
     await new Promise((resolve) => setImmediate(resolve))
+  })
+})
+
+describe('wineCommandRun, winePathGet and scriptRun (88.2-17)', () => {
+  const wineCall: WineCommandRequest = {
+    streamId: 'runner-stream-2',
+    gameSettings: { winePrefix: '/prefix' },
+    commandParts: ['cmd', '/c', 'echo', 'x'],
+    wait: true,
+    protonVerb: 'runinprefix',
+    options: { env: { ZED: '1' }, wrappers: ['gamemoderun'], trackKey: 'k' },
+    logTargets: [{ target: { kind: 'general' }, rotate: true }],
+    observe: true,
+    spawnClass: 'game'
+  }
+
+  it('wineCommandRun sends one launch_wine_command call, answers what Rust did and rejects with the transport, with no fallback', async () => {
+    const reply = { stdout: 'o', stderr: '', code: 0 }
+    const deps = fakeTransport(reply)
+    expect(await wineCommandRun(deps, wineCall)).toBe(reply)
+    expect(deps.calls).toEqual([[RUST_LAUNCH_WINE_COMMAND, [wineCall]]])
+    expect(RUST_LAUNCH_WINE_COMMAND).toBe('launch_wine_command')
+    expect(() =>
+      rustInvokeArgs[RUST_LAUNCH_WINE_COMMAND].parse(deps.calls[0]?.[1])
+    ).not.toThrow()
+
+    const down = fakeTransport(new Error('launch_wine_command:not-ready'))
+    await expect(wineCommandRun(down, wineCall)).rejects.toThrow('not-ready')
+    expect(down.calls).toHaveLength(1)
+  })
+
+  it('the wine command schema refuses a stray key, an options key it does not read, a bad spawn class and a settings value that is not an object', () => {
+    const schema = rustInvokeArgs[RUST_LAUNCH_WINE_COMMAND]
+    const bare = { commandParts: ['x'] }
+    expect(() => schema.parse([bare])).not.toThrow()
+    expect(() => schema.parse([{ ...bare, extra: 1 }])).toThrow()
+    expect(() =>
+      schema.parse([{ ...bare, options: { abortId: 'a' } }])
+    ).toThrow()
+    expect(() => schema.parse([{ ...bare, spawnClass: 'daemon' }])).toThrow()
+    expect(() => schema.parse([{ ...bare, gameSettings: '/etc/x' }])).toThrow()
+    expect(() => schema.parse([{ commandParts: 'x' }])).toThrow()
+    expect(() => schema.parse([])).toThrow()
+  })
+
+  it('winePathGet sends one launch_wine_path call and the schema takes the two variants only', async () => {
+    const deps = fakeTransport('/unix/path')
+    const request = {
+      path: 'C:\\x',
+      gameSettings: { winePrefix: '/p' },
+      variant: 'win' as const
+    }
+    expect(await winePathGet(deps, request)).toBe('/unix/path')
+    expect(deps.calls).toEqual([[RUST_LAUNCH_WINE_PATH, [request]]])
+    expect(RUST_LAUNCH_WINE_PATH).toBe('launch_wine_path')
+    const schema = rustInvokeArgs[RUST_LAUNCH_WINE_PATH]
+    expect(() => schema.parse([request])).not.toThrow()
+    expect(() => schema.parse([{ ...request, variant: 'posix' }])).toThrow()
+    expect(() => schema.parse([{ ...request, extra: 1 }])).toThrow()
+    expect(() => schema.parse([{ path: 'x' }])).toThrow()
+  })
+
+  it('scriptRun sends one launch_script_run call, passes the error text through and the schema takes the two stages only', async () => {
+    const request: ScriptRunRequest = {
+      scriptPath: '/s.sh',
+      stage: 'after',
+      appName: 'a',
+      runner: 'gog',
+      title: 'T',
+      settingsJson: '{"a":1}',
+      infoJson: '{"b":2}',
+      verbose: true,
+      logTarget: { target: { kind: 'runner', runner: 'gog' }, rotate: true }
+    }
+    const deps = fakeTransport(true)
+    expect(await scriptRun(deps, request)).toBe(true)
+    expect(deps.calls).toEqual([[RUST_LAUNCH_SCRIPT_RUN, [request]]])
+    expect(RUST_LAUNCH_SCRIPT_RUN).toBe('launch_script_run')
+    const schema = rustInvokeArgs[RUST_LAUNCH_SCRIPT_RUN]
+    expect(() => schema.parse([request])).not.toThrow()
+    expect(() => schema.parse([{ ...request, stage: 'during' }])).toThrow()
+    expect(() => schema.parse([{ ...request, extra: 1 }])).toThrow()
+    expect(() => schema.parse([{ ...request, settingsJson: {} }])).toThrow()
+
+    const failed = fakeTransport(new Error('No such file (os error 2)'))
+    await expect(scriptRun(failed, request)).rejects.toThrow(
+      'No such file (os error 2)'
+    )
   })
 })

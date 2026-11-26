@@ -166,6 +166,9 @@ import {
   RUST_LAUNCH_RUNNER_CALL,
   RUST_LAUNCH_RUNNER_KILL,
   RUST_LAUNCH_RUNNER_ABORT,
+  RUST_LAUNCH_WINE_COMMAND,
+  RUST_LAUNCH_WINE_PATH,
+  RUST_LAUNCH_SCRIPT_RUN,
   RUST_LAUNCH_SETUP_ENV_VARS,
   RUST_LAUNCH_SETUP_WINE_ENV_VARS,
   RUST_LAUNCH_SETUP_WRAPPER_ENV_VARS,
@@ -1373,7 +1376,73 @@ export const rustInvokeArgs = {
   [RUST_LAUNCH_RUNNER_KILL]: z.tuple([z.string().meta({ title: 'streamId' })]),
   // Phase 88.2 (SVC-03, 88.2-15, D-02, D-19): aborts the run that was given an abort id. `[abortId]`; answers whether a run
   // answered to it.
-  [RUST_LAUNCH_RUNNER_ABORT]: z.tuple([z.string().meta({ title: 'abortId' })])
+  [RUST_LAUNCH_RUNNER_ABORT]: z.tuple([z.string().meta({ title: 'abortId' })]),
+  // Phase 88.2 (SVC-03, 88.2-17, D-02, D-19): one wine command, launch variant. One strict object: the `WineCommandArgs` fields,
+  // `options` reduced to the three the crate reads (`env`, `wrappers`, `trackKey`), `logTargets` the caller's log writers as typed
+  // targets, `streamId` and `observe` for the output frames, `spawnClass` `game` for the sideload wine launch. `gameSettings` is
+  // the game's settings object as the TS holds it, opaque to the generated decode (the crate reads the fields it needs). The
+  // shell appends the wine host facts itself (T-88.1-14), and the crate decodes the object strictly again.
+  [RUST_LAUNCH_WINE_COMMAND]: z.tuple([
+    z
+      .object({
+        streamId: z.string().optional(),
+        gameSettings: knownFixGameSettings.optional(),
+        commandParts: z.array(z.string().meta({ title: 'part' })),
+        wait: z.boolean().optional(),
+        protonVerb: z.string().optional(),
+        installFolderName: z.string().optional(),
+        gameInstallPath: z.string().optional(),
+        options: z
+          .object({
+            env: knownFixEnvMap('env').optional(),
+            wrappers: z.array(z.string().meta({ title: 'word' })).optional(),
+            trackKey: z.string().optional()
+          })
+          .strict()
+          .optional(),
+        startFolder: z.string().optional(),
+        skipPrefixCheckIKnowWhatImDoing: z.boolean().optional(),
+        ignoreLogging: z.boolean().optional(),
+        resolveOnExit: z.boolean().optional(),
+        logTargets: z.array(runnerLogHandOff).optional(),
+        logMessagePrefix: z.string().optional(),
+        observe: z.boolean().optional(),
+        spawnClass: z.enum(['helper', 'game']).optional()
+      })
+      .strict()
+  ]),
+  // Phase 88.2 (SVC-03, 88.2-17, D-02, D-19): `getWinePath`. One strict object `{ path, gameSettings, variant? }`; the shell
+  // appends the wine host facts.
+  [RUST_LAUNCH_WINE_PATH]: z.tuple([
+    z
+      .object({
+        path: z.string(),
+        gameSettings: knownFixGameSettings,
+        variant: z.enum(['win', 'unix']).optional()
+      })
+      .strict()
+  ]),
+  // Phase 88.2 (SVC-03, 88.2-17, D-02, D-19): a game's before or after launch script. One strict object; `settingsJson` and
+  // `infoJson` are the TS's own `JSON.stringify` text, handed to the script verbatim. The shell appends the process
+  // environment, which is laid over the `HEROIC_GAME_*` block. `logTarget` is the game's log writer, read when `verbose` is on.
+  [RUST_LAUNCH_SCRIPT_RUN]: z.tuple([
+    z
+      .object({
+        scriptPath: z.string(),
+        stage: z.enum(['before', 'after']),
+        appName: z.string(),
+        executable: z.string().optional(),
+        prefix: z.string().optional(),
+        runner: z.string(),
+        title: z.string(),
+        installPath: z.string().optional(),
+        settingsJson: z.string(),
+        infoJson: z.string(),
+        verbose: z.boolean().optional(),
+        logTarget: runnerLogHandOff.optional()
+      })
+      .strict()
+  ])
 } satisfies Record<RustInvokeChannel, z.ZodTuple>
 
 /** The positional args a `rustInvoke` call for channel `C` sends (input side of the schema). */

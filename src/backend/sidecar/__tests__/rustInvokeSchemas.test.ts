@@ -80,7 +80,8 @@ describe('rustInvokeArgs', () => {
     // wine_runtime_download, wine_manager_install, wine_manager_list, wine_winetricks_list_installed,
     // engine_launch_arm_deadline, knownfix_apply_profile_registry, knownfix_profile_overlay_env and wine_manager_refresh).
     // Phase 88.2 plan 15: 207 -> 210, launch_runner_call, launch_runner_kill and launch_runner_abort.
-    expect(RUST_INVOKE_CHANNELS).toHaveLength(210)
+    // Phase 88.2 plan 17: 210 -> 213, launch_wine_command, launch_wine_path and launch_script_run.
+    expect(RUST_INVOKE_CHANNELS).toHaveLength(213)
   })
 
   it('parses the store-embed wire fixtures', () => {

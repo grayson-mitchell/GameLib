@@ -1,9 +1,25 @@
-import { runnerCall } from 'backend/launchrust/runner'
-import type { RunnerCallRequest } from 'backend/launchrust/runner'
+import {
+  runnerCall,
+  scriptRun,
+  winePathGet,
+  wineCommandRun
+} from 'backend/launchrust/runner'
+import type {
+  RunnerCallRequest,
+  ScriptRunRequest,
+  WineCommandRequest
+} from 'backend/launchrust/runner'
 import type { RunnerStreams } from 'backend/runnerStream'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
-import type { RunnerProps } from 'backend/commandRunner'
-import type { CallRunnerOptions, ExecResult, Runner } from 'common/types'
+import type { RunnerProps, WineCommandResult } from 'backend/commandRunner'
+import type {
+  CallRunnerOptions,
+  ExecResult,
+  GameInfo,
+  GameSettings,
+  Runner,
+  WineCommandArgs
+} from 'common/types'
 import type LogWriter from 'backend/logger/targetWriter'
 
 /**
@@ -51,12 +67,37 @@ export type RunnerAdapterCallOptions = CallRunnerOptions & {
   ) => void
 }
 
+/**
+ * The options of a wine command: the TS ones, and the spawn class Rust runs the child as (`game` for the sideload wine launch,
+ * a child that outlives GameLib; `helper`, the default, for everything else).
+ */
+export type RunnerAdapterWineOptions = CallRunnerOptions & {
+  spawnClass?: 'helper' | 'game'
+}
+
+/** `WineCommandArgs` with the adapter's wine options. A `WineCommandArgs` is assignable to it. */
+export type RunnerAdapterWineCommandArgs = Omit<WineCommandArgs, 'options'> & {
+  options?: RunnerAdapterWineOptions
+}
+
 export interface RunnerAdapter {
   callRunner(
     commandParts: string[],
     runnerProps: RunnerProps,
     options: RunnerAdapterCallOptions
   ): Promise<ExecResult>
+  runWineCommand(args: RunnerAdapterWineCommandArgs): Promise<WineCommandResult>
+  getWinePath(args: {
+    path: string
+    gameSettings: GameSettings
+    variant?: 'win' | 'unix'
+  }): Promise<string>
+  runScriptForGame(
+    gameInfo: GameInfo,
+    gameSettings: GameSettings,
+    scriptStage: 'before' | 'after',
+    logWriter: LogWriter
+  ): Promise<boolean | string>
 }
 
 /**
@@ -78,6 +119,28 @@ export function settleExecResult(reply: unknown): ExecResult {
   throw new Error('callRunner: the reply was not a command result')
 }
 
+/**
+ * Narrows Rust's answer to a wine command to a `WineCommandResult`: an object with a string `stdout` and `stderr`, and a
+ * `code` that is a number or `null` when it is there (it is absent when nothing ran, an invalid wine). The answer is handed
+ * on as it came.
+ */
+export function settleWineCommandResult(reply: unknown): WineCommandResult {
+  if (
+    typeof reply === 'object' &&
+    reply !== null &&
+    'stdout' in reply &&
+    typeof reply.stdout === 'string' &&
+    'stderr' in reply &&
+    typeof reply.stderr === 'string' &&
+    (!('code' in reply) ||
+      reply.code === null ||
+      typeof reply.code === 'number')
+  ) {
+    return reply as WineCommandResult
+  }
+  throw new Error('runWineCommand: the reply was not a command result')
+}
+
 /** The caller's environment as `[key, value]` pairs in insertion order; a variable with no value is left out. */
 function envPairs(env: CallRunnerOptions['env']): string[][] | undefined {
   if (!env) return undefined
@@ -86,6 +149,18 @@ function envPairs(env: CallRunnerOptions['env']): string[][] | undefined {
     if (typeof value === 'string') pairs.push([key, value])
   }
   return pairs
+}
+
+/** The caller's environment as a string map; a variable with no value is left out. */
+function envRecord(
+  env: CallRunnerOptions['env']
+): Record<string, string> | undefined {
+  if (!env) return undefined
+  const record: Record<string, string> = {}
+  for (const [key, value] of Object.entries(env)) {
+    if (typeof value === 'string') record[key] = value
+  }
+  return record
 }
 
 export function createRunnerAdapter(deps: RunnerAdapterDeps): RunnerAdapter {
@@ -161,5 +236,144 @@ export function createRunnerAdapter(deps: RunnerAdapterDeps): RunnerAdapter {
     }
   }
 
-  return { callRunner }
+  /**
+   * The log writers handed off, in order, each once; a closed or refused writer is left out. Called after the log forwarder's
+   * flush and sent with nothing awaited in between, as `callRunner` does.
+   */
+  function handOffAll(
+    writers: readonly LogWriter[] | undefined
+  ): NonNullable<WineCommandRequest['logTargets']> {
+    const targets: NonNullable<WineCommandRequest['logTargets']> = []
+    for (const writer of writers ?? []) {
+      const handOff = writer.handOff()
+      if (handOff) targets.push(handOff)
+    }
+    return targets
+  }
+
+  async function runWineCommand(
+    args: RunnerAdapterWineCommandArgs
+  ): Promise<WineCommandResult> {
+    const options = args.options
+    const observe = !!options?.onOutput || !!args.onSpawn
+    const streamId = observe
+      ? deps.streams.open({
+          onOutput: options?.onOutput,
+          onSpawn: args.onSpawn
+        })
+      : undefined
+
+    try {
+      await deps.flushLogs()
+
+      const request: WineCommandRequest = {
+        // A copy: Rust builds its own argv, and the caller's list is never touched (87 finding 3).
+        commandParts: [...args.commandParts],
+        logTargets: handOffAll(options?.logWriters),
+        spawnClass: options?.spawnClass ?? 'helper'
+      }
+      if (streamId !== undefined) {
+        request.streamId = streamId
+        request.observe = true
+      }
+      if (args.gameSettings) request.gameSettings = args.gameSettings
+      if (args.wait !== undefined) request.wait = args.wait
+      if (args.protonVerb !== undefined) request.protonVerb = args.protonVerb
+      if (args.installFolderName !== undefined)
+        request.installFolderName = args.installFolderName
+      if (args.gameInstallPath !== undefined)
+        request.gameInstallPath = args.gameInstallPath
+      if (args.startFolder !== undefined) request.startFolder = args.startFolder
+      if (args.skipPrefixCheckIKnowWhatImDoing !== undefined)
+        request.skipPrefixCheckIKnowWhatImDoing =
+          args.skipPrefixCheckIKnowWhatImDoing
+      if (args.ignoreLogging !== undefined)
+        request.ignoreLogging = args.ignoreLogging
+      if (args.resolveOnExit !== undefined)
+        request.resolveOnExit = args.resolveOnExit
+      if (options?.logMessagePrefix !== undefined)
+        request.logMessagePrefix = options.logMessagePrefix
+      const env = envRecord(options?.env)
+      const wineOptions: NonNullable<WineCommandRequest['options']> = {}
+      if (env) wineOptions.env = env
+      if (options?.wrappers) wineOptions.wrappers = [...options.wrappers]
+      if (options?.trackKey !== undefined)
+        wineOptions.trackKey = options.trackKey
+      if (Object.keys(wineOptions).length) request.options = wineOptions
+
+      return settleWineCommandResult(await wineCommandRun(deps, request))
+    } finally {
+      if (streamId !== undefined) deps.streams.close(streamId)
+    }
+  }
+
+  async function getWinePath({
+    path,
+    gameSettings,
+    variant
+  }: {
+    path: string
+    gameSettings: GameSettings
+    variant?: 'win' | 'unix'
+  }): Promise<string> {
+    const reply = await winePathGet(deps, {
+      path,
+      gameSettings,
+      ...(variant !== undefined ? { variant } : {})
+    })
+    if (typeof reply !== 'string') {
+      throw new Error('getWinePath: the reply was not a path')
+    }
+    return reply
+  }
+
+  async function runScriptForGame(
+    gameInfo: GameInfo,
+    gameSettings: GameSettings,
+    scriptStage: 'before' | 'after',
+    logWriter: LogWriter
+  ): Promise<boolean | string> {
+    const scriptPath = gameSettings[`${scriptStage}LaunchScriptPath`]
+    if (typeof scriptPath !== 'string') {
+      throw new Error('runScriptForGame: the settings name no script')
+    }
+    const verbose = !!gameSettings.verboseLogs
+
+    // The writer is read only when verbose logs are on (Rust drops the script's output otherwise), so it is handed off, and
+    // its rotation claimed, only then.
+    let logTarget: ScriptRunRequest['logTarget']
+    if (verbose) {
+      await deps.flushLogs()
+      logTarget = logWriter.handOff() ?? undefined
+    }
+
+    const request: ScriptRunRequest = {
+      scriptPath,
+      stage: scriptStage,
+      appName: gameInfo.app_name,
+      runner: gameInfo.runner,
+      title: gameInfo.title,
+      // The TS text, verbatim: Rust hands both to the script as they are, never re-serialised.
+      settingsJson: JSON.stringify(gameSettings),
+      infoJson: JSON.stringify(gameInfo)
+    }
+    if (typeof gameInfo.install?.executable === 'string')
+      request.executable = gameInfo.install.executable
+    if (typeof gameSettings.winePrefix === 'string')
+      request.prefix = gameSettings.winePrefix
+    if (typeof gameInfo.install?.install_path === 'string')
+      request.installPath = gameInfo.install.install_path
+    if (verbose) request.verbose = true
+    if (logTarget) request.logTarget = logTarget
+
+    try {
+      await scriptRun(deps, request)
+    } catch (error) {
+      // A script that could not be started: the text Rust answered, as an Error, as the TS rethrew the spawn error.
+      throw new Error(error instanceof Error ? error.message : String(error))
+    }
+    return true
+  }
+
+  return { callRunner, runWineCommand, getWinePath, runScriptForGame }
 }

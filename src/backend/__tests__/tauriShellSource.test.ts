@@ -525,7 +525,8 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     // wine_runtime_download, wine_manager_install, wine_manager_list, wine_winetricks_list_installed,
     // engine_launch_arm_deadline, knownfix_apply_profile_registry, knownfix_profile_overlay_env and wine_manager_refresh).
     // Phase 88.2 plan 15: 207 -> 210, launch_runner_call, launch_runner_kill and launch_runner_abort.
-    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(210)
+    // Phase 88.2 plan 17: 210 -> 213, launch_wine_command, launch_wine_path and launch_script_run.
+    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(213)
     expect(router).not.toContain('_ =>')
   })
 
@@ -1108,6 +1109,12 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       // the false answer for an id no run holds and a real `/bin/sh` run ended by its stream id and by its abort id.
       'launch_runner_kill',
       'launch_runner_abort',
+      // Phase 88.2 plan 17: the wine command, the winepath translation and a game's launch script (`wineCommandRun`, `winePathGet` and `scriptRun` in `launchrust/runner.ts`). PROVEN:
+      // `launch_dispatch::tests` drives each arm's decode, not-ready and the fixed bad-args, a wine that is not installed refused without a spawn, and a real script run over the shell's host
+      // that answers `true` whatever its code and an error that carries the OS's text; `gamelib-launch`'s `golden_wine_launch.rs`, `golden_wine_path.rs` and `script_real.rs` drive the crate.
+      'launch_wine_command',
+      'launch_wine_path',
+      'launch_script_run',
       // Phase 94 plan 11: the shortcut exists check (`shortcutsResolvers.ts` resolver). PROVEN: `shortcuts_dispatch::tests`
       // drives the arm's decode, not-ready and a real exists answer on a FakeHome; `golden_paths.rs` replays the TS goldens.
       'shortcuts_exist',

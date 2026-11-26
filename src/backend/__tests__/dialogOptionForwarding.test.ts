@@ -280,7 +280,13 @@ describe('sidecarRpc UNBOUNDED_RUST_CHANNELS covers every human-gated dialog cha
     'RUST_LAUNCH_CHECK_WINE_BEFORE_LAUNCH',
     // Phase 88.2 plan 15: launch_runner_call runs one store CLI command to its end, as long as the install or game it hosts takes
     // (the TS callRunner it replaces had no timeout); ended by its abort id, launch_runner_kill or the shutdown. Not a dialog channel.
-    'RUST_LAUNCH_RUNNER_CALL'
+    'RUST_LAUNCH_RUNNER_CALL',
+    // Phase 88.2 plan 17: launch_wine_command runs one wine command for as long as the game or installer it hosts takes, launch_wine_path
+    // runs winepath through the same core and launch_script_run runs a game's launch script for as long as the user wrote it to (the TS
+    // each replaces had no timeout); ended by the tracked kill or the shutdown. Not dialog channels.
+    'RUST_LAUNCH_WINE_COMMAND',
+    'RUST_LAUNCH_WINE_PATH',
+    'RUST_LAUNCH_SCRIPT_RUN'
   ]
 
   test('contains exactly the dialog, depot, Rust CM, safety remove, wine runtime download and wine manager channels', () => {

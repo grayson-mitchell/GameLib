@@ -608,6 +608,88 @@ pub(crate) fn rpc_launch_runner_abort(args: &[Value]) -> Result<Value, String> {
     runner_abort_over(launch_ctx(), args)
 }
 
+/// The body of the `launch_wine_command` arm over a given context and host: the generated decode (one object; a
+/// `gameSettings` that is present must be an object) and an arity check first, so a bad call is rejected the same fixed
+/// `<op>:bad-args` literal before and after the install and never echoes the sidecar's value, then the crate over
+/// `[call, host]`, which decodes the object strictly again. `host` is the shell's own wine facts (T-88.1-14), taken only
+/// once the context is there.
+fn wine_command_over(
+    ctx: Option<&Arc<LaunchCtx>>,
+    args: &[Value],
+    host: impl FnOnce() -> Value,
+) -> Result<Value, String> {
+    let decoded = LaunchWineCommandArgs::from_args(args)?;
+    if args.len() != 1 {
+        return Err("launch_wine_command:bad-args".to_string());
+    }
+    if let Some(settings) = decoded.game_settings {
+        settings_object(settings, "launch_wine_command")?;
+    }
+    let ctx = ctx.ok_or_else(|| "launch_wine_command:not-ready".to_string())?;
+    rpc_launch_op(Some(ctx), "launch_wine_command", &[args[0].clone(), host()])
+}
+
+/// The `launch_wine_command` `rustInvoke` arm (88.2-17, D-02, D-19): `runWineCommand`, one wine command for a game or an
+/// installer, answered `{ stdout, stderr, code? }`. It runs on the dispatcher's worker thread for this one request (every
+/// `rustInvoke` runs on its own spawned thread, so a run that lasts as long as a game holds neither the reader nor another
+/// call), and a call that observes the stream writes its `runnerOutput` and `runnerSpawned` frames from that thread before
+/// the arm returns, so they precede the reply on the one ordered stdin pipe. The shell appends
+/// [`wine_dispatch::wine_run_host`]. A wine command runs as long as the game or installer it hosts, so the sidecar lists the
+/// channel as unbounded (`UNBOUNDED_RUST_CHANNELS`); a tracked kill, the crate's `guarded` registrant and the shutdown token
+/// end it.
+pub(crate) fn rpc_launch_wine_command(args: &[Value]) -> Result<Value, String> {
+    wine_command_over(launch_ctx(), args, wine_dispatch::wine_run_host)
+}
+
+/// The body of the `launch_wine_path` arm over a given context and host: the generated decode (`{ path, gameSettings,
+/// variant? }`, the settings an object) and an arity check first, then the crate over `[call, host]`.
+fn wine_path_over(
+    ctx: Option<&Arc<LaunchCtx>>,
+    args: &[Value],
+    host: impl FnOnce() -> Value,
+) -> Result<Value, String> {
+    let decoded = LaunchWinePathArgs::from_args(args)?;
+    if args.len() != 1 {
+        return Err("launch_wine_path:bad-args".to_string());
+    }
+    settings_object(decoded.game_settings, "launch_wine_path")?;
+    let ctx = ctx.ok_or_else(|| "launch_wine_path:not-ready".to_string())?;
+    rpc_launch_op(Some(ctx), "launch_wine_path", &[args[0].clone(), host()])
+}
+
+/// The `launch_wine_path` `rustInvoke` arm (88.2-17, D-02, D-19): `getWinePath`, a path translated by `winepath` inside the
+/// game's prefix through the wine command core, answered as text (`""` when `winepath` printed nothing). The shell appends
+/// [`wine_dispatch::wine_run_host`]. It runs a wine command, which can outlast the sidecar's 60 s `RUST_INVOKE_TIMEOUT_MS`
+/// on a cold prefix, so the channel is unbounded.
+pub(crate) fn rpc_launch_wine_path(args: &[Value]) -> Result<Value, String> {
+    wine_path_over(launch_ctx(), args, wine_dispatch::wine_run_host)
+}
+
+/// The body of the `launch_script_run` arm over a given context and host: the generated decode (one object) and an arity
+/// check first, then the crate over `[call, host]`, which decodes the object strictly again. `host` is the shell's own
+/// facts ([`runner_host`]), taken only once the context is there. A script that could not be started is the crate's `Err`
+/// text, which passes through as the dispatch error.
+fn script_run_over(
+    ctx: Option<&Arc<LaunchCtx>>,
+    args: &[Value],
+    host: impl FnOnce() -> Value,
+) -> Result<Value, String> {
+    LaunchScriptRunArgs::from_args(args)?;
+    if args.len() != 1 {
+        return Err("launch_script_run:bad-args".to_string());
+    }
+    let ctx = ctx.ok_or_else(|| "launch_script_run:not-ready".to_string())?;
+    rpc_launch_op(Some(ctx), "launch_script_run", &[args[0].clone(), host()])
+}
+
+/// The `launch_script_run` `rustInvoke` arm (88.2-17, D-02, D-19): `runScriptForGame`, a game's before or after launch
+/// script, run as a Helper and answered `true` once it has exited (whatever its code). The shell appends [`runner_host`]:
+/// the environment the script inherits, laid over the `HEROIC_GAME_*` block. A script runs as long as the user wrote it
+/// to, so the sidecar lists the channel as unbounded; the crate's `guarded` registrant and the shutdown token end it.
+pub(crate) fn rpc_launch_script_run(args: &[Value]) -> Result<Value, String> {
+    script_run_over(launch_ctx(), args, runner_host)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1525,6 +1607,205 @@ mod tests {
         assert_eq!(
             runner_abort_over(Some(&ctx), &[json!("abort-mine")]),
             Ok(json!(false))
+        );
+    }
+    /// A game's settings whose wine is not installed here: the wine command core answers `Invalid wine` for it without
+    /// spawning anything, so the arms run end to end on every OS.
+    fn missing_wine_settings(prefix: &std::path::Path) -> Value {
+        json!({
+            "winePrefix": prefix.to_string_lossy(),
+            "wineVersion": {"bin": "/nonexistent/wine-bin", "name": "Nothing", "type": "wine"}
+        })
+    }
+
+    fn wine_command_args(prefix: &std::path::Path) -> Value {
+        json!({
+            "gameSettings": missing_wine_settings(prefix),
+            "commandParts": ["cmd", "/c", "echo", "x"],
+            "skipPrefixCheckIKnowWhatImDoing": true,
+            "options": {"env": {"ZED": "1"}, "wrappers": ["wrap"], "trackKey": "key-1"},
+            "logTargets": [{"target": {"kind": "general"}}],
+            "observe": false
+        })
+    }
+
+    fn script_run_args(script: &str) -> Value {
+        json!({
+            "scriptPath": script,
+            "stage": "before",
+            "appName": "app-1",
+            "runner": "gog",
+            "title": "Title",
+            "settingsJson": "{\"a\":1}",
+            "infoJson": "{\"b\":2}"
+        })
+    }
+
+    #[test]
+    fn the_wine_command_path_and_script_arms_are_not_ready_before_the_install_and_reject_a_wrong_call_the_same_way_after(
+    ) {
+        let home = FakeHome::new("launch-shell-");
+        let ctx = ctx_over(&home);
+        let secret = "/Users/someone/secret-profile-path";
+        let prefix = home.root().join("prefix");
+        assert_eq!(
+            wine_command_over(None, &[wine_command_args(&prefix)], host),
+            Err("launch_wine_command:not-ready".to_string())
+        );
+        assert_eq!(
+            wine_path_over(
+                None,
+                &[json!({"path": "C:\\x", "gameSettings": missing_wine_settings(&prefix)})],
+                host
+            ),
+            Err("launch_wine_path:not-ready".to_string())
+        );
+        assert_eq!(
+            script_run_over(None, &[script_run_args("/bin/true")], host),
+            Err("launch_script_run:not-ready".to_string())
+        );
+
+        let mut command_settings_text = wine_command_args(&prefix);
+        command_settings_text["gameSettings"] = json!(secret);
+        let mut command_stray_target = wine_command_args(&prefix);
+        command_stray_target["logTargets"] = json!([{"target": {"kind": secret}}]);
+        let wrong_command: Vec<Vec<Value>> = vec![
+            vec![],
+            vec![json!(secret)],
+            vec![json!({"commandParts": secret})],
+            vec![wine_command_args(&prefix), json!(secret)],
+            vec![command_settings_text],
+            vec![command_stray_target],
+        ];
+        for args in &wrong_command {
+            for ctx in [None, Some(&ctx)] {
+                let err = wine_command_over(ctx, args, host).unwrap_err();
+                assert_eq!(err, "launch_wine_command:bad-args", "{args:?}");
+                assert!(!err.contains(secret), "{args:?}");
+            }
+        }
+        let wrong_path: Vec<Vec<Value>> = vec![
+            vec![],
+            vec![json!({"path": secret})],
+            vec![json!({"path": "p", "gameSettings": secret})],
+            vec![json!({"path": "p", "gameSettings": {}, "variant": secret})],
+            vec![json!({"path": "p", "gameSettings": {}}), json!(secret)],
+        ];
+        for args in &wrong_path {
+            for ctx in [None, Some(&ctx)] {
+                let err = wine_path_over(ctx, args, host).unwrap_err();
+                assert_eq!(err, "launch_wine_path:bad-args", "{args:?}");
+                assert!(!err.contains(secret), "{args:?}");
+            }
+        }
+        let mut script_stage = script_run_args("/bin/true");
+        script_stage["stage"] = json!(secret);
+        let wrong_script: Vec<Vec<Value>> = vec![
+            vec![],
+            vec![json!(secret)],
+            vec![json!({"scriptPath": secret})],
+            vec![script_run_args("/bin/true"), json!(secret)],
+            vec![script_stage],
+        ];
+        for args in &wrong_script {
+            for ctx in [None, Some(&ctx)] {
+                let err = script_run_over(ctx, args, host).unwrap_err();
+                assert_eq!(err, "launch_script_run:bad-args", "{args:?}");
+                assert!(!err.contains(secret), "{args:?}");
+            }
+        }
+        // An unknown key passes the generated decode and is the crate's to refuse, which needs the context: the same literal.
+        let mut extra = wine_command_args(&prefix);
+        extra["extra"] = json!(secret);
+        let err = wine_command_over(Some(&ctx), &[extra], host).unwrap_err();
+        assert_eq!(err, "launch_wine_command:bad-args");
+        let mut extra = script_run_args("/bin/true");
+        extra["extra"] = json!(secret);
+        let err = script_run_over(Some(&ctx), &[extra], host).unwrap_err();
+        assert_eq!(err, "launch_script_run:bad-args");
+        assert!(!err.contains(secret));
+    }
+
+    #[test]
+    fn the_wine_command_arm_runs_the_call_over_the_shells_wine_host_and_answers_stdout_and_stderr()
+    {
+        let home = FakeHome::new("launch-shell-");
+        let ctx = ctx_over(&home);
+        let prefix = home.root().join("prefix");
+        let got = wine_command_over(Some(&ctx), &[wine_command_args(&prefix)], host).unwrap();
+        // A wine that is not installed is refused without a spawn: an empty stdout, `Invalid wine` and no code.
+        assert_eq!(got, json!({"stdout": "", "stderr": "Invalid wine"}));
+        // The shell's own host carries its wine facts: the process environment.
+        let own = wine_dispatch::wine_run_host();
+        assert!(own["env"].is_object());
+    }
+
+    #[test]
+    fn the_wine_path_arm_answers_an_empty_path_for_a_wine_that_is_not_installed() {
+        let home = FakeHome::new("launch-shell-");
+        let ctx = ctx_over(&home);
+        let prefix = home.root().join("prefix");
+        let got = wine_path_over(
+            Some(&ctx),
+            &[json!({
+                "path": "C:\\Windows",
+                "gameSettings": missing_wine_settings(&prefix),
+                "variant": "unix"
+            })],
+            host,
+        )
+        .unwrap();
+        assert_eq!(got, json!(""));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn the_script_arm_runs_the_script_over_the_shells_host_and_answers_true_whatever_its_code() {
+        use std::os::unix::fs::PermissionsExt;
+        let home = FakeHome::new("launch-shell-");
+        let ctx = ctx_over(&home);
+        let dir = home.root().join("scripts");
+        std::fs::create_dir_all(&dir).unwrap();
+        let out = dir.join("out.txt");
+        let script = dir.join("before.sh");
+        std::fs::write(
+            &script,
+            format!(
+                "#!/bin/sh\nprintf '%s|%s|%s' \"$HOST_ONLY\" \"$HEROIC_GAME_SETTINGS\" \"$HEROIC_GAME_INFO\" > '{}'\nexit 7\n",
+                out.display()
+            ),
+        )
+        .unwrap();
+        std::fs::set_permissions(&script, std::fs::Permissions::from_mode(0o755)).unwrap();
+        let got = script_run_over(
+            Some(&ctx),
+            &[script_run_args(&script.to_string_lossy())],
+            || json!({"env": {"HOST_ONLY": "h", "PATH": "/usr/bin:/bin"}, "path": "/usr/bin:/bin"}),
+        )
+        .unwrap();
+        assert_eq!(got, json!(true));
+        // The settings and info text arrive exactly as the sidecar stringified them.
+        assert_eq!(
+            std::fs::read_to_string(&out).unwrap(),
+            "h|{\"a\":1}|{\"b\":2}"
+        );
+    }
+
+    #[test]
+    fn a_script_that_cannot_start_is_the_dispatch_error_with_the_crates_text() {
+        let home = FakeHome::new("launch-shell-");
+        let ctx = ctx_over(&home);
+        let missing = home.root().join("no-such-script");
+        let err = script_run_over(
+            Some(&ctx),
+            &[script_run_args(&missing.to_string_lossy())],
+            host,
+        )
+        .unwrap_err();
+        assert!(!err.is_empty());
+        assert!(
+            !err.ends_with(":bad-args") && !err.ends_with(":not-ready"),
+            "{err}"
         );
     }
 }

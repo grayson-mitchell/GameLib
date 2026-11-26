@@ -1,7 +1,10 @@
 import {
   RUST_LAUNCH_RUNNER_ABORT,
   RUST_LAUNCH_RUNNER_CALL,
-  RUST_LAUNCH_RUNNER_KILL
+  RUST_LAUNCH_RUNNER_KILL,
+  RUST_LAUNCH_SCRIPT_RUN,
+  RUST_LAUNCH_WINE_COMMAND,
+  RUST_LAUNCH_WINE_PATH
 } from 'common/types/sidecarTransport'
 import type { RustInvokeArgsOf } from 'common/types/ipc/rustInvoke'
 import { sidecarInternalSendArgs } from 'common/types/ipc/sidecarInternal'
@@ -66,6 +69,59 @@ export async function runnerAbort(
   abortId: string
 ): Promise<unknown> {
   return deps.requestRustInvoke(RUST_LAUNCH_RUNNER_ABORT, [abortId])
+}
+
+/** One wine command, as the `launch_wine_command` zod schema takes it. */
+export type WineCommandRequest = RustInvokeArgsOf<
+  typeof RUST_LAUNCH_WINE_COMMAND
+>[0]
+
+/**
+ * Runs one wine command for a game or an installer (88.2-17, D-02): the launch variant of `runWineCommand`, which Rust
+ * runs through the wine command core (the prefix check, the wine check, the merged environment, umu, the proton verb, the
+ * wrappers and the argv) and answers `{ stdout, stderr, code? }` as `unknown`: the last 50 chunks of each stream joined, the
+ * exit code (`null` for a spawn that failed or a child a signal ended) and no code at all when nothing ran (an invalid wine).
+ * A call that watches its output (`observe: true`, a `streamId` from the stream table) is sent the chunks and the spawn as
+ * frames ahead of the reply, as {@link runnerCall} is. A wine command runs as long as the game or installer it hosts, so the
+ * channel is unbounded (`UNBOUNDED_RUST_CHANNELS`); a tracked kill and the app shutdown end it. Rejects with Rust's category
+ * word when the call could not be made.
+ */
+export async function wineCommandRun(
+  deps: RustInvokeDeps,
+  args: WineCommandRequest
+): Promise<unknown> {
+  return deps.requestRustInvoke(RUST_LAUNCH_WINE_COMMAND, [args])
+}
+
+/** One path translation, as the `launch_wine_path` zod schema takes it. */
+export type WinePathRequest = RustInvokeArgsOf<typeof RUST_LAUNCH_WINE_PATH>[0]
+
+/**
+ * `getWinePath` (88.2-17, D-02): the path translated by `winepath` inside the game's prefix, as text (`""` when `winepath`
+ * printed nothing), as `unknown`. It runs a wine command, so the channel is unbounded.
+ */
+export async function winePathGet(
+  deps: RustInvokeDeps,
+  args: WinePathRequest
+): Promise<unknown> {
+  return deps.requestRustInvoke(RUST_LAUNCH_WINE_PATH, [args])
+}
+
+/** One launch script run, as the `launch_script_run` zod schema takes it. */
+export type ScriptRunRequest = RustInvokeArgsOf<
+  typeof RUST_LAUNCH_SCRIPT_RUN
+>[0]
+
+/**
+ * `runScriptForGame` (88.2-17, D-02): a game's before or after launch script, run to its exit. Resolves `true` once it has
+ * exited, whatever its code, as `unknown`. A script that could not be started rejects with the OS's text. A script runs as
+ * long as the user wrote it to, so the channel is unbounded.
+ */
+export async function scriptRun(
+  deps: RustInvokeDeps,
+  args: ScriptRunRequest
+): Promise<unknown> {
+  return deps.requestRustInvoke(RUST_LAUNCH_SCRIPT_RUN, [args])
 }
 
 /**

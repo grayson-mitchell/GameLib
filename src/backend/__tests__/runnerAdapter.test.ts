@@ -4,7 +4,12 @@
  * a caller sees: the flush before the invoke, the output frames before the reply, and each writer handed off once.
  */
 import { rustInvokeArgs } from 'common/types/ipc/rustInvoke'
-import { RUST_LAUNCH_RUNNER_CALL } from 'common/types/sidecarTransport'
+import {
+  RUST_LAUNCH_RUNNER_CALL,
+  RUST_LAUNCH_SCRIPT_RUN,
+  RUST_LAUNCH_WINE_COMMAND,
+  RUST_LAUNCH_WINE_PATH
+} from 'common/types/sidecarTransport'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import { createIpcRegistry } from 'backend/sidecar/ipcRegistry'
 import { createRunnerStreams } from 'backend/runnerStream'
@@ -13,10 +18,15 @@ import {
   runnerKill
 } from 'backend/launchrust/runner'
 import LogWriter from 'backend/logger/targetWriter'
-import type { RunnerProps } from 'backend/commandRunner'
+import type { CommandRunner, RunnerProps } from 'backend/commandRunner'
+import type { GameInfo, GameSettings } from 'common/types'
 import type { LogFrameTarget } from 'common/types/sidecarTransport'
 
-import { createRunnerAdapter, settleExecResult } from '../runnerAdapter'
+import {
+  createRunnerAdapter,
+  settleExecResult,
+  settleWineCommandResult
+} from '../runnerAdapter'
 import type { RunnerAdapterCallOptions } from '../runnerAdapter'
 
 const RUNNER_TARGET: LogFrameTarget = { kind: 'runner', runner: 'legendary' }
@@ -308,4 +318,315 @@ describe('settleExecResult', () => {
       expect(() => settleExecResult(reply)).toThrow('not a command result')
     }
   )
+})
+
+const WINE_SETTINGS = {
+  winePrefix: '/prefix',
+  wineVersion: { bin: '/wine/bin/wine', name: 'Wine', type: 'wine' },
+  verboseLogs: true,
+  beforeLaunchScriptPath: '/scripts/before.sh',
+  afterLaunchScriptPath: '/scripts/after.sh'
+} as unknown as GameSettings
+
+describe('createRunnerAdapter.runWineCommand', () => {
+  it('leaves the caller commandParts, wrappers and options untouched', async () => {
+    const r = rig(() => ({ stdout: 'ok', stderr: '', code: 0 }))
+    const commandParts = ['cmd', '/c', 'echo', 'x']
+    const wrappers = ['gamemoderun', 'mangohud']
+    const options = {
+      env: { ZED: '1', GONE: undefined },
+      wrappers,
+      trackKey: 'key-1'
+    }
+    const snapshot = JSON.stringify({ commandParts, wrappers, options })
+    const result = await r.adapter.runWineCommand({
+      gameSettings: WINE_SETTINGS,
+      commandParts,
+      options
+    })
+    expect(result).toEqual({ stdout: 'ok', stderr: '', code: 0 })
+    expect(JSON.stringify({ commandParts, wrappers, options })).toBe(snapshot)
+    expect(commandParts).toEqual(['cmd', '/c', 'echo', 'x'])
+    expect(wrappers).toEqual(['gamemoderun', 'mangohud'])
+
+    const { channel, args } = invokeAt(r, 0)
+    expect(channel).toBe(RUST_LAUNCH_WINE_COMMAND)
+    const parsed = rustInvokeArgs[RUST_LAUNCH_WINE_COMMAND].parse(args)
+    expect(parsed[0]).toMatchObject({
+      commandParts: ['cmd', '/c', 'echo', 'x'],
+      options: { env: { ZED: '1' }, wrappers, trackKey: 'key-1' },
+      spawnClass: 'helper'
+    })
+    // A copy, never the caller's own list.
+    const sent = (args[0] as { commandParts: string[] }).commandParts
+    expect(sent).not.toBe(commandParts)
+    expect(parsed[0]).not.toHaveProperty('streamId')
+    expect(parsed[0]).not.toHaveProperty('observe')
+  })
+
+  it('sends the flags, the wrapper-less options as absent and the game spawn class', async () => {
+    const r = rig(() => ({ stdout: '', stderr: '' }))
+    await r.adapter.runWineCommand({
+      commandParts: ['winecfg'],
+      wait: true,
+      protonVerb: 'runinprefix',
+      installFolderName: 'Folder',
+      gameInstallPath: '/games/x',
+      startFolder: '/games/x',
+      skipPrefixCheckIKnowWhatImDoing: true,
+      ignoreLogging: true,
+      resolveOnExit: true,
+      options: { spawnClass: 'game', logMessagePrefix: 'Launching' }
+    })
+    const [request] = invokeAt(r, 0).args as [Record<string, unknown>]
+    expect(request).toEqual({
+      commandParts: ['winecfg'],
+      wait: true,
+      protonVerb: 'runinprefix',
+      installFolderName: 'Folder',
+      gameInstallPath: '/games/x',
+      startFolder: '/games/x',
+      skipPrefixCheckIKnowWhatImDoing: true,
+      ignoreLogging: true,
+      resolveOnExit: true,
+      logMessagePrefix: 'Launching',
+      logTargets: [],
+      spawnClass: 'game'
+    })
+    expect(() =>
+      rustInvokeArgs[RUST_LAUNCH_WINE_COMMAND].parse([request])
+    ).not.toThrow()
+  })
+
+  it('delivers the output frames to onOutput in order and the spawn to onSpawn, before the call resolves', async () => {
+    const r = rig((streamId, send) => {
+      send('runnerSpawned', { streamId, pid: 77 })
+      send('runnerOutput', { streamId, seq: 1, pipe: 'stderr', chunk: 'two' })
+      send('runnerOutput', { streamId, seq: 0, pipe: 'stdout', chunk: 'one' })
+      return { stdout: 'one', stderr: 'two', code: 0 }
+    })
+    const seen: string[] = []
+    const spawned: Array<number | undefined> = []
+    await r.adapter.runWineCommand({
+      commandParts: ['x'],
+      onSpawn: (child) => spawned.push(child.pid),
+      options: { onOutput: (chunk) => seen.push(chunk) }
+    })
+    expect(seen).toEqual(['one', 'two'])
+    expect(spawned).toEqual([77])
+    const [request] = invokeAt(r, 0).args as [
+      { streamId?: string; observe?: boolean }
+    ]
+    expect(request.streamId).toBe('runner-stream-1')
+    expect(request.observe).toBe(true)
+    expect(r.streams.size()).toBe(0)
+  })
+
+  it('flushes the logs, then hands each caller writer off once and does not add a runner writer', async () => {
+    const r = rig(() => ({ stdout: '', stderr: '' }))
+    const writer = new LogWriter(GAME_TARGET, false)
+    await r.adapter.runWineCommand({
+      commandParts: ['x'],
+      options: { logWriters: [writer] }
+    })
+    expect(r.events).toEqual(['flushed', 'invoke'])
+    const [request] = invokeAt(r, 0).args as [{ logTargets: unknown }]
+    expect(request.logTargets).toEqual([
+      { target: GAME_TARGET, disabled: false, rotate: true }
+    ])
+    expect(r.runnerWriter.handOff()).toMatchObject({ rotate: true })
+  })
+
+  it('answers a refused wine without a code, closes the stream and rejects a call that could not be made', async () => {
+    const refused = rig(() => ({ stdout: '', stderr: 'Invalid wine' }))
+    expect(
+      await refused.adapter.runWineCommand({ commandParts: ['x'] })
+    ).toEqual({ stdout: '', stderr: 'Invalid wine' })
+
+    const down = rig(() => {
+      throw new Error('launch_wine_command:not-ready')
+    })
+    await expect(
+      down.adapter.runWineCommand({
+        commandParts: ['x'],
+        options: { onOutput: () => undefined }
+      })
+    ).rejects.toThrow('launch_wine_command:not-ready')
+    expect(down.streams.size()).toBe(0)
+  })
+
+  it('is assignable to commandRunner`s own type', () => {
+    const r = rig()
+    const asRunner: Pick<
+      CommandRunner,
+      'callRunner' | 'runWineCommand' | 'getWinePath' | 'runScriptForGame'
+    > = r.adapter
+    expect(Object.keys(asRunner).sort()).toEqual([
+      'callRunner',
+      'getWinePath',
+      'runScriptForGame',
+      'runWineCommand'
+    ])
+  })
+})
+
+describe('settleWineCommandResult', () => {
+  it('hands on a result with a code, a null code or none', () => {
+    for (const reply of [
+      { stdout: '', stderr: '', code: 0 },
+      { stdout: '', stderr: '', code: null },
+      { stdout: '', stderr: 'Invalid wine' }
+    ]) {
+      expect(settleWineCommandResult(reply)).toBe(reply)
+    }
+  })
+
+  it.each([
+    null,
+    'x',
+    {},
+    { stdout: 'a' },
+    { stdout: 'a', stderr: 'b', code: 'zero' }
+  ])('refuses %j', (reply) => {
+    expect(() => settleWineCommandResult(reply)).toThrow('not a command result')
+  })
+})
+
+describe('createRunnerAdapter.getWinePath', () => {
+  it('sends the path, the settings and the variant, and answers the string', async () => {
+    const r = rig(() => '/unix/path')
+    expect(
+      await r.adapter.getWinePath({
+        path: 'C:\\Windows',
+        gameSettings: WINE_SETTINGS,
+        variant: 'unix'
+      })
+    ).toBe('/unix/path')
+    const { channel, args } = invokeAt(r, 0)
+    expect(channel).toBe(RUST_LAUNCH_WINE_PATH)
+    expect(() =>
+      rustInvokeArgs[RUST_LAUNCH_WINE_PATH].parse(args)
+    ).not.toThrow()
+    expect(args[0]).toMatchObject({ path: 'C:\\Windows', variant: 'unix' })
+    // No flush and no log: it asks winepath and nothing else.
+    expect(r.events).toEqual(['invoke'])
+  })
+
+  it('leaves the variant out when it is not given, answers an empty path as empty and refuses a reply that is not text', async () => {
+    const r = rig(() => '')
+    expect(
+      await r.adapter.getWinePath({ path: '/x', gameSettings: WINE_SETTINGS })
+    ).toBe('')
+    expect(invokeAt(r, 0).args[0]).not.toHaveProperty('variant')
+    const bad = rig(() => ({ nope: true }))
+    await expect(
+      bad.adapter.getWinePath({ path: '/x', gameSettings: WINE_SETTINGS })
+    ).rejects.toThrow('not a path')
+  })
+})
+
+describe('createRunnerAdapter.runScriptForGame', () => {
+  const gameInfo = {
+    app_name: 'app-1',
+    runner: 'gog',
+    title: 'Ünïcode "Title"',
+    install: {
+      executable: 'bin/game',
+      install_path: '/games/app-1'
+    }
+  } as unknown as GameInfo
+
+  it('sends the script path, the HEROIC fields and the exact JSON.stringify text', async () => {
+    const r = rig(() => true)
+    const writer = new LogWriter(GAME_TARGET, false)
+    const answer = await r.adapter.runScriptForGame(
+      gameInfo,
+      WINE_SETTINGS,
+      'before',
+      writer
+    )
+    expect(answer).toBe(true)
+    const { channel, args } = invokeAt(r, 0)
+    expect(channel).toBe(RUST_LAUNCH_SCRIPT_RUN)
+    const [request] = args as [Record<string, unknown>]
+    expect(() =>
+      rustInvokeArgs[RUST_LAUNCH_SCRIPT_RUN].parse(args)
+    ).not.toThrow()
+    expect(request).toEqual({
+      scriptPath: '/scripts/before.sh',
+      stage: 'before',
+      appName: 'app-1',
+      executable: 'bin/game',
+      prefix: '/prefix',
+      runner: 'gog',
+      title: 'Ünïcode "Title"',
+      installPath: '/games/app-1',
+      settingsJson: JSON.stringify(WINE_SETTINGS),
+      infoJson: JSON.stringify(gameInfo),
+      verbose: true,
+      logTarget: { target: GAME_TARGET, disabled: false, rotate: true }
+    })
+    // Verbose logs: the flush precedes the call so the TS lines of the writer come first.
+    expect(r.events).toEqual(['flushed', 'invoke'])
+  })
+
+  it('hands the writer off only when verbose logs are on, so its rotation is not spent on a silent script', async () => {
+    const r = rig(() => true)
+    const writer = new LogWriter(GAME_TARGET, false)
+    const quiet = { ...WINE_SETTINGS, verboseLogs: false } as GameSettings
+    await r.adapter.runScriptForGame(gameInfo, quiet, 'after', writer)
+    const [request] = invokeAt(r, 0).args as [Record<string, unknown>]
+    expect(request.scriptPath).toBe('/scripts/after.sh')
+    expect(request.stage).toBe('after')
+    expect(request).not.toHaveProperty('verbose')
+    expect(request).not.toHaveProperty('logTarget')
+    expect(r.events).toEqual(['invoke'])
+    expect(writer.handOff()).toMatchObject({ rotate: true })
+  })
+
+  it('leaves out the facts the game does not have', async () => {
+    const r = rig(() => true)
+    const bare = { app_name: 'a', runner: 'gog', title: 'T' } as GameInfo
+    const settings = {
+      beforeLaunchScriptPath: '/s.sh',
+      verboseLogs: false
+    } as unknown as GameSettings
+    await r.adapter.runScriptForGame(
+      bare,
+      settings,
+      'before',
+      new LogWriter(GAME_TARGET, false)
+    )
+    const [request] = invokeAt(r, 0).args as [Record<string, unknown>]
+    for (const key of ['executable', 'prefix', 'installPath']) {
+      expect(request).not.toHaveProperty(key)
+    }
+  })
+
+  it('rejects with the Rust text as an Error when the script could not be started', async () => {
+    const r = rig(() => {
+      throw new Error('No such file or directory (os error 2)')
+    })
+    await expect(
+      r.adapter.runScriptForGame(
+        gameInfo,
+        WINE_SETTINGS,
+        'before',
+        new LogWriter(GAME_TARGET, false)
+      )
+    ).rejects.toThrow('No such file or directory (os error 2)')
+  })
+
+  it('refuses settings that name no script before it calls Rust', async () => {
+    const r = rig(() => true)
+    await expect(
+      r.adapter.runScriptForGame(
+        gameInfo,
+        { verboseLogs: false } as unknown as GameSettings,
+        'before',
+        new LogWriter(GAME_TARGET, false)
+      )
+    ).rejects.toThrow('no script')
+    expect(r.invokes).toHaveLength(0)
+  })
 })
