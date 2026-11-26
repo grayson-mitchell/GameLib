@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: "88.2"
 current_phase_name: Command runner and game processes
 status: executing
-stopped_at: Completed 88.2-17-PLAN.md
-last_updated: "2026-11-26T23:24:54.372Z"
+stopped_at: Completed 88.2-18-PLAN.md
+last_updated: "2026-11-26T23:49:57.598Z"
 last_activity: 2026-11-26
 last_activity_desc: Phase 88.2 execution started
-state_head: 516cd8424fe55490cef5f6c0cbe587dea0ee54cb
+state_head: c40054242af0958636b1d2e08a8e920656828108
 progress:
   total_phases: 25
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-25)
 ## Current Position
 
 Phase: 88.2 (Command runner and game processes) — EXECUTING
-Plan: 18 of 25
+Plan: 19 of 25
 Status: Ready to execute
 Last activity: 2026-11-26 — Phase 88.2 execution started
 Progress: [████████████████░░░░] 204/257 plans ([█████████░] 92%)
@@ -564,6 +564,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 88.2 P15 | 2 h | 2 tasks | 16 files |
 | Phase 88.2 P16 | 60 min | 2 tasks | 7 files |
 | Phase 88.2 P17 | 15 min | 2 tasks | 14 files |
+| Phase 88.2 P18 | 35 min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -1274,6 +1275,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 88.2]: 88.2-15: createRunnerStreams takes { kill(streamId) } so runnerStream.ts does not import the shim file; launch_runner_kill answers a boolean at the shell (count > 0); frames behind a gap are held up to 256 then delivered past it, and close() flushes
 - [Phase 88.2]: 88.2-16: runner adapter flushes the log forwarder, then claims each writer's rotation (handOff) with no await before the invoke; abortAll stays local-only; logSanitizer maps to a Rust name by identity and an unknown function is refused
 - [Phase 88.2]: 88.2-17: runScriptForGame hands the game log writer off (claiming its rotation) only when verbose logs are on; a wine command's options cross as only env, wrappers and trackKey; spawnAsync carries timeoutMs as number or null
+- [Phase 88.2]: 88.2-18: ManagerHooks reach the TS managers over one long-running channel launchManagerCall ([op, {runner, appName}]); hooks look the sidecar up per call because the launch context is built before the sidecar spawns; every failure is HookError("sidecar") with no payload
 
 ### Pending Todos
 
@@ -1560,8 +1562,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-26T23:24:46.985Z
-Stopped at: Completed 88.2-17-PLAN.md
+Last session: 2026-11-26T23:49:54.271Z
+Stopped at: Completed 88.2-18-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
