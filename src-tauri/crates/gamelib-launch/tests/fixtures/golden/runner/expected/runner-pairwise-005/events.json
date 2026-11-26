@@ -1,0 +1,18 @@
+[
+  {
+    "level": "info",
+    "prefix": "Sideload",
+    "parts": [
+      "Running command:",
+      "GAMELIB_TEST_VALUE=\"a value with a space\" <TOOLS>/sideload/opt/gamelib/bin/sideload-run run --flag"
+    ]
+  },
+  {
+    "level": "info",
+    "prefix": "Sideload",
+    "parts": [
+      "Abort command",
+      "\"GAMELIB_TEST_VALUE=\"a value with a space\" <TOOLS>/sideload/opt/gamelib/bin/sideload-run run --flag\""
+    ]
+  }
+]

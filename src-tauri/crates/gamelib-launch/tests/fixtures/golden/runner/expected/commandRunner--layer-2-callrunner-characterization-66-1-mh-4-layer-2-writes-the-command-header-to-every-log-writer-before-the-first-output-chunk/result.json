@@ -1,0 +1,9 @@
+{
+  "results": [
+    {
+      "stdout": "first-chunk",
+      "stderr": "",
+      "fullCommand": "gogdl list l1-header"
+    }
+  ]
+}

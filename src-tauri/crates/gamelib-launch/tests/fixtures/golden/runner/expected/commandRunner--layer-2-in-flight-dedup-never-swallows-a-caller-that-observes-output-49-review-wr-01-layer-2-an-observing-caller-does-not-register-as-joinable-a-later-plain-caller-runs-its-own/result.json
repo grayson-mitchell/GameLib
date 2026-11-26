@@ -1,0 +1,18 @@
+{
+  "results": [
+    {
+      "stdout": "",
+      "stderr": "",
+      "fullCommand": "gogdl list-updates --json observer-first"
+    },
+    {
+      "stdout": "",
+      "stderr": "",
+      "fullCommand": "gogdl list-updates --json observer-first"
+    }
+  ],
+  "identical": [
+    0,
+    1
+  ]
+}

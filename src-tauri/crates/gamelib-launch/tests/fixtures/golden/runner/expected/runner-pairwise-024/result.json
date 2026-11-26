@@ -1,0 +1,10 @@
+{
+  "results": [
+    {
+      "stdout": "",
+      "stderr": "",
+      "fullCommand": "<TOOLS>/sideload/sideload-run run --flag",
+      "abort": true
+    }
+  ]
+}

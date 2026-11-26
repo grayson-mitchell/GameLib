@@ -1,0 +1,23 @@
+[
+  {
+    "seam": "abort.create",
+    "id": "app-legendary"
+  },
+  {
+    "seam": "errorHandler",
+    "error": "out-1err-1",
+    "appName": "app-legendary",
+    "runner": "legendary"
+  },
+  {
+    "seam": "errorHandler",
+    "error": "Process exited with code 1",
+    "appName": "app-legendary",
+    "runner": "legendary"
+  },
+  {
+    "seam": "abort.remove",
+    "id": "app-legendary",
+    "aborted": false
+  }
+]

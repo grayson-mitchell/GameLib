@@ -1,0 +1,23 @@
+[
+  {
+    "seam": "abort.create",
+    "id": "nonzero"
+  },
+  {
+    "seam": "errorHandler",
+    "error": "",
+    "appName": "nonzero",
+    "runner": "gog"
+  },
+  {
+    "seam": "errorHandler",
+    "error": "Process exited with code 1",
+    "appName": "nonzero",
+    "runner": "gog"
+  },
+  {
+    "seam": "abort.remove",
+    "id": "nonzero",
+    "aborted": false
+  }
+]

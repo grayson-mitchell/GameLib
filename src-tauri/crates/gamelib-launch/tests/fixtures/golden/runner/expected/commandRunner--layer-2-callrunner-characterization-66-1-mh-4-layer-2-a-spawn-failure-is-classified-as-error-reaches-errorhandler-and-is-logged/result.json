@@ -1,0 +1,10 @@
+{
+  "results": [
+    {
+      "stdout": "",
+      "stderr": "spawn gogdl ENOENT",
+      "fullCommand": "gogdl list enoent",
+      "error": "spawn gogdl ENOENT"
+    }
+  ]
+}

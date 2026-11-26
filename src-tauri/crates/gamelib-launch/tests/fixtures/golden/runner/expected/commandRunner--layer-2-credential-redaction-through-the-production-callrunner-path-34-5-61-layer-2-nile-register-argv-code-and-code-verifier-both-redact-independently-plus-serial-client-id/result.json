@@ -1,0 +1,9 @@
+{
+  "results": [
+    {
+      "stdout": "",
+      "stderr": "",
+      "fullCommand": "gogdl register --code <redacted> --code-verifier <redacted> --serial <redacted> --client-id <redacted>"
+    }
+  ]
+}

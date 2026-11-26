@@ -1,0 +1,10 @@
+[
+  {
+    "level": "info",
+    "prefix": "Gog",
+    "parts": [
+      "Launching Example:",
+      "GAMELIB_TEST_VALUE=\"a value with a space\" <TOOLS>/gog/gogdl launch /games/app-gog app-gog"
+    ]
+  }
+]

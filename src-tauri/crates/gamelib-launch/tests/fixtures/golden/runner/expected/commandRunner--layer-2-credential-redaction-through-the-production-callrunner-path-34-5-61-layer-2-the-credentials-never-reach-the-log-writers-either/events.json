@@ -1,0 +1,10 @@
+[
+  {
+    "level": "info",
+    "prefix": "Gog",
+    "parts": [
+      "Running command:",
+      "gogdl install a --password <redacted>"
+    ]
+  }
+]

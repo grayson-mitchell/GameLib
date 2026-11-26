@@ -1,0 +1,20 @@
+[
+  {
+    "level": "info",
+    "prefix": "Sideload",
+    "parts": [
+      "Launching Example:",
+      "LANG=en_NZ.UTF-8 sideload-run run --flag"
+    ]
+  },
+  {
+    "level": "error",
+    "prefix": "Sideload",
+    "parts": [
+      "Error running",
+      "command",
+      "\"LANG=en_NZ.UTF-8 sideload-run run --flag\":",
+      {}
+    ]
+  }
+]

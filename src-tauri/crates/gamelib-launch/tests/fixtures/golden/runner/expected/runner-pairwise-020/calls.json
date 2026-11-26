@@ -1,0 +1,11 @@
+[
+  {
+    "seam": "abort.create",
+    "id": "app-legendary"
+  },
+  {
+    "seam": "abort.remove",
+    "id": "app-legendary",
+    "aborted": false
+  }
+]

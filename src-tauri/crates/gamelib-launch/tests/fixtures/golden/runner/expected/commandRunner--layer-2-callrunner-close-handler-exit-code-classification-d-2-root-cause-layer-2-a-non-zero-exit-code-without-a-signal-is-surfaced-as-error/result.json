@@ -1,0 +1,10 @@
+{
+  "results": [
+    {
+      "stdout": "",
+      "stderr": "Process exited with code 1",
+      "fullCommand": "gogdl download nonzero",
+      "error": "Process exited with code 1"
+    }
+  ]
+}

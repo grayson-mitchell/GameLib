@@ -1,0 +1,506 @@
+[
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": true,
+    "line": {
+      "level": "INFO",
+      "prefix": "",
+      "message": "Running command: gogdl download app-gog --path /games \n\n"
+    }
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "line": {
+      "level": "INFO",
+      "prefix": "",
+      "message": "Game Output:"
+    }
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "progress 1/30\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "[gogdl] debug: chunk 1 verified\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "progress 2/30\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "[gogdl] debug: chunk 2 verified\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "progress 3/30\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "[gogdl] debug: chunk 3 verified\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "progress 4/30\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "[gogdl] debug: chunk 4 verified\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "progress 5/30\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "[gogdl] debug: chunk 5 verified\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "progress 6/30\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "[gogdl] debug: chunk 6 verified\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "progress 7/30\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "[gogdl] debug: chunk 7 verified\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "progress 8/30\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "[gogdl] debug: chunk 8 verified\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "progress 9/30\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "[gogdl] debug: chunk 9 verified\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "progress 10/30\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "[gogdl] debug: chunk 10 verified\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "progress 11/30\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "[gogdl] debug: chunk 11 verified\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "progress 12/30\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "[gogdl] debug: chunk 12 verified\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "progress 13/30\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "[gogdl] debug: chunk 13 verified\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "progress 14/30\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "[gogdl] debug: chunk 14 verified\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "progress 15/30\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "[gogdl] debug: chunk 15 verified\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "progress 16/30\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "[gogdl] debug: chunk 16 verified\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "progress 17/30\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "[gogdl] debug: chunk 17 verified\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "progress 18/30\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "[gogdl] debug: chunk 18 verified\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "progress 19/30\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "[gogdl] debug: chunk 19 verified\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "progress 20/30\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "[gogdl] debug: chunk 20 verified\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "progress 21/30\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "[gogdl] debug: chunk 21 verified\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "progress 22/30\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "[gogdl] debug: chunk 22 verified\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "progress 23/30\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "[gogdl] debug: chunk 23 verified\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "progress 24/30\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "[gogdl] debug: chunk 24 verified\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "progress 25/30\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "[gogdl] debug: chunk 25 verified\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "progress 26/30\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "[gogdl] debug: chunk 26 verified\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "progress 27/30\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "[gogdl] debug: chunk 27 verified\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "progress 28/30\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "[gogdl] debug: chunk 28 verified\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "progress 29/30\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "[gogdl] debug: chunk 29 verified\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "progress 30/30\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "[gogdl] debug: chunk 30 verified\n"
+  }
+]

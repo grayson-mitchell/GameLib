@@ -1,0 +1,18 @@
+[
+  {
+    "level": "info",
+    "prefix": "Legendary",
+    "parts": [
+      "Launching Example:",
+      "LANG=en_NZ.UTF-8 powershell -NoProfile Start-Process \"`\"<TOOLS>/legendary/legendary`\"\" -Wait -NoNewWindow -ArgumentList \"`\"launch`\"\",\"`\"app-legendary`\"\""
+    ]
+  },
+  {
+    "level": "info",
+    "prefix": "Legendary",
+    "parts": [
+      "Abort command",
+      "\"LANG=en_NZ.UTF-8 powershell -NoProfile Start-Process \"`\"<TOOLS>/legendary/legendary`\"\" -Wait -NoNewWindow -ArgumentList \"`\"launch`\"\",\"`\"app-legendary`\"\"\""
+    ]
+  }
+]

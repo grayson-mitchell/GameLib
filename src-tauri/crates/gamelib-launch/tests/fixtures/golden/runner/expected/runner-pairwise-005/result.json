@@ -1,0 +1,10 @@
+{
+  "results": [
+    {
+      "stdout": "",
+      "stderr": "",
+      "fullCommand": "GAMELIB_TEST_VALUE=\"a value with a space\" <TOOLS>/sideload/opt/gamelib/bin/sideload-run run --flag",
+      "abort": true
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+[
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": true,
+    "line": {
+      "level": "INFO",
+      "prefix": "",
+      "message": "Running command: L2_ENV_SHARED=from-options L2_ENV_OPT=opt gogdl list l1-env \n\n"
+    }
+  }
+]

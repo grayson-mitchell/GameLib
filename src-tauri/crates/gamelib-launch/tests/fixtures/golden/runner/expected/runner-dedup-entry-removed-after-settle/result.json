@@ -1,0 +1,19 @@
+{
+  "results": [
+    {
+      "stdout": "",
+      "stderr": "",
+      "fullCommand": "legendary list --json"
+    },
+    {
+      "stdout": "",
+      "stderr": "",
+      "fullCommand": "legendary list --json"
+    },
+    {
+      "stdout": "",
+      "stderr": "",
+      "fullCommand": "legendary list --json"
+    }
+  ]
+}

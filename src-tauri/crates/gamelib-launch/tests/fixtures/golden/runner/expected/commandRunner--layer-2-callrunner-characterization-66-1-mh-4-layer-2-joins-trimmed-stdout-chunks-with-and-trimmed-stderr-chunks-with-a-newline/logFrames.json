@@ -1,0 +1,46 @@
+[
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": true,
+    "line": {
+      "level": "INFO",
+      "prefix": "",
+      "message": "Running command: gogdl list l1-join \n\n"
+    }
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": " a \n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "\n b "
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": " x \n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": " y "
+  }
+]

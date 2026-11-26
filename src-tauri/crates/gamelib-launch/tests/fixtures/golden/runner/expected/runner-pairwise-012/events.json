@@ -1,0 +1,20 @@
+[
+  {
+    "level": "info",
+    "prefix": "Sideload",
+    "parts": [
+      "Launching Example:",
+      "sideload-run run --flag"
+    ]
+  },
+  {
+    "level": "error",
+    "prefix": "Sideload",
+    "parts": [
+      "Error running",
+      "command",
+      "\"sideload-run run --flag\":",
+      {}
+    ]
+  }
+]

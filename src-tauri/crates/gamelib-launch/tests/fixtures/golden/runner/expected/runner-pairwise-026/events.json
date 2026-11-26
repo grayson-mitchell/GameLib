@@ -1,0 +1,18 @@
+[
+  {
+    "level": "info",
+    "prefix": "Legendary",
+    "parts": [
+      "Launching Example:",
+      "<TOOLS>/legendary/legendary launch app-legendary"
+    ]
+  },
+  {
+    "level": "info",
+    "prefix": "Legendary",
+    "parts": [
+      "Abort command",
+      "\"<TOOLS>/legendary/legendary launch app-legendary\""
+    ]
+  }
+]

@@ -1,0 +1,9 @@
+{
+  "results": [
+    {
+      "stdout": "",
+      "stderr": "",
+      "fullCommand": "nile update --flag app-nile"
+    }
+  ]
+}

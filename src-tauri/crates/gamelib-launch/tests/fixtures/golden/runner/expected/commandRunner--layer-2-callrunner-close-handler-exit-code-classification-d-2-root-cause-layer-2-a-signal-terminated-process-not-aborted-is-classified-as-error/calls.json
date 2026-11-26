@@ -1,0 +1,23 @@
+[
+  {
+    "seam": "abort.create",
+    "id": "sig"
+  },
+  {
+    "seam": "errorHandler",
+    "error": "",
+    "appName": "sig",
+    "runner": "gog"
+  },
+  {
+    "seam": "errorHandler",
+    "error": "Process terminated with signal SIGTERM",
+    "appName": "sig",
+    "runner": "gog"
+  },
+  {
+    "seam": "abort.remove",
+    "id": "sig",
+    "aborted": false
+  }
+]

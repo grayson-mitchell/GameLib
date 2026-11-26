@@ -1,0 +1,9 @@
+{
+  "results": [
+    {
+      "stdout": "",
+      "stderr": "",
+      "fullCommand": "powershell -NoProfile Start-Process \"`\"gogdl`\"\" -Wait -NoNewWindow -ArgumentList \"`\"register`\"\",\"`\"--code`\"\",\"`\"<redacted>`\"\",\"`\"--code-verifier`\"\",\"`\"<redacted>`\"\",\"`\"--serial`\"\",\"`\"<redacted>`\"\",\"`\"--client-id`\"\",\"`\"<redacted>`\"\",\"`\"--password`\"\",\"`\"<redacted>`\"\""
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "results": [
+    {
+      "stdout": "out-1",
+      "stderr": "err-1",
+      "fullCommand": "LANG=en_NZ.UTF-8 /opt/gamelib/bin/nile launch --flag app-nile"
+    }
+  ]
+}

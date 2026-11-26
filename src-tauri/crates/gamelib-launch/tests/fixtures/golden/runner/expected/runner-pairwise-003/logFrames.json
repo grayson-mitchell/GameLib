@@ -1,0 +1,30 @@
+[
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": true,
+    "line": {
+      "level": "INFO",
+      "prefix": "",
+      "message": "Running command: LANG=en_NZ.UTF-8 powershell -NoProfile Start-Process \"`\"<TOOLS>/gog/gogdl`\"\" -Wait -NoNewWindow -ArgumentList \"`\"list`\"\" \n\n"
+    }
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "out-1\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "err-1\n"
+  }
+]

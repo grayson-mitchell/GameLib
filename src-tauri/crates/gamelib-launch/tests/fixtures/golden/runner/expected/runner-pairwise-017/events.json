@@ -1,0 +1,20 @@
+[
+  {
+    "level": "info",
+    "prefix": "Nile",
+    "parts": [
+      "Launching Example:",
+      "powershell -NoProfile Start-Process \"`\"<TOOLS>/nile/nile`\"\" -Wait -NoNewWindow -ArgumentList \"`\"library`\"\",\"`\"list`\"\""
+    ]
+  },
+  {
+    "level": "error",
+    "prefix": "Nile",
+    "parts": [
+      "Error running",
+      "command",
+      "\"powershell -NoProfile Start-Process \"`\"<TOOLS>/nile/nile`\"\" -Wait -NoNewWindow -ArgumentList \"`\"library`\"\",\"`\"list`\"\"\":",
+      {}
+    ]
+  }
+]

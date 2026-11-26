@@ -1,0 +1,34 @@
+[
+  {
+    "level": "info",
+    "prefix": "Gog",
+    "parts": [
+      "Running command:",
+      "gogdl list-updates --json"
+    ]
+  },
+  {
+    "level": "info",
+    "prefix": "Gog",
+    "parts": [
+      "Running command:",
+      "gogdl list-updates --json"
+    ]
+  },
+  {
+    "level": "info",
+    "prefix": "Gog",
+    "parts": [
+      "Abort command",
+      "\"gogdl list-updates --json\""
+    ]
+  },
+  {
+    "level": "info",
+    "prefix": "Gog",
+    "parts": [
+      "Abort command",
+      "\"gogdl list-updates --json\""
+    ]
+  }
+]

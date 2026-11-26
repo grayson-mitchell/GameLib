@@ -1,0 +1,10 @@
+{
+  "results": [
+    {
+      "stdout": "",
+      "stderr": "spawn gogdl ENOENT",
+      "fullCommand": "LANG=en_NZ.UTF-8 <TOOLS>/gog/gogdl launch /games/app-gog app-gog",
+      "error": "spawn gogdl ENOENT"
+    }
+  ]
+}

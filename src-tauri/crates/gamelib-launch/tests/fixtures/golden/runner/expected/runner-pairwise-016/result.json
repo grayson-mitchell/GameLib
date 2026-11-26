@@ -1,0 +1,10 @@
+{
+  "results": [
+    {
+      "stdout": "",
+      "stderr": "spawn ./legendary ENOENT",
+      "fullCommand": "GAMELIB_TEST_VALUE=\"a value with a space\" <TOOLS>/legendary/legendary status",
+      "error": "spawn ./legendary ENOENT"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "results": [
+    {
+      "stdout": "",
+      "stderr": "",
+      "fullCommand": "powershell -NoProfile Start-Process \"`\"gogdl`\"\" -Wait -NoNewWindow -ArgumentList \"`\"a`\"\",\"`\"one`\"\""
+    },
+    {
+      "stdout": "",
+      "stderr": "",
+      "fullCommand": "powershell -NoProfile Start-Process \"`\"gogdl`\"\" -Wait -NoNewWindow -ArgumentList \"`\"a`\"\",\"`\"two`\"\""
+    }
+  ]
+}

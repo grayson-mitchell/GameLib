@@ -1,0 +1,22 @@
+[
+  {
+    "level": "info",
+    "prefix": "Sideload",
+    "parts": [
+      "Launching Example:",
+      "<TOOLS>/sideload/sideload-run run --flag"
+    ]
+  },
+  {
+    "level": "error",
+    "prefix": "Sideload",
+    "parts": [
+      "Error running",
+      "command",
+      "\"<TOOLS>/sideload/sideload-run run --flag\":",
+      {
+        "code": "ENOENT"
+      }
+    ]
+  }
+]

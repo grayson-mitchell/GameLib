@@ -1,0 +1,40 @@
+[
+  {
+    "program": "./gogdl",
+    "argv": [
+      "launch",
+      "/games/app-gog",
+      "app-gog"
+    ],
+    "env": {
+      "APPDATA": "<HOME>/AppData/Roaming",
+      "GAMELIB_TEST_VALUE": "a value with a space",
+      "HOME": "<HOME>",
+      "LANG": "C.UTF-8",
+      "LOCALAPPDATA": "<HOME>/AppData/Local",
+      "PATH": "/usr/bin:/bin",
+      "USER": "gamelib-oracle",
+      "USERPROFILE": "<HOME>",
+      "XDG_CACHE_HOME": "<HOME>/.cache",
+      "XDG_CONFIG_HOME": "<HOME>/.config",
+      "XDG_DATA_HOME": "<HOME>/.local/share",
+      "XDG_STATE_HOME": "<HOME>/.local/state"
+    },
+    "cwd": "<TOOLS>/gog",
+    "replaceEnv": true,
+    "resolveOn": null,
+    "track": {
+      "runner": "gog",
+      "key": "pairwise-abort"
+    },
+    "timeout": {
+      "none": true,
+      "reason": "store CLI downloads and installs run for as long as the transfer takes; the user cancels through the abort controller or killTracked"
+    },
+    "timeoutMs": null,
+    "windowsHide": false,
+    "hasSignal": true,
+    "callSite": "runner.call.launch",
+    "class": "game"
+  }
+]

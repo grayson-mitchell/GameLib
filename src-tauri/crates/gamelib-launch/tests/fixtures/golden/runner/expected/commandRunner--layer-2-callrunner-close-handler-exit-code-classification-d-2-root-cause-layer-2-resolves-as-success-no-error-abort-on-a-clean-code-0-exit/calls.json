@@ -1,0 +1,17 @@
+[
+  {
+    "seam": "abort.create",
+    "id": "clean"
+  },
+  {
+    "seam": "errorHandler",
+    "error": "",
+    "appName": "clean",
+    "runner": "gog"
+  },
+  {
+    "seam": "abort.remove",
+    "id": "clean",
+    "aborted": false
+  }
+]

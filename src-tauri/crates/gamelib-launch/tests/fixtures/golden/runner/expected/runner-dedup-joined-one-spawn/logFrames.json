@@ -1,0 +1,34 @@
+[
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "legendary"
+    },
+    "rotate": true,
+    "line": {
+      "level": "INFO",
+      "prefix": "",
+      "message": "Running command: legendary list --json \n\n"
+    }
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "legendary"
+    },
+    "rotate": false,
+    "line": {
+      "level": "INFO",
+      "prefix": "",
+      "message": "Running command: legendary list --json \n\n"
+    }
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "legendary"
+    },
+    "rotate": false,
+    "raw": "joined\n"
+  }
+]

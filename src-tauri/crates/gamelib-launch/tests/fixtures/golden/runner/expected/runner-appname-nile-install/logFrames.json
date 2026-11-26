@@ -1,0 +1,26 @@
+[
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "nile"
+    },
+    "rotate": true,
+    "line": {
+      "level": "INFO",
+      "prefix": "",
+      "message": "Running command: nile install --flag app-nile \n\n"
+    }
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "nile"
+    },
+    "rotate": false,
+    "line": {
+      "level": "INFO",
+      "prefix": "",
+      "message": "Game Output:"
+    }
+  }
+]

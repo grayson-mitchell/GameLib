@@ -1,0 +1,11 @@
+[
+  {
+    "seam": "abort.create",
+    "id": "skip-abort"
+  },
+  {
+    "seam": "abort.remove",
+    "id": "skip-abort",
+    "aborted": true
+  }
+]

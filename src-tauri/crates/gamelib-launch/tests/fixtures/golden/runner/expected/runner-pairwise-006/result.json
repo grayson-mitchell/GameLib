@@ -1,0 +1,10 @@
+{
+  "results": [
+    {
+      "stdout": "",
+      "stderr": "spawn ./nile ENOENT",
+      "fullCommand": "<TOOLS>/nile/nile launch --flag app-nile",
+      "error": "spawn ./nile ENOENT"
+    }
+  ]
+}

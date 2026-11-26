@@ -1,0 +1,28 @@
+[
+  {
+    "target": {
+      "kind": "game",
+      "appName": "game-writer",
+      "runner": "gog",
+      "type": "launch"
+    },
+    "rotate": true,
+    "line": {
+      "level": "INFO",
+      "prefix": "",
+      "message": "Running command: gogdl install a --password <redacted> \n\n"
+    }
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": true,
+    "line": {
+      "level": "INFO",
+      "prefix": "",
+      "message": "Running command: gogdl install a --password <redacted> \n\n"
+    }
+  }
+]

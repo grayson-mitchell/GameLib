@@ -1,0 +1,28 @@
+[
+  {
+    "seam": "searchForExecutableOnPath",
+    "executable": "powershell",
+    "found": true
+  },
+  {
+    "seam": "abort.create",
+    "id": "0.4242"
+  },
+  {
+    "seam": "errorHandler",
+    "error": "out-1err-1",
+    "appName": "",
+    "runner": "gog"
+  },
+  {
+    "seam": "errorHandler",
+    "error": "Process terminated with signal SIGTERM",
+    "appName": "",
+    "runner": "gog"
+  },
+  {
+    "seam": "abort.remove",
+    "id": "0.4242",
+    "aborted": false
+  }
+]

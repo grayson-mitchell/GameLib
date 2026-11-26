@@ -1,0 +1,19 @@
+{
+  "results": [
+    {
+      "stdout": "",
+      "stderr": "",
+      "fullCommand": "gogdl list closure",
+      "abort": true
+    },
+    {
+      "stdout": "",
+      "stderr": "",
+      "fullCommand": "gogdl list closure"
+    }
+  ],
+  "identical": [
+    0,
+    1
+  ]
+}

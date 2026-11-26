@@ -1,0 +1,8 @@
+[
+  {
+    "seam": "commandToArgsArray",
+    "command": {
+      "foo": 1
+    }
+  }
+]

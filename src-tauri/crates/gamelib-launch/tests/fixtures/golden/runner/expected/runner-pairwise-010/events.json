@@ -1,0 +1,18 @@
+[
+  {
+    "level": "info",
+    "prefix": "Gog",
+    "parts": [
+      "Launching Example:",
+      "GAMELIB_TEST_VALUE=\"a value with a space\" powershell -NoProfile Start-Process \"`\"<TOOLS>/gog/gogdl`\"\" -Wait -NoNewWindow -ArgumentList \"`\"launch`\"\",\"`\"/games/app-gog`\"\",\"`\"app-gog`\"\""
+    ]
+  },
+  {
+    "level": "info",
+    "prefix": "Gog",
+    "parts": [
+      "Abort command",
+      "\"GAMELIB_TEST_VALUE=\"a value with a space\" powershell -NoProfile Start-Process \"`\"<TOOLS>/gog/gogdl`\"\" -Wait -NoNewWindow -ArgumentList \"`\"launch`\"\",\"`\"/games/app-gog`\"\",\"`\"app-gog`\"\"\""
+    ]
+  }
+]

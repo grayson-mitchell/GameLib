@@ -1,0 +1,22 @@
+[
+  {
+    "level": "info",
+    "prefix": "Nile",
+    "parts": [
+      "Launching Example:",
+      "<TOOLS>/nile/nile launch --flag app-nile"
+    ]
+  },
+  {
+    "level": "error",
+    "prefix": "Nile",
+    "parts": [
+      "Error running",
+      "command",
+      "\"<TOOLS>/nile/nile launch --flag app-nile\":",
+      {
+        "code": "ENOENT"
+      }
+    ]
+  }
+]

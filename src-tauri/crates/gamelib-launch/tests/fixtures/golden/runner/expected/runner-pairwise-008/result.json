@@ -1,0 +1,10 @@
+{
+  "results": [
+    {
+      "stdout": "",
+      "stderr": "Process exited with code 1",
+      "fullCommand": "LANG=en_NZ.UTF-8 sideload-run run --flag",
+      "error": "Process exited with code 1"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+[
+  {
+    "level": "info",
+    "prefix": "Legendary",
+    "parts": [
+      "Launching Example:",
+      "<TOOLS>/legendary/legendary launch app-legendary"
+    ]
+  }
+]

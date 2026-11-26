@@ -1,0 +1,22 @@
+[
+  {
+    "level": "info",
+    "prefix": "Legendary",
+    "parts": [
+      "Launching Example:",
+      "GAMELIB_TEST_VALUE=\"a value with a space\" <TOOLS>/legendary/legendary status"
+    ]
+  },
+  {
+    "level": "error",
+    "prefix": "Legendary",
+    "parts": [
+      "Error running",
+      "command",
+      "\"GAMELIB_TEST_VALUE=\"a value with a space\" <TOOLS>/legendary/legendary status\":",
+      {
+        "code": "ENOENT"
+      }
+    ]
+  }
+]

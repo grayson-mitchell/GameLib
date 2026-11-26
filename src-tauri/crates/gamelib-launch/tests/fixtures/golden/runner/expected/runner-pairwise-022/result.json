@@ -1,0 +1,10 @@
+{
+  "results": [
+    {
+      "stdout": "",
+      "stderr": "Process exited with code 1",
+      "fullCommand": "GAMELIB_TEST_VALUE=\"a value with a space\" <TOOLS>/gog/gogdl launch /games/app-gog app-gog",
+      "error": "Process exited with code 1"
+    }
+  ]
+}

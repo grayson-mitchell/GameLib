@@ -1,0 +1,14 @@
+[
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "sideload"
+    },
+    "rotate": true,
+    "line": {
+      "level": "INFO",
+      "prefix": "",
+      "message": "Running command: sideload run app-sideload \n\n"
+    }
+  }
+]

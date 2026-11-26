@@ -1,0 +1,30 @@
+[
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "nile"
+    },
+    "rotate": true,
+    "line": {
+      "level": "INFO",
+      "prefix": "",
+      "message": "Launching Example: powershell -NoProfile Start-Process \"`\"<TOOLS>/nile/nile`\"\" -Wait -NoNewWindow -ArgumentList \"`\"library`\"\",\"`\"list`\"\" \n\n"
+    }
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "nile"
+    },
+    "rotate": false,
+    "raw": "out-1\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "nile"
+    },
+    "rotate": false,
+    "raw": "err-1\n"
+  }
+]

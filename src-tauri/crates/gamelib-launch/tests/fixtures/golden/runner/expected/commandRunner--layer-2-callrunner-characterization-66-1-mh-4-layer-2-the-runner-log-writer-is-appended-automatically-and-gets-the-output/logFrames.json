@@ -1,0 +1,22 @@
+[
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": true,
+    "line": {
+      "level": "INFO",
+      "prefix": "",
+      "message": "Running command: gogdl list runner-writer \n\n"
+    }
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "to-runner-log"
+  }
+]

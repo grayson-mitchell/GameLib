@@ -1,0 +1,17 @@
+[
+  {
+    "seam": "abort.create",
+    "id": "pairwise-abort"
+  },
+  {
+    "seam": "errorHandler",
+    "error": "out-1err-1",
+    "appName": "",
+    "runner": "sideload"
+  },
+  {
+    "seam": "abort.remove",
+    "id": "pairwise-abort",
+    "aborted": false
+  }
+]

@@ -1,0 +1,14 @@
+[
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "nile"
+    },
+    "rotate": true,
+    "line": {
+      "level": "INFO",
+      "prefix": "",
+      "message": "Running command: nile install app-nile \n\n"
+    }
+  }
+]

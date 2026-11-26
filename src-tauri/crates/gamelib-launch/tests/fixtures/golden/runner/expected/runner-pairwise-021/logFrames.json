@@ -1,0 +1,42 @@
+[
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "legendary"
+    },
+    "rotate": true,
+    "line": {
+      "level": "INFO",
+      "prefix": "",
+      "message": "Launching Example: LANG=en_NZ.UTF-8 powershell -NoProfile Start-Process \"`\"<TOOLS>/legendary/legendary`\"\" -Wait -NoNewWindow -ArgumentList \"`\"launch`\"\",\"`\"app-legendary`\"\" \n\n"
+    }
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "legendary"
+    },
+    "rotate": false,
+    "line": {
+      "level": "INFO",
+      "prefix": "",
+      "message": "Game Output:"
+    }
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "legendary"
+    },
+    "rotate": false,
+    "raw": "out-1\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "legendary"
+    },
+    "rotate": false,
+    "raw": "err-1\n"
+  }
+]

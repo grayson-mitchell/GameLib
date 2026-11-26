@@ -1,0 +1,37 @@
+[
+  {
+    "seam": "searchForExecutableOnPath",
+    "executable": "powershell",
+    "found": true
+  },
+  {
+    "seam": "abort.create",
+    "id": "0.4242"
+  },
+  {
+    "seam": "errorHandler",
+    "error": "",
+    "appName": "",
+    "runner": "gog"
+  },
+  {
+    "seam": "abort.remove",
+    "id": "0.4242",
+    "aborted": false
+  },
+  {
+    "seam": "abort.create",
+    "id": "0.4242"
+  },
+  {
+    "seam": "errorHandler",
+    "error": "",
+    "appName": "",
+    "runner": "gog"
+  },
+  {
+    "seam": "abort.remove",
+    "id": "0.4242",
+    "aborted": false
+  }
+]

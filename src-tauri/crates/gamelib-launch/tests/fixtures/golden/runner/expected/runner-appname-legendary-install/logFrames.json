@@ -1,0 +1,26 @@
+[
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "legendary"
+    },
+    "rotate": true,
+    "line": {
+      "level": "INFO",
+      "prefix": "",
+      "message": "Running command: legendary install app-legendary \n\n"
+    }
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "legendary"
+    },
+    "rotate": false,
+    "line": {
+      "level": "INFO",
+      "prefix": "",
+      "message": "Game Output:"
+    }
+  }
+]

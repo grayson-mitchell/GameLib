@@ -1,0 +1,30 @@
+[
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "sideload"
+    },
+    "rotate": true,
+    "line": {
+      "level": "INFO",
+      "prefix": "",
+      "message": "Launching Example: LANG=en_NZ.UTF-8 sideload-run run --flag \n\n"
+    }
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "sideload"
+    },
+    "rotate": false,
+    "raw": "out-1\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "sideload"
+    },
+    "rotate": false,
+    "raw": "err-1\n"
+  }
+]

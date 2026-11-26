@@ -1,0 +1,10 @@
+{
+  "results": [
+    {
+      "stdout": "",
+      "stderr": "Process exited with code 1",
+      "fullCommand": "powershell -NoProfile Start-Process \"`\"<TOOLS>/nile/nile`\"\" -Wait -NoNewWindow -ArgumentList \"`\"library`\"\",\"`\"list`\"\"",
+      "error": "Process exited with code 1"
+    }
+  ]
+}

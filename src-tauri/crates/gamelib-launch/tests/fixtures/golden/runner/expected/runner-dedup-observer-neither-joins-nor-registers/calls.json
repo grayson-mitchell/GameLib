@@ -1,0 +1,32 @@
+[
+  {
+    "seam": "abort.create",
+    "id": "dedup-observer"
+  },
+  {
+    "seam": "abort.create",
+    "id": "dedup-first"
+  },
+  {
+    "seam": "errorHandler",
+    "error": "observed",
+    "appName": "",
+    "runner": "legendary"
+  },
+  {
+    "seam": "errorHandler",
+    "error": "shared",
+    "appName": "",
+    "runner": "legendary"
+  },
+  {
+    "seam": "abort.remove",
+    "id": "dedup-observer",
+    "aborted": false
+  },
+  {
+    "seam": "abort.remove",
+    "id": "dedup-first",
+    "aborted": false
+  }
+]

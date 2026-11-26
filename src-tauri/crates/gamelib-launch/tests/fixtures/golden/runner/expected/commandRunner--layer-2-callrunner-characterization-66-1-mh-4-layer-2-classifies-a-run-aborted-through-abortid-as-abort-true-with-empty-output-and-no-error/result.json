@@ -1,0 +1,10 @@
+{
+  "results": [
+    {
+      "stdout": "",
+      "stderr": "",
+      "fullCommand": "gogdl list l1-abort",
+      "abort": true
+    }
+  ]
+}

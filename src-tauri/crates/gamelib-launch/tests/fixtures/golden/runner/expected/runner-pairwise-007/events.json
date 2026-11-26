@@ -1,0 +1,22 @@
+[
+  {
+    "level": "info",
+    "prefix": "Gog",
+    "parts": [
+      "Running command:",
+      "powershell -NoProfile Start-Process \"`\"/opt/gamelib/bin/gogdl`\"\" -Wait -NoNewWindow -ArgumentList \"`\"launch`\"\",\"`\"/games/app-gog`\"\",\"`\"app-gog`\"\""
+    ]
+  },
+  {
+    "level": "error",
+    "prefix": "Gog",
+    "parts": [
+      "Error running",
+      "command",
+      "\"powershell -NoProfile Start-Process \"`\"/opt/gamelib/bin/gogdl`\"\" -Wait -NoNewWindow -ArgumentList \"`\"launch`\"\",\"`\"/games/app-gog`\"\",\"`\"app-gog`\"\"\":",
+      {
+        "code": "ENOENT"
+      }
+    ]
+  }
+]

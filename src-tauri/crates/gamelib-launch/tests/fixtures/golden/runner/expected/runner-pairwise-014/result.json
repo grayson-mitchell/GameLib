@@ -1,0 +1,10 @@
+{
+  "results": [
+    {
+      "stdout": "",
+      "stderr": "Process terminated with signal SIGTERM",
+      "fullCommand": "<TOOLS>/nile/opt/gamelib/bin/nile launch --flag app-nile",
+      "error": "Process terminated with signal SIGTERM"
+    }
+  ]
+}

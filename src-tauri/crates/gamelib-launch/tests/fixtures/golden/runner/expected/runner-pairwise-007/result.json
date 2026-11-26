@@ -1,0 +1,10 @@
+{
+  "results": [
+    {
+      "stdout": "",
+      "stderr": "spawn powershell ENOENT",
+      "fullCommand": "powershell -NoProfile Start-Process \"`\"/opt/gamelib/bin/gogdl`\"\" -Wait -NoNewWindow -ArgumentList \"`\"launch`\"\",\"`\"/games/app-gog`\"\",\"`\"app-gog`\"\"",
+      "error": "spawn powershell ENOENT"
+    }
+  ]
+}

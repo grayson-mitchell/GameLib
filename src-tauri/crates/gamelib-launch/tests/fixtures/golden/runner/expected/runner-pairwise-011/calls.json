@@ -1,0 +1,22 @@
+[
+  {
+    "seam": "searchForExecutableOnPath",
+    "executable": "powershell",
+    "found": false
+  },
+  {
+    "seam": "abort.create",
+    "id": "app-legendary"
+  },
+  {
+    "seam": "errorHandler",
+    "error": "out-1err-1",
+    "appName": "app-legendary",
+    "runner": "legendary"
+  },
+  {
+    "seam": "abort.remove",
+    "id": "app-legendary",
+    "aborted": false
+  }
+]

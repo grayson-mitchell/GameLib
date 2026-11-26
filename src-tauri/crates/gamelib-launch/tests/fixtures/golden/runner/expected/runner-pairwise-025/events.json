@@ -1,0 +1,18 @@
+[
+  {
+    "level": "info",
+    "prefix": "Nile",
+    "parts": [
+      "Launching Example:",
+      "<TOOLS>/nile/nile launch --flag app-nile"
+    ]
+  },
+  {
+    "level": "info",
+    "prefix": "Nile",
+    "parts": [
+      "Abort command",
+      "\"<TOOLS>/nile/nile launch --flag app-nile\""
+    ]
+  }
+]

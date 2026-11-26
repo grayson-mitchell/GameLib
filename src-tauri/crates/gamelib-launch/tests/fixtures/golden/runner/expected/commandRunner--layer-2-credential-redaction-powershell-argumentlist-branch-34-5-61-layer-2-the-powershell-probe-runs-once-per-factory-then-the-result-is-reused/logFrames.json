@@ -1,0 +1,26 @@
+[
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": true,
+    "line": {
+      "level": "INFO",
+      "prefix": "",
+      "message": "Running command: powershell -NoProfile Start-Process \"`\"gogdl`\"\" -Wait -NoNewWindow -ArgumentList \"`\"a`\"\",\"`\"one`\"\" \n\n"
+    }
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "line": {
+      "level": "INFO",
+      "prefix": "",
+      "message": "Running command: powershell -NoProfile Start-Process \"`\"gogdl`\"\" -Wait -NoNewWindow -ArgumentList \"`\"a`\"\",\"`\"two`\"\" \n\n"
+    }
+  }
+]

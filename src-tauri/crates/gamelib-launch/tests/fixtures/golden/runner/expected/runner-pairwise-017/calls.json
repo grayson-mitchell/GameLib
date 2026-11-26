@@ -1,0 +1,16 @@
+[
+  {
+    "seam": "searchForExecutableOnPath",
+    "executable": "powershell",
+    "found": true
+  },
+  {
+    "seam": "abort.create",
+    "id": "0.4242"
+  },
+  {
+    "seam": "abort.remove",
+    "id": "0.4242",
+    "aborted": false
+  }
+]

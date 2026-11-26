@@ -1,0 +1,9 @@
+{
+  "results": [
+    {
+      "stdout": "",
+      "stderr": "",
+      "fullCommand": "L2_ENV_SHARED=from-options L2_ENV_OPT=opt gogdl list l1-env"
+    }
+  ]
+}

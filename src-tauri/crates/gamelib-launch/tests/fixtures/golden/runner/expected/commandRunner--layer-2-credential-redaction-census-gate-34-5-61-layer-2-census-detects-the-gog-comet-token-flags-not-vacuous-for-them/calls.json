@@ -1,0 +1,17 @@
+[
+  {
+    "seam": "abort.create",
+    "id": "refresh-census"
+  },
+  {
+    "seam": "errorHandler",
+    "error": "",
+    "appName": "refresh-census",
+    "runner": "gog"
+  },
+  {
+    "seam": "abort.remove",
+    "id": "refresh-census",
+    "aborted": false
+  }
+]

@@ -1,0 +1,9 @@
+{
+  "results": [
+    {
+      "stdout": "token=SECRET",
+      "stderr": "err=SECRET",
+      "fullCommand": "gogdl list l1-sanitizer"
+    }
+  ]
+}

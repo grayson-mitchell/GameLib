@@ -1,0 +1,10 @@
+{
+  "results": [
+    {
+      "stdout": "",
+      "stderr": "Process exited with code 1",
+      "fullCommand": "/opt/gamelib/bin/legendary launch app-legendary",
+      "error": "Process exited with code 1"
+    }
+  ]
+}

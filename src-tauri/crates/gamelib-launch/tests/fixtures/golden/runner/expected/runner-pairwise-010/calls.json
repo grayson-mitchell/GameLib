@@ -1,0 +1,22 @@
+[
+  {
+    "seam": "searchForExecutableOnPath",
+    "executable": "powershell",
+    "found": true
+  },
+  {
+    "seam": "abort.create",
+    "id": "app-gog"
+  },
+  {
+    "seam": "errorHandler",
+    "error": "out-1err-1",
+    "appName": "app-gog",
+    "runner": "gog"
+  },
+  {
+    "seam": "abort.remove",
+    "id": "app-gog",
+    "aborted": true
+  }
+]

@@ -40,5 +40,3830 @@
         "code": 0
       }
     ]
+  },
+  {
+    "id": "commandRunner--layer-2-callrunner-close-handler-exit-code-classification-d-2-root-cause-layer-2-resolves-as-success-no-error-abort-on-a-clean-code-0-exit",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gogdl"
+        },
+        "commandParts": [
+          "download",
+          "clean"
+        ]
+      }
+    ],
+    "script": [
+      {
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-callrunner-close-handler-exit-code-classification-d-2-root-cause-layer-2-a-non-zero-exit-code-without-a-signal-is-surfaced-as-error",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gogdl"
+        },
+        "commandParts": [
+          "download",
+          "nonzero"
+        ]
+      }
+    ],
+    "script": [
+      {
+        "code": 1
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-callrunner-close-handler-exit-code-classification-d-2-root-cause-layer-2-a-signal-terminated-process-not-aborted-is-classified-as-error",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gogdl"
+        },
+        "commandParts": [
+          "download",
+          "sig"
+        ]
+      }
+    ],
+    "script": [
+      {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-callrunner-close-handler-exit-code-classification-d-2-root-cause-layer-2-a-non-zero-exit-after-the-abort-controller-was-aborted-is-abort-not-error",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gogdl"
+        },
+        "commandParts": [
+          "download",
+          "aborted"
+        ],
+        "options": {
+          "abortId": "aborted"
+        }
+      }
+    ],
+    "script": [
+      {
+        "code": 1,
+        "abortAfterExit": true
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-callrunner-close-handler-exit-code-classification-d-2-root-cause-layer-2-a-signal-terminated-process-after-abort-is-abort-held-run-abort-signal",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gogdl"
+        },
+        "commandParts": [
+          "download",
+          "aborted-signal"
+        ],
+        "options": {
+          "abortId": "aborted-signal"
+        }
+      }
+    ],
+    "script": [
+      {
+        "hold": true,
+        "abortWhileHeld": true
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-an-intended-kill-reads-as-a-cancellation-not-an-error-66-1-23-a-signal-exit-the-runner-marks-killedbyus-is-abort-even-with-no-abort-controller-signalled",
+    "callSite": "runner.call.launch",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gogdl"
+        },
+        "commandParts": [
+          "launch",
+          "x",
+          "stopped"
+        ],
+        "options": {
+          "abortId": "stopped"
+        }
+      }
+    ],
+    "script": [
+      {
+        "code": null,
+        "signal": "SIGTERM",
+        "killedByUs": true
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-an-intended-kill-reads-as-a-cancellation-not-an-error-66-1-23-a-signal-exit-not-marked-killedbyus-still-surfaces-as-an-error-the-marker-is-the-only-cancel-signal",
+    "callSite": "runner.call.launch",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gogdl"
+        },
+        "commandParts": [
+          "launch",
+          "x",
+          "crash"
+        ],
+        "options": {
+          "abortId": "crash"
+        }
+      }
+    ],
+    "script": [
+      {
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-an-intended-kill-reads-as-a-cancellation-not-an-error-66-1-23-a-non-zero-exit-marked-killedbyus-graceful-shutdown-after-sigterm-is-abort-too",
+    "callSite": "runner.call.launch",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gogdl"
+        },
+        "commandParts": [
+          "launch",
+          "x",
+          "graceful"
+        ],
+        "options": {
+          "abortId": "graceful"
+        }
+      }
+    ],
+    "script": [
+      {
+        "code": 1,
+        "killedByUs": true
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-in-flight-dedup-never-swallows-a-caller-that-observes-output-49-review-wr-01-layer-2-a-second-caller-with-identical-argv-and-an-onoutput-observer-gets-its-own-run-and-sees-the-stream",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "concurrent": true,
+    "calls": [
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gogdl"
+        },
+        "commandParts": [
+          "list-updates",
+          "--json"
+        ],
+        "options": {
+          "abortId": "lib-caller"
+        }
+      },
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gogdl"
+        },
+        "commandParts": [
+          "list-updates",
+          "--json"
+        ],
+        "options": {
+          "abortId": "probe-caller",
+          "observe": true
+        }
+      }
+    ],
+    "script": [
+      {
+        "hold": true,
+        "abortWhileHeld": true
+      },
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "[]\n"
+          }
+        ],
+        "hold": true,
+        "abortWhileHeld": true
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-in-flight-dedup-never-swallows-a-caller-that-observes-output-49-review-wr-01-layer-2-two-callers-without-an-observer-still-share-one-run-dedup-unchanged",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "concurrent": true,
+    "calls": [
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gogdl"
+        },
+        "commandParts": [
+          "list-updates",
+          "--json",
+          "dedup-control"
+        ],
+        "options": {
+          "abortId": "a"
+        }
+      },
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gogdl"
+        },
+        "commandParts": [
+          "list-updates",
+          "--json",
+          "dedup-control"
+        ],
+        "options": {
+          "abortId": "b"
+        }
+      }
+    ],
+    "script": [
+      {
+        "hold": true
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-in-flight-dedup-never-swallows-a-caller-that-observes-output-49-review-wr-01-layer-2-an-observing-caller-does-not-register-as-joinable-a-later-plain-caller-runs-its-own",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "concurrent": true,
+    "calls": [
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gogdl"
+        },
+        "commandParts": [
+          "list-updates",
+          "--json",
+          "observer-first"
+        ],
+        "options": {
+          "abortId": "probe-first",
+          "observe": true
+        }
+      },
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gogdl"
+        },
+        "commandParts": [
+          "list-updates",
+          "--json",
+          "observer-first"
+        ],
+        "options": {
+          "abortId": "plain-second"
+        }
+      }
+    ],
+    "script": [
+      {
+        "hold": true
+      },
+      {
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-in-flight-dedup-never-swallows-a-caller-that-observes-output-49-review-wr-01-layer-2-the-dedup-entry-is-released-when-the-run-settles-so-a-later-identical-call-runs-again",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gogdl"
+        },
+        "commandParts": [
+          "list",
+          "again"
+        ]
+      },
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gogdl"
+        },
+        "commandParts": [
+          "list",
+          "again"
+        ]
+      }
+    ],
+    "script": [
+      {
+        "code": 0
+      },
+      {
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-in-flight-dedup-never-swallows-a-caller-that-observes-output-49-review-wr-01-layer-2-the-in-flight-map-lives-in-the-factory-closure-not-module-scope",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "concurrent": true,
+    "instances": 2,
+    "calls": [
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gogdl"
+        },
+        "commandParts": [
+          "list",
+          "closure"
+        ],
+        "options": {
+          "abortId": "x"
+        },
+        "instance": 0
+      },
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gogdl"
+        },
+        "commandParts": [
+          "list",
+          "closure"
+        ],
+        "options": {
+          "abortId": "y"
+        },
+        "instance": 1
+      }
+    ],
+    "script": [
+      {
+        "hold": true,
+        "abortWhileHeld": true
+      },
+      {
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-credential-redaction-through-the-production-callrunner-path-34-5-61-layer-2-nile-register-argv-code-and-code-verifier-both-redact-independently-plus-serial-client-id",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gogdl"
+        },
+        "commandParts": [
+          "register",
+          "--code",
+          "code-123",
+          "--code-verifier",
+          "verifier-456",
+          "--serial",
+          "serial-789",
+          "--client-id",
+          "client-012"
+        ]
+      }
+    ],
+    "script": [
+      {
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-credential-redaction-through-the-production-callrunner-path-34-5-61-layer-2-gog-password-argv-raw-private-branch-password-redacted",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gogdl"
+        },
+        "commandParts": [
+          "install",
+          "someAppId",
+          "--password",
+          "pw-xyz789"
+        ]
+      }
+    ],
+    "script": [
+      {
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-credential-redaction-through-the-production-callrunner-path-34-5-61-layer-2-gog-comet-token-argv-261110-vdk-access-token-and-refresh-token-both-redacted",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gogdl"
+        },
+        "commandParts": [
+          "comet",
+          "--access-token",
+          "access-4f1a",
+          "--refresh-token",
+          "refresh-9c3e"
+        ]
+      }
+    ],
+    "script": [
+      {
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-credential-redaction-through-the-production-callrunner-path-34-5-61-layer-2-the-credentials-never-reach-the-log-writers-either",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gogdl"
+        },
+        "commandParts": [
+          "install",
+          "a",
+          "--password",
+          "pw-w"
+        ],
+        "options": {
+          "extraWriters": 1
+        }
+      }
+    ],
+    "script": [
+      {
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-credential-redaction-through-the-production-callrunner-path-34-5-61-layer-2-getrunnercallwithoutcredentials-takes-the-legendary-command-array-converter-as-a-dep",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "direct": {
+      "command": {
+        "foo": 1
+      },
+      "runnerPath": "legendary",
+      "converts": [
+        "auth",
+        "--token",
+        "legendary-secret"
+      ]
+    },
+    "calls": [],
+    "script": []
+  },
+  {
+    "id": "commandRunner--layer-2-credential-redaction-powershell-argumentlist-branch-34-5-61-layer-2-redacts-every-added-flag-inside-the-argumentlist-string-not-just-the-array-member-branch",
+    "callSite": "runner.call",
+    "platform": "win32",
+    "onPath": [
+      "powershell"
+    ],
+    "calls": [
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gogdl"
+        },
+        "commandParts": [
+          "register",
+          "--code",
+          "code-123",
+          "--code-verifier",
+          "verifier-456",
+          "--serial",
+          "serial-789",
+          "--client-id",
+          "client-012",
+          "--password",
+          "pw-xyz789"
+        ]
+      }
+    ],
+    "script": [
+      {
+        "program": "powershell",
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-credential-redaction-powershell-argumentlist-branch-34-5-61-layer-2-the-powershell-probe-runs-once-per-factory-then-the-result-is-reused",
+    "callSite": "runner.call",
+    "platform": "win32",
+    "onPath": [
+      "powershell"
+    ],
+    "calls": [
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gogdl"
+        },
+        "commandParts": [
+          "a",
+          "one"
+        ]
+      },
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gogdl"
+        },
+        "commandParts": [
+          "a",
+          "two"
+        ]
+      }
+    ],
+    "script": [
+      {
+        "program": "powershell",
+        "code": 0
+      },
+      {
+        "program": "powershell",
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-credential-redaction-powershell-argumentlist-branch-34-5-61-layer-2-without-powershell-on-win32-the-runner-binary-is-spawned-directly",
+    "callSite": "runner.call",
+    "platform": "win32",
+    "onPath": [],
+    "calls": [
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gogdl"
+        },
+        "commandParts": [
+          "a",
+          "direct"
+        ]
+      }
+    ],
+    "script": [
+      {
+        "program": "gogdl",
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-credential-redaction-census-gate-34-5-61-layer-2-non-vacuity-anchor-the-redaction-list-extracted-from-source-contains-all-eight-flags",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "note": "one argv carrying all eight flags: every value is redacted, so the list holds all eight",
+    "calls": [
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gogdl"
+        },
+        "commandParts": [
+          "register",
+          "--code",
+          "code-1",
+          "--token",
+          "token-1",
+          "--code-verifier",
+          "verifier-1",
+          "--password",
+          "pw-1",
+          "--serial",
+          "serial-1",
+          "--client-id",
+          "client-1",
+          "--access-token",
+          "access-1",
+          "--refresh-token",
+          "refresh-1"
+        ]
+      }
+    ],
+    "script": [
+      {
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-credential-redaction-census-gate-34-5-61-layer-2-census-detects-the-gog-comet-token-flags-not-vacuous-for-them",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "note": "the two comet token flags on their own, with a command word between them",
+    "calls": [
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gogdl"
+        },
+        "commandParts": [
+          "comet",
+          "--access-token",
+          "access-census",
+          "launch",
+          "--refresh-token",
+          "refresh-census"
+        ]
+      }
+    ],
+    "script": [
+      {
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-credential-redaction-census-gate-34-5-61-layer-2-every-credential-bearing-flag-literal-in-backend-source-is-a-member-of-the-redaction-list",
+    "callSite": "runner.call",
+    "platform": "win32",
+    "onPath": [
+      "powershell"
+    ],
+    "note": "all eight flags through the PowerShell branch, where the list is applied to the -ArgumentList string",
+    "calls": [
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gogdl"
+        },
+        "commandParts": [
+          "register",
+          "--code",
+          "code-1",
+          "--token",
+          "token-1",
+          "--code-verifier",
+          "verifier-1",
+          "--password",
+          "pw-1",
+          "--serial",
+          "serial-1",
+          "--client-id",
+          "client-1",
+          "--access-token",
+          "access-1",
+          "--refresh-token",
+          "refresh-1"
+        ]
+      }
+    ],
+    "script": [
+      {
+        "program": "powershell",
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-callrunner-skiperrorhandler-49-03-49-spec-p2-layer-2-test-1-a-failing-run-with-skiperrorhandler-never-reaches-errorhandler-yet-onoutput-saw-the-stderr-chunk-verbatim",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gogdl"
+        },
+        "commandParts": [
+          "status",
+          "skip-fail"
+        ],
+        "options": {
+          "skipErrorHandler": true,
+          "observe": true
+        }
+      }
+    ],
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stderr",
+            "text": "Stored credentials are no longer valid! Please login again."
+          }
+        ],
+        "code": 1
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-callrunner-skiperrorhandler-49-03-49-spec-p2-layer-2-test-2-a-clean-exit-with-skiperrorhandler-never-reaches-errorhandler-and-carries-no-error-abort",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gogdl"
+        },
+        "commandParts": [
+          "status",
+          "skip-clean"
+        ],
+        "options": {
+          "skipErrorHandler": true
+        }
+      }
+    ],
+    "script": [
+      {
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-callrunner-skiperrorhandler-49-03-49-spec-p2-layer-2-test-3-without-the-option-the-same-failing-run-still-reaches-errorhandler",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gogdl"
+        },
+        "commandParts": [
+          "status",
+          "default-fail"
+        ]
+      }
+    ],
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stderr",
+            "text": "Stored credentials are no longer valid! Please login again."
+          }
+        ],
+        "code": 1
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-callrunner-skiperrorhandler-49-03-49-spec-p2-layer-2-test-4-with-skiperrorhandler-an-aborted-run-is-abort-and-never-reaches-errorhandler",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gogdl"
+        },
+        "commandParts": [
+          "status",
+          "skip-abort"
+        ],
+        "options": {
+          "abortId": "skip-abort",
+          "skipErrorHandler": true
+        }
+      }
+    ],
+    "script": [
+      {
+        "hold": true,
+        "abortWhileHeld": true
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-callrunner-characterization-66-1-mh-4-layer-2-tracks-the-run-under-trackkey-with-the-runner-name-else-under-the-abortid-alone",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gogdl"
+        },
+        "commandParts": [
+          "list",
+          "l1-trackkey"
+        ],
+        "options": {
+          "trackKey": "my-key",
+          "abortId": "ignored-abort"
+        }
+      },
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gogdl"
+        },
+        "commandParts": [
+          "list",
+          "l1-abortkey"
+        ],
+        "options": {
+          "abortId": "my-abort"
+        }
+      }
+    ],
+    "script": [
+      {
+        "code": 0
+      },
+      {
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-callrunner-characterization-66-1-mh-4-layer-2-runs-with-the-option-cwd-and-an-env-where-option-keys-win-over-process-env",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "processEnv": {
+      "L2_ENV_SENTINEL": "from-process",
+      "L2_ENV_SHARED": "from-process"
+    },
+    "calls": [
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gogdl"
+        },
+        "commandParts": [
+          "list",
+          "l1-env"
+        ],
+        "options": {
+          "cwd": "<TMP>/l1/cwd",
+          "env": {
+            "L2_ENV_SHARED": "from-options",
+            "L2_ENV_OPT": "opt"
+          }
+        }
+      }
+    ],
+    "script": [
+      {
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-callrunner-characterization-66-1-mh-4-layer-2-a-runner-dir-joins-the-cwd-and-prefixes-a-relative-bin-with-off-windows",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gogdl",
+          "dir": "<TOOLS>/gogdl"
+        },
+        "commandParts": [
+          "list",
+          "dir"
+        ]
+      }
+    ],
+    "script": [
+      {
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-callrunner-characterization-66-1-mh-4-layer-2-writes-the-command-header-to-every-log-writer-before-the-first-output-chunk",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gogdl"
+        },
+        "commandParts": [
+          "list",
+          "l1-header"
+        ],
+        "options": {
+          "extraWriters": 1
+        }
+      }
+    ],
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "first-chunk"
+          }
+        ],
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-callrunner-characterization-66-1-mh-4-layer-2-the-runner-log-writer-is-appended-automatically-and-gets-the-output",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gogdl"
+        },
+        "commandParts": [
+          "list",
+          "runner-writer"
+        ]
+      }
+    ],
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "to-runner-log"
+          }
+        ],
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-callrunner-characterization-66-1-mh-4-layer-2-applies-logsanitizer-to-the-writers-but-hands-onoutput-the-raw-chunk",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gogdl"
+        },
+        "commandParts": [
+          "list",
+          "l1-sanitizer"
+        ],
+        "options": {
+          "extraWriters": 1,
+          "sanitizer": "mask-secret",
+          "observe": true
+        }
+      }
+    ],
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "token=SECRET"
+          },
+          {
+            "stream": "stderr",
+            "text": "err=SECRET"
+          }
+        ],
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-callrunner-characterization-66-1-mh-4-layer-2-joins-trimmed-stdout-chunks-with-and-trimmed-stderr-chunks-with-a-newline",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gogdl"
+        },
+        "commandParts": [
+          "list",
+          "l1-join"
+        ]
+      }
+    ],
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": " a \n"
+          },
+          {
+            "stream": "stdout",
+            "text": "\n b "
+          },
+          {
+            "stream": "stderr",
+            "text": " x \n"
+          },
+          {
+            "stream": "stderr",
+            "text": " y "
+          }
+        ],
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-callrunner-characterization-66-1-mh-4-layer-2-classifies-a-run-aborted-through-abortid-as-abort-true-with-empty-output-and-no-error",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gogdl"
+        },
+        "commandParts": [
+          "list",
+          "l1-abort"
+        ],
+        "options": {
+          "abortId": "l1-abort-id"
+        }
+      }
+    ],
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "partial"
+          }
+        ],
+        "hold": true,
+        "abortWhileHeld": true
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-callrunner-characterization-66-1-mh-4-layer-2-passes-the-documented-run-options-timeout-opt-out-with-a-reason-windowshide-false-replaceenv",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gogdl"
+        },
+        "commandParts": [
+          "list",
+          "opts"
+        ]
+      }
+    ],
+    "script": [
+      {
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-callrunner-characterization-66-1-mh-4-layer-2-a-spawn-failure-is-classified-as-error-reaches-errorhandler-and-is-logged",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gogdl"
+        },
+        "commandParts": [
+          "list",
+          "enoent"
+        ]
+      }
+    ],
+    "script": [
+      {
+        "throws": "ENOENT"
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-callrunner-characterization-66-1-mh-4-layer-2-removes-the-abort-registry-entry-once-the-call-settles",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gogdl"
+        },
+        "commandParts": [
+          "list",
+          "cleanup"
+        ],
+        "options": {
+          "abortId": "gone"
+        }
+      }
+    ],
+    "script": [
+      {
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "runner-dedup-joined-one-spawn",
+    "note": "two concurrent identical joinable calls produce one spawn and two equal results",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "concurrent": true,
+    "calls": [
+      {
+        "runner": {
+          "name": "legendary",
+          "bin": "legendary"
+        },
+        "commandParts": [
+          "list",
+          "--json"
+        ],
+        "options": {
+          "abortId": "dedup-a"
+        }
+      },
+      {
+        "runner": {
+          "name": "legendary",
+          "bin": "legendary"
+        },
+        "commandParts": [
+          "list",
+          "--json"
+        ],
+        "options": {
+          "abortId": "dedup-b"
+        }
+      }
+    ],
+    "script": [
+      {
+        "hold": true,
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "joined\n"
+          }
+        ],
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "runner-dedup-observer-neither-joins-nor-registers",
+    "note": "49-REVIEW WR-01: the observing caller runs its own and is not joinable; the two plain callers after it share one run",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "concurrent": true,
+    "calls": [
+      {
+        "runner": {
+          "name": "legendary",
+          "bin": "legendary"
+        },
+        "commandParts": [
+          "list",
+          "--json"
+        ],
+        "options": {
+          "abortId": "dedup-observer",
+          "observe": true
+        }
+      },
+      {
+        "runner": {
+          "name": "legendary",
+          "bin": "legendary"
+        },
+        "commandParts": [
+          "list",
+          "--json"
+        ],
+        "options": {
+          "abortId": "dedup-first"
+        }
+      },
+      {
+        "runner": {
+          "name": "legendary",
+          "bin": "legendary"
+        },
+        "commandParts": [
+          "list",
+          "--json"
+        ],
+        "options": {
+          "abortId": "dedup-second"
+        }
+      }
+    ],
+    "script": [
+      {
+        "hold": true,
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "observed\n"
+          }
+        ],
+        "code": 0
+      },
+      {
+        "hold": true,
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "shared\n"
+          }
+        ],
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "runner-dedup-entry-removed-after-settle",
+    "note": "the in-flight entry is gone once the run settles, so the third identical call spawns again",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "legendary",
+          "bin": "legendary"
+        },
+        "commandParts": [
+          "list",
+          "--json"
+        ],
+        "options": {
+          "abortId": "dedup-1"
+        }
+      },
+      {
+        "runner": {
+          "name": "legendary",
+          "bin": "legendary"
+        },
+        "commandParts": [
+          "list",
+          "--json"
+        ],
+        "options": {
+          "abortId": "dedup-2"
+        }
+      },
+      {
+        "runner": {
+          "name": "legendary",
+          "bin": "legendary"
+        },
+        "commandParts": [
+          "list",
+          "--json"
+        ],
+        "options": {
+          "abortId": "dedup-3"
+        }
+      }
+    ],
+    "script": [
+      {
+        "code": 0
+      },
+      {
+        "code": 0
+      },
+      {
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "runner-transcript-legendary-install-progress",
+    "note": "sixty stdout chunks, ten more than the fifty-message window: the result keeps the last fifty",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "legendary",
+          "bin": "legendary"
+        },
+        "commandParts": [
+          "install",
+          "app-legendary",
+          "--base-path",
+          "/games"
+        ],
+        "options": {
+          "observe": true
+        }
+      }
+    ],
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 1.67% (1/60), Running for 00:00:01, ETA: 00:00:59\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 3.33% (2/60), Running for 00:00:02, ETA: 00:00:58\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 5.00% (3/60), Running for 00:00:03, ETA: 00:00:57\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 6.67% (4/60), Running for 00:00:04, ETA: 00:00:56\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 8.33% (5/60), Running for 00:00:05, ETA: 00:00:55\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 10.00% (6/60), Running for 00:00:06, ETA: 00:00:54\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 11.67% (7/60), Running for 00:00:07, ETA: 00:00:53\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 13.33% (8/60), Running for 00:00:08, ETA: 00:00:52\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 15.00% (9/60), Running for 00:00:09, ETA: 00:00:51\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 16.67% (10/60), Running for 00:00:10, ETA: 00:00:50\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 18.33% (11/60), Running for 00:00:11, ETA: 00:00:49\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 20.00% (12/60), Running for 00:00:12, ETA: 00:00:48\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 21.67% (13/60), Running for 00:00:13, ETA: 00:00:47\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 23.33% (14/60), Running for 00:00:14, ETA: 00:00:46\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 25.00% (15/60), Running for 00:00:15, ETA: 00:00:45\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 26.67% (16/60), Running for 00:00:16, ETA: 00:00:44\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 28.33% (17/60), Running for 00:00:17, ETA: 00:00:43\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 30.00% (18/60), Running for 00:00:18, ETA: 00:00:42\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 31.67% (19/60), Running for 00:00:19, ETA: 00:00:41\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 33.33% (20/60), Running for 00:00:20, ETA: 00:00:40\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 35.00% (21/60), Running for 00:00:21, ETA: 00:00:39\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 36.67% (22/60), Running for 00:00:22, ETA: 00:00:38\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 38.33% (23/60), Running for 00:00:23, ETA: 00:00:37\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 40.00% (24/60), Running for 00:00:24, ETA: 00:00:36\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 41.67% (25/60), Running for 00:00:25, ETA: 00:00:35\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 43.33% (26/60), Running for 00:00:26, ETA: 00:00:34\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 45.00% (27/60), Running for 00:00:27, ETA: 00:00:33\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 46.67% (28/60), Running for 00:00:28, ETA: 00:00:32\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 48.33% (29/60), Running for 00:00:29, ETA: 00:00:31\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 50.00% (30/60), Running for 00:00:30, ETA: 00:00:30\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 51.67% (31/60), Running for 00:00:31, ETA: 00:00:29\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 53.33% (32/60), Running for 00:00:32, ETA: 00:00:28\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 55.00% (33/60), Running for 00:00:33, ETA: 00:00:27\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 56.67% (34/60), Running for 00:00:34, ETA: 00:00:26\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 58.33% (35/60), Running for 00:00:35, ETA: 00:00:25\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 60.00% (36/60), Running for 00:00:36, ETA: 00:00:24\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 61.67% (37/60), Running for 00:00:37, ETA: 00:00:23\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 63.33% (38/60), Running for 00:00:38, ETA: 00:00:22\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 65.00% (39/60), Running for 00:00:39, ETA: 00:00:21\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 66.67% (40/60), Running for 00:00:40, ETA: 00:00:20\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 68.33% (41/60), Running for 00:00:41, ETA: 00:00:19\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 70.00% (42/60), Running for 00:00:42, ETA: 00:00:18\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 71.67% (43/60), Running for 00:00:43, ETA: 00:00:17\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 73.33% (44/60), Running for 00:00:44, ETA: 00:00:16\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 75.00% (45/60), Running for 00:00:45, ETA: 00:00:15\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 76.67% (46/60), Running for 00:00:46, ETA: 00:00:14\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 78.33% (47/60), Running for 00:00:47, ETA: 00:00:13\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 80.00% (48/60), Running for 00:00:48, ETA: 00:00:12\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 81.67% (49/60), Running for 00:00:49, ETA: 00:00:11\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 83.33% (50/60), Running for 00:00:50, ETA: 00:00:10\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 85.00% (51/60), Running for 00:00:51, ETA: 00:00:09\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 86.67% (52/60), Running for 00:00:52, ETA: 00:00:08\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 88.33% (53/60), Running for 00:00:53, ETA: 00:00:07\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 90.00% (54/60), Running for 00:00:54, ETA: 00:00:06\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 91.67% (55/60), Running for 00:00:55, ETA: 00:00:05\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 93.33% (56/60), Running for 00:00:56, ETA: 00:00:04\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 95.00% (57/60), Running for 00:00:57, ETA: 00:00:03\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 96.67% (58/60), Running for 00:00:58, ETA: 00:00:02\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[DLManager] INFO: = Progress: 98.33% (59/60), Running for 00:00:59, ETA: 00:00:01\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "[cli] INFO: Finished installation process in 00:01:00\n"
+          }
+        ],
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "runner-transcript-gog-download-interleaved",
+    "note": "gogdl writes progress to stdout and its log lines to stderr, interleaved",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gogdl"
+        },
+        "commandParts": [
+          "download",
+          "app-gog",
+          "--path",
+          "/games"
+        ],
+        "options": {
+          "observe": true
+        }
+      }
+    ],
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "progress 1/30\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "[gogdl] debug: chunk 1 verified\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "progress 2/30\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "[gogdl] debug: chunk 2 verified\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "progress 3/30\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "[gogdl] debug: chunk 3 verified\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "progress 4/30\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "[gogdl] debug: chunk 4 verified\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "progress 5/30\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "[gogdl] debug: chunk 5 verified\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "progress 6/30\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "[gogdl] debug: chunk 6 verified\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "progress 7/30\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "[gogdl] debug: chunk 7 verified\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "progress 8/30\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "[gogdl] debug: chunk 8 verified\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "progress 9/30\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "[gogdl] debug: chunk 9 verified\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "progress 10/30\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "[gogdl] debug: chunk 10 verified\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "progress 11/30\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "[gogdl] debug: chunk 11 verified\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "progress 12/30\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "[gogdl] debug: chunk 12 verified\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "progress 13/30\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "[gogdl] debug: chunk 13 verified\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "progress 14/30\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "[gogdl] debug: chunk 14 verified\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "progress 15/30\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "[gogdl] debug: chunk 15 verified\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "progress 16/30\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "[gogdl] debug: chunk 16 verified\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "progress 17/30\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "[gogdl] debug: chunk 17 verified\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "progress 18/30\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "[gogdl] debug: chunk 18 verified\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "progress 19/30\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "[gogdl] debug: chunk 19 verified\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "progress 20/30\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "[gogdl] debug: chunk 20 verified\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "progress 21/30\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "[gogdl] debug: chunk 21 verified\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "progress 22/30\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "[gogdl] debug: chunk 22 verified\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "progress 23/30\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "[gogdl] debug: chunk 23 verified\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "progress 24/30\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "[gogdl] debug: chunk 24 verified\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "progress 25/30\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "[gogdl] debug: chunk 25 verified\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "progress 26/30\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "[gogdl] debug: chunk 26 verified\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "progress 27/30\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "[gogdl] debug: chunk 27 verified\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "progress 28/30\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "[gogdl] debug: chunk 28 verified\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "progress 29/30\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "[gogdl] debug: chunk 29 verified\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "progress 30/30\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "[gogdl] debug: chunk 30 verified\n"
+          }
+        ],
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "runner-transcript-nile-json-split",
+    "note": "one JSON reply split across chunks, two of the splits inside a string next to a space",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "nile",
+          "bin": "nile"
+        },
+        "commandParts": [
+          "library",
+          "list",
+          "--json"
+        ],
+        "options": {
+          "observe": true
+        }
+      }
+    ],
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "{\"games\": [{\"title\": \"Alpha "
+          },
+          {
+            "stream": "stdout",
+            "text": "Game\", \"id\": \"a1\"}, {\"title\": \"Beta"
+          },
+          {
+            "stream": "stdout",
+            "text": " Quest\", \"id\": \"b2\"}]}\n"
+          }
+        ],
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "runner-appname-gog-launch",
+    "callSite": "runner.call.launch",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gog"
+        },
+        "commandParts": [
+          "launch",
+          "/games/app-gog",
+          "app-gog",
+          "--flag"
+        ]
+      }
+    ],
+    "script": [
+      {
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "runner-appname-gog-launch-short",
+    "callSite": "runner.call.launch",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gog"
+        },
+        "commandParts": [
+          "launch",
+          "/games/only-path"
+        ]
+      }
+    ],
+    "script": [
+      {
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "runner-appname-gog-download",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gog"
+        },
+        "commandParts": [
+          "download",
+          "app-gog",
+          "--path",
+          "/games"
+        ]
+      }
+    ],
+    "script": [
+      {
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "runner-appname-gog-repair",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gog"
+        },
+        "commandParts": [
+          "repair",
+          "app-gog"
+        ]
+      }
+    ],
+    "script": [
+      {
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "runner-appname-gog-update",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gog"
+        },
+        "commandParts": [
+          "update",
+          "app-gog"
+        ]
+      }
+    ],
+    "script": [
+      {
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "runner-appname-gog-none",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gog"
+        },
+        "commandParts": [
+          "list"
+        ]
+      }
+    ],
+    "script": [
+      {
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "runner-appname-legendary-launch",
+    "callSite": "runner.call.launch",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "legendary",
+          "bin": "legendary"
+        },
+        "commandParts": [
+          "launch",
+          "app-legendary",
+          "--offline"
+        ]
+      }
+    ],
+    "script": [
+      {
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "runner-appname-legendary-install",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "legendary",
+          "bin": "legendary"
+        },
+        "commandParts": [
+          "install",
+          "app-legendary"
+        ]
+      }
+    ],
+    "script": [
+      {
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "runner-appname-legendary-repair",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "legendary",
+          "bin": "legendary"
+        },
+        "commandParts": [
+          "repair",
+          "app-legendary"
+        ]
+      }
+    ],
+    "script": [
+      {
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "runner-appname-legendary-update",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "legendary",
+          "bin": "legendary"
+        },
+        "commandParts": [
+          "update",
+          "app-legendary"
+        ]
+      }
+    ],
+    "script": [
+      {
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "runner-appname-legendary-none",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "legendary",
+          "bin": "legendary"
+        },
+        "commandParts": [
+          "status",
+          "--json"
+        ]
+      }
+    ],
+    "script": [
+      {
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "runner-appname-legendary-leading-empty",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "legendary",
+          "bin": "legendary"
+        },
+        "commandParts": [
+          "",
+          "launch",
+          "app-legendary"
+        ]
+      }
+    ],
+    "script": [
+      {
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "runner-appname-nile-launch",
+    "callSite": "runner.call.launch",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "nile",
+          "bin": "nile"
+        },
+        "commandParts": [
+          "launch",
+          "--flag",
+          "app-nile"
+        ]
+      }
+    ],
+    "script": [
+      {
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "runner-appname-nile-install",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "nile",
+          "bin": "nile"
+        },
+        "commandParts": [
+          "install",
+          "--flag",
+          "app-nile"
+        ]
+      }
+    ],
+    "script": [
+      {
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "runner-appname-nile-update",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "nile",
+          "bin": "nile"
+        },
+        "commandParts": [
+          "update",
+          "--flag",
+          "app-nile"
+        ]
+      }
+    ],
+    "script": [
+      {
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "runner-appname-nile-verify",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "nile",
+          "bin": "nile"
+        },
+        "commandParts": [
+          "verify",
+          "--flag",
+          "app-nile"
+        ]
+      }
+    ],
+    "script": [
+      {
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "runner-appname-nile-none",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "nile",
+          "bin": "nile"
+        },
+        "commandParts": [
+          "library",
+          "list"
+        ]
+      }
+    ],
+    "script": [
+      {
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "runner-appname-nile-trailing-empty",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "nile",
+          "bin": "nile"
+        },
+        "commandParts": [
+          "install",
+          "app-nile",
+          ""
+        ]
+      }
+    ],
+    "script": [
+      {
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "runner-appname-sideload-run",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "sideload",
+          "bin": "sideload"
+        },
+        "commandParts": [
+          "run",
+          "app-sideload"
+        ]
+      }
+    ],
+    "script": [
+      {
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "runner-pairwise-001",
+    "callSite": "runner.call.launch",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "legendary",
+          "bin": "legendary",
+          "dir": "<TOOLS>/legendary"
+        },
+        "commandParts": [
+          "launch",
+          "app-legendary"
+        ],
+        "options": {
+          "abortId": "pairwise-abort",
+          "observe": true,
+          "skipErrorHandler": true,
+          "logMessagePrefix": "Launching Example"
+        }
+      }
+    ],
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "out-1\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "err-1\n"
+          }
+        ],
+        "code": 0
+      }
+    ],
+    "axes": {
+      "runner": "legendary",
+      "platform": "linux",
+      "dir": "set",
+      "bin": "relative",
+      "env": "none",
+      "abortId": "explicit",
+      "onOutput": "set",
+      "skipErrorHandler": "true",
+      "logMessagePrefix": "set",
+      "outcome": "exit-0"
+    }
+  },
+  {
+    "id": "runner-pairwise-002",
+    "callSite": "runner.call.launch",
+    "platform": "darwin",
+    "calls": [
+      {
+        "runner": {
+          "name": "legendary",
+          "bin": "/opt/gamelib/bin/legendary"
+        },
+        "commandParts": [
+          "launch",
+          "app-legendary"
+        ],
+        "options": {
+          "env": {
+            "LANG": "C.UTF-8"
+          },
+          "skipErrorHandler": false
+        }
+      }
+    ],
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "out-1\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "err-1\n"
+          }
+        ],
+        "code": 1
+      }
+    ],
+    "axes": {
+      "runner": "legendary",
+      "platform": "darwin",
+      "dir": "unset",
+      "bin": "absolute",
+      "env": "base-equal",
+      "abortId": "derived",
+      "onOutput": "unset",
+      "skipErrorHandler": "false",
+      "logMessagePrefix": "unset",
+      "outcome": "exit-1"
+    }
+  },
+  {
+    "id": "runner-pairwise-003",
+    "callSite": "runner.call",
+    "platform": "win32",
+    "onPath": [
+      "powershell"
+    ],
+    "calls": [
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gogdl",
+          "dir": "<TOOLS>/gog"
+        },
+        "commandParts": [
+          "list"
+        ],
+        "options": {
+          "env": {
+            "LANG": "en_NZ.UTF-8"
+          },
+          "observe": true,
+          "skipErrorHandler": false
+        }
+      }
+    ],
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "out-1\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "err-1\n"
+          }
+        ],
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    ],
+    "axes": {
+      "runner": "gog",
+      "platform": "win32-powershell",
+      "dir": "set",
+      "bin": "relative",
+      "env": "differing",
+      "abortId": "absent",
+      "onOutput": "set",
+      "skipErrorHandler": "false",
+      "logMessagePrefix": "unset",
+      "outcome": "signal"
+    }
+  },
+  {
+    "id": "runner-pairwise-004",
+    "callSite": "runner.call",
+    "platform": "win32",
+    "calls": [
+      {
+        "runner": {
+          "name": "nile",
+          "bin": "/opt/gamelib/bin/nile"
+        },
+        "commandParts": [
+          "library",
+          "list"
+        ],
+        "options": {
+          "env": {
+            "GAMELIB_TEST_VALUE": "a value with a space"
+          },
+          "skipErrorHandler": true,
+          "logMessagePrefix": "Launching Example"
+        }
+      }
+    ],
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "out-1\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "err-1\n"
+          }
+        ],
+        "hold": true,
+        "abortWhileHeld": true
+      }
+    ],
+    "axes": {
+      "runner": "nile",
+      "platform": "win32-direct",
+      "dir": "unset",
+      "bin": "absolute",
+      "env": "with-space",
+      "abortId": "absent",
+      "onOutput": "unset",
+      "skipErrorHandler": "true",
+      "logMessagePrefix": "set",
+      "outcome": "aborted"
+    }
+  },
+  {
+    "id": "runner-pairwise-005",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "sideload",
+          "bin": "/opt/gamelib/bin/sideload-run",
+          "dir": "<TOOLS>/sideload"
+        },
+        "commandParts": [
+          "run",
+          "--flag"
+        ],
+        "options": {
+          "env": {
+            "GAMELIB_TEST_VALUE": "a value with a space"
+          },
+          "abortId": "pairwise-abort",
+          "skipErrorHandler": false
+        }
+      }
+    ],
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "out-1\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "err-1\n"
+          }
+        ],
+        "code": null,
+        "signal": "SIGTERM",
+        "killedByUs": true
+      }
+    ],
+    "axes": {
+      "runner": "sideload",
+      "platform": "linux",
+      "dir": "set",
+      "bin": "absolute",
+      "env": "with-space",
+      "abortId": "explicit",
+      "onOutput": "unset",
+      "skipErrorHandler": "false",
+      "logMessagePrefix": "unset",
+      "outcome": "killed"
+    }
+  },
+  {
+    "id": "runner-pairwise-006",
+    "callSite": "runner.call.launch",
+    "platform": "darwin",
+    "calls": [
+      {
+        "runner": {
+          "name": "nile",
+          "bin": "nile",
+          "dir": "<TOOLS>/nile"
+        },
+        "commandParts": [
+          "launch",
+          "--flag",
+          "app-nile"
+        ],
+        "options": {
+          "env": {
+            "LANG": "C.UTF-8"
+          },
+          "observe": true,
+          "skipErrorHandler": true,
+          "logMessagePrefix": "Launching Example"
+        }
+      }
+    ],
+    "script": [
+      {
+        "throws": "ENOENT"
+      }
+    ],
+    "axes": {
+      "runner": "nile",
+      "platform": "darwin",
+      "dir": "set",
+      "bin": "relative",
+      "env": "base-equal",
+      "abortId": "derived",
+      "onOutput": "set",
+      "skipErrorHandler": "true",
+      "logMessagePrefix": "set",
+      "outcome": "throw"
+    }
+  },
+  {
+    "id": "runner-pairwise-007",
+    "callSite": "runner.call.launch",
+    "platform": "win32",
+    "onPath": [
+      "powershell"
+    ],
+    "calls": [
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "/opt/gamelib/bin/gogdl"
+        },
+        "commandParts": [
+          "launch",
+          "/games/app-gog",
+          "app-gog"
+        ],
+        "options": {
+          "abortId": "pairwise-abort",
+          "skipErrorHandler": true
+        }
+      }
+    ],
+    "script": [
+      {
+        "throws": "ENOENT"
+      }
+    ],
+    "axes": {
+      "runner": "gog",
+      "platform": "win32-powershell",
+      "dir": "unset",
+      "bin": "absolute",
+      "env": "none",
+      "abortId": "explicit",
+      "onOutput": "unset",
+      "skipErrorHandler": "true",
+      "logMessagePrefix": "unset",
+      "outcome": "throw"
+    }
+  },
+  {
+    "id": "runner-pairwise-008",
+    "callSite": "runner.call",
+    "platform": "win32",
+    "calls": [
+      {
+        "runner": {
+          "name": "sideload",
+          "bin": "sideload-run"
+        },
+        "commandParts": [
+          "run",
+          "--flag"
+        ],
+        "options": {
+          "env": {
+            "LANG": "en_NZ.UTF-8"
+          },
+          "abortId": "pairwise-abort",
+          "observe": true,
+          "skipErrorHandler": true,
+          "logMessagePrefix": "Launching Example"
+        }
+      }
+    ],
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "out-1\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "err-1\n"
+          }
+        ],
+        "code": 1
+      }
+    ],
+    "axes": {
+      "runner": "sideload",
+      "platform": "win32-direct",
+      "dir": "unset",
+      "bin": "relative",
+      "env": "differing",
+      "abortId": "explicit",
+      "onOutput": "set",
+      "skipErrorHandler": "true",
+      "logMessagePrefix": "set",
+      "outcome": "exit-1"
+    }
+  },
+  {
+    "id": "runner-pairwise-009",
+    "callSite": "runner.call.launch",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "nile",
+          "bin": "/opt/gamelib/bin/nile"
+        },
+        "commandParts": [
+          "launch",
+          "--flag",
+          "app-nile"
+        ],
+        "options": {
+          "env": {
+            "LANG": "en_NZ.UTF-8"
+          },
+          "skipErrorHandler": false
+        }
+      }
+    ],
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "out-1\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "err-1\n"
+          }
+        ],
+        "code": 0
+      }
+    ],
+    "axes": {
+      "runner": "nile",
+      "platform": "linux",
+      "dir": "unset",
+      "bin": "absolute",
+      "env": "differing",
+      "abortId": "derived",
+      "onOutput": "unset",
+      "skipErrorHandler": "false",
+      "logMessagePrefix": "unset",
+      "outcome": "exit-0"
+    }
+  },
+  {
+    "id": "runner-pairwise-010",
+    "callSite": "runner.call.launch",
+    "platform": "win32",
+    "onPath": [
+      "powershell"
+    ],
+    "calls": [
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gogdl",
+          "dir": "<TOOLS>/gog"
+        },
+        "commandParts": [
+          "launch",
+          "/games/app-gog",
+          "app-gog"
+        ],
+        "options": {
+          "env": {
+            "GAMELIB_TEST_VALUE": "a value with a space"
+          },
+          "observe": true,
+          "skipErrorHandler": false,
+          "logMessagePrefix": "Launching Example"
+        }
+      }
+    ],
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "out-1\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "err-1\n"
+          }
+        ],
+        "hold": true,
+        "abortWhileHeld": true
+      }
+    ],
+    "axes": {
+      "runner": "gog",
+      "platform": "win32-powershell",
+      "dir": "set",
+      "bin": "relative",
+      "env": "with-space",
+      "abortId": "derived",
+      "onOutput": "set",
+      "skipErrorHandler": "false",
+      "logMessagePrefix": "set",
+      "outcome": "aborted"
+    }
+  },
+  {
+    "id": "runner-pairwise-011",
+    "callSite": "runner.call.launch",
+    "platform": "win32",
+    "calls": [
+      {
+        "runner": {
+          "name": "legendary",
+          "bin": "legendary",
+          "dir": "<TOOLS>/legendary"
+        },
+        "commandParts": [
+          "launch",
+          "app-legendary"
+        ],
+        "options": {
+          "observe": true,
+          "skipErrorHandler": false,
+          "logMessagePrefix": "Launching Example"
+        }
+      }
+    ],
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "out-1\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "err-1\n"
+          }
+        ],
+        "code": null,
+        "signal": "SIGTERM",
+        "killedByUs": true
+      }
+    ],
+    "axes": {
+      "runner": "legendary",
+      "platform": "win32-direct",
+      "dir": "set",
+      "bin": "relative",
+      "env": "none",
+      "abortId": "derived",
+      "onOutput": "set",
+      "skipErrorHandler": "false",
+      "logMessagePrefix": "set",
+      "outcome": "killed"
+    }
+  },
+  {
+    "id": "runner-pairwise-012",
+    "callSite": "runner.call",
+    "platform": "darwin",
+    "calls": [
+      {
+        "runner": {
+          "name": "sideload",
+          "bin": "sideload-run"
+        },
+        "commandParts": [
+          "run",
+          "--flag"
+        ],
+        "options": {
+          "skipErrorHandler": true,
+          "logMessagePrefix": "Launching Example"
+        }
+      }
+    ],
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "out-1\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "err-1\n"
+          }
+        ],
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    ],
+    "axes": {
+      "runner": "sideload",
+      "platform": "darwin",
+      "dir": "unset",
+      "bin": "relative",
+      "env": "none",
+      "abortId": "absent",
+      "onOutput": "unset",
+      "skipErrorHandler": "true",
+      "logMessagePrefix": "set",
+      "outcome": "signal"
+    }
+  },
+  {
+    "id": "runner-pairwise-013",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "/opt/gamelib/bin/gogdl"
+        },
+        "commandParts": [
+          "list"
+        ],
+        "options": {
+          "env": {
+            "LANG": "C.UTF-8"
+          },
+          "observe": true,
+          "skipErrorHandler": true,
+          "logMessagePrefix": "Launching Example"
+        }
+      }
+    ],
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "out-1\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "err-1\n"
+          }
+        ],
+        "code": null,
+        "signal": "SIGTERM",
+        "killedByUs": true
+      }
+    ],
+    "axes": {
+      "runner": "gog",
+      "platform": "linux",
+      "dir": "unset",
+      "bin": "absolute",
+      "env": "base-equal",
+      "abortId": "absent",
+      "onOutput": "set",
+      "skipErrorHandler": "true",
+      "logMessagePrefix": "set",
+      "outcome": "killed"
+    }
+  },
+  {
+    "id": "runner-pairwise-014",
+    "callSite": "runner.call.launch",
+    "platform": "win32",
+    "calls": [
+      {
+        "runner": {
+          "name": "nile",
+          "bin": "/opt/gamelib/bin/nile",
+          "dir": "<TOOLS>/nile"
+        },
+        "commandParts": [
+          "launch",
+          "--flag",
+          "app-nile"
+        ],
+        "options": {
+          "env": {
+            "LANG": "C.UTF-8"
+          },
+          "abortId": "pairwise-abort",
+          "observe": true,
+          "skipErrorHandler": true
+        }
+      }
+    ],
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "out-1\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "err-1\n"
+          }
+        ],
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    ],
+    "axes": {
+      "runner": "nile",
+      "platform": "win32-direct",
+      "dir": "set",
+      "bin": "absolute",
+      "env": "base-equal",
+      "abortId": "explicit",
+      "onOutput": "set",
+      "skipErrorHandler": "true",
+      "logMessagePrefix": "unset",
+      "outcome": "signal"
+    }
+  },
+  {
+    "id": "runner-pairwise-015",
+    "callSite": "runner.call.launch",
+    "platform": "darwin",
+    "calls": [
+      {
+        "runner": {
+          "name": "legendary",
+          "bin": "legendary",
+          "dir": "<TOOLS>/legendary"
+        },
+        "commandParts": [
+          "launch",
+          "app-legendary"
+        ],
+        "options": {
+          "env": {
+            "LANG": "en_NZ.UTF-8"
+          },
+          "abortId": "pairwise-abort",
+          "observe": true,
+          "skipErrorHandler": true
+        }
+      }
+    ],
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "out-1\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "err-1\n"
+          }
+        ],
+        "hold": true,
+        "abortWhileHeld": true
+      }
+    ],
+    "axes": {
+      "runner": "legendary",
+      "platform": "darwin",
+      "dir": "set",
+      "bin": "relative",
+      "env": "differing",
+      "abortId": "explicit",
+      "onOutput": "set",
+      "skipErrorHandler": "true",
+      "logMessagePrefix": "unset",
+      "outcome": "aborted"
+    }
+  },
+  {
+    "id": "runner-pairwise-016",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "legendary",
+          "bin": "legendary",
+          "dir": "<TOOLS>/legendary"
+        },
+        "commandParts": [
+          "status"
+        ],
+        "options": {
+          "env": {
+            "GAMELIB_TEST_VALUE": "a value with a space"
+          },
+          "observe": true,
+          "skipErrorHandler": false,
+          "logMessagePrefix": "Launching Example"
+        }
+      }
+    ],
+    "script": [
+      {
+        "throws": "ENOENT"
+      }
+    ],
+    "axes": {
+      "runner": "legendary",
+      "platform": "linux",
+      "dir": "set",
+      "bin": "relative",
+      "env": "with-space",
+      "abortId": "absent",
+      "onOutput": "set",
+      "skipErrorHandler": "false",
+      "logMessagePrefix": "set",
+      "outcome": "throw"
+    }
+  },
+  {
+    "id": "runner-pairwise-017",
+    "callSite": "runner.call",
+    "platform": "win32",
+    "onPath": [
+      "powershell"
+    ],
+    "calls": [
+      {
+        "runner": {
+          "name": "nile",
+          "bin": "nile",
+          "dir": "<TOOLS>/nile"
+        },
+        "commandParts": [
+          "library",
+          "list"
+        ],
+        "options": {
+          "observe": true,
+          "skipErrorHandler": true,
+          "logMessagePrefix": "Launching Example"
+        }
+      }
+    ],
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "out-1\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "err-1\n"
+          }
+        ],
+        "code": 1
+      }
+    ],
+    "axes": {
+      "runner": "nile",
+      "platform": "win32-powershell",
+      "dir": "set",
+      "bin": "relative",
+      "env": "none",
+      "abortId": "absent",
+      "onOutput": "set",
+      "skipErrorHandler": "true",
+      "logMessagePrefix": "set",
+      "outcome": "exit-1"
+    }
+  },
+  {
+    "id": "runner-pairwise-018",
+    "callSite": "runner.call",
+    "platform": "win32",
+    "onPath": [
+      "powershell"
+    ],
+    "calls": [
+      {
+        "runner": {
+          "name": "sideload",
+          "bin": "sideload-run",
+          "dir": "<TOOLS>/sideload"
+        },
+        "commandParts": [
+          "run",
+          "--flag"
+        ],
+        "options": {
+          "env": {
+            "LANG": "C.UTF-8"
+          },
+          "observe": true,
+          "skipErrorHandler": true,
+          "logMessagePrefix": "Launching Example"
+        }
+      }
+    ],
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "out-1\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "err-1\n"
+          }
+        ],
+        "code": 0
+      }
+    ],
+    "axes": {
+      "runner": "sideload",
+      "platform": "win32-powershell",
+      "dir": "set",
+      "bin": "relative",
+      "env": "base-equal",
+      "abortId": "absent",
+      "onOutput": "set",
+      "skipErrorHandler": "true",
+      "logMessagePrefix": "set",
+      "outcome": "exit-0"
+    }
+  },
+  {
+    "id": "runner-pairwise-019",
+    "callSite": "runner.call.launch",
+    "platform": "darwin",
+    "calls": [
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gogdl",
+          "dir": "<TOOLS>/gog"
+        },
+        "commandParts": [
+          "launch",
+          "/games/app-gog",
+          "app-gog"
+        ],
+        "options": {
+          "env": {
+            "GAMELIB_TEST_VALUE": "a value with a space"
+          },
+          "abortId": "pairwise-abort",
+          "observe": true,
+          "skipErrorHandler": true,
+          "logMessagePrefix": "Launching Example"
+        }
+      }
+    ],
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "out-1\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "err-1\n"
+          }
+        ],
+        "code": 0
+      }
+    ],
+    "axes": {
+      "runner": "gog",
+      "platform": "darwin",
+      "dir": "set",
+      "bin": "relative",
+      "env": "with-space",
+      "abortId": "explicit",
+      "onOutput": "set",
+      "skipErrorHandler": "true",
+      "logMessagePrefix": "set",
+      "outcome": "exit-0"
+    }
+  },
+  {
+    "id": "runner-pairwise-020",
+    "callSite": "runner.call.launch",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "legendary",
+          "bin": "legendary",
+          "dir": "<TOOLS>/legendary"
+        },
+        "commandParts": [
+          "launch",
+          "app-legendary"
+        ],
+        "options": {
+          "env": {
+            "GAMELIB_TEST_VALUE": "a value with a space"
+          },
+          "observe": true,
+          "skipErrorHandler": true,
+          "logMessagePrefix": "Launching Example"
+        }
+      }
+    ],
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "out-1\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "err-1\n"
+          }
+        ],
+        "code": null,
+        "signal": "SIGTERM"
+      }
+    ],
+    "axes": {
+      "runner": "legendary",
+      "platform": "linux",
+      "dir": "set",
+      "bin": "relative",
+      "env": "with-space",
+      "abortId": "derived",
+      "onOutput": "set",
+      "skipErrorHandler": "true",
+      "logMessagePrefix": "set",
+      "outcome": "signal"
+    }
+  },
+  {
+    "id": "runner-pairwise-021",
+    "callSite": "runner.call.launch",
+    "platform": "win32",
+    "onPath": [
+      "powershell"
+    ],
+    "calls": [
+      {
+        "runner": {
+          "name": "legendary",
+          "bin": "legendary",
+          "dir": "<TOOLS>/legendary"
+        },
+        "commandParts": [
+          "launch",
+          "app-legendary"
+        ],
+        "options": {
+          "env": {
+            "LANG": "en_NZ.UTF-8"
+          },
+          "abortId": "pairwise-abort",
+          "observe": true,
+          "skipErrorHandler": true,
+          "logMessagePrefix": "Launching Example"
+        }
+      }
+    ],
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "out-1\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "err-1\n"
+          }
+        ],
+        "code": null,
+        "signal": "SIGTERM",
+        "killedByUs": true
+      }
+    ],
+    "axes": {
+      "runner": "legendary",
+      "platform": "win32-powershell",
+      "dir": "set",
+      "bin": "relative",
+      "env": "differing",
+      "abortId": "explicit",
+      "onOutput": "set",
+      "skipErrorHandler": "true",
+      "logMessagePrefix": "set",
+      "outcome": "killed"
+    }
+  },
+  {
+    "id": "runner-pairwise-022",
+    "callSite": "runner.call.launch",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gogdl",
+          "dir": "<TOOLS>/gog"
+        },
+        "commandParts": [
+          "launch",
+          "/games/app-gog",
+          "app-gog"
+        ],
+        "options": {
+          "env": {
+            "GAMELIB_TEST_VALUE": "a value with a space"
+          },
+          "abortId": "pairwise-abort",
+          "observe": true,
+          "skipErrorHandler": true,
+          "logMessagePrefix": "Launching Example"
+        }
+      }
+    ],
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "out-1\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "err-1\n"
+          }
+        ],
+        "code": 1
+      }
+    ],
+    "axes": {
+      "runner": "gog",
+      "platform": "linux",
+      "dir": "set",
+      "bin": "relative",
+      "env": "with-space",
+      "abortId": "explicit",
+      "onOutput": "set",
+      "skipErrorHandler": "true",
+      "logMessagePrefix": "set",
+      "outcome": "exit-1"
+    }
+  },
+  {
+    "id": "runner-pairwise-023",
+    "callSite": "runner.call.launch",
+    "platform": "win32",
+    "calls": [
+      {
+        "runner": {
+          "name": "gog",
+          "bin": "gogdl",
+          "dir": "<TOOLS>/gog"
+        },
+        "commandParts": [
+          "launch",
+          "/games/app-gog",
+          "app-gog"
+        ],
+        "options": {
+          "env": {
+            "LANG": "en_NZ.UTF-8"
+          },
+          "abortId": "pairwise-abort",
+          "observe": true,
+          "skipErrorHandler": true,
+          "logMessagePrefix": "Launching Example"
+        }
+      }
+    ],
+    "script": [
+      {
+        "throws": "ENOENT"
+      }
+    ],
+    "axes": {
+      "runner": "gog",
+      "platform": "win32-direct",
+      "dir": "set",
+      "bin": "relative",
+      "env": "differing",
+      "abortId": "explicit",
+      "onOutput": "set",
+      "skipErrorHandler": "true",
+      "logMessagePrefix": "set",
+      "outcome": "throw"
+    }
+  },
+  {
+    "id": "runner-pairwise-024",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "sideload",
+          "bin": "sideload-run",
+          "dir": "<TOOLS>/sideload"
+        },
+        "commandParts": [
+          "run",
+          "--flag"
+        ],
+        "options": {
+          "abortId": "pairwise-abort",
+          "observe": true,
+          "skipErrorHandler": true,
+          "logMessagePrefix": "Launching Example"
+        }
+      }
+    ],
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "out-1\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "err-1\n"
+          }
+        ],
+        "hold": true,
+        "abortWhileHeld": true
+      }
+    ],
+    "axes": {
+      "runner": "sideload",
+      "platform": "linux",
+      "dir": "set",
+      "bin": "relative",
+      "env": "none",
+      "abortId": "explicit",
+      "onOutput": "set",
+      "skipErrorHandler": "true",
+      "logMessagePrefix": "set",
+      "outcome": "aborted"
+    }
+  },
+  {
+    "id": "runner-pairwise-025",
+    "callSite": "runner.call.launch",
+    "platform": "darwin",
+    "calls": [
+      {
+        "runner": {
+          "name": "nile",
+          "bin": "nile",
+          "dir": "<TOOLS>/nile"
+        },
+        "commandParts": [
+          "launch",
+          "--flag",
+          "app-nile"
+        ],
+        "options": {
+          "abortId": "pairwise-abort",
+          "observe": true,
+          "skipErrorHandler": true,
+          "logMessagePrefix": "Launching Example"
+        }
+      }
+    ],
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "out-1\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "err-1\n"
+          }
+        ],
+        "code": null,
+        "signal": "SIGTERM",
+        "killedByUs": true
+      }
+    ],
+    "axes": {
+      "runner": "nile",
+      "platform": "darwin",
+      "dir": "set",
+      "bin": "relative",
+      "env": "none",
+      "abortId": "explicit",
+      "onOutput": "set",
+      "skipErrorHandler": "true",
+      "logMessagePrefix": "set",
+      "outcome": "killed"
+    }
+  },
+  {
+    "id": "runner-pairwise-026",
+    "callSite": "runner.call.launch",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "legendary",
+          "bin": "legendary",
+          "dir": "<TOOLS>/legendary"
+        },
+        "commandParts": [
+          "launch",
+          "app-legendary"
+        ],
+        "options": {
+          "env": {
+            "LANG": "C.UTF-8"
+          },
+          "abortId": "pairwise-abort",
+          "observe": true,
+          "skipErrorHandler": true,
+          "logMessagePrefix": "Launching Example"
+        }
+      }
+    ],
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "out-1\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "err-1\n"
+          }
+        ],
+        "hold": true,
+        "abortWhileHeld": true
+      }
+    ],
+    "axes": {
+      "runner": "legendary",
+      "platform": "linux",
+      "dir": "set",
+      "bin": "relative",
+      "env": "base-equal",
+      "abortId": "explicit",
+      "onOutput": "set",
+      "skipErrorHandler": "true",
+      "logMessagePrefix": "set",
+      "outcome": "aborted"
+    }
+  },
+  {
+    "id": "runner-pairwise-027",
+    "callSite": "runner.call.launch",
+    "platform": "win32",
+    "calls": [
+      {
+        "runner": {
+          "name": "legendary",
+          "bin": "legendary",
+          "dir": "<TOOLS>/legendary"
+        },
+        "commandParts": [
+          "launch",
+          "app-legendary"
+        ],
+        "options": {
+          "abortId": "pairwise-abort",
+          "observe": true,
+          "skipErrorHandler": true,
+          "logMessagePrefix": "Launching Example"
+        }
+      }
+    ],
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "out-1\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "err-1\n"
+          }
+        ],
+        "code": 0
+      }
+    ],
+    "axes": {
+      "runner": "legendary",
+      "platform": "win32-direct",
+      "dir": "set",
+      "bin": "relative",
+      "env": "none",
+      "abortId": "explicit",
+      "onOutput": "set",
+      "skipErrorHandler": "true",
+      "logMessagePrefix": "set",
+      "outcome": "exit-0"
+    }
+  },
+  {
+    "id": "runner-pairwise-028",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "sideload",
+          "bin": "sideload-run",
+          "dir": "<TOOLS>/sideload"
+        },
+        "commandParts": [
+          "run",
+          "--flag"
+        ],
+        "options": {
+          "abortId": "pairwise-abort",
+          "observe": true,
+          "skipErrorHandler": true,
+          "logMessagePrefix": "Launching Example"
+        }
+      }
+    ],
+    "script": [
+      {
+        "throws": "ENOENT"
+      }
+    ],
+    "axes": {
+      "runner": "sideload",
+      "platform": "linux",
+      "dir": "set",
+      "bin": "relative",
+      "env": "none",
+      "abortId": "explicit",
+      "onOutput": "set",
+      "skipErrorHandler": "true",
+      "logMessagePrefix": "set",
+      "outcome": "throw"
+    }
   }
 ]

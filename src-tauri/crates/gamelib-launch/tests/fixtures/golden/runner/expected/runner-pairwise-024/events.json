@@ -1,0 +1,18 @@
+[
+  {
+    "level": "info",
+    "prefix": "Sideload",
+    "parts": [
+      "Launching Example:",
+      "<TOOLS>/sideload/sideload-run run --flag"
+    ]
+  },
+  {
+    "level": "info",
+    "prefix": "Sideload",
+    "parts": [
+      "Abort command",
+      "\"<TOOLS>/sideload/sideload-run run --flag\""
+    ]
+  }
+]

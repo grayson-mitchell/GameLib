@@ -1,0 +1,18 @@
+[
+  {
+    "level": "info",
+    "prefix": "Gog",
+    "parts": [
+      "Launching Example:",
+      "/opt/gamelib/bin/gogdl list"
+    ]
+  },
+  {
+    "level": "info",
+    "prefix": "Gog",
+    "parts": [
+      "Abort command",
+      "\"/opt/gamelib/bin/gogdl list\""
+    ]
+  }
+]

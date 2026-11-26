@@ -1,0 +1,10 @@
+{
+  "results": [
+    {
+      "stdout": "",
+      "stderr": "Process terminated with signal SIGTERM",
+      "fullCommand": "gogdl launch x crash",
+      "error": "Process terminated with signal SIGTERM"
+    }
+  ]
+}

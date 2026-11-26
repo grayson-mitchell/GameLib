@@ -1,0 +1,11 @@
+[
+  {
+    "seam": "abort.create",
+    "id": "pairwise-abort"
+  },
+  {
+    "seam": "abort.remove",
+    "id": "pairwise-abort",
+    "aborted": true
+  }
+]

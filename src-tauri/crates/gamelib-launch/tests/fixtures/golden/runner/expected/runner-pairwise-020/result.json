@@ -1,0 +1,10 @@
+{
+  "results": [
+    {
+      "stdout": "",
+      "stderr": "Process terminated with signal SIGTERM",
+      "fullCommand": "GAMELIB_TEST_VALUE=\"a value with a space\" <TOOLS>/legendary/legendary launch app-legendary",
+      "error": "Process terminated with signal SIGTERM"
+    }
+  ]
+}

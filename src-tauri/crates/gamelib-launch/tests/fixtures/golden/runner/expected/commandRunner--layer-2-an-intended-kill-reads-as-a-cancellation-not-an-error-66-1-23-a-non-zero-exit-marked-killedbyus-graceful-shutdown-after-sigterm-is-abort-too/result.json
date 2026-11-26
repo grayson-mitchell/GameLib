@@ -1,0 +1,10 @@
+{
+  "results": [
+    {
+      "stdout": "",
+      "stderr": "",
+      "fullCommand": "gogdl launch x graceful",
+      "abort": true
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+[
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "legendary"
+    },
+    "rotate": true,
+    "line": {
+      "level": "INFO",
+      "prefix": "",
+      "message": "Launching Example: GAMELIB_TEST_VALUE=\"a value with a space\" <TOOLS>/legendary/legendary status \n\n"
+    }
+  }
+]

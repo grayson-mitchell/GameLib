@@ -1,0 +1,9 @@
+{
+  "results": [
+    {
+      "stdout": "{\"games\": [{\"title\": \"AlphaGame\", \"id\": \"a1\"}, {\"title\": \"BetaQuest\", \"id\": \"b2\"}]}",
+      "stderr": "",
+      "fullCommand": "nile library list --json"
+    }
+  ]
+}

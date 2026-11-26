@@ -1,0 +1,17 @@
+[
+  {
+    "seam": "abort.create",
+    "id": "0.4242"
+  },
+  {
+    "seam": "errorHandler",
+    "error": "{\"games\": [{\"title\": \"AlphaGame\", \"id\": \"a1\"}, {\"title\": \"BetaQuest\", \"id\": \"b2\"}]}",
+    "appName": "",
+    "runner": "nile"
+  },
+  {
+    "seam": "abort.remove",
+    "id": "0.4242",
+    "aborted": false
+  }
+]

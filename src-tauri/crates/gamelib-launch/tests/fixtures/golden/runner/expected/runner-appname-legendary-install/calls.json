@@ -1,0 +1,17 @@
+[
+  {
+    "seam": "abort.create",
+    "id": "app-legendary"
+  },
+  {
+    "seam": "errorHandler",
+    "error": "",
+    "appName": "app-legendary",
+    "runner": "legendary"
+  },
+  {
+    "seam": "abort.remove",
+    "id": "app-legendary",
+    "aborted": false
+  }
+]

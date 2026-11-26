@@ -49,7 +49,21 @@ import {
   type OraclePlatform
 } from 'backend/testUtils/engineWineOracle/harness'
 import { engineWineOracleMode } from 'backend/testUtils/engineWineOracle/recorder'
-import { withPinnedBaseEnv } from 'backend/testUtils/launchOracle/baseEnv'
+import {
+  PINNED_BASE,
+  withPinnedBaseEnv
+} from 'backend/testUtils/launchOracle/baseEnv'
+import {
+  assertCasesCoverTitles,
+  slug,
+  tsTestTitles
+} from 'backend/testUtils/launchOracle/census'
+import {
+  allPairs,
+  uncoveredPairs,
+  type Axes,
+  type Row
+} from 'backend/testUtils/launchOracle/pairwise'
 import {
   injectPlatform,
   withInjected
@@ -57,21 +71,27 @@ import {
 import {
   createRunnerTrace,
   recordStream,
-  type RunnerStep
+  type RunnerStep,
+  type ScriptChunk
 } from 'backend/testUtils/launchOracle/runnerTrace'
 import {
   attachSpawnClass,
   loadClasses
 } from 'backend/testUtils/launchOracle/spawnClass'
-import { createCommandRunner } from 'backend/commandRunner'
+import {
+  createCommandRunner,
+  getRunnerCallWithoutCredentials
+} from 'backend/commandRunner'
 import LogWriter from 'backend/logger/targetWriter'
 import { RunnerToLogPrefixMap } from 'backend/logger/constants'
 import type { Runner } from 'common/types'
 
 const CRATE = 'gamelib-launch'
 const SLICE = 'runner'
+/** The stem of a case that stands for one `it` title of commandRunner.test.ts. */
+const CENSUS_STEM = 'commandRunner'
 /** The case count this plan committed; a later edit may raise it, never lower it. */
-const RUNNER_FLOOR = 1
+const RUNNER_FLOOR = 93
 
 const mode = engineWineOracleMode()
 
@@ -132,6 +152,16 @@ interface RunnerCase {
   concurrent?: true
   /** How many `createCommandRunner` instances share the deps; default 1. */
   instances?: number
+  /**
+   * The case calls `getRunnerCallWithoutCredentials` itself instead of `callRunner`: `command` is
+   * its first argument, `converts` what the legendary command-array converter answers.
+   */
+  direct?: {
+    command: string[] | Record<string, unknown>
+    env?: Record<string, string>
+    runnerPath: string
+    converts?: string[]
+  }
   calls: CallSpec[]
   /** One step per spawn, consumed in order. */
   script: RunnerStep[]
@@ -176,8 +206,852 @@ function tracerCases(): RunnerCase[] {
   ]
 }
 
+// ---- the commandRunner.test.ts titles --------------------------------------------------------
+
+/** The eight credential flags, each with a synthetic value, after a command word. */
+const EIGHT_FLAGS = [
+  'register',
+  '--code',
+  'code-1',
+  '--token',
+  'token-1',
+  '--code-verifier',
+  'verifier-1',
+  '--password',
+  'pw-1',
+  '--serial',
+  'serial-1',
+  '--client-id',
+  'client-1',
+  '--access-token',
+  'access-1',
+  '--refresh-token',
+  'refresh-1'
+]
+
+const GOGDL = { name: 'gog' as const, bin: 'gogdl' }
+const out = (text: string): ScriptChunk => ({ stream: 'stdout', text })
+const err = (text: string): ScriptChunk => ({ stream: 'stderr', text })
+const LEGENDARY_LINE =
+  'Stored credentials are no longer valid! Please login again.'
+
+/** The `it` titles of commandRunner.test.ts one case each; `Layer-2: ` is part of the title. */
+type NamedCase = Omit<RunnerCase, 'id' | 'axes'>
+
+/** One call of the gogdl runner, the way the legacy suite made it. */
+const gogCall = (
+  commandParts: string[],
+  options?: CallSpec['options']
+): CallSpec => ({
+  runner: GOGDL,
+  commandParts,
+  ...(options && { options })
+})
+
+const NAMED: Record<string, NamedCase> = {
+  // -- close-handler exit-code classification (D-2 root cause)
+  'Layer-2: resolves as success (no .error/.abort) on a clean code=0 exit': {
+    callSite: 'runner.call',
+    platform: 'linux',
+    calls: [gogCall(['download', 'clean'])],
+    script: [{ code: 0 }]
+  },
+  'Layer-2: a non-zero exit code WITHOUT a signal is surfaced as .error': {
+    callSite: 'runner.call',
+    platform: 'linux',
+    calls: [gogCall(['download', 'nonzero'])],
+    script: [{ code: 1 }]
+  },
+  'Layer-2: a signal-terminated process (not aborted) is classified as .error':
+    {
+      callSite: 'runner.call',
+      platform: 'linux',
+      calls: [gogCall(['download', 'sig'])],
+      script: [{ code: null, signal: 'SIGTERM' }]
+    },
+  'Layer-2: a non-zero exit AFTER the abort controller was aborted is .abort, not .error':
+    {
+      callSite: 'runner.call',
+      platform: 'linux',
+      calls: [gogCall(['download', 'aborted'], { abortId: 'aborted' })],
+      script: [{ code: 1, abortAfterExit: true }]
+    },
+  'Layer-2: a signal-terminated process AFTER abort is .abort (held run, abort signal)':
+    {
+      callSite: 'runner.call',
+      platform: 'linux',
+      calls: [
+        gogCall(['download', 'aborted-signal'], { abortId: 'aborted-signal' })
+      ],
+      script: [{ hold: true, abortWhileHeld: true }]
+    },
+
+  // -- an intended kill reads as a cancellation, not an error (66.1-23)
+  'a signal exit the runner marks killedByUs is .abort even with no abort controller signalled':
+    {
+      callSite: 'runner.call.launch',
+      platform: 'linux',
+      calls: [gogCall(['launch', 'x', 'stopped'], { abortId: 'stopped' })],
+      script: [{ code: null, signal: 'SIGTERM', killedByUs: true }]
+    },
+  'a signal exit NOT marked killedByUs still surfaces as an error (the marker is the only cancel signal)':
+    {
+      callSite: 'runner.call.launch',
+      platform: 'linux',
+      calls: [gogCall(['launch', 'x', 'crash'], { abortId: 'crash' })],
+      script: [{ code: null, signal: 'SIGTERM' }]
+    },
+  'a non-zero exit marked killedByUs (graceful shutdown after SIGTERM) is .abort too':
+    {
+      callSite: 'runner.call.launch',
+      platform: 'linux',
+      calls: [gogCall(['launch', 'x', 'graceful'], { abortId: 'graceful' })],
+      script: [{ code: 1, killedByUs: true }]
+    },
+
+  // -- in-flight dedup never swallows a caller that observes output (49-REVIEW WR-01)
+  'Layer-2: a second caller with identical argv and an onOutput observer gets its OWN run and sees the stream':
+    {
+      callSite: 'runner.call',
+      platform: 'linux',
+      concurrent: true,
+      calls: [
+        gogCall(['list-updates', '--json'], { abortId: 'lib-caller' }),
+        gogCall(['list-updates', '--json'], {
+          abortId: 'probe-caller',
+          observe: true
+        })
+      ],
+      script: [
+        { hold: true, abortWhileHeld: true },
+        { chunks: [out('[]\n')], hold: true, abortWhileHeld: true }
+      ]
+    },
+  'Layer-2: two callers WITHOUT an observer still share one run (dedup unchanged)':
+    {
+      callSite: 'runner.call',
+      platform: 'linux',
+      concurrent: true,
+      calls: [
+        gogCall(['list-updates', '--json', 'dedup-control'], { abortId: 'a' }),
+        gogCall(['list-updates', '--json', 'dedup-control'], { abortId: 'b' })
+      ],
+      script: [{ hold: true }]
+    },
+  'Layer-2: an observing caller does not register as joinable: a later plain caller runs its own':
+    {
+      callSite: 'runner.call',
+      platform: 'linux',
+      concurrent: true,
+      calls: [
+        gogCall(['list-updates', '--json', 'observer-first'], {
+          abortId: 'probe-first',
+          observe: true
+        }),
+        gogCall(['list-updates', '--json', 'observer-first'], {
+          abortId: 'plain-second'
+        })
+      ],
+      script: [{ hold: true }, { code: 0 }]
+    },
+  'Layer-2: the dedup entry is released when the run settles, so a later identical call runs again':
+    {
+      callSite: 'runner.call',
+      platform: 'linux',
+      calls: [gogCall(['list', 'again']), gogCall(['list', 'again'])],
+      script: [{ code: 0 }, { code: 0 }]
+    },
+  'Layer-2: the in-flight map lives in the factory closure, not module scope': {
+    callSite: 'runner.call',
+    platform: 'linux',
+    concurrent: true,
+    instances: 2,
+    calls: [
+      { ...gogCall(['list', 'closure'], { abortId: 'x' }), instance: 0 },
+      { ...gogCall(['list', 'closure'], { abortId: 'y' }), instance: 1 }
+    ],
+    script: [{ hold: true, abortWhileHeld: true }, { code: 0 }]
+  },
+
+  // -- credential redaction through the production callRunner path (34.5-61); synthetic secrets only
+  'Layer-2: nile register argv: --code and --code-verifier both redact independently, plus --serial/--client-id':
+    {
+      callSite: 'runner.call',
+      platform: 'linux',
+      calls: [
+        gogCall([
+          'register',
+          '--code',
+          'code-123',
+          '--code-verifier',
+          'verifier-456',
+          '--serial',
+          'serial-789',
+          '--client-id',
+          'client-012'
+        ])
+      ],
+      script: [{ code: 0 }]
+    },
+  'Layer-2: GOG --password argv: raw private-branch password redacted': {
+    callSite: 'runner.call',
+    platform: 'linux',
+    calls: [gogCall(['install', 'someAppId', '--password', 'pw-xyz789'])],
+    script: [{ code: 0 }]
+  },
+  'Layer-2: GOG comet token argv (261110-vdk): --access-token and --refresh-token both redacted':
+    {
+      callSite: 'runner.call',
+      platform: 'linux',
+      calls: [
+        gogCall([
+          'comet',
+          '--access-token',
+          'access-4f1a',
+          '--refresh-token',
+          'refresh-9c3e'
+        ])
+      ],
+      script: [{ code: 0 }]
+    },
+  'Layer-2: the credentials never reach the log writers either': {
+    callSite: 'runner.call',
+    platform: 'linux',
+    calls: [
+      gogCall(['install', 'a', '--password', 'pw-w'], { extraWriters: 1 })
+    ],
+    script: [{ code: 0 }]
+  },
+  'Layer-2: getRunnerCallWithoutCredentials takes the legendary command-array converter as a dep':
+    {
+      callSite: 'runner.call',
+      platform: 'linux',
+      direct: {
+        command: { foo: 1 },
+        runnerPath: 'legendary',
+        converts: ['auth', '--token', 'legendary-secret']
+      },
+      calls: [],
+      script: []
+    },
+
+  // -- credential redaction: PowerShell -ArgumentList branch (34.5-61)
+  'Layer-2: redacts every added flag inside the -ArgumentList string, not just the array-member branch':
+    {
+      callSite: 'runner.call',
+      platform: 'win32',
+      onPath: ['powershell'],
+      calls: [
+        gogCall([
+          'register',
+          '--code',
+          'code-123',
+          '--code-verifier',
+          'verifier-456',
+          '--serial',
+          'serial-789',
+          '--client-id',
+          'client-012',
+          '--password',
+          'pw-xyz789'
+        ])
+      ],
+      script: [{ program: 'powershell', code: 0 }]
+    },
+  'Layer-2: the PowerShell probe runs once per factory, then the result is reused':
+    {
+      callSite: 'runner.call',
+      platform: 'win32',
+      onPath: ['powershell'],
+      calls: [gogCall(['a', 'one']), gogCall(['a', 'two'])],
+      script: [
+        { program: 'powershell', code: 0 },
+        { program: 'powershell', code: 0 }
+      ]
+    },
+  'Layer-2: without PowerShell on win32 the runner binary is spawned directly':
+    {
+      callSite: 'runner.call',
+      platform: 'win32',
+      onPath: [],
+      calls: [gogCall(['a', 'direct'])],
+      script: [{ program: 'gogdl', code: 0 }]
+    },
+
+  // -- credential redaction census gate (34.5-61): the TS titles scan source; the case pins the same list
+  'Layer-2: non-vacuity anchor: the redaction list extracted from source contains all eight flags':
+    {
+      callSite: 'runner.call',
+      platform: 'linux',
+      note: 'one argv carrying all eight flags: every value is redacted, so the list holds all eight',
+      calls: [gogCall(EIGHT_FLAGS)],
+      script: [{ code: 0 }]
+    },
+  'Layer-2: census detects the GOG comet token flags (not vacuous for them)': {
+    callSite: 'runner.call',
+    platform: 'linux',
+    note: 'the two comet token flags on their own, with a command word between them',
+    calls: [
+      gogCall([
+        'comet',
+        '--access-token',
+        'access-census',
+        'launch',
+        '--refresh-token',
+        'refresh-census'
+      ])
+    ],
+    script: [{ code: 0 }]
+  },
+  'Layer-2: every credential-bearing --flag literal in backend source is a member of the redaction list':
+    {
+      callSite: 'runner.call',
+      platform: 'win32',
+      onPath: ['powershell'],
+      note: 'all eight flags through the PowerShell branch, where the list is applied to the -ArgumentList string',
+      calls: [gogCall(EIGHT_FLAGS)],
+      script: [{ program: 'powershell', code: 0 }]
+    },
+
+  // -- callRunner skipErrorHandler (49-03, 49-SPEC P2)
+  'Layer-2: Test 1: a failing run with skipErrorHandler never reaches errorHandler, yet onOutput saw the stderr chunk verbatim':
+    {
+      callSite: 'runner.call',
+      platform: 'linux',
+      calls: [
+        gogCall(['status', 'skip-fail'], {
+          skipErrorHandler: true,
+          observe: true
+        })
+      ],
+      script: [{ chunks: [err(LEGENDARY_LINE)], code: 1 }]
+    },
+  'Layer-2: Test 2: a clean exit with skipErrorHandler never reaches errorHandler and carries no .error/.abort':
+    {
+      callSite: 'runner.call',
+      platform: 'linux',
+      calls: [gogCall(['status', 'skip-clean'], { skipErrorHandler: true })],
+      script: [{ code: 0 }]
+    },
+  'Layer-2: Test 3: without the option the same failing run still reaches errorHandler':
+    {
+      callSite: 'runner.call',
+      platform: 'linux',
+      calls: [gogCall(['status', 'default-fail'])],
+      script: [{ chunks: [err(LEGENDARY_LINE)], code: 1 }]
+    },
+  'Layer-2: Test 4: with skipErrorHandler an aborted run is .abort and never reaches errorHandler':
+    {
+      callSite: 'runner.call',
+      platform: 'linux',
+      calls: [
+        gogCall(['status', 'skip-abort'], {
+          abortId: 'skip-abort',
+          skipErrorHandler: true
+        })
+      ],
+      script: [{ hold: true, abortWhileHeld: true }]
+    },
+
+  // -- callRunner characterization (66.1 MH-4)
+  'Layer-2: tracks the run under trackKey with the runner name, else under the abortId alone':
+    {
+      callSite: 'runner.call',
+      platform: 'linux',
+      calls: [
+        gogCall(['list', 'l1-trackkey'], {
+          trackKey: 'my-key',
+          abortId: 'ignored-abort'
+        }),
+        gogCall(['list', 'l1-abortkey'], { abortId: 'my-abort' })
+      ],
+      script: [{ code: 0 }, { code: 0 }]
+    },
+  'Layer-2: runs with the option cwd and an env where option keys win over process.env':
+    {
+      callSite: 'runner.call',
+      platform: 'linux',
+      processEnv: {
+        L2_ENV_SENTINEL: 'from-process',
+        L2_ENV_SHARED: 'from-process'
+      },
+      calls: [
+        gogCall(['list', 'l1-env'], {
+          cwd: '<TMP>/l1/cwd',
+          env: { L2_ENV_SHARED: 'from-options', L2_ENV_OPT: 'opt' }
+        })
+      ],
+      script: [{ code: 0 }]
+    },
+  'Layer-2: a runner dir joins the cwd and prefixes a relative bin with ./ off Windows':
+    {
+      callSite: 'runner.call',
+      platform: 'linux',
+      calls: [
+        {
+          runner: { ...GOGDL, dir: '<TOOLS>/gogdl' },
+          commandParts: ['list', 'dir']
+        }
+      ],
+      script: [{ code: 0 }]
+    },
+  'Layer-2: writes the command header to every log writer before the first output chunk':
+    {
+      callSite: 'runner.call',
+      platform: 'linux',
+      calls: [gogCall(['list', 'l1-header'], { extraWriters: 1 })],
+      script: [{ chunks: [out('first-chunk')], code: 0 }]
+    },
+  'Layer-2: the runner log writer is appended automatically and gets the output':
+    {
+      callSite: 'runner.call',
+      platform: 'linux',
+      calls: [gogCall(['list', 'runner-writer'])],
+      script: [{ chunks: [out('to-runner-log')], code: 0 }]
+    },
+  'Layer-2: applies logSanitizer to the writers but hands onOutput the raw chunk':
+    {
+      callSite: 'runner.call',
+      platform: 'linux',
+      calls: [
+        gogCall(['list', 'l1-sanitizer'], {
+          extraWriters: 1,
+          sanitizer: 'mask-secret',
+          observe: true
+        })
+      ],
+      script: [{ chunks: [out('token=SECRET'), err('err=SECRET')], code: 0 }]
+    },
+  'Layer-2: joins trimmed stdout chunks with "" and trimmed stderr chunks with a newline':
+    {
+      callSite: 'runner.call',
+      platform: 'linux',
+      calls: [gogCall(['list', 'l1-join'])],
+      script: [
+        {
+          chunks: [out(' a \n'), out('\n b '), err(' x \n'), err(' y ')],
+          code: 0
+        }
+      ]
+    },
+  'Layer-2: classifies a run aborted through abortId as { abort: true } with empty output and no error':
+    {
+      callSite: 'runner.call',
+      platform: 'linux',
+      calls: [gogCall(['list', 'l1-abort'], { abortId: 'l1-abort-id' })],
+      script: [{ chunks: [out('partial')], hold: true, abortWhileHeld: true }]
+    },
+  'Layer-2: passes the documented run options: timeout opt-out with a reason, windowsHide false, replaceEnv':
+    {
+      callSite: 'runner.call',
+      platform: 'linux',
+      calls: [gogCall(['list', 'opts'])],
+      script: [{ code: 0 }]
+    },
+  'Layer-2: a spawn failure is classified as .error, reaches errorHandler and is logged':
+    {
+      callSite: 'runner.call',
+      platform: 'linux',
+      calls: [gogCall(['list', 'enoent'])],
+      script: [{ throws: 'ENOENT' }]
+    },
+  'Layer-2: removes the abort registry entry once the call settles': {
+    callSite: 'runner.call',
+    platform: 'linux',
+    calls: [gogCall(['list', 'cleanup'], { abortId: 'gone' })],
+    script: [{ code: 0 }]
+  }
+}
+
+/** The `describe` titles whose `it`s are callRunner's (every other describe has a named owner). */
+const CALL_RUNNER_DESCRIBES = [
+  'Layer-2: callRunner close-handler exit-code classification (D-2 root cause)',
+  'Layer-2: an intended kill reads as a cancellation, not an error (66.1-23)',
+  'Layer-2: in-flight dedup never swallows a caller that observes output (49-REVIEW WR-01)',
+  'Layer-2: credential redaction through the production callRunner path (34.5-61)',
+  'Layer-2: credential redaction: PowerShell -ArgumentList branch (34.5-61)',
+  'Layer-2: credential redaction census gate (34.5-61)',
+  'Layer-2: callRunner skipErrorHandler (49-03, 49-SPEC P2)',
+  'Layer-2: callRunner characterization (66.1 MH-4)'
+]
+
+const OWNED_BY_88_2_04 = [
+  'Layer-2: runWineCommand resolveOnExit',
+  'Layer-2: runWineCommand characterization (66.1 MH-4)',
+  'Layer-2: getWinePath',
+  'Layer-2: runScriptForGame characterization (66.1 MH-4)'
+]
+const REAL_CHILDREN = 'Layer-2: real children (createRealRunner, fake HOME)'
+
+const COMMAND_RUNNER_TEST = join(__dirname, '..', 'commandRunner.test.ts')
+
+/** Every `it` title of commandRunner.test.ts, `describe > it`. */
+const commandRunnerTitles = (): string[] => tsTestTitles(COMMAND_RUNNER_TEST)
+
+const describeOf = (title: string): string => title.split(' > ')[0] ?? ''
+
+/** The titles that are not callRunner's, each with the owner that records or tests it. */
+function notPorted(titles: readonly string[]): Record<string, string> {
+  const owners: Record<string, string> = {}
+  for (const title of titles) {
+    const describe = describeOf(title)
+    if (CALL_RUNNER_DESCRIBES.includes(describe)) continue
+    if (OWNED_BY_88_2_04.includes(describe)) {
+      owners[title] =
+        '88.2-04: runWineCommand, getWinePath and runScriptForGame are recorded with the wine env builders in golden/runner_wine'
+    } else if (describe === REAL_CHILDREN) {
+      owners[title] =
+        'gamelib-launch/tests/runner_real.rs (88.2-07): a real-children test, not a golden'
+    } else {
+      throw new Error(
+        `commandRunner.test.ts has a describe with no owner: ${describe}`
+      )
+    }
+  }
+  return owners
+}
+
+/** One named case per callRunner `it` title: `commandRunner--<slug of describe > it>`. */
+function namedCases(): RunnerCase[] {
+  const titles = commandRunnerTitles()
+  const callRunnerTitles = titles.filter((title) =>
+    CALL_RUNNER_DESCRIBES.includes(describeOf(title))
+  )
+  const itOf = (title: string): string =>
+    title.split(' > ').slice(1).join(' > ')
+  const cases: RunnerCase[] = []
+  for (const title of callRunnerTitles) {
+    const named = NAMED[itOf(title)]
+    if (!named) {
+      throw new Error(`no named runner case for the title: ${title}`)
+    }
+    cases.push({ id: `${CENSUS_STEM}--${slug(title)}`, ...named })
+  }
+  const known = new Set(callRunnerTitles.map(itOf))
+  const stale = Object.keys(NAMED).filter((key) => !known.has(key))
+  if (stale.length > 0) {
+    throw new Error(
+      `NAMED holds a title commandRunner.test.ts does not: ${stale.join(' | ')}`
+    )
+  }
+  return cases
+}
+
+// ---- dedup, transcripts, app names ------------------------------------------------------------
+
+const LEGENDARY = { name: 'legendary' as const, bin: 'legendary' }
+
+function dedupCases(): RunnerCase[] {
+  const list = ['list', '--json']
+  return [
+    {
+      id: 'runner-dedup-joined-one-spawn',
+      note: 'two concurrent identical joinable calls produce one spawn and two equal results',
+      callSite: 'runner.call',
+      platform: 'linux',
+      concurrent: true,
+      calls: [
+        {
+          runner: LEGENDARY,
+          commandParts: list,
+          options: { abortId: 'dedup-a' }
+        },
+        {
+          runner: LEGENDARY,
+          commandParts: list,
+          options: { abortId: 'dedup-b' }
+        }
+      ],
+      script: [{ hold: true, chunks: [out('joined\n')], code: 0 }]
+    },
+    {
+      id: 'runner-dedup-observer-neither-joins-nor-registers',
+      note: '49-REVIEW WR-01: the observing caller runs its own and is not joinable; the two plain callers after it share one run',
+      callSite: 'runner.call',
+      platform: 'linux',
+      concurrent: true,
+      calls: [
+        {
+          runner: LEGENDARY,
+          commandParts: list,
+          options: { abortId: 'dedup-observer', observe: true }
+        },
+        {
+          runner: LEGENDARY,
+          commandParts: list,
+          options: { abortId: 'dedup-first' }
+        },
+        {
+          runner: LEGENDARY,
+          commandParts: list,
+          options: { abortId: 'dedup-second' }
+        }
+      ],
+      script: [
+        { hold: true, chunks: [out('observed\n')], code: 0 },
+        { hold: true, chunks: [out('shared\n')], code: 0 }
+      ]
+    },
+    {
+      id: 'runner-dedup-entry-removed-after-settle',
+      note: 'the in-flight entry is gone once the run settles, so the third identical call spawns again',
+      callSite: 'runner.call',
+      platform: 'linux',
+      calls: [
+        {
+          runner: LEGENDARY,
+          commandParts: list,
+          options: { abortId: 'dedup-1' }
+        },
+        {
+          runner: LEGENDARY,
+          commandParts: list,
+          options: { abortId: 'dedup-2' }
+        },
+        {
+          runner: LEGENDARY,
+          commandParts: list,
+          options: { abortId: 'dedup-3' }
+        }
+      ],
+      script: [{ code: 0 }, { code: 0 }, { code: 0 }]
+    }
+  ]
+}
+
+/** `count` progress chunks, the way a store CLI prints them: a line, a newline, some padding. */
+const progressChunks = (
+  count: number,
+  line: (index: number) => string,
+  stream: ScriptChunk['stream'] = 'stdout'
+): ScriptChunk[] =>
+  Array.from({ length: count }, (_unused, index) => ({
+    stream,
+    text: line(index + 1)
+  }))
+
+function transcriptCases(): RunnerCase[] {
+  const total = 60
+  return [
+    {
+      id: 'runner-transcript-legendary-install-progress',
+      note: 'sixty stdout chunks, ten more than the fifty-message window: the result keeps the last fifty',
+      callSite: 'runner.call',
+      platform: 'linux',
+      calls: [
+        {
+          runner: LEGENDARY,
+          commandParts: ['install', 'app-legendary', '--base-path', '/games'],
+          options: { observe: true }
+        }
+      ],
+      script: [
+        {
+          chunks: [
+            ...progressChunks(
+              total - 1,
+              (n) =>
+                `[DLManager] INFO: = Progress: ${((n / total) * 100).toFixed(2)}% (${n}/${total}), Running for 00:00:${String(n).padStart(2, '0')}, ETA: 00:00:${String(total - n).padStart(2, '0')}\n`
+            ),
+            out('[cli] INFO: Finished installation process in 00:01:00\n')
+          ],
+          code: 0
+        }
+      ]
+    },
+    {
+      id: 'runner-transcript-gog-download-interleaved',
+      note: 'gogdl writes progress to stdout and its log lines to stderr, interleaved',
+      callSite: 'runner.call',
+      platform: 'linux',
+      calls: [
+        {
+          runner: GOGDL,
+          commandParts: ['download', 'app-gog', '--path', '/games'],
+          options: { observe: true }
+        }
+      ],
+      script: [
+        {
+          chunks: Array.from({ length: 30 }, (_unused, index) => [
+            out(`progress ${index + 1}/30\n`),
+            err(`[gogdl] debug: chunk ${index + 1} verified\n`)
+          ]).flat(),
+          code: 0
+        }
+      ]
+    },
+    {
+      id: 'runner-transcript-nile-json-split',
+      note: 'one JSON reply split across chunks, two of the splits inside a string next to a space',
+      callSite: 'runner.call',
+      platform: 'linux',
+      calls: [
+        {
+          runner: { name: 'nile', bin: 'nile' },
+          commandParts: ['library', 'list', '--json'],
+          options: { observe: true }
+        }
+      ],
+      script: [
+        {
+          chunks: [
+            out('{"games": [{"title": "Alpha '),
+            out('Game", "id": "a1"}, {"title": "Beta'),
+            out(' Quest", "id": "b2"}]}\n')
+          ],
+          code: 0
+        }
+      ]
+    }
+  ]
+}
+
+/** Every store's app-name rule: where the abort id comes from when the call names none. */
+function appNameCases(): RunnerCase[] {
+  const rows: [Runner, string, string[]][] = [
+    ['gog', 'launch', ['launch', '/games/app-gog', 'app-gog', '--flag']],
+    ['gog', 'launch-short', ['launch', '/games/only-path']],
+    ['gog', 'download', ['download', 'app-gog', '--path', '/games']],
+    ['gog', 'repair', ['repair', 'app-gog']],
+    ['gog', 'update', ['update', 'app-gog']],
+    ['gog', 'none', ['list']],
+    ['legendary', 'launch', ['launch', 'app-legendary', '--offline']],
+    ['legendary', 'install', ['install', 'app-legendary']],
+    ['legendary', 'repair', ['repair', 'app-legendary']],
+    ['legendary', 'update', ['update', 'app-legendary']],
+    ['legendary', 'none', ['status', '--json']],
+    ['legendary', 'leading-empty', ['', 'launch', 'app-legendary']],
+    ['nile', 'launch', ['launch', '--flag', 'app-nile']],
+    ['nile', 'install', ['install', '--flag', 'app-nile']],
+    ['nile', 'update', ['update', '--flag', 'app-nile']],
+    ['nile', 'verify', ['verify', '--flag', 'app-nile']],
+    ['nile', 'none', ['library', 'list']],
+    ['nile', 'trailing-empty', ['install', 'app-nile', '']],
+    ['sideload', 'run', ['run', 'app-sideload']]
+  ]
+  return rows.map(([name, shape, commandParts]) => ({
+    id: `runner-appname-${name}-${shape}`,
+    callSite:
+      commandParts[0] === 'launch' ? 'runner.call.launch' : 'runner.call',
+    platform: 'linux' as const,
+    calls: [{ runner: { name, bin: name }, commandParts }],
+    script: [{ code: 0 }]
+  }))
+}
+
+// ---- the pairwise rows (D-14) ------------------------------------------------------------------
+
+const AXES = {
+  runner: ['legendary', 'gog', 'nile', 'sideload'],
+  platform: ['linux', 'darwin', 'win32-powershell', 'win32-direct'],
+  dir: ['set', 'unset'],
+  bin: ['relative', 'absolute'],
+  env: ['none', 'base-equal', 'differing', 'with-space'],
+  abortId: ['explicit', 'derived', 'absent'],
+  onOutput: ['set', 'unset'],
+  skipErrorHandler: ['true', 'false'],
+  logMessagePrefix: ['set', 'unset'],
+  outcome: ['exit-0', 'exit-1', 'signal', 'aborted', 'killed', 'throw']
+} as const satisfies Axes
+
+/** A sideload command names no app, so an abort id derived from the app name is not a legal pair. */
+const feasible = (row: Row): boolean =>
+  !(row.abortId === 'derived' && row.runner === 'sideload')
+
+const PAIRWISE_BINS: Record<string, string> = {
+  legendary: 'legendary',
+  gog: 'gogdl',
+  nile: 'nile',
+  sideload: 'sideload-run'
+}
+
+/** The command a row runs: it names the app unless the row's abort id is `absent`. */
+function pairwiseParts(runner: string, abortId: string): string[] {
+  const named = abortId !== 'absent'
+  switch (runner) {
+    case 'legendary':
+      return named ? ['launch', 'app-legendary'] : ['status']
+    case 'gog':
+      return named ? ['launch', '/games/app-gog', 'app-gog'] : ['list']
+    case 'nile':
+      return named ? ['launch', '--flag', 'app-nile'] : ['library', 'list']
+    default:
+      return ['run', '--flag']
+  }
+}
+
+const PAIRWISE_ENV: Record<string, Record<string, string> | undefined> = {
+  none: undefined,
+  'base-equal': { LANG: PINNED_BASE.LANG },
+  differing: { LANG: 'en_NZ.UTF-8' },
+  'with-space': { GAMELIB_TEST_VALUE: 'a value with a space' }
+}
+
+const PAIRWISE_CHUNKS = [out('out-1\n'), err('err-1\n')]
+
+const PAIRWISE_STEPS: Record<string, RunnerStep> = {
+  'exit-0': { chunks: PAIRWISE_CHUNKS, code: 0 },
+  'exit-1': { chunks: PAIRWISE_CHUNKS, code: 1 },
+  signal: { chunks: PAIRWISE_CHUNKS, code: null, signal: 'SIGTERM' },
+  aborted: { chunks: PAIRWISE_CHUNKS, hold: true, abortWhileHeld: true },
+  killed: {
+    chunks: PAIRWISE_CHUNKS,
+    code: null,
+    signal: 'SIGTERM',
+    killedByUs: true
+  },
+  throw: { throws: 'ENOENT' }
+}
+
+function pairwiseCases(): RunnerCase[] {
+  return allPairs(AXES, feasible).map((row, index) => {
+    const runner = String(row.runner) as Runner
+    const platform = String(row.platform)
+    const bin = PAIRWISE_BINS[runner] ?? runner
+    const parts = pairwiseParts(runner, String(row.abortId))
+    const env = PAIRWISE_ENV[String(row.env)]
+    return {
+      id: `runner-pairwise-${String(index + 1).padStart(3, '0')}`,
+      callSite: parts[0] === 'launch' ? 'runner.call.launch' : 'runner.call',
+      platform: platform.startsWith('win32')
+        ? 'win32'
+        : (platform as HostPlatform),
+      ...(platform === 'win32-powershell' && { onPath: ['powershell'] }),
+      calls: [
+        {
+          runner: {
+            name: runner,
+            bin: row.bin === 'absolute' ? `/opt/gamelib/bin/${bin}` : bin,
+            ...(row.dir === 'set' && { dir: `<TOOLS>/${runner}` })
+          },
+          commandParts: parts,
+          options: {
+            ...(env && { env }),
+            ...(row.abortId === 'explicit' && { abortId: 'pairwise-abort' }),
+            ...(row.onOutput === 'set' && { observe: true as const }),
+            skipErrorHandler: row.skipErrorHandler === 'true',
+            ...(row.logMessagePrefix === 'set' && {
+              logMessagePrefix: 'Launching Example'
+            })
+          }
+        }
+      ],
+      script: [PAIRWISE_STEPS[String(row.outcome)] ?? { code: 0 }],
+      axes: row
+    }
+  })
+}
+
 function runnerCases(): RunnerCase[] {
-  return [...tracerCases()]
+  return [
+    ...tracerCases(),
+    ...namedCases(),
+    ...dedupCases(),
+    ...transcriptCases(),
+    ...appNameCases(),
+    ...pairwiseCases()
+  ]
 }
 
 /** The documented Rust-side differences (D-19); a delta no case uses is itself an error on the Rust side. */
@@ -220,6 +1094,26 @@ async function recordCase(
       const out = await withInjected([injectPlatform(OS[c.platform])], () =>
         withPinnedBaseEnv(profile.fake, async () => {
           Object.assign(process.env, c.processEnv)
+          if (c.direct) {
+            const direct = c.direct
+            const line = getRunnerCallWithoutCredentials(
+              direct.command as never,
+              direct.env,
+              direct.runnerPath,
+              (command) => {
+                trace.records.calls.push({
+                  seam: 'commandToArgsArray',
+                  command
+                })
+                return [...(direct.converts ?? [])]
+              }
+            )
+            return {
+              results: [{ line }] as unknown[],
+              identical: undefined,
+              streams: [] as (string[] | null)[]
+            }
+          }
           const instances = Array.from({ length: c.instances ?? 1 }, () =>
             createCommandRunner(trace.deps)
           )
@@ -280,15 +1174,13 @@ async function recordCase(
             trace.releaseAll()
             return Promise.all(promises)
           }
-          let results: Awaited<ReturnType<typeof start>>[]
+          let results: unknown[]
           if (c.concurrent) {
-            results = (await settle(c.calls.map(start))) as typeof results
+            results = await settle(c.calls.map(start))
           } else {
             results = []
             for (const [index, spec] of c.calls.entries()) {
-              results.push(
-                ...((await settle([start(spec, index)])) as typeof results)
-              )
+              results.push(...(await settle([start(spec, index)])))
             }
           }
           trace.expectScriptConsumed()
@@ -370,10 +1262,17 @@ describeSkipOnWindows('command runner oracle (88.2-01)', () => {
     })
   })
 
+  const byId = (id: string): RunnerCase => {
+    const found = cases.find((c) => c.id === id)
+    if (!found) throw new Error(`${id} is missing from cases.json`)
+    return found
+  }
+
   it('the tracer records the runner-log entries with rotate true on the first and false after', async () => {
-    const tracer = cases.find((c) => c.id === 'runner-tracer-legendary-list')
-    if (!tracer) throw new Error('the tracer case is missing')
-    const recorded = await recordCase(tracer, classes)
+    const recorded = await recordCase(
+      byId('runner-tracer-legendary-list'),
+      classes
+    )
     const runnerFrames = (
       recorded.logFrames as { target: { kind: string }; rotate: boolean }[]
     ).filter((frame) => frame.target.kind === 'runner')
@@ -381,6 +1280,73 @@ describeSkipOnWindows('command runner oracle (88.2-01)', () => {
     expect(runnerFrames.map((frame) => frame.rotate)).toEqual(
       runnerFrames.map((_frame, index) => index === 0)
     )
+  })
+
+  it('every pair of pairwise axis values that can occur together is in some runner-pairwise row', () => {
+    const rows = cases
+      .filter((c) => c.id.startsWith('runner-pairwise-'))
+      .map((c) => c.axes as Row)
+    expect(rows.length).toBeGreaterThan(0)
+    expect(uncoveredPairs(AXES, rows, feasible)).toEqual([])
+    // Every value of every axis appears in at least one row (a one-axis claim, not a pair).
+    for (const [axis, values] of Object.entries(AXES)) {
+      for (const value of values) {
+        expect(rows.some((row) => row[axis] === value)).toBe(true)
+      }
+    }
+  })
+
+  it('every callRunner title of commandRunner.test.ts is a named case, and every other title names its owner', () => {
+    const titles = commandRunnerTitles()
+    const owners = notPorted(titles)
+    const ids = cases
+      .map((c) => c.id)
+      .filter((id) => id.startsWith(`${CENSUS_STEM}--`))
+      .map((id) => id.slice(CENSUS_STEM.length + 2))
+    assertCasesCoverTitles(ids, titles, owners)
+    for (const owner of Object.values(owners)) {
+      expect(owner).toMatch(/88\.2-04|runner_real\.rs/)
+    }
+    // Both owners are in use: the map names 88.2-04 for the wine titles and runner_real.rs for the real children.
+    expect(Object.values(owners).some((o) => o.includes('88.2-04'))).toBe(true)
+    expect(
+      Object.values(owners).some((o) => o.includes('runner_real.rs'))
+    ).toBe(true)
+  })
+
+  it('a transcript of more than fifty stdout chunks answers with exactly the last fifty', async () => {
+    const c = byId('runner-transcript-legendary-install-progress')
+    const chunks = c.script.flatMap((step) => step.chunks ?? [])
+    const stdoutChunks = chunks.filter((chunk) => chunk.stream === 'stdout')
+    expect(stdoutChunks.length).toBeGreaterThan(50)
+    const recorded = await recordCase(c, classes)
+    const result = (recorded.result as { results: { stdout: string }[] })
+      .results[0]
+    expect(result?.stdout).toBe(
+      stdoutChunks
+        .slice(-50)
+        .map((chunk) => chunk.text.trim())
+        .join('')
+    )
+  })
+
+  it('every runner call site named in classes.json is one of the eight 88.2 ones, and no case uses an unclassified one', () => {
+    const runnerSites = Object.keys(classes).filter((site) =>
+      site.startsWith('runner.')
+    )
+    expect(runnerSites.sort()).toEqual(
+      [
+        'runner.call',
+        'runner.call.launch',
+        'runner.script',
+        'runner.spawn_async',
+        'runner.wine_command',
+        'runner.wine_command.launch',
+        'runner.wine_command.wineserver_wait',
+        'runner.wine_path'
+      ].sort()
+    )
+    for (const c of cases) expect(classes[c.callSite]).toBeDefined()
   })
 
   it('the committed MANIFEST agrees with the case list and holds one folder per case', () => {

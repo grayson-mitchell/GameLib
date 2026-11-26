@@ -1,0 +1,17 @@
+[
+  {
+    "seam": "abort.create",
+    "id": "app-nile"
+  },
+  {
+    "seam": "errorHandler",
+    "error": "",
+    "appName": "app-nile",
+    "runner": "nile"
+  },
+  {
+    "seam": "abort.remove",
+    "id": "app-nile",
+    "aborted": false
+  }
+]

@@ -1,0 +1,10 @@
+{
+  "results": [
+    {
+      "stdout": "",
+      "stderr": "",
+      "fullCommand": "<TOOLS>/nile/nile launch --flag app-nile",
+      "abort": true
+    }
+  ]
+}

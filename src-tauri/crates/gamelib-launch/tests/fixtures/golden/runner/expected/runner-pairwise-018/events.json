@@ -1,0 +1,10 @@
+[
+  {
+    "level": "info",
+    "prefix": "Sideload",
+    "parts": [
+      "Launching Example:",
+      "powershell -NoProfile Start-Process \"`\"<TOOLS>/sideload/sideload-run`\"\" -Wait -NoNewWindow -ArgumentList \"`\"run`\"\",\"`\"--flag`\"\""
+    ]
+  }
+]

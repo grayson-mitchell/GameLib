@@ -1,0 +1,22 @@
+[
+  {
+    "level": "info",
+    "prefix": "Gog",
+    "parts": [
+      "Launching Example:",
+      "LANG=en_NZ.UTF-8 <TOOLS>/gog/gogdl launch /games/app-gog app-gog"
+    ]
+  },
+  {
+    "level": "error",
+    "prefix": "Gog",
+    "parts": [
+      "Error running",
+      "command",
+      "\"LANG=en_NZ.UTF-8 <TOOLS>/gog/gogdl launch /games/app-gog app-gog\":",
+      {
+        "code": "ENOENT"
+      }
+    ]
+  }
+]

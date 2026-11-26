@@ -1,0 +1,17 @@
+[
+  {
+    "seam": "abort.create",
+    "id": "aborted-signal"
+  },
+  {
+    "seam": "errorHandler",
+    "error": "",
+    "appName": "aborted-signal",
+    "runner": "gog"
+  },
+  {
+    "seam": "abort.remove",
+    "id": "aborted-signal",
+    "aborted": true
+  }
+]

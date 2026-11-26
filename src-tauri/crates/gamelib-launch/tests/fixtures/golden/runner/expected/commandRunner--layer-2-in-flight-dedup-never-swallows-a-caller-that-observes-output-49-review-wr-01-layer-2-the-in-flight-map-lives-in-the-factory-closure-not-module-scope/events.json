@@ -1,0 +1,26 @@
+[
+  {
+    "level": "info",
+    "prefix": "Gog",
+    "parts": [
+      "Running command:",
+      "gogdl list closure"
+    ]
+  },
+  {
+    "level": "info",
+    "prefix": "Gog",
+    "parts": [
+      "Running command:",
+      "gogdl list closure"
+    ]
+  },
+  {
+    "level": "info",
+    "prefix": "Gog",
+    "parts": [
+      "Abort command",
+      "\"gogdl list closure\""
+    ]
+  }
+]

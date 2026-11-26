@@ -1,0 +1,10 @@
+{
+  "results": [
+    {
+      "stdout": "",
+      "stderr": "Process exited with code 1",
+      "fullCommand": "gogdl status skip-fail",
+      "error": "Process exited with code 1"
+    }
+  ]
+}

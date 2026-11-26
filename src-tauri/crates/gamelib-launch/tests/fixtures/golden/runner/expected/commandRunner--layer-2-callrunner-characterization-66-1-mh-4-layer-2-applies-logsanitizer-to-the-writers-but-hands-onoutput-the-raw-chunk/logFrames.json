@@ -1,0 +1,64 @@
+[
+  {
+    "target": {
+      "kind": "game",
+      "appName": "game-writer",
+      "runner": "gog",
+      "type": "launch"
+    },
+    "rotate": true,
+    "line": {
+      "level": "INFO",
+      "prefix": "",
+      "message": "Running command: gogdl list l1-sanitizer \n\n"
+    }
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": true,
+    "line": {
+      "level": "INFO",
+      "prefix": "",
+      "message": "Running command: gogdl list l1-sanitizer \n\n"
+    }
+  },
+  {
+    "target": {
+      "kind": "game",
+      "appName": "game-writer",
+      "runner": "gog",
+      "type": "launch"
+    },
+    "rotate": false,
+    "raw": "token=***"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "token=***"
+  },
+  {
+    "target": {
+      "kind": "game",
+      "appName": "game-writer",
+      "runner": "gog",
+      "type": "launch"
+    },
+    "rotate": false,
+    "raw": "err=***"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "gog"
+    },
+    "rotate": false,
+    "raw": "err=***"
+  }
+]

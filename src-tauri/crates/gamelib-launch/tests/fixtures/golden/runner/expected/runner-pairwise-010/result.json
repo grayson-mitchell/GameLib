@@ -1,0 +1,10 @@
+{
+  "results": [
+    {
+      "stdout": "",
+      "stderr": "",
+      "fullCommand": "GAMELIB_TEST_VALUE=\"a value with a space\" powershell -NoProfile Start-Process \"`\"<TOOLS>/gog/gogdl`\"\" -Wait -NoNewWindow -ArgumentList \"`\"launch`\"\",\"`\"/games/app-gog`\"\",\"`\"app-gog`\"\"",
+      "abort": true
+    }
+  ]
+}

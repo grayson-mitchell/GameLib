@@ -1,0 +1,20 @@
+[
+  {
+    "level": "info",
+    "prefix": "Gog",
+    "parts": [
+      "Launching Example:",
+      "GAMELIB_TEST_VALUE=\"a value with a space\" <TOOLS>/gog/gogdl launch /games/app-gog app-gog"
+    ]
+  },
+  {
+    "level": "error",
+    "prefix": "Gog",
+    "parts": [
+      "Error running",
+      "command",
+      "\"GAMELIB_TEST_VALUE=\"a value with a space\" <TOOLS>/gog/gogdl launch /games/app-gog app-gog\":",
+      {}
+    ]
+  }
+]

@@ -1,0 +1,38 @@
+[
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "nile"
+    },
+    "rotate": true,
+    "line": {
+      "level": "INFO",
+      "prefix": "",
+      "message": "Running command: nile library list --json \n\n"
+    }
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "nile"
+    },
+    "rotate": false,
+    "raw": "{\"games\": [{\"title\": \"Alpha "
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "nile"
+    },
+    "rotate": false,
+    "raw": "Game\", \"id\": \"a1\"}, {\"title\": \"Beta"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "nile"
+    },
+    "rotate": false,
+    "raw": " Quest\", \"id\": \"b2\"}]}\n"
+  }
+]

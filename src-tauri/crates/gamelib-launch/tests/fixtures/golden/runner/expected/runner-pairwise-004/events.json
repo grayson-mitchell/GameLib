@@ -1,0 +1,18 @@
+[
+  {
+    "level": "info",
+    "prefix": "Nile",
+    "parts": [
+      "Launching Example:",
+      "GAMELIB_TEST_VALUE=\"a value with a space\" /opt/gamelib/bin/nile library list"
+    ]
+  },
+  {
+    "level": "info",
+    "prefix": "Nile",
+    "parts": [
+      "Abort command",
+      "\"GAMELIB_TEST_VALUE=\"a value with a space\" /opt/gamelib/bin/nile library list\""
+    ]
+  }
+]

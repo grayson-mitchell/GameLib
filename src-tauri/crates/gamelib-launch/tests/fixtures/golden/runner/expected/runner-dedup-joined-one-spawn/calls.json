@@ -1,0 +1,17 @@
+[
+  {
+    "seam": "abort.create",
+    "id": "dedup-a"
+  },
+  {
+    "seam": "errorHandler",
+    "error": "joined",
+    "appName": "",
+    "runner": "legendary"
+  },
+  {
+    "seam": "abort.remove",
+    "id": "dedup-a",
+    "aborted": false
+  }
+]

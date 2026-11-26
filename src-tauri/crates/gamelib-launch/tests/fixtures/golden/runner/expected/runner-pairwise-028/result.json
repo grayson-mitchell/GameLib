@@ -1,0 +1,10 @@
+{
+  "results": [
+    {
+      "stdout": "",
+      "stderr": "spawn ./sideload-run ENOENT",
+      "fullCommand": "<TOOLS>/sideload/sideload-run run --flag",
+      "error": "spawn ./sideload-run ENOENT"
+    }
+  ]
+}

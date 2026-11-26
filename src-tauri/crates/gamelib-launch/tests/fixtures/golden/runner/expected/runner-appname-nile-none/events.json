@@ -1,0 +1,10 @@
+[
+  {
+    "level": "info",
+    "prefix": "Nile",
+    "parts": [
+      "Running command:",
+      "nile library list"
+    ]
+  }
+]

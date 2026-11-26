@@ -1,0 +1,20 @@
+[
+  {
+    "level": "info",
+    "prefix": "Gog",
+    "parts": [
+      "Running command:",
+      "gogdl status default-fail"
+    ]
+  },
+  {
+    "level": "error",
+    "prefix": "Gog",
+    "parts": [
+      "Error running",
+      "command",
+      "\"gogdl status default-fail\":",
+      {}
+    ]
+  }
+]

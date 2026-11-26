@@ -1,0 +1,47 @@
+[
+  {
+    "seam": "abort.create",
+    "id": "dedup-1"
+  },
+  {
+    "seam": "errorHandler",
+    "error": "",
+    "appName": "",
+    "runner": "legendary"
+  },
+  {
+    "seam": "abort.remove",
+    "id": "dedup-1",
+    "aborted": false
+  },
+  {
+    "seam": "abort.create",
+    "id": "dedup-2"
+  },
+  {
+    "seam": "errorHandler",
+    "error": "",
+    "appName": "",
+    "runner": "legendary"
+  },
+  {
+    "seam": "abort.remove",
+    "id": "dedup-2",
+    "aborted": false
+  },
+  {
+    "seam": "abort.create",
+    "id": "dedup-3"
+  },
+  {
+    "seam": "errorHandler",
+    "error": "",
+    "appName": "",
+    "runner": "legendary"
+  },
+  {
+    "seam": "abort.remove",
+    "id": "dedup-3",
+    "aborted": false
+  }
+]

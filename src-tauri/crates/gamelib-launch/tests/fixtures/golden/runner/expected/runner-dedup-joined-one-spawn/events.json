@@ -1,0 +1,18 @@
+[
+  {
+    "level": "info",
+    "prefix": "Legendary",
+    "parts": [
+      "Running command:",
+      "legendary list --json"
+    ]
+  },
+  {
+    "level": "info",
+    "prefix": "Legendary",
+    "parts": [
+      "Running command:",
+      "legendary list --json"
+    ]
+  }
+]

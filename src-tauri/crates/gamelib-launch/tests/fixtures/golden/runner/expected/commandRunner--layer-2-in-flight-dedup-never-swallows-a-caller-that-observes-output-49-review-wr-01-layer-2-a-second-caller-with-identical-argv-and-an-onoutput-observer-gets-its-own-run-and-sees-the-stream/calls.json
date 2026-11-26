@@ -1,0 +1,32 @@
+[
+  {
+    "seam": "abort.create",
+    "id": "lib-caller"
+  },
+  {
+    "seam": "abort.create",
+    "id": "probe-caller"
+  },
+  {
+    "seam": "errorHandler",
+    "error": "",
+    "appName": "",
+    "runner": "gog"
+  },
+  {
+    "seam": "abort.remove",
+    "id": "lib-caller",
+    "aborted": true
+  },
+  {
+    "seam": "errorHandler",
+    "error": "[]",
+    "appName": "",
+    "runner": "gog"
+  },
+  {
+    "seam": "abort.remove",
+    "id": "probe-caller",
+    "aborted": true
+  }
+]

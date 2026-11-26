@@ -1,0 +1,10 @@
+[
+  {
+    "level": "info",
+    "prefix": "Gog",
+    "parts": [
+      "Running command:",
+      "powershell -NoProfile Start-Process \"`\"gogdl`\"\" -Wait -NoNewWindow -ArgumentList \"`\"register`\"\",\"`\"--code`\"\",\"`\"<redacted>`\"\",\"`\"--token`\"\",\"`\"<redacted>`\"\",\"`\"--code-verifier`\"\",\"`\"<redacted>`\"\",\"`\"--password`\"\",\"`\"<redacted>`\"\",\"`\"--serial`\"\",\"`\"<redacted>`\"\",\"`\"--client-id`\"\",\"`\"<redacted>`\"\",\"`\"--access-token`\"\",\"`\"<redacted>`\"\",\"`\"--refresh-token`\"\",\"`\"<redacted>`\"\""
+    ]
+  }
+]

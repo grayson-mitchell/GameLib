@@ -1,0 +1,10 @@
+[
+  {
+    "level": "info",
+    "prefix": "Sideload",
+    "parts": [
+      "Running command:",
+      "sideload run app-sideload"
+    ]
+  }
+]

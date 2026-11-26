@@ -1,0 +1,23 @@
+[
+  {
+    "seam": "abort.create",
+    "id": "0.4242"
+  },
+  {
+    "seam": "errorHandler",
+    "error": "Stored credentials are no longer valid! Please login again.",
+    "appName": "",
+    "runner": "gog"
+  },
+  {
+    "seam": "errorHandler",
+    "error": "Process exited with code 1",
+    "appName": "",
+    "runner": "gog"
+  },
+  {
+    "seam": "abort.remove",
+    "id": "0.4242",
+    "aborted": false
+  }
+]

@@ -1,0 +1,9 @@
+{
+  "results": [
+    {
+      "stdout": "",
+      "stderr": "",
+      "fullCommand": "sideload run app-sideload"
+    }
+  ]
+}

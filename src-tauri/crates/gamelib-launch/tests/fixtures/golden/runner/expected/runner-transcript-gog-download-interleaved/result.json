@@ -1,0 +1,9 @@
+{
+  "results": [
+    {
+      "stdout": "progress 1/30progress 2/30progress 3/30progress 4/30progress 5/30progress 6/30progress 7/30progress 8/30progress 9/30progress 10/30progress 11/30progress 12/30progress 13/30progress 14/30progress 15/30progress 16/30progress 17/30progress 18/30progress 19/30progress 20/30progress 21/30progress 22/30progress 23/30progress 24/30progress 25/30progress 26/30progress 27/30progress 28/30progress 29/30progress 30/30",
+      "stderr": "[gogdl] debug: chunk 1 verified\n[gogdl] debug: chunk 2 verified\n[gogdl] debug: chunk 3 verified\n[gogdl] debug: chunk 4 verified\n[gogdl] debug: chunk 5 verified\n[gogdl] debug: chunk 6 verified\n[gogdl] debug: chunk 7 verified\n[gogdl] debug: chunk 8 verified\n[gogdl] debug: chunk 9 verified\n[gogdl] debug: chunk 10 verified\n[gogdl] debug: chunk 11 verified\n[gogdl] debug: chunk 12 verified\n[gogdl] debug: chunk 13 verified\n[gogdl] debug: chunk 14 verified\n[gogdl] debug: chunk 15 verified\n[gogdl] debug: chunk 16 verified\n[gogdl] debug: chunk 17 verified\n[gogdl] debug: chunk 18 verified\n[gogdl] debug: chunk 19 verified\n[gogdl] debug: chunk 20 verified\n[gogdl] debug: chunk 21 verified\n[gogdl] debug: chunk 22 verified\n[gogdl] debug: chunk 23 verified\n[gogdl] debug: chunk 24 verified\n[gogdl] debug: chunk 25 verified\n[gogdl] debug: chunk 26 verified\n[gogdl] debug: chunk 27 verified\n[gogdl] debug: chunk 28 verified\n[gogdl] debug: chunk 29 verified\n[gogdl] debug: chunk 30 verified",
+      "fullCommand": "gogdl download app-gog --path /games"
+    }
+  ]
+}

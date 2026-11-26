@@ -1,0 +1,14 @@
+[
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "sideload"
+    },
+    "rotate": true,
+    "line": {
+      "level": "INFO",
+      "prefix": "",
+      "message": "Launching Example: <TOOLS>/sideload/sideload-run run --flag \n\n"
+    }
+  }
+]

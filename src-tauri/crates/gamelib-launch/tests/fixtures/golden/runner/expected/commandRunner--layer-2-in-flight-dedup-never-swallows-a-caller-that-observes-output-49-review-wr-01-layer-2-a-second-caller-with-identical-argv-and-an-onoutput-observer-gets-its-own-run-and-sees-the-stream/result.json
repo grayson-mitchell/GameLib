@@ -1,0 +1,20 @@
+{
+  "results": [
+    {
+      "stdout": "",
+      "stderr": "",
+      "fullCommand": "gogdl list-updates --json",
+      "abort": true
+    },
+    {
+      "stdout": "",
+      "stderr": "",
+      "fullCommand": "gogdl list-updates --json",
+      "abort": true
+    }
+  ],
+  "identical": [
+    0,
+    1
+  ]
+}

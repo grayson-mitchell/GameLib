@@ -1,0 +1,20 @@
+[
+  {
+    "level": "info",
+    "prefix": "Gog",
+    "parts": [
+      "Running command:",
+      "LANG=en_NZ.UTF-8 powershell -NoProfile Start-Process \"`\"<TOOLS>/gog/gogdl`\"\" -Wait -NoNewWindow -ArgumentList \"`\"list`\"\""
+    ]
+  },
+  {
+    "level": "error",
+    "prefix": "Gog",
+    "parts": [
+      "Error running",
+      "command",
+      "\"LANG=en_NZ.UTF-8 powershell -NoProfile Start-Process \"`\"<TOOLS>/gog/gogdl`\"\" -Wait -NoNewWindow -ArgumentList \"`\"list`\"\"\":",
+      {}
+    ]
+  }
+]

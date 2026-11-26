@@ -1,0 +1,10 @@
+{
+  "results": [
+    {
+      "stdout": "",
+      "stderr": "Process terminated with signal SIGTERM",
+      "fullCommand": "sideload-run run --flag",
+      "error": "Process terminated with signal SIGTERM"
+    }
+  ]
+}

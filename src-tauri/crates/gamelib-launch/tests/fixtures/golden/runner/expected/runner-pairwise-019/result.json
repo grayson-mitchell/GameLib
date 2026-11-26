@@ -1,0 +1,9 @@
+{
+  "results": [
+    {
+      "stdout": "out-1",
+      "stderr": "err-1",
+      "fullCommand": "GAMELIB_TEST_VALUE=\"a value with a space\" <TOOLS>/gog/gogdl launch /games/app-gog app-gog"
+    }
+  ]
+}

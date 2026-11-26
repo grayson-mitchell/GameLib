@@ -1,0 +1,20 @@
+[
+  {
+    "level": "info",
+    "prefix": "Legendary",
+    "parts": [
+      "Running command:",
+      "/opt/gamelib/bin/legendary launch app-legendary"
+    ]
+  },
+  {
+    "level": "error",
+    "prefix": "Legendary",
+    "parts": [
+      "Error running",
+      "command",
+      "\"/opt/gamelib/bin/legendary launch app-legendary\":",
+      {}
+    ]
+  }
+]

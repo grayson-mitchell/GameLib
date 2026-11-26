@@ -1,0 +1,10 @@
+{
+  "results": [
+    {
+      "stdout": "",
+      "stderr": "",
+      "fullCommand": "GAMELIB_TEST_VALUE=\"a value with a space\" /opt/gamelib/bin/nile library list",
+      "abort": true
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+[
+  {
+    "seam": "abort.create",
+    "id": "app-gog"
+  },
+  {
+    "seam": "errorHandler",
+    "error": "progress 1/30progress 2/30progress 3/30progress 4/30progress 5/30progress 6/30progress 7/30progress 8/30progress 9/30progress 10/30progress 11/30progress 12/30progress 13/30progress 14/30progress 15/30progress 16/30progress 17/30progress 18/30progress 19/30progress 20/30progress 21/30progress 22/30progress 23/30progress 24/30progress 25/30progress 26/30progress 27/30progress 28/30progress 29/30progress 30/30[gogdl] debug: chunk 1 verified[gogdl] debug: chunk 2 verified[gogdl] debug: chunk 3 verified[gogdl] debug: chunk 4 verified[gogdl] debug: chunk 5 verified[gogdl] debug: chunk 6 verified[gogdl] debug: chunk 7 verified[gogdl] debug: chunk 8 verified[gogdl] debug: chunk 9 verified[gogdl] debug: chunk 10 verified[gogdl] debug: chunk 11 verified[gogdl] debug: chunk 12 verified[gogdl] debug: chunk 13 verified[gogdl] debug: chunk 14 verified[gogdl] debug: chunk 15 verified[gogdl] debug: chunk 16 verified[gogdl] debug: chunk 17 verified[gogdl] debug: chunk 18 verified[gogdl] debug: chunk 19 verified[gogdl] debug: chunk 20 verified[gogdl] debug: chunk 21 verified[gogdl] debug: chunk 22 verified[gogdl] debug: chunk 23 verified[gogdl] debug: chunk 24 verified[gogdl] debug: chunk 25 verified[gogdl] debug: chunk 26 verified[gogdl] debug: chunk 27 verified[gogdl] debug: chunk 28 verified[gogdl] debug: chunk 29 verified[gogdl] debug: chunk 30 verified",
+    "appName": "app-gog",
+    "runner": "gog"
+  },
+  {
+    "seam": "abort.remove",
+    "id": "app-gog",
+    "aborted": false
+  }
+]

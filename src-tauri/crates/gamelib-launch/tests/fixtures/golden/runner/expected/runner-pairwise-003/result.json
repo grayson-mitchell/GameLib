@@ -1,0 +1,10 @@
+{
+  "results": [
+    {
+      "stdout": "",
+      "stderr": "Process terminated with signal SIGTERM",
+      "fullCommand": "LANG=en_NZ.UTF-8 powershell -NoProfile Start-Process \"`\"<TOOLS>/gog/gogdl`\"\" -Wait -NoNewWindow -ArgumentList \"`\"list`\"\"",
+      "error": "Process terminated with signal SIGTERM"
+    }
+  ]
+}

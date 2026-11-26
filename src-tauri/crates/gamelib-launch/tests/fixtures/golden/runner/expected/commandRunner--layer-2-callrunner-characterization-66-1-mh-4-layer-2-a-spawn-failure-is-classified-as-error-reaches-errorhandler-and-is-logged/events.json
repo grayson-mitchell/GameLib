@@ -1,0 +1,22 @@
+[
+  {
+    "level": "info",
+    "prefix": "Gog",
+    "parts": [
+      "Running command:",
+      "gogdl list enoent"
+    ]
+  },
+  {
+    "level": "error",
+    "prefix": "Gog",
+    "parts": [
+      "Error running",
+      "command",
+      "\"gogdl list enoent\":",
+      {
+        "code": "ENOENT"
+      }
+    ]
+  }
+]

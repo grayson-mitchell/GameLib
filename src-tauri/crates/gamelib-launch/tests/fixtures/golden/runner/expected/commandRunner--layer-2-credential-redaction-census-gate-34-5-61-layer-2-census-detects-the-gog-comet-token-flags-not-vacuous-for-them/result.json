@@ -1,0 +1,9 @@
+{
+  "results": [
+    {
+      "stdout": "",
+      "stderr": "",
+      "fullCommand": "gogdl comet --access-token <redacted> launch --refresh-token <redacted>"
+    }
+  ]
+}
