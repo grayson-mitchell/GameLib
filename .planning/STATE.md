@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: "88.2"
 current_phase_name: Command runner and game processes
 status: executing
-stopped_at: Completed 88.2-13-PLAN.md
-last_updated: "2026-11-26T21:06:46.062Z"
+stopped_at: Completed 88.2-14-PLAN.md
+last_updated: "2026-11-26T22:26:55.325Z"
 last_activity: 2026-11-26
 last_activity_desc: Phase 88.2 execution started
-state_head: 748953d3ee7d60211ce52aa265753c9df310042a
+state_head: 2e2bcaa92a4aaf27b71011667b8ea44aa3988e57
 progress:
   total_phases: 25
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-25)
 ## Current Position
 
 Phase: 88.2 (Command runner and game processes) — EXECUTING
-Plan: 14 of 25
+Plan: 15 of 25
 Status: Ready to execute
 Last activity: 2026-11-26 — Phase 88.2 execution started
 Progress: [████████████████░░░░] 204/257 plans ([█████████░] 92%)
@@ -560,6 +560,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 88.2 P11 | 75 min | 2 tasks | 11 files |
 | Phase 88.2 P12 | 94 min | 2 tasks | 9 files |
 | Phase 88.2 P13 | 75 min | 2 tasks | 10 files |
+| Phase 88.2 P14 | 150min | 2 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -1264,6 +1265,9 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 88.2]: 88.2-12: ProcSpec.post_exit (Drain default, Grace, UntilClosed) gives the helper wine command the TS resolveOn close (every pipe holder) and exit (+250 ms grace); launch_wine_command shares prepare_wine_command with run_wine_command (87 deltas.json untouched), game arm = capture file + registry { wine, key }, wineserver --wait always a 30-minute Helper — close needed a real wait for pipe holders the 2 s drain never gave; the launch replay compares the TS caller-list as the argv, so no wine_command delta is applied
 - [Phase 88.2]: 88.2-13: launch_wine_path answers through 88.1-13 get_wine_path; its three differences from the TS golden (fixed error line, no debug lines, no tracked entry or resolveOn close) are recorded deltas, not closed by routing through the launch variant
 - [Phase 88.2]: 88.2-13: run_script_for_game answers Ok(true) for any exit code and Err(text) for a script that could not start; the op passes that Err through, and the script's HOME is the host env the shell passes (the D-22 real-profile arm)
+- [Phase 88.2]: 88.2-14: launch_spawn_async takes [args] only and registers as a helper under its stream id, so launch_runner_kill ends it with a resolved aborted:true
+- [Phase 88.2]: 88.2-14: windows_quoting asserts the child's parsed argv equals the argv sent on all three paths; raw command lines compared only for rows with no quote (Rust and Node quote embedded quotes differently by design)
+- [Phase 88.2]: 88.2-14: the direct Windows runner path refuses .bat/.cmd with Node's text 'spawn EINVAL' (an errno exception with no file name)
 
 ### Pending Todos
 
@@ -1550,8 +1554,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-26T21:06:24.030Z
-Stopped at: Completed 88.2-13-PLAN.md
+Last session: 2026-11-26T22:26:52.096Z
+Stopped at: Completed 88.2-14-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
