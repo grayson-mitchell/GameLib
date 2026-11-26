@@ -190,7 +190,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 86: Pure leaf services** — 27/27 plans in 21 waves (26 + 1 gap closure); completed 2026-11-23
 - [ ] **Phase 87: Engine, Wine and tools** — 59 plans in 38 waves; planned 2026-11-23 (executes after Phase 86 closes)
 - [x] **Phase 88: Launch scaffolding and known fixes** — 17/17 plans in 14 waves; completed 2026-11-25 (SVC-03 part 1 of 4; split 2026-11-25, 88-CONTEXT D-30)
-- [ ] **Phase 88.1: Launch builders and prepare steps** — 20 plans in 15 waves; planned 2026-11-25 (SVC-03 part 2 of 4; D-30)
+- [ ] **Phase 88.1: Launch builders and prepare steps** — 23 plans (20 in 15 waves + 3 gap closure for CR-01, planned 2026-11-26); planned 2026-11-25 (SVC-03 part 2 of 4; D-30)
 - [ ] **Phase 88.2: Command runner and game processes** — 25 plans in 18 waves; planned 2026-11-26, re-sliced the same day to fit the smart-zone budget and file cap (SVC-03 part 3 of 4; D-30)
 - [ ] **Phase 88.3: Launch funnel, re-adoption and the live gate** — not planned (runs the Phase 88 live gate)
 - [ ] **Phase 89: Steam library state** — not planned
@@ -950,7 +950,7 @@ Plans:
   2. Anti-cheat at launch, `check_wine_before_launch`, `download_default_wine` (D-28), `isMacSonomaOrHigher`, `isEpicServiceOffline`, `removeQuoteIfNecessary` and system info behave as before
   3. The builder TS, `gamescopeCommand.ts`, `utils/systeminfo` and the replaced `utils.ts` rows are deleted; closes on goldens, three-OS CI and a Linux stub-gamescope smoke
 
-**Plans:** 20/20 plans executed in 15 waves; planned 2026-11-25 (goldens are recorded from the TS before each Rust slice, D-25)
+**Plans:** 20/23 plans executed (20 in 15 waves + 3 gap closure); planned 2026-11-25 (goldens are recorded from the TS before each Rust slice, D-25); gap closure planned 2026-11-26 from 88.1-VERIFICATION (CR-01, WR-01, the truth-2 decision)
 
 Plans:
 **Wave 1**
@@ -1002,6 +1002,11 @@ Plans:
 
 **Wave 15** *(blocked on Wave 14 completion)*
 - [x] 88.1-20-PLAN.md — Clean-worktree proof, push checkpoint and three-OS CI with the Linux stub-gamescope smoke (D-30: no signed build)
+
+**Gap closure** *(from 88.1-VERIFICATION, 2026-11-26; gap waves 1-3, run with `/gsd-execute-phase 88.1 --gaps-only`)*
+- [ ] 88.1-21-PLAN.md — CR-01 and WR-01: setupEnvVars reads a wine-free SetupEnvView, WineInstallation ignores a legacy key; 11 builders goldens recorded from the pre-port TS (Windows `{}` first); shell arm and CLI reproduction tests
+- [ ] 88.1-22-PLAN.md — The operator-accepted pairwise narrowing as a truth-2 override; SVC-03's edge-coverage row classified; the review ledger closed (WR-02..04 and IN-02 to triaged todos)
+- [ ] 88.1-23-PLAN.md — Gap-closure proof at a candidate head, push checkpoint, three-OS CI with the new cases observed on windows-latest
 
 **Cross-cutting constraints:** <!-- gsd:generated -->
 - Flagged assumption (spec-less edge probe): SVC-03's edge-coverage row is `unclassified` and unresolved; the D-14 matrix stands in for edge coverage and is not claimed as a verified edge
