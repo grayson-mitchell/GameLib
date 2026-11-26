@@ -106,6 +106,27 @@ impl ChildSet {
         }
         hard_killed
     }
+
+    /// Ends one registered helper's whole tree and unregisters it; every other helper, and every
+    /// game (a game is never registered), is untouched. Answers whether an entry was found.
+    ///
+    /// Unix: SIGTERM to the helper's own group, poll until the group is empty (the leader's reaped
+    /// zombie does not count) up to `grace`, SIGKILL whatever remains, then reap the child if the
+    /// set owns it. Windows: terminate the entry's Job when it has one, else kill the owned child.
+    ///
+    /// The set's lock is held only to take the entry out, never while waiting, so a
+    /// `HelperGuard::drop` on a tokio worker is never stalled behind a slow kill.
+    pub fn terminate_one(&self, pid: u32, grace: Duration) -> bool {
+        let entry = self.lock().remove(&pid);
+        let Some(entry) = entry else {
+            return false;
+        };
+        terminate_entry(pid, entry, grace);
+        // The group is gone (or was never ours to keep): tell the reaper so it cannot later
+        // signal a recycled id.
+        unregister_with_reaper(pid);
+        true
+    }
 }
 
 /// A helper's pid is its process group id (unix `process_group(0)`); a pid that does not fit an
@@ -204,6 +225,76 @@ fn terminate_entries(mut entries: Vec<(u32, Entry)>, grace: Duration) -> Vec<&'s
     }
     hard_killed.sort_unstable();
     hard_killed
+}
+
+/// One entry's share of `terminate_all`, run to completion: the group is empty (or `grace` has
+/// passed and it was SIGKILLed) when this returns.
+#[cfg(unix)]
+fn terminate_entry(pid: u32, mut e: Entry, grace: Duration) {
+    use crate::kill_tree::{kill_process_group, signal_group};
+    use std::time::Instant;
+
+    let label = e.label;
+    let pgid = match i32::try_from(pid) {
+        Ok(pgid) if still_ours(pid, &e) => pgid,
+        // Not a group this set can prove is the helper's: signal nothing, but still reap what the
+        // set owns so no zombie is left behind.
+        _ => {
+            if let Some(child) = e.owned.as_mut() {
+                let _ = child.try_wait();
+            }
+            return;
+        }
+    };
+    if let Err(err) = signal_group(pgid, libc::SIGTERM) {
+        if err.raw_os_error() != Some(libc::ESRCH) {
+            diag(&format!("SIGTERM to helper '{label}' failed: {err}"));
+        }
+    }
+    let deadline = Instant::now() + grace;
+    loop {
+        // Reaping the owned leader as soon as it exits is safe: the group id cannot be reused
+        // while any member remains, and the checks below read the group, not the leader.
+        if let Some(child) = e.owned.as_mut() {
+            if let Err(err) = child.try_wait() {
+                diag(&format!("try_wait failed for helper '{label}': {err}"));
+            }
+        }
+        if !crate::probe::group_alive(pid) || Instant::now() >= deadline {
+            break;
+        }
+        std::thread::sleep(Duration::from_millis(50));
+    }
+    if crate::probe::group_alive(pid) {
+        if let Err(err) = kill_process_group(pgid) {
+            if err.raw_os_error() != Some(libc::ESRCH) {
+                diag(&format!("SIGKILL to helper '{label}' failed: {err}"));
+            }
+        }
+    }
+    if let Some(child) = e.owned.as_mut() {
+        if let Err(err) = child.wait() {
+            diag(&format!("wait failed for helper '{label}': {err}"));
+        }
+    }
+}
+
+/// Windows: the entry's Job kills the helper and every descendant it still has; without one
+/// (creation failed and was logged) fall back to killing the owned child alone. Dropping the
+/// entry closes the Job handle.
+#[cfg(windows)]
+fn terminate_entry(_pid: u32, mut e: Entry, _grace: Duration) {
+    let jobbed = e.job.as_ref().is_some_and(|j| j.terminate());
+    if let Some(child) = e.owned.as_mut() {
+        if !jobbed {
+            if let Err(err) = child.kill() {
+                diag(&format!("kill failed for helper '{}': {err}", e.label));
+            }
+        }
+        if let Err(err) = child.wait() {
+            diag(&format!("wait failed for helper '{}': {err}", e.label));
+        }
+    }
 }
 
 #[cfg(windows)]

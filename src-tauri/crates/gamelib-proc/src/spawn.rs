@@ -3,7 +3,6 @@
 
 use crate::children::{global, HelperGuard};
 use crate::job::JobSlot;
-use crate::kill_tree::KillOutcome;
 use crate::probe;
 use std::path::Path;
 use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
@@ -223,10 +222,10 @@ impl GameHandle {
     /// unless it was reaped, the pid cannot have been recycled (see `wait_leader_exit`). `Gone`
     /// when the group is already empty.
     #[cfg(unix)]
-    pub fn kill_tree(&mut self, grace: std::time::Duration) -> KillOutcome {
+    pub fn kill_tree(&mut self, grace: std::time::Duration) -> crate::kill_tree::KillOutcome {
         match i32::try_from(self.pid) {
             Ok(pgid) => crate::kill_tree::terminate_known_group(pgid, grace),
-            Err(_) => KillOutcome::Gone,
+            Err(_) => crate::kill_tree::KillOutcome::Gone,
         }
     }
 

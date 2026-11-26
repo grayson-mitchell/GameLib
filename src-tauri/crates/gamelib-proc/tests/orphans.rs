@@ -74,6 +74,7 @@ struct Paths {
     /// Where the Node stand-in sidecar writes its two children's pids.
     node_pids: PathBuf,
     /// Where the stand-in writes the game's `<pid> <stamp>` record (`--game-stamp`).
+    #[cfg_attr(not(unix), allow(dead_code))]
     game_stamp: PathBuf,
 }
 
@@ -115,6 +116,9 @@ struct Run {
     child: Child,
     stdin: Option<ChildStdin>,
     manifest: serde_json::Value,
+    /// Every stdout line after the manifest, read on a thread so a hung stand-in fails a test
+    /// instead of hanging it.
+    lines: mpsc::Receiver<String>,
 }
 
 impl Run {
@@ -126,12 +130,17 @@ impl Run {
         let mut child = standin(home, paths, extra).spawn().expect("spawn stand-in");
         let stdout = child.stdout.take().expect("piped stdout");
         let stdin = child.stdin.take();
-        // Read the manifest line on a thread so a hung stand-in fails the test, not hangs it.
+        // Read stdout on a thread so a hung stand-in fails the test, not hangs it. The first line
+        // is the manifest; the reader keeps going so the stand-in's later lines have somewhere
+        // to land (a closed pipe would make its next write fail).
         let (tx, rx) = mpsc::channel();
         std::thread::spawn(move || {
-            let mut line = String::new();
-            let _ = BufReader::new(stdout).read_line(&mut line);
-            let _ = tx.send(line);
+            for line in BufReader::new(stdout).lines() {
+                let Ok(l) = line else { break };
+                if tx.send(l).is_err() {
+                    break;
+                }
+            }
         });
         let line = rx.recv_timeout(LIMIT).expect("manifest line within 15 s");
         let manifest: serde_json::Value = serde_json::from_str(line.trim()).expect("manifest JSON");
@@ -139,6 +148,27 @@ impl Run {
             child,
             stdin,
             manifest,
+            lines: rx,
+        }
+    }
+
+    /// Writes one line to the stand-in without closing its stdin.
+    fn send(&mut self, line: &str) {
+        let stdin = self.stdin.as_mut().expect("stdin still open");
+        writeln!(stdin, "{line}").expect("write line");
+        stdin.flush().expect("flush line");
+    }
+
+    /// Waits (bounded) for the stand-in to print `expected` as a stdout line.
+    fn expect_line(&self, expected: &str) {
+        let deadline = Instant::now() + LIMIT;
+        loop {
+            let left = deadline.saturating_duration_since(Instant::now());
+            match self.lines.recv_timeout(left) {
+                Ok(l) if l.trim() == expected => return,
+                Ok(_) => {}
+                Err(_) => panic!("timed out waiting for the stand-in to print: {expected}"),
+            }
         }
     }
 
@@ -693,4 +723,43 @@ fn own_handle_kill_reaches_a_grandchild_after_the_leader_exits() {
     assert!(!game.group_alive(), "the group is empty after the kill");
     game.reap()
         .expect("reap the leader once its group is empty");
+}
+
+/// One helper's tree ended by pid (`ChildSet::terminate_one`): the tree helper and its grandchild go;
+/// the two idle helpers and the game are untouched (T-88.2-04). A graceful quit afterwards still
+/// drains the rest.
+#[test]
+fn terminate_one_kills_a_helper_and_its_grandchild() {
+    let home = FakeHome::new("gamelib-proc-orphans");
+    let paths = Paths::new(&home);
+    let mut run = Run::start_with(&home, &paths, &["--terminate-one"]);
+    let _strays = Strays(run.pids("games"));
+    let helpers = run.pids("helpers");
+    let grandchildren = run.pids("grandchildren");
+    assert_eq!(helpers.len(), 3, "two idle helpers and the tree helper");
+    assert_eq!(grandchildren.len(), 1, "the tree helper's grandchild");
+    let (idle_1, idle_2, tree) = (helpers[0], helpers[1], helpers[2]);
+    for p in helpers
+        .iter()
+        .chain(&grandchildren)
+        .chain(&run.pids("games"))
+    {
+        assert!(is_alive(*p), "pid {p} alive before the kill");
+    }
+
+    run.send("kill-one");
+    run.expect_line("done");
+    wait_until("the tree helper and its grandchild to die", || {
+        !is_alive(tree) && !is_alive(grandchildren[0])
+    });
+    for p in [idle_1, idle_2].iter().chain(&run.pids("games")) {
+        assert!(is_alive(*p), "pid {p} must survive a single-helper kill");
+    }
+
+    run.quit();
+    run.wait_for_parent_exit();
+    wait_until("the remaining helpers to die", || {
+        !is_alive(idle_1) && !is_alive(idle_2)
+    });
+    assert_helpers_die_and_game_survives(&run, &paths);
 }

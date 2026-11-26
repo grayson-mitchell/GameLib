@@ -24,7 +24,9 @@
 //!   anything else, exactly as the shell's `fn main` does (plan 83-08), because the reaper is this
 //!   same executable re-exec'd.
 //!
-//! `parent` flags: `--game-stamp <path>` spawns the game through `spawn_game_tracked` and writes one
+//! `parent` flags: `--terminate-one` makes the stand-in answer a `kill-one` stdin line by ending the
+//! `tree` helper (and so its grandchild) alone through `ChildSet::terminate_one`, then printing `done`.
+//! `--game-stamp <path>` spawns the game through `spawn_game_tracked` and writes one
 //! line `<pid> <stamp>` to the path (before the manifest is printed), the record a later stamp-checked
 //! kill is given. `--spec-tree` runs one `spec-tree` child through `SpecProcRunner` (on a background
 //! runtime thread, so the run stays in flight) and adds its pid to `helpers` and its grandchild's to
@@ -341,9 +343,16 @@ fn parent(args: &[String]) {
 
     // `quit` and stdin EOF (the test died) both drain the set, so no stray helper outlives a
     // failed run. The game is deliberately not touched: it is not in the set.
+    let terminate_one = has_flag(args, "--terminate-one");
     for line in std::io::stdin().lock().lines() {
         match line {
             Ok(l) if l.trim() == "quit" => break,
+            Ok(l) if terminate_one && l.trim() == "kill-one" => {
+                let found = global().terminate_one(tree_pid, Duration::from_millis(1500));
+                assert!(found, "the tree helper was registered");
+                writeln!(out, "done").expect("write done");
+                out.flush().expect("flush done");
+            }
             Ok(_) => {}
             Err(_) => break,
         }
