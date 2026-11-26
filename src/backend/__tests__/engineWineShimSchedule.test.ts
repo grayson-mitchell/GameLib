@@ -1235,6 +1235,41 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     callers: RUNNER_SHIM_IMPORTERS,
     deletedBy: 88.3
   },
+  // 88.2-17 (D-02, D-07, D-19): spawnAsync, the tracked kills and the running-game query. `spawnAsyncRun` is `spawnAsync` over a
+  // stream, and `trackedKillAll` and `gamesRunning` are the quit handler's reads of the Rust registry; all three go with the shell
+  // cutover in 98. `trackedKill` is `killTracked`, the managers' stop (92). The same file as `runnerCall`, so the same `callers`.
+  {
+    name: 'spawnAsyncRun',
+    file: 'src/backend/launchrust/runner.ts',
+    shape: 'shim',
+    channel: 'RUST_LAUNCH_SPAWN_ASYNC',
+    callers: RUNNER_SHIM_IMPORTERS,
+    deletedBy: 98
+  },
+  {
+    name: 'trackedKill',
+    file: 'src/backend/launchrust/runner.ts',
+    shape: 'shim',
+    channel: 'RUST_LAUNCH_TRACKED_KILL',
+    callers: RUNNER_SHIM_IMPORTERS,
+    deletedBy: 92
+  },
+  {
+    name: 'trackedKillAll',
+    file: 'src/backend/launchrust/runner.ts',
+    shape: 'shim',
+    channel: 'RUST_LAUNCH_TRACKED_KILL_ALL',
+    callers: RUNNER_SHIM_IMPORTERS,
+    deletedBy: 98
+  },
+  {
+    name: 'gamesRunning',
+    file: 'src/backend/launchrust/runner.ts',
+    shape: 'shim',
+    channel: 'RUST_LAUNCH_GAMES_RUNNING',
+    callers: RUNNER_SHIM_IMPORTERS,
+    deletedBy: 98
+  },
   // 88-13 (87 D-24): the synchronous known-fix twins, for callers 88 cannot make async. The launcher's `installFixes`
   // and `getKnownFixesEnvVariables` read the tier-1 fix inline until 88.1-17 deleted them; the Steam bridge keeps its own
   // reads until 97. `withKnownFixEnv` builds the settings storeManagerCommon launches with, which the sideload and

@@ -286,7 +286,11 @@ describe('sidecarRpc UNBOUNDED_RUST_CHANNELS covers every human-gated dialog cha
     // each replaces had no timeout); ended by the tracked kill or the shutdown. Not dialog channels.
     'RUST_LAUNCH_WINE_COMMAND',
     'RUST_LAUNCH_WINE_PATH',
-    'RUST_LAUNCH_SCRIPT_RUN'
+    'RUST_LAUNCH_SCRIPT_RUN',
+    // Phase 88.2 plan 17: launch_spawn_async runs one program (an installer, an archive move) to its end, as long as it takes (the TS
+    // spawnAsync it replaces had no timeout unless the caller passed one); ended by the stream-id kill or the shutdown. The three registry
+    // channels (launch_tracked_kill, launch_tracked_kill_all, launch_games_running) are bounded and are not listed.
+    'RUST_LAUNCH_SPAWN_ASYNC'
   ]
 
   test('contains exactly the dialog, depot, Rust CM, safety remove, wine runtime download and wine manager channels', () => {

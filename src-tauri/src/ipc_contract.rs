@@ -230,6 +230,10 @@ pub(crate) enum RustInvokeChannel {
     LaunchWineCommand,
     LaunchWinePath,
     LaunchScriptRun,
+    LaunchSpawnAsync,
+    LaunchTrackedKill,
+    LaunchTrackedKillAll,
+    LaunchGamesRunning,
     ShortcutsExist,
     ShortcutsAdd,
     ShortcutsRemove,
@@ -447,6 +451,10 @@ impl RustInvokeChannel {
         RustInvokeChannel::LaunchWineCommand,
         RustInvokeChannel::LaunchWinePath,
         RustInvokeChannel::LaunchScriptRun,
+        RustInvokeChannel::LaunchSpawnAsync,
+        RustInvokeChannel::LaunchTrackedKill,
+        RustInvokeChannel::LaunchTrackedKillAll,
+        RustInvokeChannel::LaunchGamesRunning,
         RustInvokeChannel::ShortcutsExist,
         RustInvokeChannel::ShortcutsAdd,
         RustInvokeChannel::ShortcutsRemove,
@@ -664,6 +672,10 @@ impl RustInvokeChannel {
             "launch_wine_command" => Some(RustInvokeChannel::LaunchWineCommand),
             "launch_wine_path" => Some(RustInvokeChannel::LaunchWinePath),
             "launch_script_run" => Some(RustInvokeChannel::LaunchScriptRun),
+            "launch_spawn_async" => Some(RustInvokeChannel::LaunchSpawnAsync),
+            "launch_tracked_kill" => Some(RustInvokeChannel::LaunchTrackedKill),
+            "launch_tracked_kill_all" => Some(RustInvokeChannel::LaunchTrackedKillAll),
+            "launch_games_running" => Some(RustInvokeChannel::LaunchGamesRunning),
             "shortcuts_exist" => Some(RustInvokeChannel::ShortcutsExist),
             "shortcuts_add" => Some(RustInvokeChannel::ShortcutsAdd),
             "shortcuts_remove" => Some(RustInvokeChannel::ShortcutsRemove),
@@ -883,6 +895,10 @@ impl RustInvokeChannel {
             RustInvokeChannel::LaunchWineCommand => "launch_wine_command",
             RustInvokeChannel::LaunchWinePath => "launch_wine_path",
             RustInvokeChannel::LaunchScriptRun => "launch_script_run",
+            RustInvokeChannel::LaunchSpawnAsync => "launch_spawn_async",
+            RustInvokeChannel::LaunchTrackedKill => "launch_tracked_kill",
+            RustInvokeChannel::LaunchTrackedKillAll => "launch_tracked_kill_all",
+            RustInvokeChannel::LaunchGamesRunning => "launch_games_running",
             RustInvokeChannel::ShortcutsExist => "shortcuts_exist",
             RustInvokeChannel::ShortcutsAdd => "shortcuts_add",
             RustInvokeChannel::ShortcutsRemove => "shortcuts_remove",
@@ -4871,6 +4887,68 @@ impl LaunchScriptRunArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let first = args.first().ok_or_else(|| "launch_script_run:bad-args".to_string())?;
         serde_json::from_value(first.clone()).map_err(|_| "launch_script_run:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct LaunchSpawnAsyncArgs {
+    #[serde(rename = "streamId")]
+    #[serde(default)]
+    pub(crate) stream_id: Option<String>,
+    pub(crate) command: String,
+    #[serde(default)]
+    pub(crate) args: Option<Vec<String>>,
+    #[serde(default)]
+    pub(crate) cwd: Option<String>,
+    #[serde(default)]
+    pub(crate) env: Option<Value>,
+    #[serde(rename = "timeoutMs")]
+    #[serde(default)]
+    pub(crate) timeout_ms: Option<f64>,
+    #[serde(rename = "windowsHide")]
+    #[serde(default)]
+    pub(crate) windows_hide: Option<bool>,
+    #[serde(default)]
+    pub(crate) observe: Option<bool>,
+}
+
+impl LaunchSpawnAsyncArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "launch_spawn_async:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "launch_spawn_async:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct LaunchTrackedKillArgs {
+    #[serde(default)]
+    pub(crate) runner: Option<String>,
+    #[serde(default)]
+    pub(crate) key: Option<String>,
+}
+
+impl LaunchTrackedKillArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "launch_tracked_kill:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "launch_tracked_kill:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct LaunchTrackedKillAllArgs;
+
+impl LaunchTrackedKillAllArgs {
+    pub(crate) fn from_args(_args: &[Value]) -> Result<Self, String> {
+        Ok(Self)
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct LaunchGamesRunningArgs;
+
+impl LaunchGamesRunningArgs {
+    pub(crate) fn from_args(_args: &[Value]) -> Result<Self, String> {
+        Ok(Self)
     }
 }
 

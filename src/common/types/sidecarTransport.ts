@@ -1612,6 +1612,34 @@ export const RUST_LAUNCH_WINE_PATH = 'launch_wine_path' as const
  * through. A script runs as long as the user wrote it to, so the channel is unbounded.
  */
 export const RUST_LAUNCH_SCRIPT_RUN = 'launch_script_run' as const
+/**
+ * Phase 88.2 (SVC-03, 88.2-17, D-02, D-19): `spawnAsync`, one program run to its end. `launch_spawn_async` takes `[args]` only
+ * (`{ streamId?, command, args?, cwd?, env?, timeoutMs?, windowsHide?, observe? }`: `env` is the whole environment when the
+ * caller passes one, `timeoutMs` is `null` for a timeout the TS held as `NaN` or `Infinity`, which JSON cannot carry) and
+ * answers `{ code, stdout, stderr, timedOut, aborted }`: the last 50 chunks of each stream joined, `code` `null` for a child
+ * a signal ended, a timeout answering `timedOut: true` and a `launch_runner_kill` on the stream id `aborted: true`. A program
+ * that could not be started is the dispatch error, carrying the OS's text. A caller runs installers and archive moves for
+ * hours, so the channel is unbounded (`UNBOUNDED_RUST_CHANNELS`); the kill and the app shutdown end it.
+ */
+export const RUST_LAUNCH_SPAWN_ASYNC = 'launch_spawn_async' as const
+/**
+ * Phase 88.2 (SVC-03, 88.2-17, D-07, D-19): `killTracked`. `launch_tracked_kill` takes `[{ runner?, key? }]` (no field ends
+ * every registered run, `runner` alone every run of that runner, both one run) and answers how many runs it ended. A lookup
+ * and a signal bounded by the child grace, so it stays inside the 60 s transport bound; it is not cut short by the app
+ * shutdown, because the quit-kill runs while the shutdown token may already be cancelled.
+ */
+export const RUST_LAUNCH_TRACKED_KILL = 'launch_tracked_kill' as const
+/**
+ * Phase 88.2 (SVC-03, 88.2-17, D-07, D-19): `killAllTracked`. `launch_tracked_kill_all` takes nothing, ends every registered run
+ * (games through their own handles, helpers through their tokens) and answers how many it ended. It waits up to the exit
+ * budget's child grace, so it is bounded and inside the 60 s transport bound; the quit handler (88.2-19) is its one caller.
+ */
+export const RUST_LAUNCH_TRACKED_KILL_ALL = 'launch_tracked_kill_all' as const
+/**
+ * Phase 88.2 (SVC-03, 88.2-17, D-07, D-19): whether a game run is registered, the answer the quit check reads. `launch_games_running`
+ * takes nothing and answers a boolean. A registry read, so it stays bounded.
+ */
+export const RUST_LAUNCH_GAMES_RUNNING = 'launch_games_running' as const
 export const RUST_ENGINE_STATE_RECORD_DECISION =
   'engine_state_record_decision' as const
 export const RUST_ENGINE_STATE_PUBLISH_OVERLAY_NOTICE =
@@ -2064,6 +2092,10 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_LAUNCH_WINE_COMMAND,
   RUST_LAUNCH_WINE_PATH,
   RUST_LAUNCH_SCRIPT_RUN,
+  RUST_LAUNCH_SPAWN_ASYNC,
+  RUST_LAUNCH_TRACKED_KILL,
+  RUST_LAUNCH_TRACKED_KILL_ALL,
+  RUST_LAUNCH_GAMES_RUNNING,
   RUST_SHORTCUTS_EXIST,
   RUST_SHORTCUTS_ADD,
   RUST_SHORTCUTS_REMOVE,

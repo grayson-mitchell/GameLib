@@ -690,6 +690,81 @@ pub(crate) fn rpc_launch_script_run(args: &[Value]) -> Result<Value, String> {
     script_run_over(launch_ctx(), args, runner_host)
 }
 
+/// The body of the `launch_spawn_async` arm over a given context: the generated decode (`[args]` only, one object) and an
+/// arity check first, so a bad call is rejected the same fixed `<op>:bad-args` literal before and after the install and
+/// never echoes the sidecar's value, then the crate, which decodes the object strictly again and bounds the stream id. The
+/// call needs no host: the caller names the whole environment when it wants one. A program that could not be started is the
+/// crate's `Err` text, which passes through as the dispatch error.
+fn spawn_async_over(ctx: Option<&Arc<LaunchCtx>>, args: &[Value]) -> Result<Value, String> {
+    LaunchSpawnAsyncArgs::from_args(args)?;
+    if args.len() != 1 {
+        return Err("launch_spawn_async:bad-args".to_string());
+    }
+    rpc_launch_op(ctx, "launch_spawn_async", args)
+}
+
+/// The `launch_spawn_async` `rustInvoke` arm (88.2-17, D-02, D-19): `spawnAsync`, one program run to its end and answered
+/// `{ code, stdout, stderr, timedOut, aborted }`. It runs on the dispatcher's worker thread for this one request, and a call
+/// that observes the stream writes its `runnerOutput` frames from that thread before the arm returns, so they precede the
+/// reply on the one ordered stdin pipe. A caller runs installers and archive moves for hours, so the sidecar lists the
+/// channel as unbounded (`UNBOUNDED_RUST_CHANNELS`); the `launch_runner_kill` on its stream id, the caller's own timeout and
+/// the crate's `guarded` registrant and shutdown token end it.
+pub(crate) fn rpc_launch_spawn_async(args: &[Value]) -> Result<Value, String> {
+    spawn_async_over(launch_ctx(), args)
+}
+
+/// The body of the `launch_tracked_kill` arm over a given context: the generated decode (`[{ runner?, key? }]`) and an arity
+/// check first, then the crate, which bounds each name and answers how many registered runs it ended.
+fn tracked_kill_over(ctx: Option<&Arc<LaunchCtx>>, args: &[Value]) -> Result<Value, String> {
+    LaunchTrackedKillArgs::from_args(args)?;
+    if args.len() != 1 {
+        return Err("launch_tracked_kill:bad-args".to_string());
+    }
+    rpc_launch_op(ctx, "launch_tracked_kill", args)
+}
+
+/// The `launch_tracked_kill` `rustInvoke` arm (88.2-17, D-07, D-19): `killTracked`, the managers' stop. No field ends every
+/// registered run, `runner` alone every run of that runner, both one run; the answer is how many it ended. A lookup and a
+/// signal bounded by the child grace, so the sidecar keeps it inside the 60 s `RUST_INVOKE_TIMEOUT_MS`; the crate does not cut
+/// it short at shutdown, because the quit-kill runs while the shutdown token may already be cancelled.
+pub(crate) fn rpc_launch_tracked_kill(args: &[Value]) -> Result<Value, String> {
+    tracked_kill_over(launch_ctx(), args)
+}
+
+/// The body of the `launch_tracked_kill_all` arm over a given context: no argument (anything sent is the fixed `<op>:bad-args`
+/// literal, before and after the install), then the crate, which ends every registered run and answers how many.
+fn tracked_kill_all_over(ctx: Option<&Arc<LaunchCtx>>, args: &[Value]) -> Result<Value, String> {
+    LaunchTrackedKillAllArgs::from_args(args)?;
+    if !args.is_empty() {
+        return Err("launch_tracked_kill_all:bad-args".to_string());
+    }
+    rpc_launch_op(ctx, "launch_tracked_kill_all", args)
+}
+
+/// The `launch_tracked_kill_all` `rustInvoke` arm (88.2-17, D-07, D-19): `killAllTracked`, ending every registered run, games
+/// through their own handles and helpers through their tokens, and answering how many it ended. It waits up to the exit
+/// budget's child grace for them, on the dispatcher's worker thread for this one request (never the reply thread), so the
+/// sidecar keeps it inside the 60 s `RUST_INVOKE_TIMEOUT_MS`. The quit handler (88.2-19) is its one caller; the crate does not
+/// cut it short at shutdown.
+pub(crate) fn rpc_launch_tracked_kill_all(args: &[Value]) -> Result<Value, String> {
+    tracked_kill_all_over(launch_ctx(), args)
+}
+
+/// The body of the `launch_games_running` arm over a given context: no argument, then the crate's registry read.
+fn games_running_over(ctx: Option<&Arc<LaunchCtx>>, args: &[Value]) -> Result<Value, String> {
+    LaunchGamesRunningArgs::from_args(args)?;
+    if !args.is_empty() {
+        return Err("launch_games_running:bad-args".to_string());
+    }
+    rpc_launch_op(ctx, "launch_games_running", args)
+}
+
+/// The `launch_games_running` `rustInvoke` arm (88.2-17, D-07, D-19): whether a game run is registered, the answer the quit
+/// check reads. A registry read, so the sidecar keeps it inside the 60 s `RUST_INVOKE_TIMEOUT_MS`.
+pub(crate) fn rpc_launch_games_running(args: &[Value]) -> Result<Value, String> {
+    games_running_over(launch_ctx(), args)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1807,5 +1882,252 @@ mod tests {
             !err.ends_with(":bad-args") && !err.ends_with(":not-ready"),
             "{err}"
         );
+    }
+    /// A spawnAsync call as the sidecar sends it: `/bin/sh -c <script>` with a `PATH` and nothing else in its environment.
+    fn spawn_async_args(script: &str) -> Value {
+        json!({
+            "command": "/bin/sh",
+            "args": ["-c", script],
+            "env": {"PATH": "/usr/bin:/bin"}
+        })
+    }
+
+    #[test]
+    fn the_spawn_async_kill_and_query_arms_are_not_ready_before_the_install_and_reject_a_wrong_call_the_same_way_after(
+    ) {
+        let home = FakeHome::new("launch-shell-");
+        let ctx = ctx_over(&home);
+        let secret = "/Users/someone/secret-profile-path";
+        assert_eq!(
+            spawn_async_over(None, &[spawn_async_args("true")]),
+            Err("launch_spawn_async:not-ready".to_string())
+        );
+        assert_eq!(
+            tracked_kill_over(None, &[json!({})]),
+            Err("launch_tracked_kill:not-ready".to_string())
+        );
+        assert_eq!(
+            tracked_kill_all_over(None, &[]),
+            Err("launch_tracked_kill_all:not-ready".to_string())
+        );
+        assert_eq!(
+            games_running_over(None, &[]),
+            Err("launch_games_running:not-ready".to_string())
+        );
+
+        let mut stray_timeout = spawn_async_args("true");
+        stray_timeout["timeoutMs"] = json!(secret);
+        let wrong_spawn: Vec<Vec<Value>> = vec![
+            vec![],
+            vec![json!(secret)],
+            vec![json!({"command": 1})],
+            vec![json!({"args": [secret]})],
+            vec![spawn_async_args("true"), json!(secret)],
+            vec![stray_timeout],
+        ];
+        for args in &wrong_spawn {
+            for ctx in [None, Some(&ctx)] {
+                let err = spawn_async_over(ctx, args).unwrap_err();
+                assert_eq!(err, "launch_spawn_async:bad-args", "{args:?}");
+                assert!(!err.contains(secret), "{args:?}");
+            }
+        }
+        // An unknown key passes the generated decode and is the crate's to refuse, which needs the context: the same literal.
+        let mut extra = spawn_async_args("true");
+        extra["extra"] = json!(secret);
+        let err = spawn_async_over(Some(&ctx), &[extra]).unwrap_err();
+        assert_eq!(err, "launch_spawn_async:bad-args");
+        assert!(!err.contains(secret));
+        // A stream id with a path separator is refused by the crate with the same literal.
+        let mut bad_id = spawn_async_args("true");
+        bad_id["streamId"] = json!(secret);
+        let err = spawn_async_over(Some(&ctx), &[bad_id]).unwrap_err();
+        assert_eq!(err, "launch_spawn_async:bad-args");
+
+        let wrong_kill: Vec<Vec<Value>> = vec![
+            vec![],
+            vec![json!(secret)],
+            vec![json!({"runner": 1})],
+            vec![json!({}), json!(secret)],
+        ];
+        for args in &wrong_kill {
+            for ctx in [None, Some(&ctx)] {
+                let err = tracked_kill_over(ctx, args).unwrap_err();
+                assert_eq!(err, "launch_tracked_kill:bad-args", "{args:?}");
+                assert!(!err.contains(secret), "{args:?}");
+            }
+        }
+        // An unbounded name and an unknown key are the crate's to refuse.
+        for bad in [
+            json!({"runner": ""}),
+            json!({"key": secret.repeat(40)}),
+            json!({"x": 1}),
+        ] {
+            let err = tracked_kill_over(Some(&ctx), &[bad]).unwrap_err();
+            assert_eq!(err, "launch_tracked_kill:bad-args");
+            assert!(!err.contains(secret));
+        }
+        // The two queries take nothing: anything sent is the fixed literal, before and after the install.
+        for args in [vec![json!(secret)], vec![json!({}), json!(1)]] {
+            for ctx in [None, Some(&ctx)] {
+                let err = tracked_kill_all_over(ctx, &args).unwrap_err();
+                assert_eq!(err, "launch_tracked_kill_all:bad-args");
+                let err = games_running_over(ctx, &args).unwrap_err();
+                assert_eq!(err, "launch_games_running:bad-args");
+                assert!(!err.contains(secret));
+            }
+        }
+    }
+
+    #[test]
+    fn the_registry_arms_answer_nothing_running_over_an_empty_registry() {
+        let home = FakeHome::new("launch-shell-");
+        let ctx = ctx_over(&home);
+        assert_eq!(games_running_over(Some(&ctx), &[]), Ok(json!(false)));
+        assert_eq!(tracked_kill_all_over(Some(&ctx), &[]), Ok(json!(0)));
+        assert_eq!(tracked_kill_over(Some(&ctx), &[json!({})]), Ok(json!(0)));
+        assert_eq!(
+            tracked_kill_over(Some(&ctx), &[json!({"runner": "gog", "key": "none"})]),
+            Ok(json!(0))
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn the_spawn_async_arm_runs_a_real_program_and_answers_its_result() {
+        let home = FakeHome::new("launch-shell-");
+        let ctx = ctx_over(&home);
+        let got = spawn_async_over(
+            Some(&ctx),
+            &[spawn_async_args("printf out; printf err >&2; exit 3")],
+        )
+        .unwrap();
+        assert_eq!(
+            got,
+            json!({"code": 3, "stdout": "out", "stderr": "err", "timedOut": false, "aborted": false})
+        );
+        // A timeout the TypeScript held as NaN or Infinity arrives as null and is no timeout at all.
+        let mut no_timeout = spawn_async_args("printf done");
+        no_timeout["timeoutMs"] = Value::Null;
+        let got = spawn_async_over(Some(&ctx), &[no_timeout]).unwrap();
+        assert_eq!(got["stdout"], json!("done"), "{got}");
+        assert_eq!(got["timedOut"], json!(false), "{got}");
+        // A timeout ends the child and answers `timedOut` with a null code.
+        let mut slow = spawn_async_args("sleep 30");
+        slow["timeoutMs"] = json!(300);
+        let got = spawn_async_over(Some(&ctx), &[slow]).unwrap();
+        assert_eq!(got["timedOut"], json!(true), "{got}");
+        assert_eq!(got["code"], Value::Null, "{got}");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_program_that_cannot_start_is_the_spawn_async_dispatch_error_with_the_crates_text() {
+        let home = FakeHome::new("launch-shell-");
+        let ctx = ctx_over(&home);
+        let mut call = spawn_async_args("true");
+        call["command"] = json!(home.root().join("no-such-program").to_string_lossy());
+        let err = spawn_async_over(Some(&ctx), &[call]).unwrap_err();
+        assert!(!err.is_empty());
+        assert!(
+            !err.ends_with(":bad-args") && !err.ends_with(":not-ready"),
+            "{err}"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_spawn_async_kill_by_stream_id_ends_that_call_with_aborted() {
+        let home = FakeHome::new("launch-shell-");
+        let ctx = ctx_over(&home);
+        let mut call = spawn_async_args("sleep 30");
+        call["streamId"] = json!("spawn-stream-1");
+        let call_ctx = Arc::clone(&ctx);
+        let run = std::thread::spawn(move || spawn_async_over(Some(&call_ctx), &[call]));
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(20);
+        while runner_kill_over(Some(&ctx), &[json!("spawn-stream-1")]) != Ok(json!(true)) {
+            assert!(
+                std::time::Instant::now() < deadline,
+                "the call never registered"
+            );
+            std::thread::sleep(std::time::Duration::from_millis(50));
+        }
+        let got = run.join().unwrap().unwrap();
+        assert_eq!(got["aborted"], json!(true), "{got}");
+        assert_eq!(got["code"], Value::Null, "{got}");
+    }
+
+    /// A runner call that marks that it has started and then sleeps, tracked under `{ sideload, key }`, on a thread. The run
+    /// is registered before its child is spawned, so the marker proves the registry holds it.
+    #[cfg(unix)]
+    fn sleeping_tracked_run(
+        ctx: &Arc<LaunchCtx>,
+        key: &str,
+        marker: &std::path::Path,
+    ) -> std::thread::JoinHandle<Result<Value, String>> {
+        let mut call = runner_call_args(&format!("touch '{}'; sleep 30", marker.display()));
+        call["trackKey"] = json!(key);
+        let ctx = Arc::clone(ctx);
+        std::thread::spawn(move || runner_call_over(Some(&ctx), &[call], host))
+    }
+
+    #[cfg(unix)]
+    fn wait_for_markers(markers: &[std::path::PathBuf]) {
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(20);
+        while !markers.iter().all(|marker| marker.exists()) {
+            assert!(
+                std::time::Instant::now() < deadline,
+                "the runs never started"
+            );
+            std::thread::sleep(std::time::Duration::from_millis(50));
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_tracked_kill_ends_the_run_its_filter_names_and_a_kill_all_ends_the_rest() {
+        let home = FakeHome::new("launch-shell-");
+        let ctx = ctx_over(&home);
+        let markers: Vec<std::path::PathBuf> = ["one", "two", "three"]
+            .iter()
+            .map(|name| home.root().join(format!("started-{name}")))
+            .collect();
+        let first = sleeping_tracked_run(&ctx, "key-one", &markers[0]);
+        let second = sleeping_tracked_run(&ctx, "key-two", &markers[1]);
+        let third = sleeping_tracked_run(&ctx, "key-three", &markers[2]);
+        wait_for_markers(&markers);
+        // The helper runs are not games.
+        assert_eq!(games_running_over(Some(&ctx), &[]), Ok(json!(false)));
+
+        // A filter that names nothing registered ends nothing.
+        assert_eq!(
+            tracked_kill_over(Some(&ctx), &[json!({"runner": "sideload", "key": "other"})]),
+            Ok(json!(0))
+        );
+        // Both fields end one run, and only that run.
+        assert_eq!(
+            tracked_kill_over(
+                Some(&ctx),
+                &[json!({"runner": "sideload", "key": "key-one"})]
+            ),
+            Ok(json!(1))
+        );
+        let ended = first.join().unwrap().unwrap();
+        assert!(
+            ended.get("abort") == Some(&json!(true)) || ended["error"].is_string(),
+            "{ended}"
+        );
+        assert!(!second.is_finished() && !third.is_finished());
+
+        // A kill-all ends every run still registered and answers how many.
+        assert_eq!(tracked_kill_all_over(Some(&ctx), &[]), Ok(json!(2)));
+        for run in [second, third] {
+            let ended = run.join().unwrap().unwrap();
+            assert!(
+                ended.get("abort") == Some(&json!(true)) || ended["error"].is_string(),
+                "{ended}"
+            );
+        }
+        assert_eq!(tracked_kill_all_over(Some(&ctx), &[]), Ok(json!(0)));
     }
 }

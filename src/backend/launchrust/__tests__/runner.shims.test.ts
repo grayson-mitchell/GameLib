@@ -8,10 +8,14 @@
 import { rustInvokeArgs } from 'common/types/ipc/rustInvoke'
 import { sidecarInternalSendArgs } from 'common/types/ipc/sidecarInternal'
 import {
+  RUST_LAUNCH_GAMES_RUNNING,
   RUST_LAUNCH_RUNNER_ABORT,
   RUST_LAUNCH_RUNNER_CALL,
   RUST_LAUNCH_RUNNER_KILL,
   RUST_LAUNCH_SCRIPT_RUN,
+  RUST_LAUNCH_SPAWN_ASYNC,
+  RUST_LAUNCH_TRACKED_KILL,
+  RUST_LAUNCH_TRACKED_KILL_ALL,
   RUST_LAUNCH_WINE_COMMAND,
   RUST_LAUNCH_WINE_PATH
 } from 'common/types/sidecarTransport'
@@ -25,13 +29,18 @@ import {
   runnerAbort,
   runnerCall,
   runnerKill,
+  gamesRunning,
   scriptRun,
+  spawnAsyncRun,
+  trackedKill,
+  trackedKillAll,
   winePathGet,
   wineCommandRun
 } from '../runner'
 import type {
   RunnerCallRequest,
   ScriptRunRequest,
+  SpawnAsyncRequest,
   WineCommandRequest
 } from '../runner'
 
@@ -470,5 +479,101 @@ describe('wineCommandRun, winePathGet and scriptRun (88.2-17)', () => {
     await expect(scriptRun(failed, request)).rejects.toThrow(
       'No such file (os error 2)'
     )
+  })
+})
+
+describe('spawnAsyncRun, trackedKill, trackedKillAll and gamesRunning (88.2-17)', () => {
+  it('spawnAsyncRun sends [args] only on launch_spawn_async and answers what Rust did', async () => {
+    const request: SpawnAsyncRequest = {
+      streamId: 'runner-stream-3',
+      command: '/bin/echo',
+      args: ['a b', 'c'],
+      cwd: '/tmp',
+      env: { PATH: '/bin' },
+      timeoutMs: 1000,
+      windowsHide: true,
+      observe: true
+    }
+    const reply = {
+      code: 0,
+      stdout: 'a b c',
+      stderr: '',
+      timedOut: false,
+      aborted: false
+    }
+    const deps = fakeTransport(reply)
+    expect(await spawnAsyncRun(deps, request)).toBe(reply)
+    expect(deps.calls).toEqual([[RUST_LAUNCH_SPAWN_ASYNC, [request]]])
+    expect(RUST_LAUNCH_SPAWN_ASYNC).toBe('launch_spawn_async')
+    const schema = rustInvokeArgs[RUST_LAUNCH_SPAWN_ASYNC]
+    expect(() => schema.parse([request])).not.toThrow()
+    expect(() => schema.parse([{ command: 'x' }])).not.toThrow()
+    // A timeout the TypeScript held as NaN or Infinity is sent as null; the number type refuses the two as they are.
+    expect(() =>
+      schema.parse([{ command: 'x', timeoutMs: null }])
+    ).not.toThrow()
+    expect(() => schema.parse([{ command: 'x', timeoutMs: NaN }])).toThrow()
+    expect(() =>
+      schema.parse([{ command: 'x', timeoutMs: Infinity }])
+    ).toThrow()
+    expect(() => schema.parse([{ command: 'x', extra: 1 }])).toThrow()
+    expect(() => schema.parse([{ command: 'x', args: [1] }])).toThrow()
+    expect(() => schema.parse([{ args: [] }])).toThrow()
+    expect(() => schema.parse([{ command: 'x' }, 'second'])).toThrow()
+  })
+
+  it('spawnAsyncRun rejects with the OS text Rust answered and has no fallback', async () => {
+    const deps = fakeTransport(new Error('No such file (os error 2)'))
+    await expect(spawnAsyncRun(deps, { command: '/nope' })).rejects.toThrow(
+      'No such file (os error 2)'
+    )
+    expect(deps.calls).toHaveLength(1)
+  })
+
+  it('trackedKill sends the filter and answers the count', async () => {
+    const deps = fakeTransport(2)
+    expect(await trackedKill(deps, { runner: 'gog', key: 'k' })).toBe(2)
+    expect(await trackedKill(deps, {})).toBe(2)
+    expect(deps.calls).toEqual([
+      [RUST_LAUNCH_TRACKED_KILL, [{ runner: 'gog', key: 'k' }]],
+      [RUST_LAUNCH_TRACKED_KILL, [{}]]
+    ])
+    expect(RUST_LAUNCH_TRACKED_KILL).toBe('launch_tracked_kill')
+    const schema = rustInvokeArgs[RUST_LAUNCH_TRACKED_KILL]
+    expect(() => schema.parse([{}])).not.toThrow()
+    expect(() =>
+      schema.parse([{ runner: 'wine', key: 'prefix' }])
+    ).not.toThrow()
+    expect(() => schema.parse([{ key: 1 }])).toThrow()
+    expect(() => schema.parse([{ other: 'x' }])).toThrow()
+    expect(() => schema.parse([])).toThrow()
+  })
+
+  it('trackedKillAll and gamesRunning send no argument and answer what Rust did', async () => {
+    const killed = fakeTransport(3)
+    expect(await trackedKillAll(killed)).toBe(3)
+    expect(killed.calls).toEqual([[RUST_LAUNCH_TRACKED_KILL_ALL, []]])
+    expect(RUST_LAUNCH_TRACKED_KILL_ALL).toBe('launch_tracked_kill_all')
+
+    const running = fakeTransport(true)
+    expect(await gamesRunning(running)).toBe(true)
+    expect(running.calls).toEqual([[RUST_LAUNCH_GAMES_RUNNING, []]])
+    expect(RUST_LAUNCH_GAMES_RUNNING).toBe('launch_games_running')
+
+    for (const channel of [
+      RUST_LAUNCH_TRACKED_KILL_ALL,
+      RUST_LAUNCH_GAMES_RUNNING
+    ]) {
+      const schema = rustInvokeArgs[channel]
+      expect(() => schema.parse([])).not.toThrow()
+      expect(() => schema.parse([{}])).toThrow()
+    }
+  })
+
+  it('a rejected registry call rejects the caller, with no fallback', async () => {
+    const down = fakeTransport(new Error('launch_games_running:not-ready'))
+    await expect(gamesRunning(down)).rejects.toThrow('not-ready')
+    await expect(trackedKillAll(down)).rejects.toThrow('not-ready')
+    expect(down.calls).toHaveLength(2)
   })
 })

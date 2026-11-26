@@ -169,6 +169,10 @@ import {
   RUST_LAUNCH_WINE_COMMAND,
   RUST_LAUNCH_WINE_PATH,
   RUST_LAUNCH_SCRIPT_RUN,
+  RUST_LAUNCH_SPAWN_ASYNC,
+  RUST_LAUNCH_TRACKED_KILL,
+  RUST_LAUNCH_TRACKED_KILL_ALL,
+  RUST_LAUNCH_GAMES_RUNNING,
   RUST_LAUNCH_SETUP_ENV_VARS,
   RUST_LAUNCH_SETUP_WINE_ENV_VARS,
   RUST_LAUNCH_SETUP_WRAPPER_ENV_VARS,
@@ -1442,7 +1446,37 @@ export const rustInvokeArgs = {
         logTarget: runnerLogHandOff.optional()
       })
       .strict()
-  ])
+  ]),
+  // Phase 88.2 (SVC-03, 88.2-17, D-02, D-19): `spawnAsync`. `[args]` only, one strict object. `env` is the whole environment the
+  // child gets when the caller passes one (opaque to the generated decode, the crate checks it is a string map); `timeoutMs` is
+  // `null` for a timeout the TS held as `NaN` or `Infinity`, which JSON cannot carry (an absent one is no timeout too).
+  [RUST_LAUNCH_SPAWN_ASYNC]: z.tuple([
+    z
+      .object({
+        streamId: z.string().optional(),
+        command: z.string(),
+        args: z.array(z.string().meta({ title: 'arg' })).optional(),
+        cwd: z.string().optional(),
+        env: knownFixEnvMap('env').optional(),
+        timeoutMs: z.number().nullable().optional(),
+        windowsHide: z.boolean().optional(),
+        observe: z.boolean().optional()
+      })
+      .strict()
+  ]),
+  // Phase 88.2 (SVC-03, 88.2-17, D-07, D-19): the TS `killTracked` filter. No field ends every registered run, `runner` alone every
+  // run of it, both one run; the crate bounds each name and answers how many runs it ended.
+  [RUST_LAUNCH_TRACKED_KILL]: z.tuple([
+    z
+      .object({
+        runner: z.string().optional(),
+        key: z.string().optional()
+      })
+      .strict()
+  ]),
+  // Phase 88.2 (SVC-03, 88.2-17, D-07, D-19): `killAllTracked` and the running-game query. Neither takes an argument.
+  [RUST_LAUNCH_TRACKED_KILL_ALL]: empty,
+  [RUST_LAUNCH_GAMES_RUNNING]: empty
 } satisfies Record<RustInvokeChannel, z.ZodTuple>
 
 /** The positional args a `rustInvoke` call for channel `C` sends (input side of the schema). */

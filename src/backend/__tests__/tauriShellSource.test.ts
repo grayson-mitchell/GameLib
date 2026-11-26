@@ -526,7 +526,8 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     // engine_launch_arm_deadline, knownfix_apply_profile_registry, knownfix_profile_overlay_env and wine_manager_refresh).
     // Phase 88.2 plan 15: 207 -> 210, launch_runner_call, launch_runner_kill and launch_runner_abort.
     // Phase 88.2 plan 17: 210 -> 213, launch_wine_command, launch_wine_path and launch_script_run.
-    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(213)
+    // Phase 88.2 plan 17 task 2: 213 -> 217, launch_spawn_async, launch_tracked_kill, launch_tracked_kill_all and launch_games_running.
+    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(217)
     expect(router).not.toContain('_ =>')
   })
 
@@ -1115,6 +1116,13 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       'launch_wine_command',
       'launch_wine_path',
       'launch_script_run',
+      // Phase 88.2 plan 17: `spawnAsync`, the tracked kill, the kill of every tracked run and the running-game query (`spawnAsyncRun`, `trackedKill`, `trackedKillAll` and `gamesRunning` in
+      // `launchrust/runner.ts`). PROVEN: `launch_dispatch::tests` drives each arm's decode, not-ready and the fixed bad-args, a real `/bin/sh` spawnAsync that answers its result and the OS's text
+      // for a program that cannot start, a tracked kill that ends a real run by its key and a kill-all that ends the rest; `gamelib-launch`'s `golden_spawn_async.rs` drives the crate.
+      'launch_spawn_async',
+      'launch_tracked_kill',
+      'launch_tracked_kill_all',
+      'launch_games_running',
       // Phase 94 plan 11: the shortcut exists check (`shortcutsResolvers.ts` resolver). PROVEN: `shortcuts_dispatch::tests`
       // drives the arm's decode, not-ready and a real exists answer on a FakeHome; `golden_paths.rs` replays the TS goldens.
       'shortcuts_exist',

@@ -85,6 +85,7 @@ import {
   RUST_LAUNCH_WINE_COMMAND,
   RUST_LAUNCH_WINE_PATH,
   RUST_LAUNCH_SCRIPT_RUN,
+  RUST_LAUNCH_SPAWN_ASYNC,
   RUST_LAUNCH_VERIFY_WINE_PREFIX,
   RUST_DIALOG_MESSAGE,
   RUST_DIALOG_OPEN,
@@ -260,6 +261,11 @@ const RUST_INVOKE_TIMEOUT_MS = 60_000
  * command core and `launch_script_run` runs a game's before or after launch script for as long as the user wrote it to. Rust
  * bounds each by the tracked kill and the app shutdown (the registrant and the shutdown token), so no entry can outlive the
  * sidecar.
+ *
+ * Twenty-fifth (Phase 88.2, 88.2-17): `launch_spawn_async` runs one program to its end (an installer, an archive move) for as
+ * long as it takes, as the TS `spawnAsync` it replaces did; the stream-id kill, the caller's timeout when it passes one and the
+ * app shutdown end it. `launch_tracked_kill`, `launch_tracked_kill_all` and `launch_games_running` are registry lookups and
+ * signals bounded by the child grace and stay bounded.
  */
 const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_DIALOG_OPEN,
@@ -311,7 +317,8 @@ const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_LAUNCH_RUNNER_CALL,
   RUST_LAUNCH_WINE_COMMAND,
   RUST_LAUNCH_WINE_PATH,
-  RUST_LAUNCH_SCRIPT_RUN
+  RUST_LAUNCH_SCRIPT_RUN,
+  RUST_LAUNCH_SPAWN_ASYNC
 ]
 
 /**

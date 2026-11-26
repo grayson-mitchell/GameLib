@@ -1,8 +1,12 @@
 import {
   RUST_LAUNCH_RUNNER_ABORT,
   RUST_LAUNCH_RUNNER_CALL,
+  RUST_LAUNCH_GAMES_RUNNING,
   RUST_LAUNCH_RUNNER_KILL,
   RUST_LAUNCH_SCRIPT_RUN,
+  RUST_LAUNCH_SPAWN_ASYNC,
+  RUST_LAUNCH_TRACKED_KILL,
+  RUST_LAUNCH_TRACKED_KILL_ALL,
   RUST_LAUNCH_WINE_COMMAND,
   RUST_LAUNCH_WINE_PATH
 } from 'common/types/sidecarTransport'
@@ -122,6 +126,58 @@ export async function scriptRun(
   args: ScriptRunRequest
 ): Promise<unknown> {
   return deps.requestRustInvoke(RUST_LAUNCH_SCRIPT_RUN, [args])
+}
+
+/** One spawnAsync call, as the `launch_spawn_async` zod schema takes it. */
+export type SpawnAsyncRequest = RustInvokeArgsOf<
+  typeof RUST_LAUNCH_SPAWN_ASYNC
+>[0]
+
+/**
+ * `spawnAsync` (88.2-17, D-02): one program run to its end, with no shell. Resolves `{ code, stdout, stderr, timedOut,
+ * aborted }` as `unknown`: the last 50 chunks of each stream joined, `code` `null` for a child a signal ended, a timeout
+ * answering `timedOut: true` and a kill on the `streamId` `aborted: true`, both with a `null` code. A call that watches its
+ * output (`observe: true`) is sent `runnerOutput` frames ahead of the reply. A program that could not be started rejects with
+ * the OS's text. A caller runs installers and archive moves for hours, so the channel is unbounded.
+ */
+export async function spawnAsyncRun(
+  deps: RustInvokeDeps,
+  args: SpawnAsyncRequest
+): Promise<unknown> {
+  return deps.requestRustInvoke(RUST_LAUNCH_SPAWN_ASYNC, [args])
+}
+
+/** The `killTracked` filter, as the `launch_tracked_kill` zod schema takes it. */
+export type TrackedKillFilter = RustInvokeArgsOf<
+  typeof RUST_LAUNCH_TRACKED_KILL
+>[0]
+
+/**
+ * `killTracked` (88.2-17, D-07): ends the registered runs the filter names (no field every run, `runner` alone every run of
+ * that runner, both one run) and resolves how many it ended, as `unknown`. A lookup and a signal bounded by the child grace, so
+ * the channel stays inside the 60 s transport bound.
+ */
+export async function trackedKill(
+  deps: RustInvokeDeps,
+  filter: TrackedKillFilter
+): Promise<unknown> {
+  return deps.requestRustInvoke(RUST_LAUNCH_TRACKED_KILL, [filter])
+}
+
+/**
+ * `killAllTracked` (88.2-17, D-07): ends every registered run, games through their own handles and helpers through their
+ * tokens, and resolves how many it ended, as `unknown`. It waits up to the exit budget's child grace, so it is bounded.
+ */
+export async function trackedKillAll(deps: RustInvokeDeps): Promise<unknown> {
+  return deps.requestRustInvoke(RUST_LAUNCH_TRACKED_KILL_ALL, [])
+}
+
+/**
+ * Whether a game run is registered in Rust (88.2-17, D-07), the answer the quit check reads, as `unknown` (a boolean). A
+ * registry read, so it stays bounded.
+ */
+export async function gamesRunning(deps: RustInvokeDeps): Promise<unknown> {
+  return deps.requestRustInvoke(RUST_LAUNCH_GAMES_RUNNING, [])
 }
 
 /**
