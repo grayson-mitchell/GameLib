@@ -308,6 +308,13 @@ within suites (pairs straddling suites are not enumerated); the Linux `stub_game
 temporary cfg on macOS) and its first real run is the ubuntu leg; the Windows sysinfo and DNS code is only cross-clippy'd, and option A (the
 in-repo UDP TXT query, operator-chosen) has no TCP fallback and is IPv4-only on Windows resolvers.
 
+edge-coverage SVC-03 88.1: accepted (operator, 2026-11-26)
+
+The row is now classified as an accepted narrowing of the D-14 matrix as executed (per-axis plus pairwise within suites plus named
+incidents), recorded as the `overrides:` entry on truth 2 of `88.1-VERIFICATION.md`. The CR-01 class of escape (a missing platform axis)
+is covered by 88.1-21's Windows `{}` setupEnvVars case and 88.1-22's per-platform setupEnvVars and Windows wine-env cases. The other items
+the sub-phase left open, listed above, are unchanged.
+
 ## CI proof (88.1)
 
 Measured by plan 88.1-20 Task 3, 2026-11-26, after the operator chose `push` in Task 2 (push now; follow-up fix commits for CI-only failures
