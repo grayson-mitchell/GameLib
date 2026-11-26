@@ -18,7 +18,7 @@ import {
 export interface RowActivation {
   type: 'click' | 'keydown'
   isTrusted: boolean
-  /** A click's click count (1 for a mouse press, 0 for a synthetic `.click()`); 0 for a key. */
+  /** A click's click count (1 for a mouse press, 0 for a synthetic click such as the gamepad's); 0 for a key. */
   detail: number
   /** The key of a keydown; '' for a click. */
   key: string
@@ -57,8 +57,9 @@ export function activationOf(
 /**
  * True for a pointer click that landed within `STALE_CLICK_WINDOW_MS` of a dialog
  * closing. A pointer click carries `detail >= 1` (the click count: the probe saw
- * detail=1 on every real press in the WebView); a synthetic `.click()`, which is
- * how the gamepad's main action activates the focused control, carries 0 and is
+ * detail=1 on every real press in the WebView); the gamepad's main action
+ * dispatches `new MouseEvent('click', ...)` with no `detail`
+ * (`tauriGamepadInput.ts` `dispatchPointerSequence`), so it carries 0 and is
  * never ignored.
  */
 export function isStalePointerClick(activation: RowActivation): boolean {
