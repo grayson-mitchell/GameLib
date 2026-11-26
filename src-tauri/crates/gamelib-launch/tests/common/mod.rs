@@ -373,6 +373,13 @@ pub struct Step {
     #[serde(default, deserialize_with = "present")]
     pub code: Option<Option<i32>>,
     pub throws: Option<String>,
+    /// The run is held open after its chunks until the spec's cancel token fires, then reads as cancelled
+    /// (a child that is still running when the caller kills it).
+    #[serde(default)]
+    pub hold: bool,
+    /// The run reads as ended by its time limit: no code, `timed_out` set.
+    #[serde(default)]
+    pub timed_out: bool,
 }
 
 pub struct CaseRunner {
@@ -438,6 +445,26 @@ impl SpecRunner for CaseRunner {
                     Pipe::Stderr
                 };
                 on_chunk(pipe, &chunk.text);
+            }
+            if step.hold {
+                match &spec.cancel {
+                    Some(cancel) => cancel.cancelled().await,
+                    None => std::future::pending::<()>().await,
+                }
+                return SpecOutput {
+                    stdout,
+                    stderr,
+                    cancelled: true,
+                    ..SpecOutput::default()
+                };
+            }
+            if step.timed_out {
+                return SpecOutput {
+                    stdout,
+                    stderr,
+                    timed_out: true,
+                    ..SpecOutput::default()
+                };
             }
             tokio::task::yield_now().await;
             SpecOutput {

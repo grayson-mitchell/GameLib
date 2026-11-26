@@ -36,6 +36,7 @@ use prepare::wine_begin::PrepareWineBeginArgs;
 use prepare::wine_finish::PrepareWineFinishArgs;
 use runner::call_runner::{abort_run, call_runner, RunnerCallArgs, RunnerHost};
 use runner::script::{run_script_for_game, ScriptRunArgs};
+use runner::spawn_async::{spawn_async, SpawnAsyncArgs};
 use runner::stream::{NullSink, OutputSink, UiOutputSink};
 use runner::wine_command::{launch_wine_command, LaunchWineCommandArgs};
 use runner::wine_path::{wine_path, WinePathArgs};
@@ -66,6 +67,7 @@ pub const OPS: &[&str] = &[
     "launch_setup_wine_env_vars",
     "launch_setup_wrapper_env_vars",
     "launch_setup_wrappers",
+    "launch_spawn_async",
     "launch_tracked_kill",
     "launch_tracked_kill_all",
     "launch_verify_wine_prefix",
@@ -83,7 +85,7 @@ const KILL_OPS: &[&str] = &[
 ];
 
 /// Runs `op` over `args`. `Err` is only an unknown op, bad arguments, a shutdown, a wrong thread or a
-/// panic (`<op>:panic`), and, for `launch_script_run`, the text of a script that could not be started.
+/// panic (`<op>:panic`), and, for `launch_script_run` and `launch_spawn_async`, the text of a program that could not be started.
 pub async fn dispatch(op: &str, args: &[Value], ctx: &LaunchCtx) -> Result<Value, String> {
     let Some(name) = OPS.iter().copied().find(|o| *o == op) else {
         return Err(format!("unknown op: {op}"));
@@ -272,6 +274,27 @@ async fn route(op: &str, args: &[Value], ctx: &LaunchCtx) -> Result<Value, Strin
                 _ => return Err(bad()),
             };
             run_script_for_game(ctx, call, &host).await.map(Value::Bool)
+        }
+        // `spawnAsync` (88.2-14). Arguments `[args]`: the call (`SpawnAsyncArgs`: stream id, command, argv, cwd, the
+        // whole env when one is passed, `timeoutMs`, `windowsHide` and whether the caller watches the stream). Answers
+        // `{ code, stdout, stderr, timedOut, aborted }` (the last 50 chunks of each stream joined); a timeout answers
+        // `timedOut: true` and a `launch_runner_kill` on the stream id `aborted: true`, both with a `null` code. A
+        // program that could not be started is an `Err` carrying the OS's text. A spawnAsync caller runs installers
+        // and archive moves for hours, so its shim lists the channel as unbounded (the app shutdown still ends it).
+        "launch_spawn_async" => {
+            let [call @ Value::Object(_)] = args else {
+                return Err(bad());
+            };
+            let call: SpawnAsyncArgs = serde_json::from_value(call.clone()).map_err(|_| bad())?;
+            if !call.stream_id.is_empty() && !run_id(&call.stream_id) {
+                return Err(bad());
+            }
+            let sink: Arc<dyn OutputSink> = match (&ctx.engine.ui, call.observe) {
+                (Some(ui), true) => Arc::new(UiOutputSink::new(ui.clone(), call.stream_id.clone())),
+                _ => Arc::new(NullSink),
+            };
+            let result = spawn_async(ctx, call, sink).await?;
+            result_of(serde_json::to_value(result))
         }
         // `getWinePath` (88.2-13). Arguments `[args, host]`: the path, the game's settings and the variant
         // (`WinePathArgs`) and the wine host facts the shell read (the process environment `winepath` inherits).
@@ -751,7 +774,7 @@ mod tests {
 
     #[test]
     fn the_twenty_one_launch_ops_are_in_the_table() {
-        assert_eq!(OPS.len(), 21);
+        assert_eq!(OPS.len(), 22);
         assert!(OPS.iter().all(|op| op.starts_with("launch_")));
     }
 
