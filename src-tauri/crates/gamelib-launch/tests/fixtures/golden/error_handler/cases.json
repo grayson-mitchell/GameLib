@@ -1,0 +1,1012 @@
+[
+  {
+    "id": "error-handler-legendary-empty-error",
+    "note": "an empty error returns before anything",
+    "entry": "errorHandler",
+    "runner": "legendary",
+    "appName": "AppAlpha",
+    "error": "",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-legendary-ignore-index-error",
+    "note": "the macOS false-alarm message alone is ignored",
+    "entry": "errorHandler",
+    "runner": "legendary",
+    "appName": "AppAlpha",
+    "error": "IndexError: list index out of range",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-legendary-ignore-requests-warning",
+    "note": "the zipapp dependency warning alone is ignored",
+    "entry": "errorHandler",
+    "runner": "legendary",
+    "appName": "AppAlpha",
+    "error": "RequestsDependencyWarning",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-legendary-ignore-index-error-inside-text",
+    "note": "the false-alarm message inside a longer text is still ignored",
+    "entry": "errorHandler",
+    "runner": "legendary",
+    "appName": "AppAlpha",
+    "error": "Something went wrong\nIndexError: list index out of range\nmore text",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-legendary-ignore-requests-warning-inside-text",
+    "note": "the dependency warning inside a longer text is still ignored",
+    "entry": "errorHandler",
+    "runner": "legendary",
+    "appName": "AppAlpha",
+    "error": "/usr/lib/python3/site-packages/requests/__init__.py: RequestsDependencyWarning: urllib3 mismatch",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-legendary-ignore-beats-deleted-folder",
+    "note": "an ignore-list message wins over the deleted-folder message: no dialog",
+    "entry": "errorHandler",
+    "runner": "legendary",
+    "appName": "AppAlpha",
+    "error": "Error: game folder appears to be deleted IndexError: list index out of range",
+    "answer": 1,
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-legendary-ignore-beats-legendary",
+    "note": "an ignore-list message wins over the legendary .py rule: no modal",
+    "entry": "errorHandler",
+    "runner": "legendary",
+    "appName": "AppAlpha",
+    "error": "Traceback (most recent call last): File \"/opt/legendary/legendary/cli.py\", line 12, in main\nValueError: bad value\nRequestsDependencyWarning",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-legendary-deleted-folder-answered-yes",
+    "note": "the deleted-folder message with an app name, answered Yes: forceUninstall once",
+    "entry": "errorHandler",
+    "runner": "legendary",
+    "appName": "AppAlpha",
+    "error": "Error: game folder appears to be deleted",
+    "answer": 1,
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-legendary-deleted-folder-answered-no",
+    "note": "the deleted-folder message with an app name, answered No: no forceUninstall",
+    "entry": "errorHandler",
+    "runner": "legendary",
+    "appName": "AppAlpha",
+    "error": "Error: game folder appears to be deleted",
+    "answer": 0,
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-legendary-deleted-folder-dismissed",
+    "note": "the deleted-folder message dismissed: the dialog answers its cancelId 0, no forceUninstall (T-88.2-06)",
+    "entry": "errorHandler",
+    "runner": "legendary",
+    "appName": "AppAlpha",
+    "error": "Error: game folder appears to be deleted",
+    "answer": "dismiss",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-legendary-deleted-folder-game-without-title",
+    "note": "the deleted-folder message for a game whose info has no title: the dialog title falls back to the app name",
+    "entry": "errorHandler",
+    "runner": "legendary",
+    "appName": "AppAlpha",
+    "error": "Error: game folder appears to be deleted",
+    "answer": 0,
+    "title": null
+  },
+  {
+    "id": "error-handler-legendary-deleted-folder-without-app-name",
+    "note": "the deleted-folder message with no app name skips the dialog and matches nothing else",
+    "entry": "errorHandler",
+    "runner": "legendary",
+    "appName": "",
+    "error": "Error: game folder appears to be deleted",
+    "answer": 1,
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-legendary-deleted-folder-without-app-name-legendary",
+    "note": "the deleted-folder message with no app name falls through to the legendary .py rule",
+    "entry": "errorHandler",
+    "runner": "legendary",
+    "appName": "",
+    "error": "Error: game folder appears to be deleted\nTraceback (most recent call last): File \"/opt/legendary/legendary/cli.py\", line 12, in main\nValueError: bad value",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-legendary-deleted-folder-beats-legendary",
+    "note": "a text matching both the deleted-folder and the legendary rule asks the dialog (order of checks)",
+    "entry": "errorHandler",
+    "runner": "legendary",
+    "appName": "AppAlpha",
+    "error": "Traceback (most recent call last): File \"/opt/legendary/legendary/cli.py\", line 12, in main\nValueError: bad value\nError: game folder appears to be deleted",
+    "answer": 0,
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-legendary-legendary-py-modal",
+    "note": "a legendary .py text sends the generic error modal, the error interpolated",
+    "entry": "errorHandler",
+    "runner": "legendary",
+    "appName": "AppAlpha",
+    "error": "Traceback (most recent call last): File \"/opt/legendary/legendary/cli.py\", line 12, in main\nValueError: bad value",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-legendary-legendary-py-memory-error",
+    "note": "the legendary .py text with MemoryError: returns with no dialog and no frontend message",
+    "entry": "errorHandler",
+    "runner": "legendary",
+    "appName": "AppAlpha",
+    "error": "Traceback (most recent call last): File \"/opt/legendary/legendary/cli.py\", line 12, in main\nValueError: bad value\nMemoryError: out of memory",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-legendary-legendary-py-memory-error-without-space",
+    "note": "MemoryError without the trailing space is not the exception: the modal is sent",
+    "entry": "errorHandler",
+    "runner": "legendary",
+    "appName": "AppAlpha",
+    "error": "Traceback (most recent call last): File \"/opt/legendary/legendary/cli.py\", line 12, in main\nValueError: bad value\nMemoryError:",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-legendary-legendary-py-beats-credentials",
+    "note": "a text matching both the legendary .py rule and expired credentials sends the legendary modal",
+    "entry": "errorHandler",
+    "runner": "legendary",
+    "appName": "AppAlpha",
+    "error": "Traceback (most recent call last): File \"/opt/legendary/legendary/cli.py\", line 12, in main\nValueError: bad value\nNo saved credentials found for this account",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-legendary-legendary-py-with-markup",
+    "note": "an error with quotes, angle brackets and an ampersand: the interpolation escaping is recorded as is",
+    "entry": "errorHandler",
+    "runner": "legendary",
+    "appName": "AppAlpha",
+    "error": "legendary/cli.py raised <KeyError 'a&b'> \"quoted\"",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-legendary-expired-credentials",
+    "note": "No saved credentials sends the credentials modal",
+    "entry": "errorHandler",
+    "runner": "legendary",
+    "appName": "AppAlpha",
+    "error": "No saved credentials found for this account",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-legendary-expired-credentials-inside-text",
+    "note": "No saved credentials inside a longer text still sends the credentials modal",
+    "entry": "errorHandler",
+    "runner": "legendary",
+    "appName": "AppAlpha",
+    "error": "[cli] ERROR: No saved credentials found for this account.\nPlease log in again",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-legendary-unmatched",
+    "note": "a message no rule matches does nothing",
+    "entry": "errorHandler",
+    "runner": "legendary",
+    "appName": "AppAlpha",
+    "error": "Some unrelated failure: exit status 1",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-legendary-legendary-word-without-py",
+    "note": "the word legendary with no .py after it does not match the regex",
+    "entry": "errorHandler",
+    "runner": "legendary",
+    "appName": "AppAlpha",
+    "error": "legendary failed with exit status 2",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-legendary-py-without-legendary",
+    "note": "a .py with no legendary before it does not match the regex",
+    "entry": "errorHandler",
+    "runner": "legendary",
+    "appName": "AppAlpha",
+    "error": "Traceback in helper.py line 3",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-gog-empty-error",
+    "note": "an empty error returns before anything",
+    "entry": "errorHandler",
+    "runner": "gog",
+    "appName": "AppAlpha",
+    "error": "",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-gog-ignore-index-error",
+    "note": "the macOS false-alarm message alone is ignored",
+    "entry": "errorHandler",
+    "runner": "gog",
+    "appName": "AppAlpha",
+    "error": "IndexError: list index out of range",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-gog-ignore-requests-warning",
+    "note": "the zipapp dependency warning alone is ignored",
+    "entry": "errorHandler",
+    "runner": "gog",
+    "appName": "AppAlpha",
+    "error": "RequestsDependencyWarning",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-gog-ignore-index-error-inside-text",
+    "note": "the false-alarm message inside a longer text is still ignored",
+    "entry": "errorHandler",
+    "runner": "gog",
+    "appName": "AppAlpha",
+    "error": "Something went wrong\nIndexError: list index out of range\nmore text",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-gog-ignore-requests-warning-inside-text",
+    "note": "the dependency warning inside a longer text is still ignored",
+    "entry": "errorHandler",
+    "runner": "gog",
+    "appName": "AppAlpha",
+    "error": "/usr/lib/python3/site-packages/requests/__init__.py: RequestsDependencyWarning: urllib3 mismatch",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-gog-ignore-beats-deleted-folder",
+    "note": "an ignore-list message wins over the deleted-folder message: no dialog",
+    "entry": "errorHandler",
+    "runner": "gog",
+    "appName": "AppAlpha",
+    "error": "Error: game folder appears to be deleted IndexError: list index out of range",
+    "answer": 1,
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-gog-ignore-beats-legendary",
+    "note": "an ignore-list message wins over the legendary .py rule: no modal",
+    "entry": "errorHandler",
+    "runner": "gog",
+    "appName": "AppAlpha",
+    "error": "Traceback (most recent call last): File \"/opt/legendary/legendary/cli.py\", line 12, in main\nValueError: bad value\nRequestsDependencyWarning",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-gog-deleted-folder-answered-yes",
+    "note": "the deleted-folder message with an app name, answered Yes: forceUninstall once",
+    "entry": "errorHandler",
+    "runner": "gog",
+    "appName": "AppAlpha",
+    "error": "Error: game folder appears to be deleted",
+    "answer": 1,
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-gog-deleted-folder-answered-no",
+    "note": "the deleted-folder message with an app name, answered No: no forceUninstall",
+    "entry": "errorHandler",
+    "runner": "gog",
+    "appName": "AppAlpha",
+    "error": "Error: game folder appears to be deleted",
+    "answer": 0,
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-gog-deleted-folder-dismissed",
+    "note": "the deleted-folder message dismissed: the dialog answers its cancelId 0, no forceUninstall (T-88.2-06)",
+    "entry": "errorHandler",
+    "runner": "gog",
+    "appName": "AppAlpha",
+    "error": "Error: game folder appears to be deleted",
+    "answer": "dismiss",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-gog-deleted-folder-game-without-title",
+    "note": "the deleted-folder message for a game whose info has no title: the dialog title falls back to the app name",
+    "entry": "errorHandler",
+    "runner": "gog",
+    "appName": "AppAlpha",
+    "error": "Error: game folder appears to be deleted",
+    "answer": 0,
+    "title": null
+  },
+  {
+    "id": "error-handler-gog-deleted-folder-without-app-name",
+    "note": "the deleted-folder message with no app name skips the dialog and matches nothing else",
+    "entry": "errorHandler",
+    "runner": "gog",
+    "appName": "",
+    "error": "Error: game folder appears to be deleted",
+    "answer": 1,
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-gog-deleted-folder-without-app-name-legendary",
+    "note": "the deleted-folder message with no app name falls through to the legendary .py rule",
+    "entry": "errorHandler",
+    "runner": "gog",
+    "appName": "",
+    "error": "Error: game folder appears to be deleted\nTraceback (most recent call last): File \"/opt/legendary/legendary/cli.py\", line 12, in main\nValueError: bad value",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-gog-deleted-folder-beats-legendary",
+    "note": "a text matching both the deleted-folder and the legendary rule asks the dialog (order of checks)",
+    "entry": "errorHandler",
+    "runner": "gog",
+    "appName": "AppAlpha",
+    "error": "Traceback (most recent call last): File \"/opt/legendary/legendary/cli.py\", line 12, in main\nValueError: bad value\nError: game folder appears to be deleted",
+    "answer": 0,
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-gog-legendary-py-modal",
+    "note": "a legendary .py text sends the generic error modal, the error interpolated",
+    "entry": "errorHandler",
+    "runner": "gog",
+    "appName": "AppAlpha",
+    "error": "Traceback (most recent call last): File \"/opt/legendary/legendary/cli.py\", line 12, in main\nValueError: bad value",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-gog-legendary-py-memory-error",
+    "note": "the legendary .py text with MemoryError: returns with no dialog and no frontend message",
+    "entry": "errorHandler",
+    "runner": "gog",
+    "appName": "AppAlpha",
+    "error": "Traceback (most recent call last): File \"/opt/legendary/legendary/cli.py\", line 12, in main\nValueError: bad value\nMemoryError: out of memory",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-gog-legendary-py-memory-error-without-space",
+    "note": "MemoryError without the trailing space is not the exception: the modal is sent",
+    "entry": "errorHandler",
+    "runner": "gog",
+    "appName": "AppAlpha",
+    "error": "Traceback (most recent call last): File \"/opt/legendary/legendary/cli.py\", line 12, in main\nValueError: bad value\nMemoryError:",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-gog-legendary-py-beats-credentials",
+    "note": "a text matching both the legendary .py rule and expired credentials sends the legendary modal",
+    "entry": "errorHandler",
+    "runner": "gog",
+    "appName": "AppAlpha",
+    "error": "Traceback (most recent call last): File \"/opt/legendary/legendary/cli.py\", line 12, in main\nValueError: bad value\nNo saved credentials found for this account",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-gog-legendary-py-with-markup",
+    "note": "an error with quotes, angle brackets and an ampersand: the interpolation escaping is recorded as is",
+    "entry": "errorHandler",
+    "runner": "gog",
+    "appName": "AppAlpha",
+    "error": "legendary/cli.py raised <KeyError 'a&b'> \"quoted\"",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-gog-expired-credentials",
+    "note": "No saved credentials sends the credentials modal",
+    "entry": "errorHandler",
+    "runner": "gog",
+    "appName": "AppAlpha",
+    "error": "No saved credentials found for this account",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-gog-expired-credentials-inside-text",
+    "note": "No saved credentials inside a longer text still sends the credentials modal",
+    "entry": "errorHandler",
+    "runner": "gog",
+    "appName": "AppAlpha",
+    "error": "[cli] ERROR: No saved credentials found for this account.\nPlease log in again",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-gog-unmatched",
+    "note": "a message no rule matches does nothing",
+    "entry": "errorHandler",
+    "runner": "gog",
+    "appName": "AppAlpha",
+    "error": "Some unrelated failure: exit status 1",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-gog-legendary-word-without-py",
+    "note": "the word legendary with no .py after it does not match the regex",
+    "entry": "errorHandler",
+    "runner": "gog",
+    "appName": "AppAlpha",
+    "error": "legendary failed with exit status 2",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-gog-py-without-legendary",
+    "note": "a .py with no legendary before it does not match the regex",
+    "entry": "errorHandler",
+    "runner": "gog",
+    "appName": "AppAlpha",
+    "error": "Traceback in helper.py line 3",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-nile-empty-error",
+    "note": "an empty error returns before anything",
+    "entry": "errorHandler",
+    "runner": "nile",
+    "appName": "AppAlpha",
+    "error": "",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-nile-ignore-index-error",
+    "note": "the macOS false-alarm message alone is ignored",
+    "entry": "errorHandler",
+    "runner": "nile",
+    "appName": "AppAlpha",
+    "error": "IndexError: list index out of range",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-nile-ignore-requests-warning",
+    "note": "the zipapp dependency warning alone is ignored",
+    "entry": "errorHandler",
+    "runner": "nile",
+    "appName": "AppAlpha",
+    "error": "RequestsDependencyWarning",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-nile-ignore-index-error-inside-text",
+    "note": "the false-alarm message inside a longer text is still ignored",
+    "entry": "errorHandler",
+    "runner": "nile",
+    "appName": "AppAlpha",
+    "error": "Something went wrong\nIndexError: list index out of range\nmore text",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-nile-ignore-requests-warning-inside-text",
+    "note": "the dependency warning inside a longer text is still ignored",
+    "entry": "errorHandler",
+    "runner": "nile",
+    "appName": "AppAlpha",
+    "error": "/usr/lib/python3/site-packages/requests/__init__.py: RequestsDependencyWarning: urllib3 mismatch",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-nile-ignore-beats-deleted-folder",
+    "note": "an ignore-list message wins over the deleted-folder message: no dialog",
+    "entry": "errorHandler",
+    "runner": "nile",
+    "appName": "AppAlpha",
+    "error": "Error: game folder appears to be deleted IndexError: list index out of range",
+    "answer": 1,
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-nile-ignore-beats-legendary",
+    "note": "an ignore-list message wins over the legendary .py rule: no modal",
+    "entry": "errorHandler",
+    "runner": "nile",
+    "appName": "AppAlpha",
+    "error": "Traceback (most recent call last): File \"/opt/legendary/legendary/cli.py\", line 12, in main\nValueError: bad value\nRequestsDependencyWarning",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-nile-deleted-folder-answered-yes",
+    "note": "the deleted-folder message with an app name, answered Yes: forceUninstall once",
+    "entry": "errorHandler",
+    "runner": "nile",
+    "appName": "AppAlpha",
+    "error": "Error: game folder appears to be deleted",
+    "answer": 1,
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-nile-deleted-folder-answered-no",
+    "note": "the deleted-folder message with an app name, answered No: no forceUninstall",
+    "entry": "errorHandler",
+    "runner": "nile",
+    "appName": "AppAlpha",
+    "error": "Error: game folder appears to be deleted",
+    "answer": 0,
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-nile-deleted-folder-dismissed",
+    "note": "the deleted-folder message dismissed: the dialog answers its cancelId 0, no forceUninstall (T-88.2-06)",
+    "entry": "errorHandler",
+    "runner": "nile",
+    "appName": "AppAlpha",
+    "error": "Error: game folder appears to be deleted",
+    "answer": "dismiss",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-nile-deleted-folder-game-without-title",
+    "note": "the deleted-folder message for a game whose info has no title: the dialog title falls back to the app name",
+    "entry": "errorHandler",
+    "runner": "nile",
+    "appName": "AppAlpha",
+    "error": "Error: game folder appears to be deleted",
+    "answer": 0,
+    "title": null
+  },
+  {
+    "id": "error-handler-nile-deleted-folder-without-app-name",
+    "note": "the deleted-folder message with no app name skips the dialog and matches nothing else",
+    "entry": "errorHandler",
+    "runner": "nile",
+    "appName": "",
+    "error": "Error: game folder appears to be deleted",
+    "answer": 1,
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-nile-deleted-folder-without-app-name-legendary",
+    "note": "the deleted-folder message with no app name falls through to the legendary .py rule",
+    "entry": "errorHandler",
+    "runner": "nile",
+    "appName": "",
+    "error": "Error: game folder appears to be deleted\nTraceback (most recent call last): File \"/opt/legendary/legendary/cli.py\", line 12, in main\nValueError: bad value",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-nile-deleted-folder-beats-legendary",
+    "note": "a text matching both the deleted-folder and the legendary rule asks the dialog (order of checks)",
+    "entry": "errorHandler",
+    "runner": "nile",
+    "appName": "AppAlpha",
+    "error": "Traceback (most recent call last): File \"/opt/legendary/legendary/cli.py\", line 12, in main\nValueError: bad value\nError: game folder appears to be deleted",
+    "answer": 0,
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-nile-legendary-py-modal",
+    "note": "a legendary .py text sends the generic error modal, the error interpolated",
+    "entry": "errorHandler",
+    "runner": "nile",
+    "appName": "AppAlpha",
+    "error": "Traceback (most recent call last): File \"/opt/legendary/legendary/cli.py\", line 12, in main\nValueError: bad value",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-nile-legendary-py-memory-error",
+    "note": "the legendary .py text with MemoryError: returns with no dialog and no frontend message",
+    "entry": "errorHandler",
+    "runner": "nile",
+    "appName": "AppAlpha",
+    "error": "Traceback (most recent call last): File \"/opt/legendary/legendary/cli.py\", line 12, in main\nValueError: bad value\nMemoryError: out of memory",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-nile-legendary-py-memory-error-without-space",
+    "note": "MemoryError without the trailing space is not the exception: the modal is sent",
+    "entry": "errorHandler",
+    "runner": "nile",
+    "appName": "AppAlpha",
+    "error": "Traceback (most recent call last): File \"/opt/legendary/legendary/cli.py\", line 12, in main\nValueError: bad value\nMemoryError:",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-nile-legendary-py-beats-credentials",
+    "note": "a text matching both the legendary .py rule and expired credentials sends the legendary modal",
+    "entry": "errorHandler",
+    "runner": "nile",
+    "appName": "AppAlpha",
+    "error": "Traceback (most recent call last): File \"/opt/legendary/legendary/cli.py\", line 12, in main\nValueError: bad value\nNo saved credentials found for this account",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-nile-legendary-py-with-markup",
+    "note": "an error with quotes, angle brackets and an ampersand: the interpolation escaping is recorded as is",
+    "entry": "errorHandler",
+    "runner": "nile",
+    "appName": "AppAlpha",
+    "error": "legendary/cli.py raised <KeyError 'a&b'> \"quoted\"",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-nile-expired-credentials",
+    "note": "No saved credentials sends the credentials modal",
+    "entry": "errorHandler",
+    "runner": "nile",
+    "appName": "AppAlpha",
+    "error": "No saved credentials found for this account",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-nile-expired-credentials-inside-text",
+    "note": "No saved credentials inside a longer text still sends the credentials modal",
+    "entry": "errorHandler",
+    "runner": "nile",
+    "appName": "AppAlpha",
+    "error": "[cli] ERROR: No saved credentials found for this account.\nPlease log in again",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-nile-unmatched",
+    "note": "a message no rule matches does nothing",
+    "entry": "errorHandler",
+    "runner": "nile",
+    "appName": "AppAlpha",
+    "error": "Some unrelated failure: exit status 1",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-nile-legendary-word-without-py",
+    "note": "the word legendary with no .py after it does not match the regex",
+    "entry": "errorHandler",
+    "runner": "nile",
+    "appName": "AppAlpha",
+    "error": "legendary failed with exit status 2",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-nile-py-without-legendary",
+    "note": "a .py with no legendary before it does not match the regex",
+    "entry": "errorHandler",
+    "runner": "nile",
+    "appName": "AppAlpha",
+    "error": "Traceback in helper.py line 3",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-sideload-empty-error",
+    "note": "an empty error returns before anything",
+    "entry": "errorHandler",
+    "runner": "sideload",
+    "appName": "AppAlpha",
+    "error": "",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-sideload-ignore-index-error",
+    "note": "the macOS false-alarm message alone is ignored",
+    "entry": "errorHandler",
+    "runner": "sideload",
+    "appName": "AppAlpha",
+    "error": "IndexError: list index out of range",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-sideload-ignore-requests-warning",
+    "note": "the zipapp dependency warning alone is ignored",
+    "entry": "errorHandler",
+    "runner": "sideload",
+    "appName": "AppAlpha",
+    "error": "RequestsDependencyWarning",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-sideload-ignore-index-error-inside-text",
+    "note": "the false-alarm message inside a longer text is still ignored",
+    "entry": "errorHandler",
+    "runner": "sideload",
+    "appName": "AppAlpha",
+    "error": "Something went wrong\nIndexError: list index out of range\nmore text",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-sideload-ignore-requests-warning-inside-text",
+    "note": "the dependency warning inside a longer text is still ignored",
+    "entry": "errorHandler",
+    "runner": "sideload",
+    "appName": "AppAlpha",
+    "error": "/usr/lib/python3/site-packages/requests/__init__.py: RequestsDependencyWarning: urllib3 mismatch",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-sideload-ignore-beats-deleted-folder",
+    "note": "an ignore-list message wins over the deleted-folder message: no dialog",
+    "entry": "errorHandler",
+    "runner": "sideload",
+    "appName": "AppAlpha",
+    "error": "Error: game folder appears to be deleted IndexError: list index out of range",
+    "answer": 1,
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-sideload-ignore-beats-legendary",
+    "note": "an ignore-list message wins over the legendary .py rule: no modal",
+    "entry": "errorHandler",
+    "runner": "sideload",
+    "appName": "AppAlpha",
+    "error": "Traceback (most recent call last): File \"/opt/legendary/legendary/cli.py\", line 12, in main\nValueError: bad value\nRequestsDependencyWarning",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-sideload-deleted-folder-answered-yes",
+    "note": "the deleted-folder message with an app name, answered Yes: forceUninstall once",
+    "entry": "errorHandler",
+    "runner": "sideload",
+    "appName": "AppAlpha",
+    "error": "Error: game folder appears to be deleted",
+    "answer": 1,
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-sideload-deleted-folder-answered-no",
+    "note": "the deleted-folder message with an app name, answered No: no forceUninstall",
+    "entry": "errorHandler",
+    "runner": "sideload",
+    "appName": "AppAlpha",
+    "error": "Error: game folder appears to be deleted",
+    "answer": 0,
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-sideload-deleted-folder-dismissed",
+    "note": "the deleted-folder message dismissed: the dialog answers its cancelId 0, no forceUninstall (T-88.2-06)",
+    "entry": "errorHandler",
+    "runner": "sideload",
+    "appName": "AppAlpha",
+    "error": "Error: game folder appears to be deleted",
+    "answer": "dismiss",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-sideload-deleted-folder-game-without-title",
+    "note": "the deleted-folder message for a game whose info has no title: the dialog title falls back to the app name",
+    "entry": "errorHandler",
+    "runner": "sideload",
+    "appName": "AppAlpha",
+    "error": "Error: game folder appears to be deleted",
+    "answer": 0,
+    "title": null
+  },
+  {
+    "id": "error-handler-sideload-deleted-folder-without-app-name",
+    "note": "the deleted-folder message with no app name skips the dialog and matches nothing else",
+    "entry": "errorHandler",
+    "runner": "sideload",
+    "appName": "",
+    "error": "Error: game folder appears to be deleted",
+    "answer": 1,
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-sideload-deleted-folder-without-app-name-legendary",
+    "note": "the deleted-folder message with no app name falls through to the legendary .py rule",
+    "entry": "errorHandler",
+    "runner": "sideload",
+    "appName": "",
+    "error": "Error: game folder appears to be deleted\nTraceback (most recent call last): File \"/opt/legendary/legendary/cli.py\", line 12, in main\nValueError: bad value",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-sideload-deleted-folder-beats-legendary",
+    "note": "a text matching both the deleted-folder and the legendary rule asks the dialog (order of checks)",
+    "entry": "errorHandler",
+    "runner": "sideload",
+    "appName": "AppAlpha",
+    "error": "Traceback (most recent call last): File \"/opt/legendary/legendary/cli.py\", line 12, in main\nValueError: bad value\nError: game folder appears to be deleted",
+    "answer": 0,
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-sideload-legendary-py-modal",
+    "note": "a legendary .py text sends the generic error modal, the error interpolated",
+    "entry": "errorHandler",
+    "runner": "sideload",
+    "appName": "AppAlpha",
+    "error": "Traceback (most recent call last): File \"/opt/legendary/legendary/cli.py\", line 12, in main\nValueError: bad value",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-sideload-legendary-py-memory-error",
+    "note": "the legendary .py text with MemoryError: returns with no dialog and no frontend message",
+    "entry": "errorHandler",
+    "runner": "sideload",
+    "appName": "AppAlpha",
+    "error": "Traceback (most recent call last): File \"/opt/legendary/legendary/cli.py\", line 12, in main\nValueError: bad value\nMemoryError: out of memory",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-sideload-legendary-py-memory-error-without-space",
+    "note": "MemoryError without the trailing space is not the exception: the modal is sent",
+    "entry": "errorHandler",
+    "runner": "sideload",
+    "appName": "AppAlpha",
+    "error": "Traceback (most recent call last): File \"/opt/legendary/legendary/cli.py\", line 12, in main\nValueError: bad value\nMemoryError:",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-sideload-legendary-py-beats-credentials",
+    "note": "a text matching both the legendary .py rule and expired credentials sends the legendary modal",
+    "entry": "errorHandler",
+    "runner": "sideload",
+    "appName": "AppAlpha",
+    "error": "Traceback (most recent call last): File \"/opt/legendary/legendary/cli.py\", line 12, in main\nValueError: bad value\nNo saved credentials found for this account",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-sideload-legendary-py-with-markup",
+    "note": "an error with quotes, angle brackets and an ampersand: the interpolation escaping is recorded as is",
+    "entry": "errorHandler",
+    "runner": "sideload",
+    "appName": "AppAlpha",
+    "error": "legendary/cli.py raised <KeyError 'a&b'> \"quoted\"",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-sideload-expired-credentials",
+    "note": "No saved credentials sends the credentials modal",
+    "entry": "errorHandler",
+    "runner": "sideload",
+    "appName": "AppAlpha",
+    "error": "No saved credentials found for this account",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-sideload-expired-credentials-inside-text",
+    "note": "No saved credentials inside a longer text still sends the credentials modal",
+    "entry": "errorHandler",
+    "runner": "sideload",
+    "appName": "AppAlpha",
+    "error": "[cli] ERROR: No saved credentials found for this account.\nPlease log in again",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-sideload-unmatched",
+    "note": "a message no rule matches does nothing",
+    "entry": "errorHandler",
+    "runner": "sideload",
+    "appName": "AppAlpha",
+    "error": "Some unrelated failure: exit status 1",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-sideload-legendary-word-without-py",
+    "note": "the word legendary with no .py after it does not match the regex",
+    "entry": "errorHandler",
+    "runner": "sideload",
+    "appName": "AppAlpha",
+    "error": "legendary failed with exit status 2",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-sideload-py-without-legendary",
+    "note": "a .py with no legendary before it does not match the regex",
+    "entry": "errorHandler",
+    "runner": "sideload",
+    "appName": "AppAlpha",
+    "error": "Traceback in helper.py line 3",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-steam-deleted-folder-answered-yes",
+    "note": "the deleted-folder message with an app name, answered Yes: forceUninstall once",
+    "entry": "errorHandler",
+    "runner": "steam",
+    "appName": "AppAlpha",
+    "error": "Error: game folder appears to be deleted",
+    "answer": 1,
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-steam-legendary-py-modal",
+    "note": "a legendary .py text sends the generic error modal, the error interpolated",
+    "entry": "errorHandler",
+    "runner": "steam",
+    "appName": "AppAlpha",
+    "error": "Traceback (most recent call last): File \"/opt/legendary/legendary/cli.py\", line 12, in main\nValueError: bad value",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "error-handler-steam-expired-credentials",
+    "note": "No saved credentials sends the credentials modal",
+    "entry": "errorHandler",
+    "runner": "steam",
+    "appName": "AppAlpha",
+    "error": "No saved credentials found for this account",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "ask-force-uninstall-yes",
+    "note": "answered Yes: forceUninstall once, the answer 1 returned",
+    "entry": "askForceUninstall",
+    "runner": "legendary",
+    "appName": "AppAlpha",
+    "error": "",
+    "answer": 1,
+    "title": "Alpha Game"
+  },
+  {
+    "id": "ask-force-uninstall-no",
+    "note": "answered No: no forceUninstall, the answer 0 returned",
+    "entry": "askForceUninstall",
+    "runner": "legendary",
+    "appName": "AppAlpha",
+    "error": "",
+    "answer": 0,
+    "title": "Alpha Game"
+  },
+  {
+    "id": "ask-force-uninstall-dismissed",
+    "note": "dismissed: the dialog answers its cancelId 0, no forceUninstall, 0 returned",
+    "entry": "askForceUninstall",
+    "runner": "legendary",
+    "appName": "AppAlpha",
+    "error": "",
+    "answer": "dismiss",
+    "title": "Alpha Game"
+  },
+  {
+    "id": "ask-force-uninstall-no-title-yes",
+    "note": "a game whose info has no title: the dialog title is the app name; Yes uninstalls",
+    "entry": "askForceUninstall",
+    "runner": "legendary",
+    "appName": "AppAlpha",
+    "error": "",
+    "answer": 1,
+    "title": null
+  },
+  {
+    "id": "ask-force-uninstall-no-title-no",
+    "note": "a game whose info has no title: the dialog title is the app name; No keeps it",
+    "entry": "askForceUninstall",
+    "runner": "legendary",
+    "appName": "AppAlpha",
+    "error": "",
+    "answer": 0,
+    "title": null
+  },
+  {
+    "id": "ask-force-uninstall-no-title-dismissed",
+    "note": "a game whose info has no title, dismissed: cancelId 0, no forceUninstall",
+    "entry": "askForceUninstall",
+    "runner": "legendary",
+    "appName": "AppAlpha",
+    "error": "",
+    "answer": "dismiss",
+    "title": null
+  },
+  {
+    "id": "ask-force-uninstall-empty-title",
+    "note": "a game whose info has an empty title: the empty string counts as absent, the app name is used",
+    "entry": "askForceUninstall",
+    "runner": "legendary",
+    "appName": "AppAlpha",
+    "error": "",
+    "answer": 0,
+    "title": ""
+  },
+  {
+    "id": "ask-force-uninstall-title-with-markup",
+    "note": "a title with punctuation is passed to the dialog untouched",
+    "entry": "askForceUninstall",
+    "runner": "legendary",
+    "appName": "AppAlpha",
+    "error": "",
+    "answer": 0,
+    "title": "Alpha: The \"Game\" & <More>"
+  },
+  {
+    "id": "ask-force-uninstall-empty-app-name-no-title",
+    "note": "no title and an empty app name: the dialog title is empty",
+    "entry": "askForceUninstall",
+    "runner": "legendary",
+    "appName": "",
+    "error": "",
+    "answer": 0,
+    "title": null
+  }
+]

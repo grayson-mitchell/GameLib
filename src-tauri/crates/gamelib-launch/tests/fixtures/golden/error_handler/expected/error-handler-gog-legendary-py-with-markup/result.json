@@ -1,0 +1,21 @@
+{
+  "returned": null,
+  "asked": [],
+  "answered": [],
+  "frontend": [
+    {
+      "channel": "showDialog",
+      "title": "gog",
+      "message": "An error has occurred! Try to Logout and Login on your Epic account. \n  legendary&#x2F;cli.py raised &lt;KeyError &#39;a&amp;b&#39;&gt; &quot;quoted&quot;",
+      "type": "ERROR"
+    }
+  ],
+  "forceUninstall": [],
+  "titleLookups": [],
+  "appState": [
+    {
+      "member": "raiseMainWindowForInAppDialog",
+      "args": []
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "returned": null,
+  "asked": [],
+  "answered": [],
+  "frontend": [
+    {
+      "channel": "showDialog",
+      "title": "gog",
+      "message": "Your credentials have expired, please log out and log in again.",
+      "type": "ERROR"
+    }
+  ],
+  "forceUninstall": [],
+  "titleLookups": [],
+  "appState": [
+    {
+      "member": "raiseMainWindowForInAppDialog",
+      "args": []
+    }
+  ]
+}

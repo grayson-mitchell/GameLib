@@ -1,0 +1,36 @@
+{
+  "returned": null,
+  "asked": [
+    {
+      "type": "question",
+      "title": "Alpha Game",
+      "message": "Game folder appears to be deleted, do you want to remove the game from the installed list?",
+      "buttons": [
+        "NO",
+        "YES"
+      ],
+      "cancelId": 0
+    }
+  ],
+  "answered": [
+    1
+  ],
+  "frontend": [],
+  "forceUninstall": [
+    {
+      "appName": "AppAlpha"
+    }
+  ],
+  "titleLookups": [
+    {
+      "call": "getGame",
+      "runner": "nile",
+      "appName": "AppAlpha"
+    },
+    {
+      "call": "getGameInfo",
+      "appName": "AppAlpha"
+    }
+  ],
+  "appState": []
+}

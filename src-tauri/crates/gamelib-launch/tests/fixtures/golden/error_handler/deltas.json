@@ -1,0 +1,4 @@
+{
+  "english-catalog": "The messages are the English strings of public/locales/en/translation.json resolved through the real i18next (box.error.folder-not-found.title, box.error.legendary.generic, box.error.credentials.message, box.no, box.yes). The Rust port resolves the same keys through its own catalog and compares in English; a missing key falls back to the default text the TS passes, which equals the English string for the three message keys and is No and Yes for the buttons.",
+  "interpolation-escaping": "The legendary generic message interpolates the error through i18next default escaping, so the recorded message holds HTML entities where the error held quotes, angle brackets or an ampersand. The Rust port reproduces the recorded text and does not own a second escaping rule."
+}

@@ -1,0 +1,21 @@
+{
+  "returned": null,
+  "asked": [],
+  "answered": [],
+  "frontend": [
+    {
+      "channel": "showDialog",
+      "title": "nile",
+      "message": "An error has occurred! Try to Logout and Login on your Epic account. \n  Traceback (most recent call last): File &quot;&#x2F;opt&#x2F;legendary&#x2F;legendary&#x2F;cli.py&quot;, line 12, in main\nValueError: bad value",
+      "type": "ERROR"
+    }
+  ],
+  "forceUninstall": [],
+  "titleLookups": [],
+  "appState": [
+    {
+      "member": "raiseMainWindowForInAppDialog",
+      "args": []
+    }
+  ]
+}
