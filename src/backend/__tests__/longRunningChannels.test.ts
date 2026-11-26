@@ -89,7 +89,10 @@ const EXPECTED_LONG_RUNNING_CHANNELS = [
   // Phase 100 CR-02: changeInstallPath awaits the store's changeGameInstallPath (Legendary runs
   // the runner's `move --skip-move`); steamRemoveAllCopies deletes every recorded install root.
   'changeInstallPath',
-  'steamRemoveAllCopies'
+  'steamRemoveAllCopies',
+  // Phase 88.2 plan 18 (D-26): the Rust-to-sidecar manager-hook channel. 88.2 sends game_title and
+  // force_uninstall; 88.3's funnel `launch` hook spans a whole play session, so no bound is right.
+  'launchManagerCall'
 ]
 
 /**

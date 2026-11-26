@@ -62,6 +62,180 @@ impl LaunchDialogs for ShellDialogs {
     }
 }
 
+/// The Rust-to-sidecar invoke channel the TS managers answer (88.2-18, D-26). Called as `[op, payload]` with
+/// `op` one of [`HOOK_OP_GAME_TITLE`] and [`HOOK_OP_FORCE_UNINSTALL`] and `payload` `{ runner, appName }`.
+/// It is in `LONG_RUNNING_CHANNELS`: 88.3 adds the funnel's `launch` hook to this channel, which spans a whole
+/// play session, so no wall-clock bound is right for it.
+pub(crate) const LAUNCH_MANAGER_CALL: &str = "launchManagerCall";
+const HOOK_OP_GAME_TITLE: &str = "game_title";
+const HOOK_OP_FORCE_UNINSTALL: &str = "force_uninstall";
+/// The name of the thread each hook call runs on (never the shared blocking pool: a call may wait as long
+/// as the sidecar takes, and must not hold a pool worker the rest of the shell needs).
+const HOOK_THREAD_NAME: &str = "launch-manager-hook";
+/// The fixed category word of every failure of the transport. It never carries the runner, the app name or the
+/// sidecar's error text (T-88.2-47).
+const HOOK_SIDECAR: &str = "sidecar";
+/// The fixed category word of a reply that is not the shape the op answers.
+const HOOK_BAD_REPLY: &str = "bad-reply";
+
+/// How a hook reaches the sidecar: the channel and its arguments in, the sidecar's reply or its error text out.
+/// The production one is [`sidecar_invoke`]; a test passes a scripted one.
+type HookInvoke = Arc<dyn Fn(&str, Vec<Value>) -> Result<Value, String> + Send + Sync>;
+
+/// `SidecarState::invoke` over the sidecar the shell spawned. The state does not exist yet when [`install`]
+/// runs (the sidecar is spawned after the launch context is built), so it is looked up per call; before it
+/// exists, and after the sidecar closed, the call is an error and the hook answers `HookError("sidecar")`.
+fn sidecar_invoke(channel: &str, args: Vec<Value>) -> Result<Value, String> {
+    let state = store_dispatch::sidecar_state().ok_or_else(|| HOOK_SIDECAR.to_string())?;
+    state.invoke(channel.to_string(), args)
+}
+
+/// The slot a hook's thread answers into and the future reads: a value, the waker of whoever awaits it, and
+/// whether the thread ended without answering.
+struct HookSlot<T> {
+    value: Option<T>,
+    waker: Option<std::task::Waker>,
+    closed: bool,
+}
+
+/// The sending half. Dropping it without sending (a panicking thread) closes the slot, so the future
+/// answers an error instead of waiting forever.
+struct HookSender<T>(Arc<Mutex<HookSlot<T>>>);
+
+impl<T> HookSender<T> {
+    fn send(self, value: T) {
+        let mut slot = self.0.lock().unwrap_or_else(|e| e.into_inner());
+        slot.value = Some(value);
+        if let Some(waker) = slot.waker.take() {
+            waker.wake();
+        }
+    }
+}
+
+impl<T> Drop for HookSender<T> {
+    fn drop(&mut self) {
+        let mut slot = self.0.lock().unwrap_or_else(|e| e.into_inner());
+        slot.closed = true;
+        if let Some(waker) = slot.waker.take() {
+            waker.wake();
+        }
+    }
+}
+
+/// The receiving half: ready with the thread's answer, or with `None` if the thread ended without one.
+struct HookReceiver<T>(Arc<Mutex<HookSlot<T>>>);
+
+impl<T> std::future::Future for HookReceiver<T> {
+    type Output = Option<T>;
+
+    fn poll(
+        self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<T>> {
+        let mut slot = self.0.lock().unwrap_or_else(|e| e.into_inner());
+        if let Some(value) = slot.value.take() {
+            return std::task::Poll::Ready(Some(value));
+        }
+        if slot.closed {
+            return std::task::Poll::Ready(None);
+        }
+        slot.waker = Some(cx.waker().clone());
+        std::task::Poll::Pending
+    }
+}
+
+fn hook_slot<T>() -> (HookSender<T>, HookReceiver<T>) {
+    let slot = Arc::new(Mutex::new(HookSlot {
+        value: None,
+        waker: None,
+        closed: false,
+    }));
+    (HookSender(Arc::clone(&slot)), HookReceiver(slot))
+}
+
+/// The shell's [`ManagerHooks`] (88.2-18, D-26): each call asks the TS managers over [`LAUNCH_MANAGER_CALL`]
+/// from a thread of its own and answers through a one-shot slot. An error of any kind (no sidecar, a closed
+/// sidecar, an error reply, a thread that would not start) is `HookError("sidecar")`, never the text of the
+/// error and never the runner or the app name (T-88.2-47); a sidecar that goes away fails every pending call
+/// through `drain_pending_invokes` (T-88.2-28), so no call outlives it.
+struct SidecarManagerHooks {
+    invoke: HookInvoke,
+}
+
+impl SidecarManagerHooks {
+    fn new(invoke: HookInvoke) -> SidecarManagerHooks {
+        SidecarManagerHooks { invoke }
+    }
+
+    /// Sends `[op, { runner, appName }]` from a named thread and answers the reply, or the category word.
+    fn ask(
+        &self,
+        op: &'static str,
+        runner: gamelib_launch::runner::RunnerName,
+        app_name: &str,
+    ) -> gamelib_core::process::BoxFuture<Result<Value, gamelib_launch::hooks::HookError>> {
+        use gamelib_launch::hooks::HookError;
+        let invoke = Arc::clone(&self.invoke);
+        let args = vec![
+            serde_json::json!(op),
+            serde_json::json!({ "runner": runner.as_str(), "appName": app_name }),
+        ];
+        let (tx, rx) = hook_slot::<Result<Value, String>>();
+        let spawned = thread::Builder::new()
+            .name(HOOK_THREAD_NAME.into())
+            .spawn(move || {
+                let reply = invoke(LAUNCH_MANAGER_CALL, args);
+                tx.send(reply);
+            });
+        if spawned.is_err() {
+            return Box::pin(async { Err(HookError(HOOK_SIDECAR)) });
+        }
+        Box::pin(async move {
+            match rx.await {
+                Some(Ok(reply)) => Ok(reply),
+                _ => Err(HookError(HOOK_SIDECAR)),
+            }
+        })
+    }
+}
+
+impl gamelib_launch::hooks::ManagerHooks for SidecarManagerHooks {
+    fn game_title(
+        &self,
+        runner: gamelib_launch::runner::RunnerName,
+        app_name: &str,
+    ) -> gamelib_core::process::BoxFuture<Result<String, gamelib_launch::hooks::HookError>> {
+        use gamelib_launch::hooks::HookError;
+        let reply = self.ask(HOOK_OP_GAME_TITLE, runner, app_name);
+        Box::pin(async move {
+            match reply.await? {
+                Value::String(title) => Ok(title),
+                _ => Err(HookError(HOOK_BAD_REPLY)),
+            }
+        })
+    }
+
+    fn force_uninstall(
+        &self,
+        runner: gamelib_launch::runner::RunnerName,
+        app_name: &str,
+    ) -> gamelib_core::process::BoxFuture<Result<(), gamelib_launch::hooks::HookError>> {
+        let reply = self.ask(HOOK_OP_FORCE_UNINSTALL, runner, app_name);
+        Box::pin(async move { reply.await.map(|_| ()) })
+    }
+}
+
+/// The hooks the shell's launch context carries: over the sidecar, looked up per call.
+fn shell_hooks() -> Arc<dyn gamelib_launch::hooks::ManagerHooks> {
+    Arc::new(SidecarManagerHooks::new(Arc::new(sidecar_invoke)))
+}
+
+/// The context with the shell's manager hooks over the sidecar ([`install`] calls this; a test calls it over
+/// its own context to see what the installed one carries).
+fn with_shell_hooks(ctx: LaunchCtx) -> LaunchCtx {
+    ctx.with_hooks(shell_hooks())
+}
+
 /// The wine manager's shell facts for the prepare steps (88.1-14): the discovery host `getAlternativeWine` runs over
 /// ([`wine_dispatch::discovery_host`], with the custom paths scanned), the install settings the global config holds now
 /// and the cancel registry the renderer's `abort(version)` reaches, so a default-wine download started by a launch
@@ -86,7 +260,7 @@ impl WineManagerFacts for ShellWineManager {
 }
 
 /// Builds the launch context from the engine, known-fix, wine and information contexts and stores it, with the
-/// dialog source over the app's native message box. A no-op when any of the four was not installed (no home
+/// dialog source over the app's native message box and the manager hooks over the sidecar (88.2-18). A no-op when any of the four was not installed (no home
 /// directory), so every launch channel answers not ready. A second call is ignored (the first context stays).
 pub(crate) fn install(app: &AppHandle) {
     let (Some(engine), Some(knownfix), Some(wine), Some(info)) = (
@@ -107,6 +281,9 @@ pub(crate) fn install(app: &AppHandle) {
     .with_manager(Arc::new(ShellWineManager {
         wine: Arc::clone(wine),
     }));
+    // 88.2-18 (D-26): the manager hooks the runner's error handler asks (the game's title, forceUninstall).
+    // `errors` stays `None`, the production handler (88.2-09), which reads the dialogs and hooks set here.
+    let ctx = with_shell_hooks(ctx);
     let _ = LAUNCH_CTX.set(Arc::new(ctx));
 }
 
@@ -781,8 +958,16 @@ mod tests {
 
     /// A launch context over a fake HOME, built the way [`install`] builds the real one.
     fn ctx_over(home: &FakeHome) -> Arc<LaunchCtx> {
+        Arc::new(ctx_built(home, None))
+    }
+
+    /// [`ctx_over`] as a value, with an engine log when one is given (a hook failure's fixed line lands there).
+    fn ctx_built(
+        home: &FakeHome,
+        log: Option<Arc<dyn gamelib_engine::sinks::EngineLog>>,
+    ) -> LaunchCtx {
         let root = home.root().to_path_buf();
-        let engine = Arc::new(EngineCtx::new(
+        let engine = EngineCtx::new(
             Arc::new(StoreHost::new()),
             Arc::new(SystemClock),
             Platform::Linux,
@@ -794,7 +979,11 @@ mod tests {
                 temp: root.join("temp"),
             },
             Shutdown::new(),
-        ));
+        );
+        let engine = Arc::new(match log {
+            Some(log) => engine.with_log(log),
+            None => engine,
+        });
         let knownfix = Arc::new(KnownFixCtx::new(
             Arc::clone(&engine),
             None,
@@ -816,7 +1005,7 @@ mod tests {
             Shutdown::new(),
             Arc::new(ReqwestHttp::new()),
         ));
-        Arc::new(LaunchCtx::new(engine, knownfix, wine, info))
+        LaunchCtx::new(engine, knownfix, wine, info)
     }
 
     #[test]
@@ -2129,5 +2318,353 @@ mod tests {
             );
         }
         assert_eq!(tracked_kill_all_over(Some(&ctx), &[]), Ok(json!(0)));
+    }
+
+    // ---- the manager hooks over the sidecar (88.2-18, D-26) ------------------------------------------
+
+    use gamelib_launch::hooks::{HookError, ManagerHooks};
+    use gamelib_launch::runner::RunnerName;
+    use std::future::Future;
+
+    /// Drives a future to its answer on the calling thread.
+    fn block_on<F: Future>(future: F) -> F::Output {
+        struct ThreadWaker(thread::Thread);
+        impl std::task::Wake for ThreadWaker {
+            fn wake(self: Arc<Self>) {
+                self.0.unpark();
+            }
+        }
+        let waker = std::task::Waker::from(Arc::new(ThreadWaker(thread::current())));
+        let mut cx = std::task::Context::from_waker(&waker);
+        let mut future = Box::pin(future);
+        loop {
+            if let std::task::Poll::Ready(out) = future.as_mut().poll(&mut cx) {
+                return out;
+            }
+            thread::park_timeout(Duration::from_millis(50));
+        }
+    }
+
+    /// What a scripted invoke saw: the channel, its arguments and the name of the thread it ran on.
+    type Seen = Arc<Mutex<Vec<(String, Vec<Value>, Option<String>)>>>;
+
+    /// An invoke that answers `reply` and records every call.
+    fn scripted(reply: Result<Value, String>) -> (HookInvoke, Seen) {
+        let seen: Seen = Arc::new(Mutex::new(Vec::new()));
+        let recorder = Arc::clone(&seen);
+        let invoke: HookInvoke = Arc::new(move |channel, args| {
+            recorder.lock().unwrap().push((
+                channel.to_string(),
+                args,
+                thread::current().name().map(str::to_string),
+            ));
+            reply.clone()
+        });
+        (invoke, seen)
+    }
+
+    #[test]
+    fn game_title_asks_the_manager_call_channel_and_answers_the_decoded_title() {
+        let (invoke, seen) = scripted(Ok(json!("Hades")));
+        let hooks = SidecarManagerHooks::new(invoke);
+        let title = block_on(hooks.game_title(RunnerName::Gog, "1234"));
+        assert_eq!(title, Ok("Hades".to_string()));
+        let seen = seen.lock().unwrap();
+        assert_eq!(seen.len(), 1);
+        assert_eq!(seen[0].0, "launchManagerCall");
+        assert_eq!(
+            seen[0].1,
+            vec![
+                json!("game_title"),
+                json!({ "runner": "gog", "appName": "1234" })
+            ]
+        );
+    }
+
+    #[test]
+    fn force_uninstall_asks_its_op_and_accepts_any_success_reply() {
+        for reply in [json!(null), json!(true), json!({ "done": 1 })] {
+            let (invoke, seen) = scripted(Ok(reply));
+            let hooks = SidecarManagerHooks::new(invoke);
+            assert_eq!(
+                block_on(hooks.force_uninstall(RunnerName::Legendary, "abc")),
+                Ok(())
+            );
+            let seen = seen.lock().unwrap();
+            assert_eq!(
+                seen[0].1,
+                vec![
+                    json!("force_uninstall"),
+                    json!({ "runner": "legendary", "appName": "abc" })
+                ]
+            );
+        }
+    }
+
+    #[test]
+    fn a_title_that_is_not_a_string_is_a_bad_reply() {
+        let (invoke, _) = scripted(Ok(json!({ "title": "x" })));
+        let hooks = SidecarManagerHooks::new(invoke);
+        assert_eq!(
+            block_on(hooks.game_title(RunnerName::Nile, "abc")),
+            Err(HookError("bad-reply"))
+        );
+    }
+
+    #[test]
+    fn every_hook_call_runs_on_a_dedicated_named_thread() {
+        let (invoke, seen) = scripted(Ok(json!("t")));
+        let hooks = SidecarManagerHooks::new(invoke);
+        let caller = thread::current().name().map(str::to_string);
+        let _ = block_on(hooks.game_title(RunnerName::Gog, "1"));
+        let _ = block_on(hooks.force_uninstall(RunnerName::Gog, "1"));
+        let seen = seen.lock().unwrap();
+        assert_eq!(seen.len(), 2);
+        for call in seen.iter() {
+            assert_eq!(call.2.as_deref(), Some("launch-manager-hook"));
+            assert_ne!(call.2, caller);
+        }
+    }
+
+    #[test]
+    fn an_invoke_error_maps_to_a_hook_error_without_the_payload() {
+        // The sidecar's own error text names the app and the runner; none of it may come back.
+        let (invoke, _) = scripted(Err(
+            "boom while asking secret-app-name for legendary at /home/someone".to_string(),
+        ));
+        let hooks = SidecarManagerHooks::new(invoke);
+        let title = block_on(hooks.game_title(RunnerName::Legendary, "secret-app-name"));
+        let forced = block_on(hooks.force_uninstall(RunnerName::Legendary, "secret-app-name"));
+        assert_eq!(title, Err(HookError("sidecar")));
+        assert_eq!(forced, Err(HookError("sidecar")));
+        for shown in [format!("{title:?}"), format!("{forced:?}")] {
+            for leaked in ["secret-app-name", "legendary", "boom", "/home/someone"] {
+                assert!(!shown.contains(leaked), "{shown} leaked {leaked}");
+            }
+        }
+    }
+
+    #[test]
+    fn a_thread_that_ends_without_answering_is_a_hook_error() {
+        let invoke: HookInvoke = Arc::new(|_, _| panic!("the sidecar handle blew up"));
+        let hooks = SidecarManagerHooks::new(invoke);
+        assert_eq!(
+            block_on(hooks.force_uninstall(RunnerName::Gog, "1")),
+            Err(HookError("sidecar"))
+        );
+    }
+
+    #[test]
+    fn before_the_sidecar_exists_every_hook_is_a_hook_error() {
+        // The shell's production invoke, in a unit test that never spawned a sidecar.
+        let hooks = SidecarManagerHooks::new(Arc::new(sidecar_invoke));
+        if store_dispatch::sidecar_state().is_none() {
+            assert_eq!(
+                block_on(hooks.game_title(RunnerName::Steam, "1")),
+                Err(HookError("sidecar"))
+            );
+        }
+    }
+
+    /// The text of the part of `install` the shell composes its context in.
+    fn install_source() -> &'static str {
+        let source = include_str!("launch_dispatch.rs");
+        let start = source.find("pub(crate) fn install(").unwrap();
+        let end = start + source[start..].find("/// Runs `op` over `args`").unwrap();
+        &source[start..end]
+    }
+
+    #[test]
+    fn the_installed_context_carries_the_hooks_the_dialogs_and_the_default_error_handler() {
+        let home = FakeHome::new("launch-shell-");
+        let ctx = with_shell_hooks(ctx_built(&home, None));
+        assert!(ctx.hooks.is_some(), "the shell context carries the hooks");
+        // The runner's RunnerErrors default (None) is the 88.2-09 error_handler, which reads these hooks.
+        assert!(ctx.errors.is_none());
+        // `install` builds the real context from an AppHandle no unit test has, so its composition is pinned
+        // as source: the dialogs (88.1) and the hooks (88.2-18) are both set before the context is stored.
+        let install = install_source();
+        assert!(install.contains(".with_dialogs(Arc::new(ShellDialogs"));
+        assert!(install.contains("with_shell_hooks(ctx)"));
+        assert!(!install.contains("with_errors("));
+    }
+
+    // ---- the hooks at sidecar EOF (T-88.2-28), over a real SidecarState ---------------------------------
+
+    /// A real `SidecarState` over a child that reads stdin and never answers, killed when dropped. Unix only:
+    /// the child is `sh`.
+    #[cfg(unix)]
+    struct SilentSidecar(Arc<SidecarState>);
+
+    #[cfg(unix)]
+    impl SilentSidecar {
+        fn new() -> SilentSidecar {
+            let mut child = std::process::Command::new("sh")
+                .args(["-c", "cat >/dev/null"])
+                .stdin(std::process::Stdio::piped())
+                .stdout(std::process::Stdio::piped())
+                .stderr(std::process::Stdio::piped())
+                .spawn()
+                .unwrap();
+            let stdin = child.stdin.take().unwrap();
+            SilentSidecar(Arc::new(SidecarState {
+                stdin: Mutex::new(stdin),
+                pending: Mutex::new(HashMap::new()),
+                abandoned: Mutex::new(VecDeque::new()),
+                counter: AtomicU64::new(1),
+                child: Mutex::new(child),
+                shutting_down: AtomicBool::new(false),
+                eof_surfaced: AtomicBool::new(false),
+                tree_reaped: AtomicBool::new(false),
+                reader_done: shell_state::ReaderDone::default(),
+            }))
+        }
+
+        /// Hooks whose invoke is this state's own `invoke`, the call the production hooks make.
+        fn hooks(&self) -> SidecarManagerHooks {
+            let state = Arc::clone(&self.0);
+            SidecarManagerHooks::new(Arc::new(move |channel, args| {
+                state.invoke(channel.to_string(), args)
+            }))
+        }
+    }
+
+    #[cfg(unix)]
+    impl Drop for SilentSidecar {
+        fn drop(&mut self) {
+            let mut child = self.0.child.lock().unwrap_or_else(|e| e.into_inner());
+            let _ = child.kill();
+            let _ = child.wait();
+        }
+    }
+
+    /// Polls `condition` until it holds or five seconds pass.
+    #[cfg(unix)]
+    fn wait_until(condition: impl Fn() -> bool) -> bool {
+        let deadline = std::time::Instant::now() + Duration::from_secs(5);
+        while std::time::Instant::now() < deadline {
+            if condition() {
+                return true;
+            }
+            thread::sleep(Duration::from_millis(5));
+        }
+        condition()
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_hook_pending_at_sidecar_eof_answers_an_error_inside_the_drain() {
+        let sidecar = SilentSidecar::new();
+        let state = Arc::clone(&sidecar.0);
+        let hooks = sidecar.hooks();
+        let (answered, answer) = std::sync::mpsc::channel();
+        let caller = thread::spawn(move || {
+            let _ = answered.send(block_on(
+                hooks.game_title(RunnerName::Legendary, "pending-app"),
+            ));
+        });
+        assert!(
+            wait_until(|| state.pending.lock().unwrap().len() == 1),
+            "the hook call never reached the pending table"
+        );
+        assert!(
+            answer.try_recv().is_err(),
+            "a hook the sidecar has not answered must still be waiting"
+        );
+        // The reader thread's EOF handling: every pending invoke is failed at once.
+        let drained = drain_pending_invokes(&state.pending, &state.abandoned);
+        assert_eq!(drained.len(), 1);
+        assert_eq!(drained[0].1, "launchManagerCall");
+        let answered = answer
+            .recv_timeout(Duration::from_secs(5))
+            .expect("the hook must answer inside the drain, not wait for the sidecar");
+        assert_eq!(answered, Err(HookError("sidecar")));
+        caller.join().unwrap();
+    }
+
+    /// A dialog source that answers every question with "Yes" and keeps the titles it was shown.
+    #[cfg(unix)]
+    struct YesDialogs(Mutex<Vec<String>>);
+
+    #[cfg(unix)]
+    impl LaunchDialogs for YesDialogs {
+        fn ask(&self, title: &str, _message: &str, buttons: &[String]) -> Option<usize> {
+            self.0.lock().unwrap().push(title.to_string());
+            assert_eq!(buttons.len(), 2);
+            Some(1)
+        }
+    }
+
+    /// An engine log that keeps `(level, line)`.
+    #[cfg(unix)]
+    #[derive(Default)]
+    struct LinesLog(Mutex<Vec<(&'static str, String)>>);
+
+    #[cfg(unix)]
+    impl gamelib_engine::sinks::EngineLog for LinesLog {
+        fn info(&self, line: &str) {
+            self.0.lock().unwrap().push(("info", line.to_string()));
+        }
+        fn warn(&self, line: &str) {
+            self.0.lock().unwrap().push(("warn", line.to_string()));
+        }
+        fn error(&self, line: &str) {
+            self.0.lock().unwrap().push(("error", line.to_string()));
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_yes_over_hooks_the_sidecar_never_answers_writes_the_fixed_failure_line_and_is_not_success()
+    {
+        let home = FakeHome::new("launch-shell-");
+        let sidecar = SilentSidecar::new();
+        let dialogs = Arc::new(YesDialogs(Mutex::new(Vec::new())));
+        let log = Arc::new(LinesLog::default());
+        let ctx = ctx_built(&home, Some(log.clone()))
+            .with_dialogs(dialogs.clone())
+            .with_hooks(Arc::new(sidecar.hooks()));
+
+        // The sidecar goes away: its EOF handling fails every pending invoke, over and over until the ask is done.
+        let stop = Arc::new(AtomicBool::new(false));
+        let state = Arc::clone(&sidecar.0);
+        let flag = Arc::clone(&stop);
+        let eof = thread::spawn(move || {
+            while !flag.load(Ordering::SeqCst) {
+                drain_pending_invokes(&state.pending, &state.abandoned);
+                thread::sleep(Duration::from_millis(2));
+            }
+        });
+
+        let (done, answer) = std::sync::mpsc::channel();
+        let asker = thread::spawn(move || {
+            let reply = gamelib_launch::dispatch_sync(
+                "launch_ask_force_uninstall",
+                &[json!({ "runner": "legendary", "appName": "some-app" })],
+                &ctx,
+            );
+            let _ = done.send(reply);
+        });
+        let reply = answer.recv_timeout(Duration::from_secs(10));
+        stop.store(true, Ordering::SeqCst);
+        eof.join().unwrap();
+        let reply = reply.expect("the ask must finish once the sidecar is gone");
+        asker.join().unwrap();
+
+        // The click was Yes, so the reply is the index; the uninstall behind it did not happen, and says so.
+        assert_eq!(reply, Ok(json!(1)));
+        // The title hook failed too, so the dialog took the app name.
+        assert_eq!(*dialogs.0.lock().unwrap(), vec!["some-app".to_string()]);
+        let lines = log.0.lock().unwrap().clone();
+        assert!(
+            lines.contains(&(
+                "error",
+                "forceUninstall hook failed (legendary)".to_string()
+            )),
+            "{lines:?}"
+        );
+        for (_, line) in &lines {
+            assert!(!line.contains("some-app"), "{line}");
+        }
     }
 }

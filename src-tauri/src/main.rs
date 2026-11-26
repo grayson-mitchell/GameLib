@@ -342,6 +342,13 @@ const LONG_RUNNING_CHANNELS: &[&str] = &[
     // an inline failure for it in plan 100-14, and a 60s rejection there would be false. Added on
     // shape, not timed.
     "steamRemoveAllCopies",
+    // Phase 88.2 plan 18 (D-26): the Rust-to-sidecar channel the Rust launch services ask the TS library
+    // managers through (`launch_dispatch::SidecarManagerHooks`). 88.2 sends `game_title` and
+    // `force_uninstall`, both quick; 88.3 adds the funnel's `launch` hook to this same channel, and that one
+    // spans a whole play session, so no wall-clock value is correct for the channel (the `launch` shape
+    // above). Added on that shape, not timed. A hook pending when the sidecar closes fails through
+    // `drain_pending_invokes`, and each call waits on a thread of its own, never the shared blocking pool.
+    "launchManagerCall",
 ];
 
 /// Cap on `SidecarState::abandoned`, oldest-dropped past this bound.
@@ -3195,6 +3202,14 @@ mod tests {
         assert_eq!(timeout_for("moveInstall"), None);
         assert_eq!(timeout_for("changeInstallPath"), None);
         assert_eq!(timeout_for("steamRemoveAllCopies"), None);
+    }
+
+    #[test]
+    fn launch_manager_call_is_long_running() {
+        // 88.2-18 (D-26): the manager-hook channel Rust asks the TS managers through; 88.3's funnel
+        // `launch` hook on it spans a whole play session, so it waits indefinitely.
+        assert!(LONG_RUNNING_CHANNELS.contains(&"launchManagerCall"));
+        assert_eq!(timeout_for("launchManagerCall"), None);
     }
 
     #[test]
