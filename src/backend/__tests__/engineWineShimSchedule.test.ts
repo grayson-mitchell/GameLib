@@ -1179,6 +1179,25 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     callers: [],
     deletedBy: 92
   },
+  // 88.2-15: ending a runner run. `runnerKill` is the spawned handle's `kill()` and spawnAsync's abort (both go with the shell
+  // cutover in 98); `runnerAbort` is `abortController.abort()` for the download manager's cancel (93). Same file as
+  // `runnerCall`, so the same `callers`.
+  {
+    name: 'runnerKill',
+    file: 'src/backend/launchrust/runner.ts',
+    shape: 'shim',
+    channel: 'RUST_LAUNCH_RUNNER_KILL',
+    callers: [],
+    deletedBy: 98
+  },
+  {
+    name: 'runnerAbort',
+    file: 'src/backend/launchrust/runner.ts',
+    shape: 'shim',
+    channel: 'RUST_LAUNCH_RUNNER_ABORT',
+    callers: [],
+    deletedBy: 93
+  },
   // 88-13 (87 D-24): the synchronous known-fix twins, for callers 88 cannot make async. The launcher's `installFixes`
   // and `getKnownFixesEnvVariables` read the tier-1 fix inline until 88.1-17 deleted them; the Steam bridge keeps its own
   // reads until 97. `withKnownFixEnv` builds the settings storeManagerCommon launches with, which the sideload and

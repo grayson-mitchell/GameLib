@@ -225,6 +225,8 @@ pub(crate) enum RustInvokeChannel {
     LaunchPrepareWineFinish,
     LaunchCheckWineBeforeLaunch,
     LaunchRunnerCall,
+    LaunchRunnerKill,
+    LaunchRunnerAbort,
     ShortcutsExist,
     ShortcutsAdd,
     ShortcutsRemove,
@@ -437,6 +439,8 @@ impl RustInvokeChannel {
         RustInvokeChannel::LaunchPrepareWineFinish,
         RustInvokeChannel::LaunchCheckWineBeforeLaunch,
         RustInvokeChannel::LaunchRunnerCall,
+        RustInvokeChannel::LaunchRunnerKill,
+        RustInvokeChannel::LaunchRunnerAbort,
         RustInvokeChannel::ShortcutsExist,
         RustInvokeChannel::ShortcutsAdd,
         RustInvokeChannel::ShortcutsRemove,
@@ -649,6 +653,8 @@ impl RustInvokeChannel {
             "launch_prepare_wine_finish" => Some(RustInvokeChannel::LaunchPrepareWineFinish),
             "launch_check_wine_before_launch" => Some(RustInvokeChannel::LaunchCheckWineBeforeLaunch),
             "launch_runner_call" => Some(RustInvokeChannel::LaunchRunnerCall),
+            "launch_runner_kill" => Some(RustInvokeChannel::LaunchRunnerKill),
+            "launch_runner_abort" => Some(RustInvokeChannel::LaunchRunnerAbort),
             "shortcuts_exist" => Some(RustInvokeChannel::ShortcutsExist),
             "shortcuts_add" => Some(RustInvokeChannel::ShortcutsAdd),
             "shortcuts_remove" => Some(RustInvokeChannel::ShortcutsRemove),
@@ -863,6 +869,8 @@ impl RustInvokeChannel {
             RustInvokeChannel::LaunchPrepareWineFinish => "launch_prepare_wine_finish",
             RustInvokeChannel::LaunchCheckWineBeforeLaunch => "launch_check_wine_before_launch",
             RustInvokeChannel::LaunchRunnerCall => "launch_runner_call",
+            RustInvokeChannel::LaunchRunnerKill => "launch_runner_kill",
+            RustInvokeChannel::LaunchRunnerAbort => "launch_runner_abort",
             RustInvokeChannel::ShortcutsExist => "shortcuts_exist",
             RustInvokeChannel::ShortcutsAdd => "shortcuts_add",
             RustInvokeChannel::ShortcutsRemove => "shortcuts_remove",
@@ -4587,6 +4595,30 @@ impl LaunchRunnerCallArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let first = args.first().ok_or_else(|| "launch_runner_call:bad-args".to_string())?;
         serde_json::from_value(first.clone()).map_err(|_| "launch_runner_call:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct LaunchRunnerKillArgs {
+    pub(crate) stream_id: String,
+}
+
+impl LaunchRunnerKillArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let stream_id = serde_json::from_value(args.first().ok_or_else(|| "launch_runner_kill:bad-args".to_string())?.clone()).map_err(|_| "launch_runner_kill:bad-args".to_string())?;
+        Ok(Self { stream_id })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct LaunchRunnerAbortArgs {
+    pub(crate) abort_id: String,
+}
+
+impl LaunchRunnerAbortArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let abort_id = serde_json::from_value(args.first().ok_or_else(|| "launch_runner_abort:bad-args".to_string())?.clone()).map_err(|_| "launch_runner_abort:bad-args".to_string())?;
+        Ok(Self { abort_id })
     }
 }
 

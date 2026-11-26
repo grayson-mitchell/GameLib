@@ -1572,6 +1572,19 @@ export const RUST_LAUNCH_CHECK_WINE_BEFORE_LAUNCH =
  * (`UNBOUNDED_RUST_CHANNELS`); the abort id, `launch_runner_kill` and the app shutdown end it.
  */
 export const RUST_LAUNCH_RUNNER_CALL = 'launch_runner_call' as const
+/**
+ * Phase 88.2 (SVC-03, 88.2-15, D-02, D-19): ends the run of the call that watches a stream. `launch_runner_kill` takes
+ * `[streamId]` (the id the caller opened and sent as the call's `streamId`; the spawned handle's `kill()` sends it) and
+ * answers `true` when a run answered to the id, `false` for an id no run holds (a run that has already ended included): a
+ * kill never reaches another run. The run then answers its own call as ended. A lookup and a signal, so it stays bounded.
+ */
+export const RUST_LAUNCH_RUNNER_KILL = 'launch_runner_kill' as const
+/**
+ * Phase 88.2 (SVC-03, 88.2-15, D-02, D-19): `abortController.abort()` for a runner run. `launch_runner_abort` takes
+ * `[abortId]` (the id the call was given as its `abortId`) and answers `true` when a run answered to the id, `false` for an
+ * id no run holds; the run then answers its call `{ abort: true }`. A lookup and a signal, so it stays bounded.
+ */
+export const RUST_LAUNCH_RUNNER_ABORT = 'launch_runner_abort' as const
 export const RUST_ENGINE_STATE_RECORD_DECISION =
   'engine_state_record_decision' as const
 export const RUST_ENGINE_STATE_PUBLISH_OVERLAY_NOTICE =
@@ -2019,6 +2032,8 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_LAUNCH_PREPARE_WINE_FINISH,
   RUST_LAUNCH_CHECK_WINE_BEFORE_LAUNCH,
   RUST_LAUNCH_RUNNER_CALL,
+  RUST_LAUNCH_RUNNER_KILL,
+  RUST_LAUNCH_RUNNER_ABORT,
   RUST_SHORTCUTS_EXIST,
   RUST_SHORTCUTS_ADD,
   RUST_SHORTCUTS_REMOVE,

@@ -164,6 +164,8 @@ import {
   RUST_LAUNCH_PREPARE_WINE_FINISH,
   RUST_LAUNCH_CHECK_WINE_BEFORE_LAUNCH,
   RUST_LAUNCH_RUNNER_CALL,
+  RUST_LAUNCH_RUNNER_KILL,
+  RUST_LAUNCH_RUNNER_ABORT,
   RUST_LAUNCH_SETUP_ENV_VARS,
   RUST_LAUNCH_SETUP_WINE_ENV_VARS,
   RUST_LAUNCH_SETUP_WRAPPER_ENV_VARS,
@@ -1365,7 +1367,13 @@ export const rustInvokeArgs = {
         spawnClass: z.enum(['helper', 'game']).optional()
       })
       .strict()
-  ])
+  ]),
+  // Phase 88.2 (SVC-03, 88.2-15, D-02, D-19): ends the run that answers to a stream id. `[streamId]`; the crate bounds the id (a
+  // name with no separator or control character) and the shell answers whether a run answered to it.
+  [RUST_LAUNCH_RUNNER_KILL]: z.tuple([z.string().meta({ title: 'streamId' })]),
+  // Phase 88.2 (SVC-03, 88.2-15, D-02, D-19): aborts the run that was given an abort id. `[abortId]`; answers whether a run
+  // answered to it.
+  [RUST_LAUNCH_RUNNER_ABORT]: z.tuple([z.string().meta({ title: 'abortId' })])
 } satisfies Record<RustInvokeChannel, z.ZodTuple>
 
 /** The positional args a `rustInvoke` call for channel `C` sends (input side of the schema). */

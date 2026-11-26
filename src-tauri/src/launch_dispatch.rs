@@ -569,6 +569,45 @@ pub(crate) fn rpc_launch_runner_call(args: &[Value]) -> Result<Value, String> {
     runner_call_over(launch_ctx(), args, runner_host)
 }
 
+/// The body of the `launch_runner_kill` arm over a given context: the generated decode (`[streamId]`) and an arity
+/// check first, then the crate, which bounds the id (a name with no path separator or control character) and ends the
+/// run of the call that watches that stream. The crate answers how many runs it ended; the sidecar is told whether one
+/// answered, so the answer is a boolean (`false` for an id no run holds, a run that has already ended included).
+fn runner_kill_over(ctx: Option<&Arc<LaunchCtx>>, args: &[Value]) -> Result<Value, String> {
+    LaunchRunnerKillArgs::from_args(args)?;
+    if args.len() != 1 {
+        return Err("launch_runner_kill:bad-args".to_string());
+    }
+    let ended = rpc_launch_op(ctx, "launch_runner_kill", args)?;
+    Ok(Value::Bool(ended.as_u64().is_some_and(|count| count > 0)))
+}
+
+/// The `launch_runner_kill` `rustInvoke` arm (88.2-15, D-02, D-19): ends the run of the call that watches the stream the
+/// caller opened (the spawned handle's `kill()` and spawnAsync's abort send it). A lookup and a signal, so the sidecar
+/// keeps it inside the 60 s `RUST_INVOKE_TIMEOUT_MS`; the crate does not cut it short at shutdown, because the quit-kill
+/// runs while the shutdown token may already be cancelled. A kill never reaches another run: it ends only what answers to
+/// the id the caller named.
+pub(crate) fn rpc_launch_runner_kill(args: &[Value]) -> Result<Value, String> {
+    runner_kill_over(launch_ctx(), args)
+}
+
+/// The body of the `launch_runner_abort` arm over a given context: the generated decode (`[abortId]`) and an arity check
+/// first, then the crate, which bounds the id and answers whether a run answered to it.
+fn runner_abort_over(ctx: Option<&Arc<LaunchCtx>>, args: &[Value]) -> Result<Value, String> {
+    LaunchRunnerAbortArgs::from_args(args)?;
+    if args.len() != 1 {
+        return Err("launch_runner_abort:bad-args".to_string());
+    }
+    rpc_launch_op(ctx, "launch_runner_abort", args)
+}
+
+/// The `launch_runner_abort` `rustInvoke` arm (88.2-15, D-02, D-19): `abortController.abort()` for a run of either class,
+/// by the abort id the call was given (the download manager's cancel sends it). The run then answers its call `{ abort:
+/// true }`. A lookup and a signal, so the sidecar keeps it inside the 60 s `RUST_INVOKE_TIMEOUT_MS`.
+pub(crate) fn rpc_launch_runner_abort(args: &[Value]) -> Result<Value, String> {
+    runner_abort_over(launch_ctx(), args)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1353,5 +1392,139 @@ mod tests {
         // A non-zero exit is the answer's `error`, not an `Err`.
         let failed = runner_call_over(Some(&ctx), &[runner_call_args("exit 3")], host).unwrap();
         assert!(failed["error"].is_string(), "{failed}");
+    }
+
+    #[test]
+    fn the_kill_and_abort_arms_are_not_ready_before_the_install_and_reject_a_wrong_call_the_same_way_after(
+    ) {
+        let home = FakeHome::new("launch-shell-");
+        let ctx = ctx_over(&home);
+        let secret = "/Users/someone/secret-profile-path";
+        assert_eq!(
+            runner_kill_over(None, &[json!("stream-1")]),
+            Err("launch_runner_kill:not-ready".to_string())
+        );
+        assert_eq!(
+            runner_abort_over(None, &[json!("abort-1")]),
+            Err("launch_runner_abort:not-ready".to_string())
+        );
+        // Not a string, no argument, a second argument and an id with a path separator are the fixed literal.
+        let wrong: Vec<Vec<Value>> = vec![
+            vec![],
+            vec![json!(1)],
+            vec![json!({"x": secret})],
+            vec![json!("a"), json!(secret)],
+        ];
+        for args in &wrong {
+            for ctx in [None, Some(&ctx)] {
+                let err = runner_kill_over(ctx, args).unwrap_err();
+                assert_eq!(err, "launch_runner_kill:bad-args", "{args:?}");
+                assert!(!err.contains(secret));
+                let err = runner_abort_over(ctx, args).unwrap_err();
+                assert_eq!(err, "launch_runner_abort:bad-args", "{args:?}");
+                assert!(!err.contains(secret));
+            }
+        }
+        for bad in [secret, "", "a\\b", "line\nbreak"] {
+            let err = runner_kill_over(Some(&ctx), &[json!(bad)]).unwrap_err();
+            assert_eq!(err, "launch_runner_kill:bad-args", "{bad:?}");
+            assert!(!err.contains(secret));
+            let err = runner_abort_over(Some(&ctx), &[json!(bad)]).unwrap_err();
+            assert_eq!(err, "launch_runner_abort:bad-args", "{bad:?}");
+            assert!(!err.contains(secret));
+        }
+    }
+
+    #[test]
+    fn a_kill_or_abort_for_an_id_no_run_holds_answers_false_and_reaches_nothing() {
+        let home = FakeHome::new("launch-shell-");
+        let ctx = ctx_over(&home);
+        assert_eq!(
+            runner_kill_over(Some(&ctx), &[json!("unknown-stream")]),
+            Ok(json!(false))
+        );
+        assert_eq!(
+            runner_abort_over(Some(&ctx), &[json!("unknown-abort")]),
+            Ok(json!(false))
+        );
+    }
+
+    /// Calls a runner that sleeps on a thread, waits until the arm under test answers `true` for `id` and answers
+    /// what the call answered. A run is registered only once its child is spawned, so the arm is retried.
+    #[cfg(unix)]
+    fn end_a_sleeping_run(
+        ctx: &Arc<LaunchCtx>,
+        call: Value,
+        end: impl Fn(&Arc<LaunchCtx>) -> Result<Value, String>,
+    ) -> Value {
+        let runner_ctx = Arc::clone(ctx);
+        let runner = std::thread::spawn(move || runner_call_over(Some(&runner_ctx), &[call], host));
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(20);
+        loop {
+            if end(ctx) == Ok(json!(true)) {
+                break;
+            }
+            assert!(
+                std::time::Instant::now() < deadline,
+                "the run never answered to its id"
+            );
+            std::thread::sleep(std::time::Duration::from_millis(50));
+        }
+        runner.join().unwrap().unwrap()
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_kill_by_stream_id_ends_that_run_only_and_the_call_answers_ended() {
+        let home = FakeHome::new("launch-shell-");
+        let ctx = ctx_over(&home);
+        let mut other = runner_call_args("sleep 30");
+        other["streamId"] = json!("stream-other");
+        other["observe"] = json!(true);
+        let other_ctx = Arc::clone(&ctx);
+        let other_run =
+            std::thread::spawn(move || runner_call_over(Some(&other_ctx), &[other], host));
+        let mut mine = runner_call_args("sleep 30");
+        mine["streamId"] = json!("stream-mine");
+        mine["observe"] = json!(true);
+        let answered = end_a_sleeping_run(&ctx, mine, |ctx| {
+            runner_kill_over(Some(ctx), &[json!("stream-mine")])
+        });
+        assert!(
+            answered.get("abort") == Some(&json!(true)) || answered["error"].is_string(),
+            "{answered}"
+        );
+        // The other run is still going: it answers to its own id, and then ends.
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(20);
+        while runner_kill_over(Some(&ctx), &[json!("stream-other")]) != Ok(json!(true)) {
+            assert!(
+                std::time::Instant::now() < deadline,
+                "the other run was gone"
+            );
+            std::thread::sleep(std::time::Duration::from_millis(50));
+        }
+        other_run.join().unwrap().unwrap();
+        // Both are gone now.
+        assert_eq!(
+            runner_kill_over(Some(&ctx), &[json!("stream-mine")]),
+            Ok(json!(false))
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn an_abort_by_abort_id_ends_the_run_and_the_call_answers_abort() {
+        let home = FakeHome::new("launch-shell-");
+        let ctx = ctx_over(&home);
+        let mut call = runner_call_args("sleep 30");
+        call["abortId"] = json!("abort-mine");
+        let answered = end_a_sleeping_run(&ctx, call, |ctx| {
+            runner_abort_over(Some(ctx), &[json!("abort-mine")])
+        });
+        assert_eq!(answered["abort"], json!(true), "{answered}");
+        assert_eq!(
+            runner_abort_over(Some(&ctx), &[json!("abort-mine")]),
+            Ok(json!(false))
+        );
     }
 }

@@ -7,13 +7,22 @@
  */
 import { rustInvokeArgs } from 'common/types/ipc/rustInvoke'
 import { sidecarInternalSendArgs } from 'common/types/ipc/sidecarInternal'
-import { RUST_LAUNCH_RUNNER_CALL } from 'common/types/sidecarTransport'
+import {
+  RUST_LAUNCH_RUNNER_ABORT,
+  RUST_LAUNCH_RUNNER_CALL,
+  RUST_LAUNCH_RUNNER_KILL
+} from 'common/types/sidecarTransport'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import { createIpcRegistry } from 'backend/sidecar/ipcRegistry'
 import { createRunnerStreams } from 'backend/runnerStream'
 import type { RunnerChildHandle } from 'backend/runnerStream'
 
-import { registerRunnerOutputListener, runnerCall } from '../runner'
+import {
+  registerRunnerOutputListener,
+  runnerAbort,
+  runnerCall,
+  runnerKill
+} from '../runner'
 import type { RunnerCallRequest } from '../runner'
 
 function fakeTransport(answer: unknown): RustInvokeDeps & {
@@ -108,7 +117,9 @@ describe('runnerCall', () => {
 /** A table over a transport, a registry with the listener installed and a way to send a frame as the shell does. */
 function rig() {
   const deps = fakeTransport(true)
-  const streams = createRunnerStreams({ kill: () => Promise.resolve() })
+  const streams = createRunnerStreams({
+    kill: (streamId) => runnerKill(deps, streamId)
+  })
   const ipc = createIpcRegistry()
   registerRunnerOutputListener(ipc, streams)
   const send = (channel: string, ...args: unknown[]) => {
@@ -252,5 +263,114 @@ describe('registerRunnerOutputListener', () => {
         { streamId: 's', pid: 4242 }
       ])
     ).not.toThrow()
+  })
+})
+
+describe('runnerKill', () => {
+  it('sends one launch_runner_kill call carrying the stream id and answers what Rust did', async () => {
+    const deps = fakeTransport(true)
+    expect(await runnerKill(deps, 'runner-stream-1')).toBe(true)
+    expect(deps.calls).toEqual([[RUST_LAUNCH_RUNNER_KILL, ['runner-stream-1']]])
+    expect(RUST_LAUNCH_RUNNER_KILL).toBe('launch_runner_kill')
+    expect(() =>
+      rustInvokeArgs[RUST_LAUNCH_RUNNER_KILL].parse(deps.calls[0]?.[1])
+    ).not.toThrow()
+  })
+
+  it('answers false for an id no run holds, and rejects with what the transport rejected with', async () => {
+    expect(await runnerKill(fakeTransport(false), 'gone')).toBe(false)
+    await expect(
+      runnerKill(fakeTransport(new Error('launch_runner_kill:not-ready')), 's')
+    ).rejects.toThrow('launch_runner_kill:not-ready')
+  })
+
+  it('has a schema that takes one string and nothing else', () => {
+    const schema = rustInvokeArgs[RUST_LAUNCH_RUNNER_KILL]
+    expect(() => schema.parse(['s'])).not.toThrow()
+    for (const args of [[], [1], ['s', 't'], [null]]) {
+      expect(() => schema.parse(args)).toThrow()
+    }
+  })
+})
+
+describe('runnerAbort', () => {
+  it('sends one launch_runner_abort call carrying the abort id and answers what Rust did', async () => {
+    const deps = fakeTransport(true)
+    expect(await runnerAbort(deps, '1234')).toBe(true)
+    expect(deps.calls).toEqual([[RUST_LAUNCH_RUNNER_ABORT, ['1234']]])
+    expect(RUST_LAUNCH_RUNNER_ABORT).toBe('launch_runner_abort')
+    expect(() =>
+      rustInvokeArgs[RUST_LAUNCH_RUNNER_ABORT].parse(deps.calls[0]?.[1])
+    ).not.toThrow()
+  })
+
+  it('answers false for an id no run holds, and rejects with what the transport rejected with', async () => {
+    expect(await runnerAbort(fakeTransport(false), 'gone')).toBe(false)
+    await expect(
+      runnerAbort(
+        fakeTransport(new Error('launch_runner_abort:not-ready')),
+        'a'
+      )
+    ).rejects.toThrow('launch_runner_abort:not-ready')
+  })
+
+  it('has a schema that takes one string and nothing else', () => {
+    const schema = rustInvokeArgs[RUST_LAUNCH_RUNNER_ABORT]
+    expect(() => schema.parse(['a'])).not.toThrow()
+    for (const args of [[], [1], ['a', 'b'], [null]]) {
+      expect(() => schema.parse(args)).toThrow()
+    }
+  })
+})
+
+describe('the spawned handle', () => {
+  it('gives onSpawn a handle whose kill() sends launch_runner_kill with the stream id, and the next output frame carries the same handle', () => {
+    const { deps, streams, send } = rig()
+    const spawned: RunnerChildHandle[] = []
+    const outputs: Array<[string, RunnerChildHandle]> = []
+    const streamId = streams.open({
+      onSpawn: (child) => spawned.push(child),
+      onOutput: (chunk, child) => outputs.push([chunk, child])
+    })
+    send('runnerSpawned', { streamId, pid: 4242 })
+    expect(spawned).toHaveLength(1)
+    const [handle] = spawned
+    expect(handle?.pid).toBe(4242)
+    expect(handle?.exitCode).toBeNull()
+    expect(handle?.signalCode).toBeNull()
+    expect(deps.calls).toEqual([])
+    expect(handle?.kill()).toBe(true)
+    expect(deps.calls).toEqual([[RUST_LAUNCH_RUNNER_KILL, [streamId]]])
+    send('runnerOutput', { streamId, seq: 0, pipe: 'stdout', chunk: 'x' })
+    expect(outputs).toHaveLength(1)
+    expect(outputs[0]?.[1]).toBe(handle)
+    // A second spawn frame for the stream is ignored: onSpawn runs once.
+    send('runnerSpawned', { streamId, pid: 9999 })
+    expect(spawned).toHaveLength(1)
+  })
+
+  it('gives output that arrives before any spawn a pid-less handle that still kills the stream, and ignores a spawn for another stream', () => {
+    const { deps, streams, send } = rig()
+    const seen: RunnerChildHandle[] = []
+    const streamId = streams.open({
+      onOutput: (_chunk, child) => seen.push(child)
+    })
+    send('runnerSpawned', { streamId: 'never-opened', pid: 1 })
+    send('runnerOutput', { streamId, seq: 0, pipe: 'stderr', chunk: 'early' })
+    expect(seen[0]?.pid).toBeUndefined()
+    expect(seen[0]?.kill()).toBe(true)
+    expect(deps.calls).toEqual([[RUST_LAUNCH_RUNNER_KILL, [streamId]]])
+  })
+
+  it('does not let a kill that Rust rejects surface as an unhandled rejection', async () => {
+    const streams = createRunnerStreams({
+      kill: () => Promise.reject(new Error('launch_runner_kill:not-ready'))
+    })
+    const handles: RunnerChildHandle[] = []
+    const streamId = streams.open({ onSpawn: (child) => handles.push(child) })
+    streams.spawned({ streamId, pid: 7 })
+    expect(handles[0]?.kill()).toBe(true)
+    // Let the rejected promise settle; the process would fail on an unhandled one.
+    await new Promise((resolve) => setImmediate(resolve))
   })
 })

@@ -1,4 +1,8 @@
-import { RUST_LAUNCH_RUNNER_CALL } from 'common/types/sidecarTransport'
+import {
+  RUST_LAUNCH_RUNNER_ABORT,
+  RUST_LAUNCH_RUNNER_CALL,
+  RUST_LAUNCH_RUNNER_KILL
+} from 'common/types/sidecarTransport'
 import type { RustInvokeArgsOf } from 'common/types/ipc/rustInvoke'
 import { sidecarInternalSendArgs } from 'common/types/ipc/sidecarInternal'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
@@ -37,6 +41,31 @@ export async function runnerCall(
   args: RunnerCallRequest
 ): Promise<unknown> {
   return deps.requestRustInvoke(RUST_LAUNCH_RUNNER_CALL, [args])
+}
+
+/**
+ * Ends the run of the call that watches `streamId` (the id the caller opened in the stream table and sent as the call's
+ * `streamId`); the spawned handle's `kill()` is this. Resolves `true` when a run answered to the id, `false` for an id no
+ * run holds (a run that has already ended included), as `unknown`. The call then answers as ended. A lookup and a signal,
+ * so the channel stays inside the 60 s transport bound.
+ */
+export async function runnerKill(
+  deps: RustInvokeDeps,
+  streamId: string
+): Promise<unknown> {
+  return deps.requestRustInvoke(RUST_LAUNCH_RUNNER_KILL, [streamId])
+}
+
+/**
+ * `abortController.abort()` for a runner run: ends the run that was given `abortId` as its `abortId`. Resolves `true`
+ * when a run answered to the id, `false` for an id no run holds, as `unknown`; the run then answers its call
+ * `{ abort: true }`. A lookup and a signal, so the channel stays inside the 60 s transport bound.
+ */
+export async function runnerAbort(
+  deps: RustInvokeDeps,
+  abortId: string
+): Promise<unknown> {
+  return deps.requestRustInvoke(RUST_LAUNCH_RUNNER_ABORT, [abortId])
 }
 
 /**
