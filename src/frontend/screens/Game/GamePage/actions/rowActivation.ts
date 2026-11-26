@@ -72,7 +72,7 @@ export function isStalePointerClick(activation: RowActivation): boolean {
 }
 
 /** `event=click trusted=true detail=1 key=- repeat=false sinceDialogCloseMs=312` */
-export function describeActivation(activation: RowActivation): string {
+function describeActivation(activation: RowActivation): string {
   const since =
     activation.sinceDialogCloseMs === null
       ? 'none'

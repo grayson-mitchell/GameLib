@@ -8,9 +8,7 @@ binaries	.github/workflows/release-tauri.yml	vite
 binaries	.github/workflows/rust-test.yml	vite
 binaries	package.json	vite
 dependencies	package.json	source-map-support
-devDependencies	package.json	@testing-library/dom
 devDependencies	package.json	@testing-library/jest-dom
-devDependencies	package.json	@testing-library/user-event
 devDependencies	package.json	@types/source-map-support
 devDependencies	package.json	node-gyp
 devDependencies	package.json	unimported

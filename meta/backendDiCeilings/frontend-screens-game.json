@@ -2,6 +2,7 @@
   "jestMock": {
     "src/frontend/screens/Game/GamePage/__tests__/gamePageGate.test.tsx": 1,
     "src/frontend/screens/Game/GamePage/components/InstallTab/__tests__/installTabRows.test.tsx": 3,
+    "src/frontend/screens/Game/GamePage/components/InstallTab/__tests__/uninstallCancelKeepsSteamShortcut.test.tsx": 1,
     "src/frontend/screens/Game/GamePage/components/__tests__/EngineBadge.test.tsx": 1,
     "src/frontend/screens/Game/GamePage/components/__tests__/EngineNotices.test.tsx": 1,
     "src/frontend/screens/Game/GamePage/components/__tests__/GameStatus.bottleWaiting.test.tsx": 6,
