@@ -1,0 +1,20 @@
+{
+  "response": {
+    "stdout": "",
+    "stderr": "Invalid wine"
+  },
+  "commandPartsBefore": [
+    "reg",
+    "query",
+    "HKCU"
+  ],
+  "commandPartsAfter": [
+    "reg",
+    "query",
+    "HKCU"
+  ],
+  "wrappersBefore": null,
+  "wrappersAfter": null,
+  "settledBeforeRelease": true,
+  "onSpawnCalls": 0
+}

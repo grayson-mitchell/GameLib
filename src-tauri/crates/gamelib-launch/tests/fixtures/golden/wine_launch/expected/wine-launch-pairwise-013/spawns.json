@@ -1,0 +1,97 @@
+[
+  {
+    "program": "<TOOLS>/runtimes/umu/umu_run.py",
+    "argv": [
+      "<HOME>/Games/Game/game.exe",
+      "-flag"
+    ],
+    "env": {
+      "APPDATA": "<HOME>/AppData/Roaming",
+      "HOME": "<HOME>",
+      "LANG": "C.UTF-8",
+      "LD_PRELOAD": "",
+      "LOCALAPPDATA": "<HOME>/AppData/Local",
+      "MY_VAR": "quoted value",
+      "PATH": "/usr/bin:/bin",
+      "PROTONPATH": "<TOOLS>/proton/GE-Proton9-1",
+      "PROTON_DISABLE_NVAPI": "1",
+      "PROTON_LOG_DIR": "<HOME>",
+      "PROTON_NO_ESYNC": "1",
+      "PROTON_NO_FSYNC": "1",
+      "PROTON_VERB": "waitforexitandrun",
+      "STEAM_COMPAT_APP_ID": "0",
+      "STEAM_COMPAT_CLIENT_INSTALL_PATH": "<HOME>/.steam/steam",
+      "STEAM_COMPAT_DATA_PATH": "<HOME>/Games/prefix",
+      "SteamAppId": "0",
+      "SteamGameId": "heroic-0",
+      "USER": "gamelib-oracle",
+      "USERPROFILE": "<HOME>",
+      "WINEPREFIX": "<HOME>/Games/prefix",
+      "WINE_FULLSCREEN_FSR": "0",
+      "XDG_CACHE_HOME": "<HOME>/.cache",
+      "XDG_CONFIG_HOME": "<HOME>/.config",
+      "XDG_DATA_HOME": "<HOME>/.local/share",
+      "XDG_STATE_HOME": "<HOME>/.local/state"
+    },
+    "cwd": "<HOME>/Games/Game",
+    "replaceEnv": true,
+    "resolveOn": "exit",
+    "track": {
+      "runner": "wine",
+      "key": "sideload-app"
+    },
+    "timeout": {
+      "none": true,
+      "reason": "a wine command runs as long as the game or installer it hosts; the caller cancels through killTracked or its own deadline"
+    },
+    "timeoutMs": null,
+    "windowsHide": false,
+    "hasSignal": false,
+    "callSite": "runner.wine_command.launch",
+    "class": "game"
+  },
+  {
+    "program": "<TOOLS>/proton/GE-Proton9-1/files/bin/wineserver",
+    "argv": [
+      "--wait"
+    ],
+    "env": {
+      "APPDATA": "<HOME>/AppData/Roaming",
+      "HOME": "<HOME>",
+      "LANG": "C.UTF-8",
+      "LD_PRELOAD": "",
+      "LOCALAPPDATA": "<HOME>/AppData/Local",
+      "MY_VAR": "quoted value",
+      "PATH": "/usr/bin:/bin",
+      "PROTONPATH": "<TOOLS>/proton/GE-Proton9-1",
+      "PROTON_DISABLE_NVAPI": "1",
+      "PROTON_LOG_DIR": "<HOME>",
+      "PROTON_NO_ESYNC": "1",
+      "PROTON_NO_FSYNC": "1",
+      "PROTON_VERB": "waitforexitandrun",
+      "STEAM_COMPAT_APP_ID": "0",
+      "STEAM_COMPAT_CLIENT_INSTALL_PATH": "<HOME>/.steam/steam",
+      "STEAM_COMPAT_DATA_PATH": "<HOME>/Games/prefix",
+      "SteamAppId": "0",
+      "SteamGameId": "heroic-0",
+      "USER": "gamelib-oracle",
+      "USERPROFILE": "<HOME>",
+      "WINEPREFIX": "<HOME>/Games/prefix",
+      "WINE_FULLSCREEN_FSR": "0",
+      "XDG_CACHE_HOME": "<HOME>/.cache",
+      "XDG_CONFIG_HOME": "<HOME>/.config",
+      "XDG_DATA_HOME": "<HOME>/.local/share",
+      "XDG_STATE_HOME": "<HOME>/.local/state"
+    },
+    "cwd": "<HOME>/Games/Game",
+    "replaceEnv": true,
+    "resolveOn": null,
+    "track": null,
+    "timeout": null,
+    "timeoutMs": 1800000,
+    "windowsHide": false,
+    "hasSignal": false,
+    "callSite": "runner.wine_command.wineserver_wait",
+    "class": "helper"
+  }
+]

@@ -1,0 +1,44 @@
+[
+  {
+    "program": "<TOOLS>/crossover/bin/wine",
+    "argv": [
+      "reg",
+      "query",
+      "HKCU"
+    ],
+    "env": {
+      "APPDATA": "<HOME>/AppData/Roaming",
+      "CX_BOTTLE": "bottle-1",
+      "HOME": "<HOME>",
+      "LANG": "C.UTF-8",
+      "LD_PRELOAD": "",
+      "LOCALAPPDATA": "<HOME>/AppData/Local",
+      "MY_VAR": "quoted value",
+      "PATH": "/usr/bin:/bin",
+      "PROTON_VERB": "run",
+      "USER": "gamelib-oracle",
+      "USERPROFILE": "<HOME>",
+      "WINE_FULLSCREEN_FSR": "0",
+      "XDG_CACHE_HOME": "<HOME>/.cache",
+      "XDG_CONFIG_HOME": "<HOME>/.config",
+      "XDG_DATA_HOME": "<HOME>/.local/share",
+      "XDG_STATE_HOME": "<HOME>/.local/state"
+    },
+    "cwd": null,
+    "replaceEnv": true,
+    "resolveOn": "close",
+    "track": {
+      "runner": "wine",
+      "key": "tk"
+    },
+    "timeout": {
+      "none": true,
+      "reason": "a wine command runs as long as the game or installer it hosts; the caller cancels through killTracked or its own deadline"
+    },
+    "timeoutMs": null,
+    "windowsHide": false,
+    "hasSignal": false,
+    "callSite": "runner.wine_command",
+    "class": "helper"
+  }
+]

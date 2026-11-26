@@ -1,0 +1,239 @@
+[
+  {
+    "id": "commandRunner--layer-2-runscriptforgame-characterization-66-1-mh-4-layer-2-resolves-true-on-exit-while-a-grandchild-still-holds-the-pipes",
+    "callSite": "runner.script",
+    "calls": [
+      {
+        "stage": "before",
+        "verbose": false,
+        "outcome": "exit-0-drain",
+        "chunks": false
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-runscriptforgame-characterization-66-1-mh-4-layer-2-rejects-when-the-child-cannot-be-spawned",
+    "callSite": "runner.script",
+    "calls": [
+      {
+        "stage": "before",
+        "verbose": false,
+        "outcome": "throw",
+        "chunks": false
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-runscriptforgame-characterization-66-1-mh-4-layer-2-writes-output-to-the-log-writer-only-when-verboselogs-is-on",
+    "callSite": "runner.script",
+    "calls": [
+      {
+        "stage": "before",
+        "verbose": false,
+        "outcome": "exit-0",
+        "chunks": true
+      },
+      {
+        "stage": "before",
+        "verbose": true,
+        "outcome": "exit-0",
+        "chunks": true
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-runscriptforgame-characterization-66-1-mh-4-layer-2-runs-the-stage-script-with-cwd-install-path-and-heroic-env-merged-under-process-env",
+    "callSite": "runner.script",
+    "processEnv": {
+      "L2_SCRIPT_SENTINEL": "inherited"
+    },
+    "calls": [
+      {
+        "stage": "after",
+        "verbose": false,
+        "outcome": "exit-0",
+        "chunks": false
+      }
+    ]
+  },
+  {
+    "id": "script-before-verbose-exit-0",
+    "callSite": "runner.script",
+    "calls": [
+      {
+        "stage": "before",
+        "verbose": true,
+        "outcome": "exit-0",
+        "chunks": true
+      }
+    ]
+  },
+  {
+    "id": "script-before-verbose-exit-2",
+    "callSite": "runner.script",
+    "calls": [
+      {
+        "stage": "before",
+        "verbose": true,
+        "outcome": "exit-2",
+        "chunks": true
+      }
+    ]
+  },
+  {
+    "id": "script-before-verbose-throw",
+    "callSite": "runner.script",
+    "calls": [
+      {
+        "stage": "before",
+        "verbose": true,
+        "outcome": "throw",
+        "chunks": true
+      }
+    ]
+  },
+  {
+    "id": "script-before-quiet-exit-0",
+    "callSite": "runner.script",
+    "calls": [
+      {
+        "stage": "before",
+        "verbose": false,
+        "outcome": "exit-0",
+        "chunks": true
+      }
+    ]
+  },
+  {
+    "id": "script-before-quiet-exit-2",
+    "callSite": "runner.script",
+    "calls": [
+      {
+        "stage": "before",
+        "verbose": false,
+        "outcome": "exit-2",
+        "chunks": true
+      }
+    ]
+  },
+  {
+    "id": "script-before-quiet-throw",
+    "callSite": "runner.script",
+    "calls": [
+      {
+        "stage": "before",
+        "verbose": false,
+        "outcome": "throw",
+        "chunks": true
+      }
+    ]
+  },
+  {
+    "id": "script-after-verbose-exit-0",
+    "callSite": "runner.script",
+    "calls": [
+      {
+        "stage": "after",
+        "verbose": true,
+        "outcome": "exit-0",
+        "chunks": true
+      }
+    ]
+  },
+  {
+    "id": "script-after-verbose-exit-2",
+    "callSite": "runner.script",
+    "calls": [
+      {
+        "stage": "after",
+        "verbose": true,
+        "outcome": "exit-2",
+        "chunks": true
+      }
+    ]
+  },
+  {
+    "id": "script-after-verbose-throw",
+    "callSite": "runner.script",
+    "calls": [
+      {
+        "stage": "after",
+        "verbose": true,
+        "outcome": "throw",
+        "chunks": true
+      }
+    ]
+  },
+  {
+    "id": "script-after-quiet-exit-0",
+    "callSite": "runner.script",
+    "calls": [
+      {
+        "stage": "after",
+        "verbose": false,
+        "outcome": "exit-0",
+        "chunks": true
+      }
+    ]
+  },
+  {
+    "id": "script-after-quiet-exit-2",
+    "callSite": "runner.script",
+    "calls": [
+      {
+        "stage": "after",
+        "verbose": false,
+        "outcome": "exit-2",
+        "chunks": true
+      }
+    ]
+  },
+  {
+    "id": "script-after-quiet-throw",
+    "callSite": "runner.script",
+    "calls": [
+      {
+        "stage": "after",
+        "verbose": false,
+        "outcome": "throw",
+        "chunks": true
+      }
+    ]
+  },
+  {
+    "id": "script-inherited-env-wins-over-the-heroic-keys",
+    "note": "the process env is merged last, so an inherited HEROIC_GAME_TITLE replaces the one the launcher sets",
+    "callSite": "runner.script",
+    "processEnv": {
+      "HEROIC_GAME_TITLE": "from-process",
+      "EXTRA_FLAG": "on"
+    },
+    "calls": [
+      {
+        "stage": "before",
+        "verbose": false,
+        "outcome": "exit-0",
+        "chunks": false
+      }
+    ]
+  },
+  {
+    "id": "script-before-then-after-in-one-session",
+    "note": "a before run and an after run on the same runner: two spawns, two writers, two rotations",
+    "callSite": "runner.script",
+    "calls": [
+      {
+        "stage": "before",
+        "verbose": true,
+        "outcome": "exit-0",
+        "chunks": true
+      },
+      {
+        "stage": "after",
+        "verbose": true,
+        "outcome": "exit-2",
+        "chunks": true
+      }
+    ]
+  }
+]

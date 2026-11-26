@@ -1,0 +1,49 @@
+[
+  {
+    "program": "<TOOLS>/wine/Wine-9/bin/wine",
+    "argv": [
+      "cmd",
+      "/c",
+      "winepath",
+      "-u",
+      "C:\\missing"
+    ],
+    "env": {
+      "APPDATA": "<HOME>/AppData/Roaming",
+      "HOME": "<HOME>",
+      "LANG": "C.UTF-8",
+      "LD_LIBRARY_PATH": "<TOOLS>/wine/Wine-9/lib64:<TOOLS>/wine/Wine-9/lib",
+      "LD_PRELOAD": "",
+      "LOCALAPPDATA": "<HOME>/AppData/Local",
+      "MY_VAR": "quoted value",
+      "ORIG_LD_LIBRARY_PATH": "",
+      "PATH": "/usr/bin:/bin",
+      "PROTON_VERB": "runinprefix",
+      "USER": "gamelib-oracle",
+      "USERPROFILE": "<HOME>",
+      "WINEDLLOVERRIDES": "winemenubuilder.exe=d",
+      "WINEPREFIX": "<HOME>/Games/prefix",
+      "WINE_FULLSCREEN_FSR": "0",
+      "XDG_CACHE_HOME": "<HOME>/.cache",
+      "XDG_CONFIG_HOME": "<HOME>/.config",
+      "XDG_DATA_HOME": "<HOME>/.local/share",
+      "XDG_STATE_HOME": "<HOME>/.local/state"
+    },
+    "cwd": null,
+    "replaceEnv": true,
+    "resolveOn": "close",
+    "track": {
+      "runner": "wine",
+      "key": "<HOME>/Games/prefix"
+    },
+    "timeout": {
+      "none": true,
+      "reason": "a wine command runs as long as the game or installer it hosts; the caller cancels through killTracked or its own deadline"
+    },
+    "timeoutMs": null,
+    "windowsHide": false,
+    "hasSignal": false,
+    "callSite": "runner.wine_path",
+    "class": "helper"
+  }
+]

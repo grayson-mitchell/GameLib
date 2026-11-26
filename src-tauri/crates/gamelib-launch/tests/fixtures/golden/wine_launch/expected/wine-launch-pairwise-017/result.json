@@ -1,0 +1,20 @@
+{
+  "response": {
+    "stderr": "err-1\n",
+    "stdout": "out-1\n",
+    "code": 0
+  },
+  "commandPartsBefore": [
+    "<HOME>/Games/Game/game.exe",
+    "-flag"
+  ],
+  "commandPartsAfter": [
+    "run",
+    "<HOME>/Games/Game/game.exe",
+    "-flag"
+  ],
+  "wrappersBefore": null,
+  "wrappersAfter": null,
+  "settledBeforeRelease": true,
+  "onSpawnCalls": 0
+}

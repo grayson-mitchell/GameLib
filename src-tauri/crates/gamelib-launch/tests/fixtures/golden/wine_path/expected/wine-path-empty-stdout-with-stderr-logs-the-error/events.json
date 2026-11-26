@@ -1,0 +1,20 @@
+[
+  {
+    "level": "debug",
+    "prefix": "Backend",
+    "parts": "Getting wine path for C:\\missing."
+  },
+  {
+    "level": "debug",
+    "prefix": "Backend",
+    "parts": [
+      "Running Wine command:",
+      "cmd /c winepath -u C:\\missing"
+    ]
+  },
+  {
+    "level": "error",
+    "prefix": "Backend",
+    "parts": "Couldn't get wine path for C:\\missing.\nwine: cannot find C:\\missing\n"
+  }
+]

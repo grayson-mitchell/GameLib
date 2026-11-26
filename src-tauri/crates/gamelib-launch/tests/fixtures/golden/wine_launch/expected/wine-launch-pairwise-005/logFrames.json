@@ -1,0 +1,46 @@
+[
+  {
+    "target": {
+      "kind": "game",
+      "appName": "sideload-app",
+      "runner": "sideload",
+      "type": "launch"
+    },
+    "rotate": true,
+    "line": {
+      "level": "INFO",
+      "prefix": "",
+      "message": "earlier output"
+    }
+  },
+  {
+    "target": {
+      "kind": "game",
+      "appName": "sideload-app",
+      "runner": "sideload",
+      "type": "launch"
+    },
+    "rotate": false,
+    "raw": "Wine Command: <TOOLS>/crossover/bin/wine <HOME>/Games/Game/game.exe -flag\n\nGame Log:\n"
+  },
+  {
+    "target": {
+      "kind": "game",
+      "appName": "sideload-app",
+      "runner": "sideload",
+      "type": "launch"
+    },
+    "rotate": false,
+    "raw": "out-1\n"
+  },
+  {
+    "target": {
+      "kind": "game",
+      "appName": "sideload-app",
+      "runner": "sideload",
+      "type": "launch"
+    },
+    "rotate": false,
+    "raw": "err-1\n"
+  }
+]

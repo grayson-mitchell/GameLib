@@ -1,0 +1,15 @@
+[
+  {
+    "level": "debug",
+    "prefix": "Backend",
+    "parts": "Getting wine path for C:\\x."
+  },
+  {
+    "level": "debug",
+    "prefix": "Backend",
+    "parts": [
+      "Running Wine command:",
+      "cmd /c winepath -u C:\\x"
+    ]
+  }
+]

@@ -1,0 +1,26 @@
+{
+  "response": {
+    "stderr": "",
+    "stdout": "",
+    "code": null
+  },
+  "commandPartsBefore": [
+    "<HOME>/Games/Game/game.exe",
+    "-flag"
+  ],
+  "commandPartsAfter": [
+    "mangohud",
+    "<TOOLS>/runtimes/umu/umu_run.py",
+    "<HOME>/Games/Game/game.exe",
+    "-flag"
+  ],
+  "wrappersBefore": [
+    "gamemoderun",
+    "mangohud"
+  ],
+  "wrappersAfter": [
+    "mangohud"
+  ],
+  "settledBeforeRelease": true,
+  "onSpawnCalls": 0
+}

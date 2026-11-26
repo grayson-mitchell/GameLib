@@ -1,0 +1,26 @@
+{
+  "response": {
+    "stderr": "err-1\n",
+    "stdout": "out-1\n",
+    "code": 1
+  },
+  "commandPartsBefore": [
+    "<HOME>/Games/Game/game.exe",
+    "-flag"
+  ],
+  "commandPartsAfter": [
+    "mangohud",
+    "<TOOLS>/wine/Wine-9/bin/wine",
+    "<HOME>/Games/Game/game.exe",
+    "-flag"
+  ],
+  "wrappersBefore": [
+    "gamemoderun",
+    "mangohud"
+  ],
+  "wrappersAfter": [
+    "mangohud"
+  ],
+  "settledBeforeRelease": true,
+  "onSpawnCalls": 0
+}

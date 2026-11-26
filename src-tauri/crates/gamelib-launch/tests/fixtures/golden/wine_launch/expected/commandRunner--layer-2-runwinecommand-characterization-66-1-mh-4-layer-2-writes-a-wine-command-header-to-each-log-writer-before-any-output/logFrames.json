@@ -1,0 +1,42 @@
+[
+  {
+    "target": {
+      "kind": "game",
+      "appName": "sideload-app",
+      "runner": "sideload",
+      "type": "launch"
+    },
+    "rotate": true,
+    "raw": "Wine Command: <TOOLS>/crossover/bin/wine reg query HKCU\n\nGame Log:\n"
+  },
+  {
+    "target": {
+      "kind": "game",
+      "appName": "sideload-app-1",
+      "runner": "sideload",
+      "type": "launch"
+    },
+    "rotate": true,
+    "raw": "Wine Command: <TOOLS>/crossover/bin/wine reg query HKCU\n\nGame Log:\n"
+  },
+  {
+    "target": {
+      "kind": "game",
+      "appName": "sideload-app",
+      "runner": "sideload",
+      "type": "launch"
+    },
+    "rotate": false,
+    "raw": "after-header"
+  },
+  {
+    "target": {
+      "kind": "game",
+      "appName": "sideload-app-1",
+      "runner": "sideload",
+      "type": "launch"
+    },
+    "rotate": false,
+    "raw": "after-header"
+  }
+]

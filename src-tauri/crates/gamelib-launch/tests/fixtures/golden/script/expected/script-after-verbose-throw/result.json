@@ -1,0 +1,7 @@
+{
+  "calls": [
+    {
+      "thrown": "spawn <HOME>/scripts/after.sh ENOENT"
+    }
+  ]
+}

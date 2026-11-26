@@ -1,0 +1,16 @@
+[
+  {
+    "target": {
+      "kind": "game",
+      "appName": "sideload-app",
+      "runner": "sideload",
+      "type": "launch"
+    },
+    "rotate": true,
+    "line": {
+      "level": "INFO",
+      "prefix": "",
+      "message": "earlier output"
+    }
+  }
+]

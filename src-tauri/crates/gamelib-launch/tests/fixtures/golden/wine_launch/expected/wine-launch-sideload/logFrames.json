@@ -1,0 +1,56 @@
+[
+  {
+    "target": {
+      "kind": "game",
+      "appName": "sideload-app",
+      "runner": "sideload",
+      "type": "launch"
+    },
+    "rotate": true,
+    "line": {
+      "level": "INFO",
+      "prefix": "",
+      "message": "earlier output"
+    }
+  },
+  {
+    "target": {
+      "kind": "game",
+      "appName": "sideload-app",
+      "runner": "sideload",
+      "type": "launch"
+    },
+    "rotate": false,
+    "raw": "Wine Command: <TOOLS>/wine/Wine-9/bin/wine <HOME>/Games/Game/game.exe -flag\n\nGame Log:\n"
+  },
+  {
+    "target": {
+      "kind": "game",
+      "appName": "sideload-app",
+      "runner": "sideload",
+      "type": "launch"
+    },
+    "rotate": false,
+    "raw": "game starting\n"
+  },
+  {
+    "target": {
+      "kind": "game",
+      "appName": "sideload-app",
+      "runner": "sideload",
+      "type": "launch"
+    },
+    "rotate": false,
+    "raw": "warn: fsync\n"
+  },
+  {
+    "target": {
+      "kind": "game",
+      "appName": "sideload-app",
+      "runner": "sideload",
+      "type": "launch"
+    },
+    "rotate": false,
+    "raw": "ready\n"
+  }
+]

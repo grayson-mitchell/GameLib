@@ -1,0 +1,27 @@
+{
+  "response": {
+    "stderr": "err-1\n",
+    "stdout": "out-1\n",
+    "code": 0
+  },
+  "commandPartsBefore": [
+    "<HOME>/Games/Game/game.exe",
+    "-flag"
+  ],
+  "commandPartsAfter": [
+    "mangohud",
+    "<TOOLS>/proton/GE-Proton9-1/proton",
+    "waitforexitandrun",
+    "<HOME>/Games/Game/game.exe",
+    "-flag"
+  ],
+  "wrappersBefore": [
+    "gamemoderun",
+    "mangohud"
+  ],
+  "wrappersAfter": [
+    "mangohud"
+  ],
+  "settledBeforeRelease": true,
+  "onSpawnCalls": 0
+}

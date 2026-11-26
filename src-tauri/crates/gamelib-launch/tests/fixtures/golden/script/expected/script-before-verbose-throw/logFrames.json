@@ -1,0 +1,16 @@
+[
+  {
+    "target": {
+      "kind": "game",
+      "appName": "script-app",
+      "runner": "gog",
+      "type": "launch"
+    },
+    "rotate": true,
+    "line": {
+      "level": "ERROR",
+      "prefix": "",
+      "message": "Error: spawn <HOME>/scripts/before.sh ENOENT"
+    }
+  }
+]

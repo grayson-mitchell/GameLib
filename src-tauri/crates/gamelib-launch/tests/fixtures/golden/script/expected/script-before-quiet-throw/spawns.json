@@ -1,0 +1,40 @@
+[
+  {
+    "program": "<HOME>/scripts/before.sh",
+    "argv": [],
+    "env": {
+      "APPDATA": "<HOME>/AppData/Roaming",
+      "HEROIC_GAME_APP_NAME": "script-app",
+      "HEROIC_GAME_EXEC": "bin/game.exe",
+      "HEROIC_GAME_INFO": "{\"app_name\":\"script-app\",\"title\":\"Café Ünïcode — ゲーム \\\"quoted\\\"\",\"runner\":\"gog\",\"install\":{\"executable\":\"bin/game.exe\",\"install_path\":\"<HOME>/Games/script app\",\"platform\":\"windows\",\"is_dlc\":false},\"extra\":{\"about\":{\"description\":\"日本語 / ελληνικά\",\"tags\":[\"a\",\"b\"]}}}",
+      "HEROIC_GAME_PREFIX": "<HOME>/Games/prefix",
+      "HEROIC_GAME_RUNNER": "gog",
+      "HEROIC_GAME_SCRIPT_STAGE": "before",
+      "HEROIC_GAME_SETTINGS": "{\"winePrefix\":\"<HOME>/Games/prefix\",\"beforeLaunchScriptPath\":\"<HOME>/scripts/before.sh\",\"afterLaunchScriptPath\":\"<HOME>/scripts/after.sh\",\"enviromentOptions\":[{\"key\":\"MY_VAR\",\"value\":\"ünï value\"}],\"wineVersion\":{\"type\":\"wine\",\"name\":\"Wine-9\",\"bin\":\"<TOOLS>/wine/Wine-9/bin/wine\"},\"nested\":{\"a\":{\"b\":[1,2,{\"c\":\"ü\"}]}},\"verboseLogs\":false}",
+      "HEROIC_GAME_TITLE": "Café Ünïcode — ゲーム \"quoted\"",
+      "HOME": "<HOME>",
+      "LANG": "C.UTF-8",
+      "LOCALAPPDATA": "<HOME>/AppData/Local",
+      "PATH": "/usr/bin:/bin",
+      "USER": "gamelib-oracle",
+      "USERPROFILE": "<HOME>",
+      "XDG_CACHE_HOME": "<HOME>/.cache",
+      "XDG_CONFIG_HOME": "<HOME>/.config",
+      "XDG_DATA_HOME": "<HOME>/.local/share",
+      "XDG_STATE_HOME": "<HOME>/.local/state"
+    },
+    "cwd": "<HOME>/Games/script app",
+    "replaceEnv": true,
+    "resolveOn": "exit",
+    "track": null,
+    "timeout": {
+      "none": true,
+      "reason": "a launch script runs as long as the user wrote it to; it is the before/after hook of a game session and ends with that session"
+    },
+    "timeoutMs": null,
+    "windowsHide": false,
+    "hasSignal": false,
+    "callSite": "runner.script",
+    "class": "helper"
+  }
+]

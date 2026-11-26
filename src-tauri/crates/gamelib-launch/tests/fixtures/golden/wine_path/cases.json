@@ -1,0 +1,335 @@
+[
+  {
+    "id": "commandRunner--layer-2-getwinepath-layer-2-asks-winepath-through-runwinecommand-and-returns-the-trimmed-stdout",
+    "callSite": "runner.wine_path",
+    "setup": {
+      "kind": "crossover"
+    },
+    "path": "C:\\x",
+    "variant": "unix",
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "/unix/path\n"
+          }
+        ],
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-getwinepath-layer-2-logs-an-error-and-returns-when-winepath-prints-nothing",
+    "callSite": "runner.wine_path",
+    "setup": {
+      "kind": "crossover"
+    },
+    "path": "C:\\x",
+    "variant": "win",
+    "script": [
+      {
+        "code": 1
+      }
+    ]
+  },
+  {
+    "id": "wine-path-wine-unix",
+    "callSite": "runner.wine_path",
+    "setup": {
+      "kind": "wine"
+    },
+    "path": "C:\\Games\\Game One\\save",
+    "variant": "unix",
+    "processEnv": {
+      "PROTON_LOG": "1"
+    },
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "/pfx/drive_c/Game One/save\n"
+          }
+        ],
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "wine-path-wine-win",
+    "callSite": "runner.wine_path",
+    "setup": {
+      "kind": "wine"
+    },
+    "path": "/pfx/drive_c/Game One/save",
+    "variant": "win",
+    "processEnv": {
+      "PROTON_LOG": "1"
+    },
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "C:\\Games\\Game One\\save\n"
+          }
+        ],
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "wine-path-proton-umu-unix",
+    "callSite": "runner.wine_path",
+    "setup": {
+      "kind": "proton-umu"
+    },
+    "path": "C:\\Games\\Game One\\save",
+    "variant": "unix",
+    "processEnv": {
+      "PROTON_LOG": "1"
+    },
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "/pfx/drive_c/Game One/save\n"
+          }
+        ],
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "wine-path-proton-umu-win",
+    "callSite": "runner.wine_path",
+    "setup": {
+      "kind": "proton-umu"
+    },
+    "path": "/pfx/drive_c/Game One/save",
+    "variant": "win",
+    "processEnv": {
+      "PROTON_LOG": "1"
+    },
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "C:\\Games\\Game One\\save\n"
+          }
+        ],
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "wine-path-proton-unix",
+    "callSite": "runner.wine_path",
+    "setup": {
+      "kind": "proton"
+    },
+    "path": "C:\\Games\\Game One\\save",
+    "variant": "unix",
+    "processEnv": {
+      "PROTON_LOG": "1"
+    },
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "/pfx/drive_c/Game One/save\n"
+          }
+        ],
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "wine-path-proton-win",
+    "callSite": "runner.wine_path",
+    "setup": {
+      "kind": "proton"
+    },
+    "path": "/pfx/drive_c/Game One/save",
+    "variant": "win",
+    "processEnv": {
+      "PROTON_LOG": "1"
+    },
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "C:\\Games\\Game One\\save\n"
+          }
+        ],
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "wine-path-crossover-unix",
+    "callSite": "runner.wine_path",
+    "setup": {
+      "kind": "crossover"
+    },
+    "path": "C:\\Games\\Game One\\save",
+    "variant": "unix",
+    "processEnv": {
+      "PROTON_LOG": "1"
+    },
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "/pfx/drive_c/Game One/save\n"
+          }
+        ],
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "wine-path-crossover-win",
+    "callSite": "runner.wine_path",
+    "setup": {
+      "kind": "crossover"
+    },
+    "path": "/pfx/drive_c/Game One/save",
+    "variant": "win",
+    "processEnv": {
+      "PROTON_LOG": "1"
+    },
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "C:\\Games\\Game One\\save\n"
+          }
+        ],
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "wine-path-toolkit-unix",
+    "callSite": "runner.wine_path",
+    "setup": {
+      "kind": "toolkit"
+    },
+    "path": "C:\\Games\\Game One\\save",
+    "variant": "unix",
+    "processEnv": {
+      "PROTON_LOG": "1"
+    },
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "/pfx/drive_c/Game One/save\n"
+          }
+        ],
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "wine-path-toolkit-win",
+    "callSite": "runner.wine_path",
+    "setup": {
+      "kind": "toolkit"
+    },
+    "path": "/pfx/drive_c/Game One/save",
+    "variant": "win",
+    "processEnv": {
+      "PROTON_LOG": "1"
+    },
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "C:\\Games\\Game One\\save\n"
+          }
+        ],
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "wine-path-stdout-with-surrounding-whitespace",
+    "note": "the answer is trimmed on both ends and nothing else is touched",
+    "callSite": "runner.wine_path",
+    "setup": {
+      "kind": "wine"
+    },
+    "path": "C:\\a b\\c",
+    "variant": "unix",
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "\n  /pfx/drive_c/a b/c \t\n"
+          }
+        ],
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "wine-path-empty-stdout-with-stderr-logs-the-error",
+    "note": "an empty answer logs the error line with the stderr text and returns the empty string",
+    "callSite": "runner.wine_path",
+    "setup": {
+      "kind": "wine"
+    },
+    "path": "C:\\missing",
+    "variant": "unix",
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stderr",
+            "text": "wine: cannot find C:\\missing\n"
+          }
+        ],
+        "code": 1
+      }
+    ]
+  },
+  {
+    "id": "wine-path-spawn-failure-answers-empty",
+    "note": "the run fails to spawn: runWineCommand answers empty output and getWinePath logs the error line",
+    "callSite": "runner.wine_path",
+    "setup": {
+      "kind": "wine"
+    },
+    "path": "C:\\x",
+    "variant": "win",
+    "script": [
+      {
+        "throws": "ENOENT"
+      }
+    ]
+  },
+  {
+    "id": "wine-path-invalid-wine-answers-empty-with-its-stderr",
+    "note": "an invalid wine runs nothing; the stderr text of the error line is Invalid wine",
+    "callSite": "runner.wine_path",
+    "setup": {
+      "kind": "wine",
+      "missingBin": true
+    },
+    "path": "C:\\x",
+    "variant": "unix",
+    "script": []
+  }
+]

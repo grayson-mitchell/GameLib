@@ -1,0 +1,21 @@
+{
+  "response": {
+    "stderr": "",
+    "stdout": "",
+    "code": 0
+  },
+  "commandPartsBefore": [
+    "reg",
+    "query",
+    "HKCU"
+  ],
+  "commandPartsAfter": [
+    "reg",
+    "query",
+    "HKCU"
+  ],
+  "wrappersBefore": null,
+  "wrappersAfter": null,
+  "settledBeforeRelease": true,
+  "onSpawnCalls": 1
+}

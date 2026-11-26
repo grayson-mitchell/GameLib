@@ -1,0 +1,19 @@
+{
+  "response": {
+    "stderr": "warn: fsync\n",
+    "stdout": "game starting\nready\n",
+    "code": 0
+  },
+  "commandPartsBefore": [
+    "<HOME>/Games/Game/game.exe",
+    "-flag"
+  ],
+  "commandPartsAfter": [
+    "<HOME>/Games/Game/game.exe",
+    "-flag"
+  ],
+  "wrappersBefore": [],
+  "wrappersAfter": [],
+  "settledBeforeRelease": true,
+  "onSpawnCalls": 0
+}

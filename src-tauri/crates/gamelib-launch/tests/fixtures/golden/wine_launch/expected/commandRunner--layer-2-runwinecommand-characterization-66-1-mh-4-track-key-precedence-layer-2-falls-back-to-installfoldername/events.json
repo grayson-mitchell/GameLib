@@ -1,0 +1,10 @@
+[
+  {
+    "level": "debug",
+    "prefix": "Backend",
+    "parts": [
+      "Running Wine command:",
+      "reg query HKCU"
+    ]
+  }
+]

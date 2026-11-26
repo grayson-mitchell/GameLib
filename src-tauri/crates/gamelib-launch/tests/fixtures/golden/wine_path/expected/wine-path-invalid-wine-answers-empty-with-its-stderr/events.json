@@ -1,0 +1,12 @@
+[
+  {
+    "level": "debug",
+    "prefix": "Backend",
+    "parts": "Getting wine path for C:\\x."
+  },
+  {
+    "level": "error",
+    "prefix": "Backend",
+    "parts": "Couldn't get wine path for C:\\x.\nInvalid wine"
+  }
+]

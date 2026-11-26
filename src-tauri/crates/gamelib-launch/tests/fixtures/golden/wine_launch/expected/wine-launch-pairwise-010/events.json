@@ -1,0 +1,10 @@
+[
+  {
+    "level": "debug",
+    "prefix": "Backend",
+    "parts": [
+      "Running Wine command:",
+      "run <HOME>/Games/Game/game.exe -flag"
+    ]
+  }
+]

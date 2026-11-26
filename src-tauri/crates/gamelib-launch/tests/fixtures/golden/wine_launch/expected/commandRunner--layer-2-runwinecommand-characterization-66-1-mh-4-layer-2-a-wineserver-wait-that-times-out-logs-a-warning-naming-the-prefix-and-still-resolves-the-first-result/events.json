@@ -1,0 +1,15 @@
+[
+  {
+    "level": "debug",
+    "prefix": "Backend",
+    "parts": [
+      "Running Wine command:",
+      "reg query HKCU"
+    ]
+  },
+  {
+    "level": "warning",
+    "prefix": "Backend",
+    "parts": "wineserver --wait for prefix <HOME>/Games/prefix did not finish within 30 minutes; returning the command result without waiting further"
+  }
+]

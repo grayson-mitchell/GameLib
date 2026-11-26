@@ -1,0 +1,28 @@
+{
+  "response": {
+    "stderr": "",
+    "stdout": "",
+    "code": 0
+  },
+  "commandPartsBefore": [
+    "reg",
+    "query",
+    "HKCU"
+  ],
+  "commandPartsAfter": [
+    "--flag",
+    "<TOOLS>/crossover/bin/wine",
+    "reg",
+    "query",
+    "HKCU"
+  ],
+  "wrappersBefore": [
+    "gamemoderun",
+    "--flag"
+  ],
+  "wrappersAfter": [
+    "--flag"
+  ],
+  "settledBeforeRelease": true,
+  "onSpawnCalls": 0
+}

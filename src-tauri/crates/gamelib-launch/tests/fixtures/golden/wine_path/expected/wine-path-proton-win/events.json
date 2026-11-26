@@ -1,0 +1,15 @@
+[
+  {
+    "level": "debug",
+    "prefix": "Backend",
+    "parts": "Getting wine path for /pfx/drive_c/Game One/save."
+  },
+  {
+    "level": "debug",
+    "prefix": "Backend",
+    "parts": [
+      "Running Wine command:",
+      "runinprefix cmd /c winepath -w /pfx/drive_c/Game One/save"
+    ]
+  }
+]

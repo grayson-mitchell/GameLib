@@ -1,0 +1,22 @@
+[
+  {
+    "target": {
+      "kind": "game",
+      "appName": "script-app",
+      "runner": "gog",
+      "type": "launch"
+    },
+    "rotate": true,
+    "raw": "script says hi: ünï\n"
+  },
+  {
+    "target": {
+      "kind": "game",
+      "appName": "script-app",
+      "runner": "gog",
+      "type": "launch"
+    },
+    "rotate": false,
+    "raw": "script warns\n"
+  }
+]

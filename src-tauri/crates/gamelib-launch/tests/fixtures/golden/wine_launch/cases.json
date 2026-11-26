@@ -1,0 +1,1739 @@
+[
+  {
+    "id": "wine-launch-sideload",
+    "note": "the end-to-end tracer: a sideload wine launch with a claimed game log, three chunks, the track key and the wineserver wait",
+    "callSite": "runner.wine_command.launch",
+    "setup": {
+      "kind": "wine"
+    },
+    "args": {
+      "commandParts": [
+        "<HOME>/Games/Game/game.exe",
+        "-flag"
+      ],
+      "wait": true,
+      "protonVerb": "waitforexitandrun",
+      "startFolder": "<HOME>/Games/Game",
+      "wrappers": [],
+      "trackKey": "sideload-app"
+    },
+    "writers": "claimed",
+    "onOutput": true,
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "game starting\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "warn: fsync\n"
+          },
+          {
+            "stream": "stdout",
+            "text": "ready\n"
+          }
+        ],
+        "code": 0
+      },
+      {
+        "program": "<WINESERVER>",
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-runwinecommand-resolveonexit-layer-2-settles-on-exit-while-a-grandchild-still-holds-the-pipes-resolveon-exit-drain-flag",
+    "callSite": "runner.wine_command",
+    "setup": {
+      "kind": "crossover",
+      "wineserver": true
+    },
+    "args": {
+      "commandParts": [
+        "reg",
+        "query",
+        "HKCU"
+      ],
+      "skipPrefixCheck": true,
+      "wait": true,
+      "resolveOnExit": true
+    },
+    "writers": "none",
+    "onOutput": false,
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "HKEY_CURRENT_USER\n"
+          }
+        ],
+        "code": 0,
+        "drainTimedOut": true
+      },
+      {
+        "program": "<WINESERVER>",
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-runwinecommand-resolveonexit-layer-2-settles-exactly-once-and-keeps-the-exit-code-when-the-run-reports-a-late-close",
+    "callSite": "runner.wine_command",
+    "setup": {
+      "kind": "crossover"
+    },
+    "args": {
+      "commandParts": [
+        "reg",
+        "query",
+        "HKCU"
+      ],
+      "skipPrefixCheck": true,
+      "resolveOnExit": true
+    },
+    "writers": "none",
+    "onOutput": false,
+    "script": [
+      {
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-runwinecommand-resolveonexit-layer-2-an-early-close-settles-without-any-drain-flag",
+    "callSite": "runner.wine_command",
+    "setup": {
+      "kind": "crossover"
+    },
+    "args": {
+      "commandParts": [
+        "reg",
+        "query",
+        "HKCU"
+      ],
+      "skipPrefixCheck": true,
+      "resolveOnExit": true
+    },
+    "writers": "none",
+    "onOutput": false,
+    "script": [
+      {
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-runwinecommand-resolveonexit-layer-2-default-resolveon-is-close-never-exit",
+    "callSite": "runner.wine_command",
+    "setup": {
+      "kind": "crossover"
+    },
+    "args": {
+      "commandParts": [
+        "reg",
+        "query",
+        "HKCU"
+      ],
+      "skipPrefixCheck": true
+    },
+    "writers": "none",
+    "onOutput": false,
+    "script": [
+      {
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-runwinecommand-resolveonexit-layer-2-resolveonexit-false-behaves-as-the-default",
+    "callSite": "runner.wine_command",
+    "setup": {
+      "kind": "crossover"
+    },
+    "args": {
+      "commandParts": [
+        "reg",
+        "query",
+        "HKCU"
+      ],
+      "skipPrefixCheck": true,
+      "resolveOnExit": false
+    },
+    "writers": "none",
+    "onOutput": false,
+    "script": [
+      {
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-runwinecommand-resolveonexit-layer-2-59-review-wr-01-output-lost-after-the-drain-grace-while-the-exit-code-survives",
+    "callSite": "runner.wine_command",
+    "setup": {
+      "kind": "crossover"
+    },
+    "args": {
+      "commandParts": [
+        "reg",
+        "query",
+        "HKCU"
+      ],
+      "skipPrefixCheck": true,
+      "resolveOnExit": true
+    },
+    "writers": "none",
+    "onOutput": false,
+    "script": [
+      {
+        "code": 1,
+        "drainTimedOut": true
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-runwinecommand-characterization-66-1-mh-4-layer-2-resolves-stdout-stderr-code-once-the-run-closes",
+    "callSite": "runner.wine_command",
+    "setup": {
+      "kind": "crossover"
+    },
+    "args": {
+      "commandParts": [
+        "reg",
+        "query",
+        "HKCU"
+      ],
+      "skipPrefixCheck": true
+    },
+    "writers": "none",
+    "onOutput": false,
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "out-1 "
+          },
+          {
+            "stream": "stdout",
+            "text": "out-2"
+          },
+          {
+            "stream": "stderr",
+            "text": "err-1"
+          }
+        ],
+        "code": 3
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-runwinecommand-characterization-66-1-mh-4-layer-2-keeps-the-last-50-chunks-of-each-stream-memory-log-semantics-a5",
+    "callSite": "runner.wine_command",
+    "setup": {
+      "kind": "crossover"
+    },
+    "args": {
+      "commandParts": [
+        "reg",
+        "query",
+        "HKCU"
+      ],
+      "skipPrefixCheck": true
+    },
+    "writers": "none",
+    "onOutput": false,
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "0,"
+          },
+          {
+            "stream": "stdout",
+            "text": "1,"
+          },
+          {
+            "stream": "stdout",
+            "text": "2,"
+          },
+          {
+            "stream": "stdout",
+            "text": "3,"
+          },
+          {
+            "stream": "stdout",
+            "text": "4,"
+          },
+          {
+            "stream": "stdout",
+            "text": "5,"
+          },
+          {
+            "stream": "stdout",
+            "text": "6,"
+          },
+          {
+            "stream": "stdout",
+            "text": "7,"
+          },
+          {
+            "stream": "stdout",
+            "text": "8,"
+          },
+          {
+            "stream": "stdout",
+            "text": "9,"
+          },
+          {
+            "stream": "stdout",
+            "text": "10,"
+          },
+          {
+            "stream": "stdout",
+            "text": "11,"
+          },
+          {
+            "stream": "stdout",
+            "text": "12,"
+          },
+          {
+            "stream": "stdout",
+            "text": "13,"
+          },
+          {
+            "stream": "stdout",
+            "text": "14,"
+          },
+          {
+            "stream": "stdout",
+            "text": "15,"
+          },
+          {
+            "stream": "stdout",
+            "text": "16,"
+          },
+          {
+            "stream": "stdout",
+            "text": "17,"
+          },
+          {
+            "stream": "stdout",
+            "text": "18,"
+          },
+          {
+            "stream": "stdout",
+            "text": "19,"
+          },
+          {
+            "stream": "stdout",
+            "text": "20,"
+          },
+          {
+            "stream": "stdout",
+            "text": "21,"
+          },
+          {
+            "stream": "stdout",
+            "text": "22,"
+          },
+          {
+            "stream": "stdout",
+            "text": "23,"
+          },
+          {
+            "stream": "stdout",
+            "text": "24,"
+          },
+          {
+            "stream": "stdout",
+            "text": "25,"
+          },
+          {
+            "stream": "stdout",
+            "text": "26,"
+          },
+          {
+            "stream": "stdout",
+            "text": "27,"
+          },
+          {
+            "stream": "stdout",
+            "text": "28,"
+          },
+          {
+            "stream": "stdout",
+            "text": "29,"
+          },
+          {
+            "stream": "stdout",
+            "text": "30,"
+          },
+          {
+            "stream": "stdout",
+            "text": "31,"
+          },
+          {
+            "stream": "stdout",
+            "text": "32,"
+          },
+          {
+            "stream": "stdout",
+            "text": "33,"
+          },
+          {
+            "stream": "stdout",
+            "text": "34,"
+          },
+          {
+            "stream": "stdout",
+            "text": "35,"
+          },
+          {
+            "stream": "stdout",
+            "text": "36,"
+          },
+          {
+            "stream": "stdout",
+            "text": "37,"
+          },
+          {
+            "stream": "stdout",
+            "text": "38,"
+          },
+          {
+            "stream": "stdout",
+            "text": "39,"
+          },
+          {
+            "stream": "stdout",
+            "text": "40,"
+          },
+          {
+            "stream": "stdout",
+            "text": "41,"
+          },
+          {
+            "stream": "stdout",
+            "text": "42,"
+          },
+          {
+            "stream": "stdout",
+            "text": "43,"
+          },
+          {
+            "stream": "stdout",
+            "text": "44,"
+          },
+          {
+            "stream": "stdout",
+            "text": "45,"
+          },
+          {
+            "stream": "stdout",
+            "text": "46,"
+          },
+          {
+            "stream": "stdout",
+            "text": "47,"
+          },
+          {
+            "stream": "stdout",
+            "text": "48,"
+          },
+          {
+            "stream": "stdout",
+            "text": "49,"
+          },
+          {
+            "stream": "stdout",
+            "text": "50,"
+          },
+          {
+            "stream": "stdout",
+            "text": "51,"
+          },
+          {
+            "stream": "stdout",
+            "text": "52,"
+          },
+          {
+            "stream": "stdout",
+            "text": "53,"
+          },
+          {
+            "stream": "stdout",
+            "text": "54,"
+          },
+          {
+            "stream": "stdout",
+            "text": "55,"
+          },
+          {
+            "stream": "stdout",
+            "text": "56,"
+          },
+          {
+            "stream": "stdout",
+            "text": "57,"
+          },
+          {
+            "stream": "stdout",
+            "text": "58,"
+          },
+          {
+            "stream": "stdout",
+            "text": "59,"
+          }
+        ],
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-runwinecommand-characterization-66-1-mh-4-layer-2-calls-onspawn-exactly-once-with-the-spawned-child-handle",
+    "callSite": "runner.wine_command",
+    "setup": {
+      "kind": "crossover"
+    },
+    "args": {
+      "commandParts": [
+        "reg",
+        "query",
+        "HKCU"
+      ],
+      "skipPrefixCheck": true,
+      "onSpawn": true
+    },
+    "writers": "none",
+    "onOutput": false,
+    "script": [
+      {
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-runwinecommand-characterization-66-1-mh-4-layer-2-calls-onoutput-for-both-streams-with-the-chunk-and-the-child",
+    "callSite": "runner.wine_command",
+    "setup": {
+      "kind": "crossover"
+    },
+    "args": {
+      "commandParts": [
+        "reg",
+        "query",
+        "HKCU"
+      ],
+      "skipPrefixCheck": true
+    },
+    "writers": "none",
+    "onOutput": true,
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "to-stdout"
+          },
+          {
+            "stream": "stderr",
+            "text": "to-stderr"
+          }
+        ],
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-runwinecommand-characterization-66-1-mh-4-layer-2-writes-a-wine-command-header-to-each-log-writer-before-any-output",
+    "callSite": "runner.wine_command",
+    "setup": {
+      "kind": "crossover"
+    },
+    "args": {
+      "commandParts": [
+        "reg",
+        "query",
+        "HKCU"
+      ],
+      "skipPrefixCheck": true
+    },
+    "writers": "two",
+    "onOutput": false,
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "after-header"
+          }
+        ],
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-runwinecommand-characterization-66-1-mh-4-layer-2-wait-true-runs-wineserver-wait-after-close-and-resolves-only-after-it-with-a-finite-30-minute-timeout",
+    "callSite": "runner.wine_command",
+    "setup": {
+      "kind": "crossover",
+      "wineserver": true
+    },
+    "args": {
+      "commandParts": [
+        "reg",
+        "query",
+        "HKCU"
+      ],
+      "skipPrefixCheck": true,
+      "wait": true
+    },
+    "writers": "none",
+    "onOutput": false,
+    "script": [
+      {
+        "code": 0
+      },
+      {
+        "program": "<WINESERVER>",
+        "hold": true,
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-runwinecommand-characterization-66-1-mh-4-layer-2-a-wineserver-wait-that-times-out-logs-a-warning-naming-the-prefix-and-still-resolves-the-first-result",
+    "callSite": "runner.wine_command",
+    "setup": {
+      "kind": "crossover",
+      "wineserver": true
+    },
+    "args": {
+      "commandParts": [
+        "reg",
+        "query",
+        "HKCU"
+      ],
+      "skipPrefixCheck": true,
+      "wait": true
+    },
+    "writers": "none",
+    "onOutput": false,
+    "script": [
+      {
+        "code": 7
+      },
+      {
+        "program": "<WINESERVER>",
+        "code": null,
+        "timedOut": true
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-runwinecommand-characterization-66-1-mh-4-layer-2-a-wineserver-wait-spawn-failure-does-not-hang-the-caller",
+    "callSite": "runner.wine_command",
+    "setup": {
+      "kind": "crossover",
+      "wineserver": true
+    },
+    "args": {
+      "commandParts": [
+        "reg",
+        "query",
+        "HKCU"
+      ],
+      "skipPrefixCheck": true,
+      "wait": true
+    },
+    "writers": "none",
+    "onOutput": false,
+    "script": [
+      {
+        "code": 0
+      },
+      {
+        "program": "<WINESERVER>",
+        "throws": "ENOENT"
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-runwinecommand-characterization-66-1-mh-4-layer-2-returns-stdout-stderr-invalid-wine-and-runs-nothing-for-an-invalid-wine",
+    "callSite": "runner.wine_command",
+    "setup": {
+      "kind": "crossover",
+      "missingBin": true
+    },
+    "args": {
+      "commandParts": [
+        "reg",
+        "query",
+        "HKCU"
+      ],
+      "skipPrefixCheck": true
+    },
+    "writers": "none",
+    "onOutput": false,
+    "script": []
+  },
+  {
+    "id": "commandRunner--layer-2-runwinecommand-characterization-66-1-mh-4-layer-2-passes-the-documented-run-options-timeout-opt-out-with-a-reason-windowshide-false-merged-env",
+    "callSite": "runner.wine_command",
+    "setup": {
+      "kind": "crossover"
+    },
+    "args": {
+      "commandParts": [
+        "reg",
+        "query",
+        "HKCU"
+      ],
+      "skipPrefixCheck": true,
+      "protonVerb": "runinprefix",
+      "startFolder": "<HOME>/start"
+    },
+    "writers": "none",
+    "onOutput": false,
+    "script": [
+      {
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-runwinecommand-characterization-66-1-mh-4-layer-2-ignorelogging-strips-proton-log-from-the-env",
+    "callSite": "runner.wine_command",
+    "setup": {
+      "kind": "crossover"
+    },
+    "args": {
+      "commandParts": [
+        "reg",
+        "query",
+        "HKCU"
+      ],
+      "skipPrefixCheck": true,
+      "ignoreLogging": true
+    },
+    "writers": "none",
+    "onOutput": false,
+    "processEnv": {
+      "PROTON_LOG": "1"
+    },
+    "script": [
+      {
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-runwinecommand-characterization-66-1-mh-4-layer-2-wrappers-become-the-binary-with-the-runner-bin-after-them",
+    "callSite": "runner.wine_command",
+    "setup": {
+      "kind": "crossover"
+    },
+    "args": {
+      "commandParts": [
+        "reg",
+        "query",
+        "HKCU"
+      ],
+      "skipPrefixCheck": true,
+      "wrappers": [
+        "gamemoderun",
+        "--flag"
+      ]
+    },
+    "writers": "none",
+    "onOutput": false,
+    "script": [
+      {
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-runwinecommand-characterization-66-1-mh-4-track-key-precedence-layer-2-prefers-options-trackkey",
+    "callSite": "runner.wine_command",
+    "setup": {
+      "kind": "crossover"
+    },
+    "args": {
+      "commandParts": [
+        "reg",
+        "query",
+        "HKCU"
+      ],
+      "skipPrefixCheck": true,
+      "trackKey": "tk",
+      "installFolderName": "folder"
+    },
+    "writers": "none",
+    "onOutput": false,
+    "script": [
+      {
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-runwinecommand-characterization-66-1-mh-4-track-key-precedence-layer-2-falls-back-to-installfoldername",
+    "callSite": "runner.wine_command",
+    "setup": {
+      "kind": "crossover"
+    },
+    "args": {
+      "commandParts": [
+        "reg",
+        "query",
+        "HKCU"
+      ],
+      "skipPrefixCheck": true,
+      "installFolderName": "folder"
+    },
+    "writers": "none",
+    "onOutput": false,
+    "script": [
+      {
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "commandRunner--layer-2-runwinecommand-characterization-66-1-mh-4-track-key-precedence-layer-2-falls-back-to-the-wineprefix",
+    "callSite": "runner.wine_command",
+    "setup": {
+      "kind": "crossover"
+    },
+    "args": {
+      "commandParts": [
+        "reg",
+        "query",
+        "HKCU"
+      ],
+      "skipPrefixCheck": true
+    },
+    "writers": "none",
+    "onOutput": false,
+    "script": [
+      {
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "wine-launch-pairwise-001",
+    "callSite": "runner.wine_command",
+    "setup": {
+      "kind": "wine"
+    },
+    "args": {
+      "commandParts": [
+        "<HOME>/Games/Game/game.exe",
+        "-flag"
+      ],
+      "startFolder": "<HOME>/Games/Game",
+      "trackKey": "sideload-app",
+      "resolveOnExit": true,
+      "ignoreLogging": true
+    },
+    "writers": "none",
+    "onOutput": true,
+    "processEnv": {
+      "PROTON_LOG": "1"
+    },
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "out-1\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "err-1\n"
+          }
+        ],
+        "code": 0
+      }
+    ],
+    "axes": {
+      "wineType": "wine",
+      "wrappers": "none",
+      "trackKey": "set",
+      "resolveOnExit": "true",
+      "wait": "no",
+      "ignoreLogging": "true",
+      "logWriters": "none",
+      "onOutput": "set",
+      "outcome": "exit-0"
+    }
+  },
+  {
+    "id": "wine-launch-pairwise-002",
+    "callSite": "runner.wine_command.launch",
+    "setup": {
+      "kind": "wine",
+      "wineserver": true
+    },
+    "args": {
+      "commandParts": [
+        "<HOME>/Games/Game/game.exe",
+        "-flag"
+      ],
+      "wait": true,
+      "protonVerb": "waitforexitandrun",
+      "startFolder": "<HOME>/Games/Game",
+      "installFolderName": "Game One",
+      "gameInstallPath": "<HOME>/Games/Game",
+      "wrappers": [
+        "gamemoderun",
+        "mangohud"
+      ]
+    },
+    "writers": "claimed",
+    "onOutput": false,
+    "processEnv": {
+      "PROTON_LOG": "1"
+    },
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "out-1\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "err-1\n"
+          }
+        ],
+        "code": 1
+      },
+      {
+        "program": "<WINESERVER>",
+        "code": 0
+      }
+    ],
+    "axes": {
+      "wineType": "wine",
+      "wrappers": "two",
+      "trackKey": "installFolder",
+      "resolveOnExit": "false",
+      "wait": "with-wineserver",
+      "ignoreLogging": "false",
+      "logWriters": "claimed",
+      "onOutput": "unset",
+      "outcome": "exit-1"
+    }
+  },
+  {
+    "id": "wine-launch-pairwise-003",
+    "callSite": "runner.wine_command.launch",
+    "setup": {
+      "kind": "proton-umu"
+    },
+    "args": {
+      "commandParts": [
+        "<HOME>/Games/Game/game.exe",
+        "-flag"
+      ],
+      "wait": true,
+      "protonVerb": "waitforexitandrun",
+      "startFolder": "<HOME>/Games/Game",
+      "resolveOnExit": true
+    },
+    "writers": "unclaimed",
+    "onOutput": false,
+    "processEnv": {
+      "PROTON_LOG": "1"
+    },
+    "script": [
+      {
+        "throws": "ENOENT"
+      }
+    ],
+    "axes": {
+      "wineType": "proton-umu",
+      "wrappers": "none",
+      "trackKey": "neither",
+      "resolveOnExit": "true",
+      "wait": "without-wineserver",
+      "ignoreLogging": "false",
+      "logWriters": "unclaimed",
+      "onOutput": "unset",
+      "outcome": "throw"
+    }
+  },
+  {
+    "id": "wine-launch-pairwise-004",
+    "callSite": "runner.wine_command.launch",
+    "setup": {
+      "kind": "proton",
+      "wineserver": true
+    },
+    "args": {
+      "commandParts": [
+        "<HOME>/Games/Game/game.exe",
+        "-flag"
+      ],
+      "wait": true,
+      "protonVerb": "waitforexitandrun",
+      "startFolder": "<HOME>/Games/Game",
+      "trackKey": "sideload-app",
+      "wrappers": [
+        "gamemoderun",
+        "mangohud"
+      ],
+      "ignoreLogging": true
+    },
+    "writers": "unclaimed",
+    "onOutput": true,
+    "processEnv": {
+      "PROTON_LOG": "1"
+    },
+    "script": [
+      {
+        "throws": "ENOENT"
+      },
+      {
+        "program": "<WINESERVER>",
+        "code": 0
+      }
+    ],
+    "axes": {
+      "wineType": "proton",
+      "wrappers": "two",
+      "trackKey": "set",
+      "resolveOnExit": "false",
+      "wait": "with-wineserver",
+      "ignoreLogging": "true",
+      "logWriters": "unclaimed",
+      "onOutput": "set",
+      "outcome": "throw"
+    }
+  },
+  {
+    "id": "wine-launch-pairwise-005",
+    "callSite": "runner.wine_command.launch",
+    "setup": {
+      "kind": "crossover"
+    },
+    "args": {
+      "commandParts": [
+        "<HOME>/Games/Game/game.exe",
+        "-flag"
+      ],
+      "wait": true,
+      "protonVerb": "waitforexitandrun",
+      "startFolder": "<HOME>/Games/Game",
+      "installFolderName": "Game One",
+      "gameInstallPath": "<HOME>/Games/Game",
+      "resolveOnExit": true,
+      "ignoreLogging": true
+    },
+    "writers": "claimed",
+    "onOutput": true,
+    "processEnv": {
+      "PROTON_LOG": "1"
+    },
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "out-1\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "err-1\n"
+          }
+        ],
+        "code": 1
+      }
+    ],
+    "axes": {
+      "wineType": "crossover",
+      "wrappers": "none",
+      "trackKey": "installFolder",
+      "resolveOnExit": "true",
+      "wait": "without-wineserver",
+      "ignoreLogging": "true",
+      "logWriters": "claimed",
+      "onOutput": "set",
+      "outcome": "exit-1"
+    }
+  },
+  {
+    "id": "wine-launch-pairwise-006",
+    "callSite": "runner.wine_command",
+    "setup": {
+      "kind": "crossover"
+    },
+    "args": {
+      "commandParts": [
+        "<HOME>/Games/Game/game.exe",
+        "-flag"
+      ],
+      "startFolder": "<HOME>/Games/Game",
+      "wrappers": [
+        "gamemoderun",
+        "mangohud"
+      ]
+    },
+    "writers": "none",
+    "onOutput": false,
+    "processEnv": {
+      "PROTON_LOG": "1"
+    },
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "out-1\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "err-1\n"
+          }
+        ],
+        "code": 0
+      }
+    ],
+    "axes": {
+      "wineType": "crossover",
+      "wrappers": "two",
+      "trackKey": "neither",
+      "resolveOnExit": "false",
+      "wait": "no",
+      "ignoreLogging": "false",
+      "logWriters": "none",
+      "onOutput": "unset",
+      "outcome": "exit-0"
+    }
+  },
+  {
+    "id": "wine-launch-pairwise-007",
+    "callSite": "runner.wine_command.launch",
+    "setup": {
+      "kind": "toolkit"
+    },
+    "args": {
+      "commandParts": [
+        "<HOME>/Games/Game/game.exe",
+        "-flag"
+      ],
+      "wait": true,
+      "protonVerb": "waitforexitandrun",
+      "startFolder": "<HOME>/Games/Game",
+      "trackKey": "sideload-app",
+      "ignoreLogging": true
+    },
+    "writers": "none",
+    "onOutput": false,
+    "processEnv": {
+      "PROTON_LOG": "1"
+    },
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "out-1\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "err-1\n"
+          }
+        ],
+        "code": 1
+      }
+    ],
+    "axes": {
+      "wineType": "toolkit",
+      "wrappers": "none",
+      "trackKey": "set",
+      "resolveOnExit": "false",
+      "wait": "without-wineserver",
+      "ignoreLogging": "true",
+      "logWriters": "none",
+      "onOutput": "unset",
+      "outcome": "exit-1"
+    }
+  },
+  {
+    "id": "wine-launch-pairwise-008",
+    "callSite": "runner.wine_command.launch",
+    "setup": {
+      "kind": "toolkit",
+      "wineserver": true
+    },
+    "args": {
+      "commandParts": [
+        "<HOME>/Games/Game/game.exe",
+        "-flag"
+      ],
+      "wait": true,
+      "protonVerb": "waitforexitandrun",
+      "startFolder": "<HOME>/Games/Game",
+      "wrappers": [
+        "gamemoderun",
+        "mangohud"
+      ],
+      "resolveOnExit": true
+    },
+    "writers": "claimed",
+    "onOutput": true,
+    "processEnv": {
+      "PROTON_LOG": "1"
+    },
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "out-1\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "err-1\n"
+          }
+        ],
+        "code": 0
+      },
+      {
+        "program": "<WINESERVER>",
+        "code": 0
+      }
+    ],
+    "axes": {
+      "wineType": "toolkit",
+      "wrappers": "two",
+      "trackKey": "neither",
+      "resolveOnExit": "true",
+      "wait": "with-wineserver",
+      "ignoreLogging": "false",
+      "logWriters": "claimed",
+      "onOutput": "set",
+      "outcome": "exit-0"
+    }
+  },
+  {
+    "id": "wine-launch-pairwise-009",
+    "callSite": "runner.wine_command",
+    "setup": {
+      "kind": "proton-umu"
+    },
+    "args": {
+      "commandParts": [
+        "<HOME>/Games/Game/game.exe",
+        "-flag"
+      ],
+      "startFolder": "<HOME>/Games/Game",
+      "installFolderName": "Game One",
+      "gameInstallPath": "<HOME>/Games/Game",
+      "wrappers": [
+        "gamemoderun",
+        "mangohud"
+      ],
+      "ignoreLogging": true
+    },
+    "writers": "none",
+    "onOutput": true,
+    "processEnv": {
+      "PROTON_LOG": "1"
+    },
+    "script": [
+      {
+        "throws": "ENOENT"
+      }
+    ],
+    "axes": {
+      "wineType": "proton-umu",
+      "wrappers": "two",
+      "trackKey": "installFolder",
+      "resolveOnExit": "false",
+      "wait": "no",
+      "ignoreLogging": "true",
+      "logWriters": "none",
+      "onOutput": "set",
+      "outcome": "throw"
+    }
+  },
+  {
+    "id": "wine-launch-pairwise-010",
+    "callSite": "runner.wine_command",
+    "setup": {
+      "kind": "proton"
+    },
+    "args": {
+      "commandParts": [
+        "<HOME>/Games/Game/game.exe",
+        "-flag"
+      ],
+      "startFolder": "<HOME>/Games/Game",
+      "trackKey": "sideload-app",
+      "resolveOnExit": true
+    },
+    "writers": "claimed",
+    "onOutput": false,
+    "processEnv": {
+      "PROTON_LOG": "1"
+    },
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "out-1\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "err-1\n"
+          }
+        ],
+        "code": 1
+      }
+    ],
+    "axes": {
+      "wineType": "proton",
+      "wrappers": "none",
+      "trackKey": "set",
+      "resolveOnExit": "true",
+      "wait": "no",
+      "ignoreLogging": "false",
+      "logWriters": "claimed",
+      "onOutput": "unset",
+      "outcome": "exit-1"
+    }
+  },
+  {
+    "id": "wine-launch-pairwise-011",
+    "callSite": "runner.wine_command.launch",
+    "setup": {
+      "kind": "proton"
+    },
+    "args": {
+      "commandParts": [
+        "<HOME>/Games/Game/game.exe",
+        "-flag"
+      ],
+      "wait": true,
+      "protonVerb": "waitforexitandrun",
+      "startFolder": "<HOME>/Games/Game",
+      "installFolderName": "Game One",
+      "gameInstallPath": "<HOME>/Games/Game",
+      "wrappers": [
+        "gamemoderun",
+        "mangohud"
+      ],
+      "resolveOnExit": true,
+      "ignoreLogging": true
+    },
+    "writers": "unclaimed",
+    "onOutput": true,
+    "processEnv": {
+      "PROTON_LOG": "1"
+    },
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "out-1\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "err-1\n"
+          }
+        ],
+        "code": 0
+      }
+    ],
+    "axes": {
+      "wineType": "proton",
+      "wrappers": "two",
+      "trackKey": "installFolder",
+      "resolveOnExit": "true",
+      "wait": "without-wineserver",
+      "ignoreLogging": "true",
+      "logWriters": "unclaimed",
+      "onOutput": "set",
+      "outcome": "exit-0"
+    }
+  },
+  {
+    "id": "wine-launch-pairwise-012",
+    "callSite": "runner.wine_command",
+    "setup": {
+      "kind": "wine"
+    },
+    "args": {
+      "commandParts": [
+        "<HOME>/Games/Game/game.exe",
+        "-flag"
+      ],
+      "startFolder": "<HOME>/Games/Game",
+      "resolveOnExit": true,
+      "ignoreLogging": true
+    },
+    "writers": "unclaimed",
+    "onOutput": true,
+    "processEnv": {
+      "PROTON_LOG": "1"
+    },
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "out-1\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "err-1\n"
+          }
+        ],
+        "code": 1
+      }
+    ],
+    "axes": {
+      "wineType": "wine",
+      "wrappers": "none",
+      "trackKey": "neither",
+      "resolveOnExit": "true",
+      "wait": "no",
+      "ignoreLogging": "true",
+      "logWriters": "unclaimed",
+      "onOutput": "set",
+      "outcome": "exit-1"
+    }
+  },
+  {
+    "id": "wine-launch-pairwise-013",
+    "callSite": "runner.wine_command.launch",
+    "setup": {
+      "kind": "proton-umu",
+      "wineserver": true
+    },
+    "args": {
+      "commandParts": [
+        "<HOME>/Games/Game/game.exe",
+        "-flag"
+      ],
+      "wait": true,
+      "protonVerb": "waitforexitandrun",
+      "startFolder": "<HOME>/Games/Game",
+      "trackKey": "sideload-app",
+      "resolveOnExit": true,
+      "ignoreLogging": true
+    },
+    "writers": "none",
+    "onOutput": true,
+    "processEnv": {
+      "PROTON_LOG": "1"
+    },
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "out-1\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "err-1\n"
+          }
+        ],
+        "code": 0
+      },
+      {
+        "program": "<WINESERVER>",
+        "code": 0
+      }
+    ],
+    "axes": {
+      "wineType": "proton-umu",
+      "wrappers": "none",
+      "trackKey": "set",
+      "resolveOnExit": "true",
+      "wait": "with-wineserver",
+      "ignoreLogging": "true",
+      "logWriters": "none",
+      "onOutput": "set",
+      "outcome": "exit-0"
+    }
+  },
+  {
+    "id": "wine-launch-pairwise-014",
+    "callSite": "runner.wine_command.launch",
+    "setup": {
+      "kind": "crossover",
+      "wineserver": true
+    },
+    "args": {
+      "commandParts": [
+        "<HOME>/Games/Game/game.exe",
+        "-flag"
+      ],
+      "wait": true,
+      "protonVerb": "waitforexitandrun",
+      "startFolder": "<HOME>/Games/Game",
+      "trackKey": "sideload-app",
+      "resolveOnExit": true,
+      "ignoreLogging": true
+    },
+    "writers": "claimed",
+    "onOutput": true,
+    "processEnv": {
+      "PROTON_LOG": "1"
+    },
+    "script": [
+      {
+        "throws": "ENOENT"
+      },
+      {
+        "program": "<WINESERVER>",
+        "code": 0
+      }
+    ],
+    "axes": {
+      "wineType": "crossover",
+      "wrappers": "none",
+      "trackKey": "set",
+      "resolveOnExit": "true",
+      "wait": "with-wineserver",
+      "ignoreLogging": "true",
+      "logWriters": "claimed",
+      "onOutput": "set",
+      "outcome": "throw"
+    }
+  },
+  {
+    "id": "wine-launch-pairwise-015",
+    "callSite": "runner.wine_command",
+    "setup": {
+      "kind": "toolkit"
+    },
+    "args": {
+      "commandParts": [
+        "<HOME>/Games/Game/game.exe",
+        "-flag"
+      ],
+      "startFolder": "<HOME>/Games/Game",
+      "installFolderName": "Game One",
+      "gameInstallPath": "<HOME>/Games/Game",
+      "resolveOnExit": true,
+      "ignoreLogging": true
+    },
+    "writers": "unclaimed",
+    "onOutput": true,
+    "processEnv": {
+      "PROTON_LOG": "1"
+    },
+    "script": [
+      {
+        "throws": "ENOENT"
+      }
+    ],
+    "axes": {
+      "wineType": "toolkit",
+      "wrappers": "none",
+      "trackKey": "installFolder",
+      "resolveOnExit": "true",
+      "wait": "no",
+      "ignoreLogging": "true",
+      "logWriters": "unclaimed",
+      "onOutput": "set",
+      "outcome": "throw"
+    }
+  },
+  {
+    "id": "wine-launch-pairwise-016",
+    "callSite": "runner.wine_command",
+    "setup": {
+      "kind": "proton-umu"
+    },
+    "args": {
+      "commandParts": [
+        "<HOME>/Games/Game/game.exe",
+        "-flag"
+      ],
+      "startFolder": "<HOME>/Games/Game",
+      "trackKey": "sideload-app",
+      "resolveOnExit": true,
+      "ignoreLogging": true
+    },
+    "writers": "claimed",
+    "onOutput": true,
+    "processEnv": {
+      "PROTON_LOG": "1"
+    },
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "out-1\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "err-1\n"
+          }
+        ],
+        "code": 1
+      }
+    ],
+    "axes": {
+      "wineType": "proton-umu",
+      "wrappers": "none",
+      "trackKey": "set",
+      "resolveOnExit": "true",
+      "wait": "no",
+      "ignoreLogging": "true",
+      "logWriters": "claimed",
+      "onOutput": "set",
+      "outcome": "exit-1"
+    }
+  },
+  {
+    "id": "wine-launch-pairwise-017",
+    "callSite": "runner.wine_command",
+    "setup": {
+      "kind": "proton"
+    },
+    "args": {
+      "commandParts": [
+        "<HOME>/Games/Game/game.exe",
+        "-flag"
+      ],
+      "startFolder": "<HOME>/Games/Game",
+      "resolveOnExit": true,
+      "ignoreLogging": true
+    },
+    "writers": "none",
+    "onOutput": true,
+    "processEnv": {
+      "PROTON_LOG": "1"
+    },
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "out-1\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "err-1\n"
+          }
+        ],
+        "code": 0
+      }
+    ],
+    "axes": {
+      "wineType": "proton",
+      "wrappers": "none",
+      "trackKey": "neither",
+      "resolveOnExit": "true",
+      "wait": "no",
+      "ignoreLogging": "true",
+      "logWriters": "none",
+      "onOutput": "set",
+      "outcome": "exit-0"
+    }
+  },
+  {
+    "id": "wine-launch-pairwise-018",
+    "callSite": "runner.wine_command",
+    "setup": {
+      "kind": "wine"
+    },
+    "args": {
+      "commandParts": [
+        "<HOME>/Games/Game/game.exe",
+        "-flag"
+      ],
+      "startFolder": "<HOME>/Games/Game",
+      "trackKey": "sideload-app",
+      "resolveOnExit": true,
+      "ignoreLogging": true
+    },
+    "writers": "none",
+    "onOutput": true,
+    "processEnv": {
+      "PROTON_LOG": "1"
+    },
+    "script": [
+      {
+        "throws": "ENOENT"
+      }
+    ],
+    "axes": {
+      "wineType": "wine",
+      "wrappers": "none",
+      "trackKey": "set",
+      "resolveOnExit": "true",
+      "wait": "no",
+      "ignoreLogging": "true",
+      "logWriters": "none",
+      "onOutput": "set",
+      "outcome": "throw"
+    }
+  },
+  {
+    "id": "wine-launch-pairwise-019",
+    "callSite": "runner.wine_command",
+    "setup": {
+      "kind": "crossover"
+    },
+    "args": {
+      "commandParts": [
+        "<HOME>/Games/Game/game.exe",
+        "-flag"
+      ],
+      "startFolder": "<HOME>/Games/Game",
+      "trackKey": "sideload-app",
+      "resolveOnExit": true,
+      "ignoreLogging": true
+    },
+    "writers": "unclaimed",
+    "onOutput": true,
+    "processEnv": {
+      "PROTON_LOG": "1"
+    },
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "out-1\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "err-1\n"
+          }
+        ],
+        "code": 0
+      }
+    ],
+    "axes": {
+      "wineType": "crossover",
+      "wrappers": "none",
+      "trackKey": "set",
+      "resolveOnExit": "true",
+      "wait": "no",
+      "ignoreLogging": "true",
+      "logWriters": "unclaimed",
+      "onOutput": "set",
+      "outcome": "exit-0"
+    }
+  }
+]
