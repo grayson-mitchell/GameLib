@@ -426,10 +426,15 @@ impl SpecRunner for CaseRunner {
                     ..SpecOutput::default()
                 };
             }
+            // The streamed run keeps no capture of its own (`max_buffer` 0); a plain run's output is
+            // what the chunks add up to.
+            let (mut stdout, mut stderr) = (String::new(), String::new());
             for chunk in &step.chunks {
                 let pipe = if chunk.stream == "stdout" {
+                    stdout.push_str(&chunk.text);
                     Pipe::Stdout
                 } else {
+                    stderr.push_str(&chunk.text);
                     Pipe::Stderr
                 };
                 on_chunk(pipe, &chunk.text);
@@ -440,6 +445,8 @@ impl SpecRunner for CaseRunner {
                     None => Some(0),
                     Some(code) => code,
                 },
+                stdout,
+                stderr,
                 ..SpecOutput::default()
             }
         })

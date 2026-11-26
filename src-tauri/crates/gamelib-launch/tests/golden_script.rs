@@ -26,7 +26,9 @@ use gamelib_log::frame::FrameTarget;
 use serde::Deserialize;
 use serde_json::{json, Value};
 
-/// The cases this file compares. A later edit may raise this, never lower it.
+/// The cases of `golden/script` this file compares. A later edit may raise this, never lower it.
+const SCRIPT_FLOOR: usize = 18;
+/// The tracer replays the one case it names.
 const TRACER_FLOOR: usize = 1;
 
 #[derive(Debug, Clone, Deserialize)]
@@ -283,4 +285,44 @@ fn the_tracer_script_replays_with_its_spawn_its_chunks_and_its_answer() {
         .collect();
     let n = compared(&tracer, TRACER_FLOOR).unwrap_or_else(|e| panic!("{e}"));
     println!("golden_script tracer compared {n} floor {TRACER_FLOOR}");
+}
+
+/// Every recorded case: before and after, verbose and quiet, exit 0, exit 2 and a spawn failure, the
+/// inherited-env case, the grandchild-holds-the-pipes case and a before-then-after session.
+#[test]
+fn every_script_golden_replays_through_the_op() {
+    let all = cases();
+    let manifest = read_json(&fixtures().join("golden/script/MANIFEST.json"));
+    assert_eq!(manifest["count"], json!(all.len()));
+    let n = compared(&all, SCRIPT_FLOOR).unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(n, all.len());
+    assert_eq!(all.len(), manifest["floor"].as_u64().unwrap() as usize);
+    println!("golden_script compared {n} floor {SCRIPT_FLOOR}");
+}
+
+/// A changed environment or a changed chunk fails the replay: the guard that the comparison compares.
+#[test]
+fn a_replay_with_a_changed_call_fails() {
+    let mut case = cases()
+        .into_iter()
+        .find(|c| c.id == "script-before-verbose-exit-0")
+        .expect("case");
+    case.process_env
+        .insert("EXTRA_FLAG".to_string(), "on".to_string());
+    assert!(replay(&case).is_err(), "an extra inherited variable");
+    let mut case = cases()
+        .into_iter()
+        .find(|c| c.id == "script-before-verbose-exit-0")
+        .expect("case");
+    case.calls[0].chunks = false;
+    assert!(replay(&case).is_err(), "a script that printed nothing");
+}
+
+/// `spawn-error-text` is named with a reason.
+#[test]
+fn the_deltas_file_names_the_spawn_error_text_delta() {
+    let deltas = read_json(&fixtures().join("golden/script/deltas.json"));
+    assert!(deltas["spawn-error-text"]
+        .as_str()
+        .is_some_and(|t| t.len() > 40));
 }

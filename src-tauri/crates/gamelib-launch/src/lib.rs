@@ -38,6 +38,7 @@ use runner::call_runner::{abort_run, call_runner, RunnerCallArgs, RunnerHost};
 use runner::script::{run_script_for_game, ScriptRunArgs};
 use runner::stream::{NullSink, OutputSink, UiOutputSink};
 use runner::wine_command::{launch_wine_command, LaunchWineCommandArgs};
+use runner::wine_path::{wine_path, WinePathArgs};
 use serde::Deserialize;
 use serde_json::Value;
 use std::future::Future;
@@ -69,6 +70,7 @@ pub const OPS: &[&str] = &[
     "launch_tracked_kill_all",
     "launch_verify_wine_prefix",
     "launch_wine_command",
+    "launch_wine_path",
 ];
 
 /// The ops that end a run. They are not cut short by the app shutdown: a quit-kill runs while the shutdown
@@ -81,7 +83,7 @@ const KILL_OPS: &[&str] = &[
 ];
 
 /// Runs `op` over `args`. `Err` is only an unknown op, bad arguments, a shutdown, a wrong thread or a
-/// panic (`<op>:panic`).
+/// panic (`<op>:panic`), and, for `launch_script_run`, the text of a script that could not be started.
 pub async fn dispatch(op: &str, args: &[Value], ctx: &LaunchCtx) -> Result<Value, String> {
     let Some(name) = OPS.iter().copied().find(|o| *o == op) else {
         return Err(format!("unknown op: {op}"));
@@ -270,6 +272,19 @@ async fn route(op: &str, args: &[Value], ctx: &LaunchCtx) -> Result<Value, Strin
                 _ => return Err(bad()),
             };
             run_script_for_game(ctx, call, &host).await.map(Value::Bool)
+        }
+        // `getWinePath` (88.2-13). Arguments `[args, host]`: the path, the game's settings and the variant
+        // (`WinePathArgs`) and the wine host facts the shell read (the process environment `winepath` inherits).
+        // Answers the translated path as text, `""` when `winepath` printed nothing (one fixed error line is
+        // logged, never the path). `winepath` runs as long as the wine command core lets it, so its shim lists
+        // the channel as unbounded (the app shutdown still ends it).
+        "launch_wine_path" => {
+            let [call @ Value::Object(_), host] = args else {
+                return Err(bad());
+            };
+            let call: WinePathArgs = serde_json::from_value(call.clone()).map_err(|_| bad())?;
+            let host = host_arg(host).ok_or_else(bad)?;
+            Ok(Value::String(wine_path(ctx, call, &host).await))
         }
         // Whether a game run is registered (D-07): the answer the quit check reads. Arguments `[]`.
         "launch_games_running" => {
@@ -735,8 +750,8 @@ mod tests {
     }
 
     #[test]
-    fn the_twenty_launch_ops_are_in_the_table() {
-        assert_eq!(OPS.len(), 20);
+    fn the_twenty_one_launch_ops_are_in_the_table() {
+        assert_eq!(OPS.len(), 21);
         assert!(OPS.iter().all(|op| op.starts_with("launch_")));
     }
 

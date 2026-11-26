@@ -1,6 +1,6 @@
 //! The command runner's helper path (88.2-07, D-02, D-21): `callRunner` ported from `commandRunner.ts`.
 //! [`redact`] is the credential redaction, [`sanitize`] the named auth log sanitizers, [`stream`] the log hand-off, the sinks and the chunk window,
-//! [`call_runner`] the run itself, [`wine_command`] the wine launch variant (88.2-12), [`script`] the pre and post launch scripts (88.2-13), [`error_handler`] the runner's `errorHandler` and `askForceUninstall`, and this file holds the state a context keeps across calls: the
+//! [`call_runner`] the run itself, [`wine_command`] the wine launch variant (88.2-12), [`script`] the pre and post launch scripts and [`wine_path`] `getWinePath` (88.2-13), [`error_handler`] the runner's `errorHandler` and `askForceUninstall`, and this file holds the state a context keeps across calls: the
 //! in-flight table, the abort table and the PowerShell probe ([`RunnerTables`]), and the seam the
 //! runner's `errorHandler` is reached through ([`RunnerErrors`]).
 
@@ -11,6 +11,7 @@ pub mod sanitize;
 pub mod script;
 pub mod stream;
 pub mod wine_command;
+pub mod wine_path;
 
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
