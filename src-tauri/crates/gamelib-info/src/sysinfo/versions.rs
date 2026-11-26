@@ -492,7 +492,8 @@ mod tests {
     #[test]
     fn the_arch_binary_falls_back_to_x64_and_a_stale_flat_layout_or_a_missing_one_is_an_error() {
         let public = Path::new("/app/public");
-        let only_x64 = |p: &Path| p.to_string_lossy().contains("/x64/");
+        // By component, not by text: a joined path carries backslashes on Windows.
+        let only_x64 = |p: &Path| p.components().any(|c| c.as_os_str() == "x64");
         assert_eq!(
             resolve_runner_bin("nile", None, public, Platform::Linux, "arm64", &only_x64),
             Ok(PathBuf::from("/app/public/bin/x64/linux/nile"))

@@ -688,7 +688,7 @@ mod tests {
             "winePrefix": home.root().join("never-made").to_string_lossy(),
         });
         assert_eq!(
-            verify_wine_prefix_over(None, &[crossover.clone()], host),
+            verify_wine_prefix_over(None, std::slice::from_ref(&crossover), host),
             Err("launch_verify_wine_prefix:not-ready".to_string())
         );
         // A crossover bottle has no prefix of its own: nothing spawns and nothing is created.
