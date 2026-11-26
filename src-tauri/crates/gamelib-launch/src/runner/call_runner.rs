@@ -264,7 +264,7 @@ fn powershell_on_path(path: &str) -> bool {
 
 /// The PowerShell form of a command: `-NoProfile Start-Process "<runner>" -Wait -NoNewWindow
 /// -ArgumentList <parts>`, each part's backslashes doubled and wrapped as `"`part`"`.
-fn powershell_command(full_runner_path: &str, parts: &[String]) -> Vec<String> {
+pub fn powershell_command(full_runner_path: &str, parts: &[String]) -> Vec<String> {
     let arguments = parts
         .iter()
         .map(|part| part.replace('\\', "\\\\"))
@@ -283,6 +283,16 @@ fn powershell_command(full_runner_path: &str, parts: &[String]) -> Vec<String> {
         command.push(arguments);
     }
     command
+}
+
+/// What Node's `spawn` throws for a batch file started without a shell (an errno exception: the syscall and the
+/// code, no file name).
+pub const BATCH_REFUSAL: &str = "spawn EINVAL";
+
+/// Whether `program` names a batch file (`.bat` or `.cmd`, in any case), the way Node's spawn check reads it.
+pub fn is_batch_file(program: &str) -> bool {
+    let lower = program.to_ascii_lowercase();
+    lower.ends_with(".bat") || lower.ends_with(".cmd")
 }
 
 /// The name Node reports for a signal number (Linux numbering, which macOS shares for the ones that
@@ -798,6 +808,15 @@ pub async fn call_runner(
         stdout: Arc::new(Mutex::new(ChunkWindow::new())),
         stderr: Arc::new(Mutex::new(ChunkWindow::new())),
     };
+
+    // Node 18.20.2 and later (the project needs 22) refuses to start a batch file without a shell: `spawn` throws
+    // `spawn EINVAL` (an errno exception, which names no file), inside the TS runner's promise, so the call fails
+    // with that text. Rust's std would run the file through cmd.exe, whose argument rules are an injection surface
+    // of their own (T-88.2-20). The direct path copies Node, so the outcome is the same on both runtimes.
+    // `Start-Process` (the PowerShell form) does run a batch file, so that form is unchanged.
+    if windows && !use_powershell && is_batch_file(&run.program) {
+        return run.classify_failure(BATCH_REFUSAL, false);
+    }
 
     // A game is the user's process: it never joins another run (single flight is the TS's until 88.3), is
     // registered in the tracked registry rather than the helper tables, and is tailed in this call.

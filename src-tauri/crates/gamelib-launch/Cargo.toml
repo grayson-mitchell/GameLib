@@ -34,15 +34,27 @@ serde_json = "1"
 # A workspace crate already in the lockfile, behind the `harness` feature so no shipped build carries it.
 gamelib-store = { path = "../gamelib-store", optional = true }
 
+# The command-line echo stub (`GetCommandLineW`) behind tests/windows_quoting.rs (88.2-14). windows-sys 0.61.2 is
+# already locked for gamelib-proc, steamfiles, steampoll, depot and info, and `Win32_System_Environment` is a
+# feature of that crate, so no new crate enters the tree. Optional, behind `harness`: no shipped build carries it.
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_System_Environment"], optional = true }
+
 [features]
 # Test seams: the known-fix crate's (and through it the engine's and wine's) scripted fakes.
 testing = ["gamelib-knownfix/testing"]
-# The stub-game binary behind tests/stub_game.rs. Never part of a shipped build.
-harness = ["testing", "dep:gamelib-store"]
+# The stub-game and command-line-echo binaries behind tests/stub_game.rs and tests/windows_quoting.rs. Never part
+# of a shipped build.
+harness = ["testing", "dep:gamelib-store", "dep:windows-sys"]
 
 [[bin]]
 name = "gamelib-launch-stub-game"
 path = "src/bin/stub_game.rs"
+required-features = ["harness"]
+
+[[bin]]
+name = "gamelib-launch-cmdline-echo"
+path = "src/bin/cmdline_echo.rs"
 required-features = ["harness"]
 
 [dev-dependencies]
