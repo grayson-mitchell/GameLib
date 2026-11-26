@@ -140,12 +140,18 @@ mod tests {
     }
 
     #[test]
-    fn a_wine_installation_rejects_unknown_fields_and_types() {
-        let ok = serde_json::json!({"bin": "/b", "name": "n", "type": "wine", "wineserver": "/s"});
-        assert!(serde_json::from_value::<WineInstallation>(ok).is_ok());
-        let extra = serde_json::json!({"bin": "/b", "name": "n", "type": "wine", "x": 1});
-        assert!(serde_json::from_value::<WineInstallation>(extra).is_err());
+    fn a_wine_installation_drops_an_unknown_key_and_rejects_an_unknown_type() {
+        let extra = serde_json::json!({
+            "bin": "/b", "name": "n", "type": "wine", "wineserver": "/s", "legacy": 1
+        });
+        let wine: WineInstallation = serde_json::from_value(extra).unwrap();
+        assert_eq!(
+            serde_json::to_value(&wine).unwrap(),
+            serde_json::json!({"bin": "/b", "name": "n", "type": "wine", "wineserver": "/s"})
+        );
         let kind = serde_json::json!({"bin": "/b", "name": "n", "type": "lutris"});
         assert!(serde_json::from_value::<WineInstallation>(kind).is_err());
+        let no_bin = serde_json::json!({"name": "n", "type": "wine"});
+        assert!(serde_json::from_value::<WineInstallation>(no_bin).is_err());
     }
 }

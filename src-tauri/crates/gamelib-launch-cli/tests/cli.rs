@@ -131,6 +131,23 @@ fn the_wine_env_op_still_needs_a_wine() {
 }
 
 #[test]
+fn the_wine_env_op_ignores_a_legacy_key() {
+    // WR-01: a stored wine carrying a key no current code writes is decoded and the key dropped.
+    let out = run_op(
+        "launch_setup_wine_env_vars",
+        r#"[{"winePrefix":"/p","wineVersion":{"bin":"/x","name":"w","type":"wine","legacy":1}},null,null]"#,
+    );
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let answer: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert_eq!(answer["WINEPREFIX"], "/p");
+}
+
+#[test]
 fn an_unknown_op_exits_two_over_a_fake_home() {
     let home = FakeHome::new("launch-cli-");
     let out = cli()

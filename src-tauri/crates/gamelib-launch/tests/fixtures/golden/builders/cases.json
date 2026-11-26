@@ -1380,5 +1380,28 @@
       "settings": {},
       "installPath": null
     }
+  },
+  {
+    "id": "wine-env-legacy-key-in-wine-version",
+    "platform": "linux",
+    "recordedAt": "51329e5d648b308756ec03220b970dbe1edb3361",
+    "call": {
+      "op": "wineEnv",
+      "settings": {
+        "wineVersion": {
+          "type": "wine",
+          "bin": "/pins/bin/wine",
+          "name": "Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)",
+          "wineserver": "/pins/bin/wineserver",
+          "lib": "/pins/lib",
+          "lib32": "/pins/lib32",
+          "legacy": 1
+        },
+        "winePrefix": "/pins/prefix",
+        "wineCrossoverBottle": "GameLibSteamBridge-1",
+        "enviromentOptions": [],
+        "preferSystemLibs": false
+      }
+    }
   }
 ]

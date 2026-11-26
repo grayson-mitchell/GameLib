@@ -510,6 +510,23 @@ mod tests {
     }
 
     #[test]
+    fn the_global_default_wine_keeps_a_wine_with_a_legacy_key() {
+        use crate::prepare::deps::PrepareDeps;
+        let home = FakeHome::new("launch-lib-");
+        std::fs::write(
+            home.root().join("config.json"),
+            r#"{"version":"v0","defaultSettings":{"wineVersion":{"type":"wine","name":"W","bin":"/x","legacy":1}}}"#,
+        )
+        .unwrap();
+        let ctx = ctx(&home);
+        let host = WineHost::default();
+        let wine = CtxPrepareDeps::new(&ctx, &host)
+            .global_default_wine()
+            .expect("a stored wine with a legacy key is still the global default");
+        assert_eq!(wine.bin, "/x");
+    }
+
+    #[test]
     fn the_eleven_launch_ops_are_in_the_table() {
         assert_eq!(OPS.len(), 11);
         assert!(OPS.iter().all(|op| op.starts_with("launch_")));
