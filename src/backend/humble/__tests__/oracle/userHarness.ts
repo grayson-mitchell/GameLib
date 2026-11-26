@@ -357,7 +357,7 @@ export async function runUserCase(options: UserCaseOptions): Promise<unknown> {
             throw error
           }
         }
-        const script = options.seam ?? {}
+        const { seam: script = {} } = options
         const seam: LoginWindowSeam = {
           open: (url, opts) =>
             call('open', [url, opts], () => {
