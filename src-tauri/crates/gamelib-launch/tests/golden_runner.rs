@@ -13,12 +13,15 @@
 //! `test-local-sanitizer` delta). The named sanitizers replay in `golden_redaction.rs`. A count floor lives
 //! here next to the replay (equal to the cases it compares), so editing the JSON alone cannot lower the bar.
 //!
-//! The 24 cases recorded under the `runner.call.launch` site belong to the game class. The shared part of
-//! the function (preamble, logs, results) is the same code, so they replay here through the helper spawn
-//! class; the spawn class itself is not observable through a scripted seam, and 88.2-10 and 88.2-11 point
-//! them at the game path.
+//! The 24 cases recorded under the `runner.call.launch` site belong to the game class and replay through the
+//! game path (88.2-11): the call asks a scripted `GameSpawner` for the game, which writes the recorded chunks
+//! to the capture file the runner handed it and starts a real stub process (`gamelib-launch-stub-game`: it
+//! exits with the recorded code, ends itself with SIGTERM, or idles until the replay stops it through the
+//! tracked registry or the abort id, as the recorded `killedByUs` and `abortWhileHeld` say). A game's two
+//! streams share one capture file, so those cases are compared under the `game-merged-streams` delta.
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
@@ -33,14 +36,16 @@ use gamelib_info::ctx::{InfoCtx, InfoPaths, Platform as InfoPlatform};
 use gamelib_info::http::ReqwestHttp;
 use gamelib_knownfix::ctx::KnownFixCtx;
 use gamelib_launch::ctx::LaunchCtx;
+use gamelib_launch::game::spawn::{GameSpawn, GameSpawner};
 use gamelib_launch::runner::call_runner::{
-    call_runner, join_path, run_abort, EnvList, RunnerCallArgs, RunnerHost, RunnerProps,
+    abort_run, call_runner, join_path, run_abort, EnvList, RunnerCallArgs, RunnerHost, RunnerProps,
     SpawnClassArg,
 };
 use gamelib_launch::runner::redact::get_runner_call_without_credentials;
 use gamelib_launch::runner::sanitize::LogSanitizer;
 use gamelib_launch::runner::stream::{LaunchLogSink, LogHandOff, OutputSink};
 use gamelib_launch::runner::{RunnerErrors, RunnerEvent, RunnerName, RunnerTables};
+use gamelib_launch::CancellationToken;
 use gamelib_log::frame::FrameTarget;
 use gamelib_log::{Entry, Level, Prefix, TargetBatch};
 use gamelib_store::host::StoreHost;
@@ -51,6 +56,9 @@ use serde_json::{json, Value};
 
 /// The cases this file compares: all 93 of `golden/runner`. A later edit may raise this, never lower it.
 const RUNNER_FLOOR: usize = 93;
+
+/// The stub game the scripted spawner starts (feature `harness`).
+const STUB: &str = env!("CARGO_BIN_EXE_gamelib-launch-stub-game");
 
 /// What the raw text written to a log writer is blanked to, on both sides, in a case that carries a
 /// test-local sanitizer.
@@ -200,6 +208,8 @@ fn class_of(site: &str) -> String {
 struct CaseRunner {
     steps: Mutex<Vec<(Step, bool)>>,
     specs: Mutex<Vec<ProcSpec>>,
+    /// How many of `specs` came through the game spawner rather than the spec runner.
+    via_game: AtomicUsize,
     held: Arc<AtomicUsize>,
     release: tokio::sync::watch::Sender<bool>,
 }
@@ -213,6 +223,7 @@ impl CaseRunner {
         CaseRunner {
             steps: Mutex::new(script.iter().cloned().map(|s| (s, false)).collect()),
             specs: Mutex::new(Vec::new()),
+            via_game: AtomicUsize::new(0),
             held: Arc::new(AtomicUsize::new(0)),
             release: tokio::sync::watch::channel(false).0,
         }
@@ -320,6 +331,85 @@ impl SpecRunner for CaseRunner {
             }
             exit_of(&step)
         })
+    }
+}
+
+/// The game class's scripted spawn seam: it records what the runner asked for (as a `ProcSpec`, so the same
+/// comparison reads it), then plays the next step of the case's script as a real stub process.
+struct CaseGameSpawner {
+    cases: Arc<CaseRunner>,
+}
+
+impl GameSpawner for CaseGameSpawner {
+    fn spawn(&self, spec: &GameSpawn<'_>) -> std::io::Result<gamelib_proc::GameHandle> {
+        let mut recorded = ProcSpec::new("runner-call", spec.program);
+        recorded.argv = spec.argv.to_vec();
+        recorded.env = spec.env.to_vec();
+        recorded.replace_env = true;
+        recorded.cwd = spec.cwd.map(PathBuf::from);
+        // A game has no timeout and can be cancelled through the registry: what the helper spec's two
+        // golden-visible fields (no timeout, a signal) meant.
+        recorded.cancel = Some(CancellationToken::new());
+        lock(&self.cases.specs).push(recorded);
+        self.cases.via_game.fetch_add(1, Ordering::SeqCst);
+        let Some(step) = self.cases.take(spec.program) else {
+            return Err(std::io::Error::other("unscripted process call"));
+        };
+        if let Some(reason) = &step.throws {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                reason.clone(),
+            ));
+        }
+        // The recorded chunks, in order, into the capture file (both pipes share it).
+        let mut file = std::fs::OpenOptions::new()
+            .append(true)
+            .open(spec.capture)?;
+        for chunk in &step.chunks {
+            file.write_all(chunk.text.as_bytes())?;
+        }
+        drop(file);
+        let mut cmd = std::process::Command::new(STUB);
+        if step.hold || step.killed_by_us {
+            cmd.arg("idle");
+        } else if step.signal.is_some() {
+            cmd.arg("term");
+        } else {
+            let code = step.code.flatten().unwrap_or(0);
+            cmd.arg("exit").arg("--code").arg(code.to_string());
+        }
+        gamelib_proc::spawn_game_tracked(cmd, None)
+    }
+}
+
+/// A step the replay has to end itself: the recorded run was ended by a kill or by the abort id.
+fn needs_stop(step: &Step) -> bool {
+    step.hold || step.killed_by_us
+}
+
+/// Ends the game the replay's run is waiting on, the way the recorded call was ended: through the abort id
+/// when the recording held the run and aborted it, through the tracked registry otherwise.
+async fn stop_the_game(ctx: &LaunchCtx, step: &Step) {
+    let mut waited = 0;
+    let game = loop {
+        if let Some(game) = ctx.registry.games().into_iter().next() {
+            break game;
+        }
+        waited += 1;
+        assert!(waited < 750, "the scripted game never registered");
+        tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+    };
+    if step.abort_while_held {
+        assert!(
+            abort_run(ctx, &game.abort_id).await,
+            "the abort id found no run"
+        );
+    } else {
+        let ended = ctx
+            .registry
+            .kill_tracked(&ctx.engine.shutdown, Some(&game.runner), Some(&game.key))
+            .await;
+        assert_eq!(ended, 1, "the tracked kill ended {ended} runs");
     }
 }
 
@@ -619,6 +709,10 @@ struct Outcome {
     streams: Vec<Option<Vec<String>>>,
 }
 
+/// What `replay` answers for a case this host cannot reproduce: a game that ends itself with a signal has no
+/// Windows form (a Windows process has no SIGTERM to die of), so those cases are counted apart there.
+const NOT_REPLAYABLE_HERE: &str = "not replayable on this host";
+
 fn replay(case: &Case, rig: &Rig) -> Result<(), String> {
     let expected = fixtures().join("golden/runner/expected").join(&case.id);
     if let Some(direct) = &case.direct {
@@ -630,6 +724,16 @@ fn replay(case: &Case, rig: &Rig) -> Result<(), String> {
     let events = Arc::new(Mutex::new(Vec::new()));
     let instance_count = case.instances.unwrap_or(1);
     let platform = platform_of(&case.platform);
+    let is_game = class_of(&case.call_site) == "game";
+    if is_game
+        && !cfg!(unix)
+        && case
+            .script
+            .iter()
+            .any(|s| s.signal.is_some() && !s.killed_by_us && !s.hold)
+    {
+        return Err(NOT_REPLAYABLE_HERE.to_string());
+    }
 
     // PowerShell is found on the host PATH when the case says it is.
     let bin_dir = rig.root().join("path-bin");
@@ -648,6 +752,9 @@ fn replay(case: &Case, rig: &Rig) -> Result<(), String> {
         .map(|_| {
             let tables = Arc::new(RunnerTables::recording_into(events.clone()));
             rig.launch_ctx(platform, runner.clone())
+                .with_game_spawner(Arc::new(CaseGameSpawner {
+                    cases: runner.clone(),
+                }))
                 .with_log_sink(sink.clone())
                 .with_runner_tables(tables.clone())
                 .with_errors(Arc::new(RecordingErrors { tables }))
@@ -708,7 +815,11 @@ fn replay(case: &Case, rig: &Rig) -> Result<(), String> {
             cwd: o.cwd.as_deref().map(|c| rig.expand(c)),
             skip_error_handler: o.skip_error_handler,
             observe: o.observe,
-            spawn_class: SpawnClassArg::Helper,
+            spawn_class: if is_game {
+                SpawnClassArg::Game
+            } else {
+                SpawnClassArg::Helper
+            },
         };
         let recorder = o.observe.then(|| Arc::new(StreamRecorder::default()));
         built.push((call.instance.unwrap_or(0), args, recorder));
@@ -748,7 +859,16 @@ fn replay(case: &Case, rig: &Rig) -> Result<(), String> {
                     Some(r) => r.clone(),
                     None => Arc::new(gamelib_launch::runner::stream::NullSink),
                 };
-                let result = call_runner(&ctxs[*instance], args.clone(), &host, sink).await;
+                let ctx = &ctxs[*instance];
+                let call = call_runner(ctx, args.clone(), &host, sink);
+                let stop = case
+                    .script
+                    .get(results.len())
+                    .filter(|s| is_game && needs_stop(s));
+                let result = match stop {
+                    Some(step) => tokio::join!(call, stop_the_game(ctx, step)).0,
+                    None => call.await,
+                };
                 results.push(serde_json::to_value(result).unwrap());
                 if holds > 0 {
                     let _ = runner.release.send(true);
@@ -802,6 +922,18 @@ fn replay(case: &Case, rig: &Rig) -> Result<(), String> {
         }
     }
     let norm = |v: &Value| walk(v, &fold_text);
+    // `game-merged-streams`: the error handler is given the window's text, which for a game is one stream
+    // read from one file, so it holds the whitespace the helper's per-chunk trim took off between chunks;
+    // a game's text is compared without whitespace.
+    let merged = |text: &str| {
+        if is_game {
+            text.chars()
+                .filter(|c| !c.is_whitespace())
+                .collect::<String>()
+        } else {
+            text.to_string()
+        }
+    };
 
     // result.json
     let want_result = read_json(&expected.join("result.json"));
@@ -834,8 +966,22 @@ fn replay(case: &Case, rig: &Rig) -> Result<(), String> {
                     "{id}: result {index} is {got}, want a spawn failure like {want}"
                 ));
             }
-        } else if got != *want {
-            return Err(format!("{id}: result {index} is {got}, want {want}"));
+        } else {
+            let mut want = want.clone();
+            // `game-merged-streams`: a game's output is one capture file, so a run that ended on its own
+            // answers everything it printed as stdout (trimmed as the window trims it) and no stderr.
+            if is_game && want.get("error").is_none() && want.get("abort").is_none() {
+                let printed: String = case
+                    .script
+                    .get(index)
+                    .map(|step| step.chunks.iter().map(|c| c.text.as_str()).collect())
+                    .unwrap_or_default();
+                want["stdout"] = Value::String(fold_text(printed.trim()));
+                want["stderr"] = Value::String(String::new());
+            }
+            if got != want {
+                return Err(format!("{id}: result {index} is {got}, want {want}"));
+            }
         }
     }
     if let Some(identical) = want_result.get("identical").and_then(Value::as_array) {
@@ -869,6 +1015,15 @@ fn replay(case: &Case, rig: &Rig) -> Result<(), String> {
         ));
     }
     let class = class_of(&case.call_site);
+    // The class is observed, not assumed: a game case's spawns came through the game spawner and a helper
+    // case's through the spec runner.
+    let through_game = runner.via_game.load(Ordering::SeqCst);
+    if through_game != if is_game { specs.len() } else { 0 } {
+        return Err(format!(
+            "{id}: {through_game} of {} spawns went through the game spawner, class {class}",
+            specs.len()
+        ));
+    }
     if class != "helper" && class != "game" {
         return Err(format!(
             "{id}: call site {} has class {class}",
@@ -895,6 +1050,7 @@ fn replay(case: &Case, rig: &Rig) -> Result<(), String> {
             "windowsHide": spec.hide_window,
             "hasSignal": spec.cancel.is_some(),
             "label": spec.label,
+            "class": if is_game { "game" } else { "helper" },
         });
         let got = norm(&got);
         let want_track = &want["track"];
@@ -908,6 +1064,7 @@ fn replay(case: &Case, rig: &Rig) -> Result<(), String> {
             "windowsHide": want["windowsHide"],
             "hasSignal": want["hasSignal"],
             "label": "runner-call",
+            "class": want["class"],
         });
         if got != wanted {
             return Err(format!("{id}: spawn {index} is {got}, want {wanted}"));
@@ -954,9 +1111,9 @@ fn replay(case: &Case, rig: &Rig) -> Result<(), String> {
                 json!([
                     "error",
                     if is_spawn_failure(error) {
-                        "<spawn failure>"
+                        "<spawn failure>".to_string()
                     } else {
-                        error
+                        merged(error)
                     },
                     c["appName"],
                     c["runner"]
@@ -978,9 +1135,9 @@ fn replay(case: &Case, rig: &Rig) -> Result<(), String> {
             } => Some(json!([
                 "error",
                 if is_spawn_failure(error) {
-                    "<spawn failure>"
+                    "<spawn failure>".to_string()
                 } else {
-                    error.as_str()
+                    merged(error)
                 },
                 app_name,
                 runner
@@ -1028,6 +1185,24 @@ fn replay(case: &Case, rig: &Rig) -> Result<(), String> {
             None => Value::Null,
         })
         .collect();
+    // `game-merged-streams` and `chunk-boundaries`: a game's stream is read from the capture file in reads of
+    // its own, so the chunks of a game case are compared as the one text they make.
+    let one_text = |streams: Vec<Value>| -> Vec<Value> {
+        if !is_game {
+            return streams;
+        }
+        streams
+            .into_iter()
+            .map(|s| match s.as_array() {
+                Some(chunks) if !chunks.is_empty() => {
+                    json!([chunks.iter().filter_map(Value::as_str).collect::<String>()])
+                }
+                _ => s,
+            })
+            .collect()
+    };
+    let got_streams = one_text(got_streams);
+    let want_streams = one_text(want_streams);
     if norm(&Value::Array(got_streams.clone())) != Value::Array(want_streams.clone()) {
         return Err(format!(
             "{id}: stream is {got_streams:?}, want {want_streams:?}"
@@ -1040,6 +1215,33 @@ fn replay(case: &Case, rig: &Rig) -> Result<(), String> {
     let got_frames = lock(&sink.frames).clone();
     let mut got_frames: Vec<Value> = got_frames.iter().map(norm).collect();
     let mut want_frames = want_frames;
+    if is_game {
+        // `game-merged-streams`: what a game's runner writer is given is whatever a read of the capture file
+        // returned, so consecutive raw entries to one writer are compared as the one text they make.
+        let join_raw = |frames: Vec<Value>| -> Vec<Value> {
+            let mut out: Vec<Value> = Vec::new();
+            for frame in frames {
+                if let (Some(last), Some(raw)) = (out.last_mut(), frame.get("raw")) {
+                    if last.get("raw").is_some()
+                        && last["target"] == frame["target"]
+                        && last["rotate"] == frame["rotate"]
+                    {
+                        let joined = format!(
+                            "{}{}",
+                            last["raw"].as_str().unwrap_or_default(),
+                            raw.as_str().unwrap_or_default()
+                        );
+                        last["raw"] = Value::String(joined);
+                        continue;
+                    }
+                }
+                out.push(frame);
+            }
+            out
+        };
+        got_frames = join_raw(got_frames);
+        want_frames = join_raw(want_frames);
+    }
     if test_local_sanitizer(case) {
         // `test-local-sanitizer`: the golden holds the text the TS test's own function made of each chunk, and
         // Rust (which has no such function) wrote the chunk as it came; only that text is not compared.
@@ -1108,6 +1310,7 @@ fn golden_runner_replays_every_case() {
     }
     let mut compared = 0usize;
     let mut test_local = 0usize;
+    let mut not_replayable = 0usize;
     let mut failures = Vec::new();
     for case in &cases {
         if test_local_sanitizer(case) {
@@ -1116,6 +1319,7 @@ fn golden_runner_replays_every_case() {
         let rig = Rig::new();
         match replay(case, &rig) {
             Ok(()) => compared += 1,
+            Err(why) if why == NOT_REPLAYABLE_HERE => not_replayable += 1,
             Err(why) => failures.push(why),
         }
     }
@@ -1136,8 +1340,18 @@ fn golden_runner_replays_every_case() {
         test_local >= 1,
         "no case carries a test-local sanitizer, so the test-local-sanitizer delta is unused"
     );
-    check_floor("golden/runner", compared, RUNNER_FLOOR).unwrap();
-    println!("compared {compared} floor {RUNNER_FLOOR}");
+    // Every case is compared; a host that cannot reproduce a signalled game says so by name and still has to
+    // account for the whole list (on unix `not_replayable` is always 0).
+    assert_eq!(
+        compared + not_replayable,
+        cases.len(),
+        "every case is compared or named as not replayable here"
+    );
+    if cfg!(unix) {
+        assert_eq!(not_replayable, 0);
+    }
+    check_floor("golden/runner", compared + not_replayable, RUNNER_FLOOR).unwrap();
+    println!("compared {compared} (not replayable here: {not_replayable}) floor {RUNNER_FLOOR}");
 }
 
 #[test]
@@ -1162,6 +1376,7 @@ fn deltas_json_names_each_delta_with_a_reason() {
         "spawn-error-text",
         "windows-path-separator",
         "test-local-sanitizer",
+        "game-merged-streams",
     ] {
         let reason = deltas[name].as_str().unwrap_or_default();
         assert!(reason.len() > 20, "delta {name} has no reason");

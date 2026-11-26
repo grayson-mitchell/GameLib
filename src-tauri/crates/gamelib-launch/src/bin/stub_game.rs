@@ -9,6 +9,8 @@
 //!   50 ms forever (the test that a game keeps writing after its parent is gone). Then it exits at
 //!   `--exit-after-ms` from its start, or idles.
 //! - `idle [--for-ms <ms>]`: does nothing, for `<ms>` milliseconds or forever.
+//! - `exit [--code <n>]`: exits at once with that code (0 when none). The golden replay's scripted game.
+//! - `term`: ends itself with SIGTERM (unix; elsewhere it exits 1). The golden replay's signalled game.
 //! - `shell --user-data <dir> --args <json>`: the stand-in shell. Builds a `LaunchCtx` over a `StoreHost` rooted
 //!   at `<dir>` the way `gamelib-launch-cli` does (no keyring, no real profile), runs `launch_runner_call`
 //!   with the JSON array `<json>`, prints the reply and exits.
@@ -38,9 +40,11 @@ fn main() {
     match args.first().map(String::as_str) {
         Some("idle") => idle(&args[1..]),
         Some("game") => game(&args[1..]),
+        Some("exit") => exit(number(&args[1..], "--code").unwrap_or(0) as i32),
+        Some("term") => term(),
         Some("shell") => shell(&args[1..]),
         _ => {
-            eprintln!("usage: gamelib-launch-stub-game <game|idle|shell> [flags]");
+            eprintln!("usage: gamelib-launch-stub-game <game|idle|exit|term|shell> [flags]");
             exit(2);
         }
     }
@@ -72,6 +76,24 @@ fn idle(args: &[String]) -> ! {
             std::thread::sleep(Duration::from_secs(1));
         },
     }
+}
+
+/// Ends this process with SIGTERM, which nothing here handles, so the status the parent reads is the signal.
+#[cfg(unix)]
+fn term() -> ! {
+    let _ = Command::new("kill")
+        .arg("-TERM")
+        .arg(std::process::id().to_string())
+        .status();
+    // The signal lands while this sleeps.
+    loop {
+        std::thread::sleep(Duration::from_secs(1));
+    }
+}
+
+#[cfg(not(unix))]
+fn term() -> ! {
+    exit(1)
 }
 
 fn game(args: &[String]) -> ! {
