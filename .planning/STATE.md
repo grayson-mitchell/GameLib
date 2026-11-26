@@ -2,14 +2,14 @@
 gsd_state_version: "1.0"
 milestone: v0.11
 milestone_name: Node Sidecar Retirement
-current_phase: "88.1"
-current_phase_name: Launch builders and prepare steps
+current_phase: "88.2"
+current_phase_name: Command runner and game processes
 status: executing
-stopped_at: Completed 88.1-23-PLAN.md
-last_updated: "2026-11-26T10:52:44.108Z"
+stopped_at: Completed 88.2-01-PLAN.md
+last_updated: "2026-11-26T11:07:46.861Z"
 last_activity: 2026-11-26
-last_activity_desc: Phase 88.1 execution started
-state_head: 02269203f8cca21ce695876f0665d92badf5c213
+last_activity_desc: Phase 88.2 execution started
+state_head: f7a807279c14dcee18a9b6fc02689b5569efc072
 progress:
   total_phases: 25
   completed_phases: 23
@@ -25,7 +25,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-25)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 88.1 — Launch builders and prepare steps
+**Current focus:** Phase 88.2 — Command runner and game processes
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -76,10 +76,10 @@ See: .planning/PROJECT.md (updated 2026-11-25)
 
 ## Current Position
 
-Phase: 88.1 (Launch builders and prepare steps) — EXECUTING
-Plan: 24 of 24
+Phase: 88.2 (Command runner and game processes) — EXECUTING
+Plan: 2 of 25
 Status: Ready to execute
-Last activity: 2026-11-26 — Phase 88.1 execution started
+Last activity: 2026-11-26 — Phase 88.2 execution started
 Progress: [████████████████░░░░] 204/257 plans ([█████████░] 92%)
 
 ## Native-Install Arc Phase Map (21–25)
@@ -547,6 +547,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 88.1 P21 | 24 min | 2 tasks | 14 files |
 | Phase 88.1 P22 | 55 min | 2 tasks | 58 files |
 | Phase 88.1 P23 | 10 min | 2 tasks | 7 files |
+| Phase 88.2 P01 | 35 min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -1231,6 +1232,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 88.1]: 88.1-21: setupEnvVars reads only nvidiaPrime/showFps/enviromentOptions through SetupEnvView (no wine); Option<WineInstallation> on GameSettingsView rejected because ~22 .wine_version reads and the decode-failure-as-signal sites would silently accept wine-less settings
 - [Phase 88.1]: [88.1-22] WineInstallation drops unknown keys on decode (WR-01); strictness stays at the shell's parse_wine_installation; the crate wine_valid op now accepts a legacy key
 - [Phase 88.1]: 88.1-23: the operator's 2026-11-26 pairwise-narrowing acceptance is an overrides entry on truth 2 in 88.1-VERIFICATION.md; status, score and overrides_applied are left for re-verification
+- [Phase 88.2]: 88.2-01: runnerTrace carries its own scripted runner; createSpawnTracer cannot script a signal, killedByUs or a held run and records only an env diff
+- [Phase 88.2]: 88.2-01: golden/runner holds 93 TS-recorded callRunner cases (floor 93); the census-gate source-scan titles are pinned as cases carrying the eight-flag list; two minor D-20 todos filed (chunk trim drops a boundary space, nile app name read before empty args dropped)
 
 ### Pending Todos
 
@@ -1517,8 +1520,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-26T10:52:40.926Z
-Stopped at: Completed 88.1-23-PLAN.md
+Last session: 2026-11-26T11:07:43.589Z
+Stopped at: Completed 88.2-01-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
