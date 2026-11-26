@@ -33,7 +33,7 @@ pub struct FrameBatch {
 
 /// One flat struct for every target kind. The closed-set fields are read as strings and checked
 /// explicitly, so each failure maps to its own category.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct FrameTarget {
     pub kind: String,
@@ -92,7 +92,8 @@ fn utf16_len(s: &str) -> usize {
     s.encode_utf16().count()
 }
 
-fn target_of(t: FrameTarget) -> Result<LogTarget, FrameReject> {
+/// The typed target a frame names, validated as `parse_frame` does (a bad one is a `FrameReject`).
+pub fn target_of(t: FrameTarget) -> Result<LogTarget, FrameReject> {
     let none_of = |fields: &[&Option<String>]| {
         if fields.iter().any(|f| f.is_some()) {
             Err(FrameReject::Shape)

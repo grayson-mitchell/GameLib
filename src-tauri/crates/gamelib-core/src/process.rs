@@ -33,6 +33,10 @@ pub trait ProcessRunner: Send + Sync + 'static {
 /// stderr rarely need more than a tail, and MoltenVK once wrote 3.37 GB, spike 059).
 pub const DEFAULT_MAX_BUFFER: usize = 1024 * 1024;
 
+/// Default size of one pipe read of a [`ProcSpec`] run: 8 KiB. A raw-chunk run hands the reader's
+/// slices to its sink, so this is also the largest chunk the sink sees.
+pub const DEFAULT_READ_CHUNK: usize = 8 * 1024;
+
 /// Everything one engine or wine helper spawn needs that [`ProcessRunner::run`] cannot say: an
 /// environment (added to, or replacing, the inherited one), a working directory, stdin text, an
 /// output cap, a cancellation token and a stable label for the child registry (D-17).
@@ -60,6 +64,10 @@ pub struct ProcSpec {
     /// spawns (a GUI process that runs PowerShell or `reg.exe` would otherwise flash a console for
     /// each one; Phase 94, Pitfall 12). Ignored on unix. `false` for every spec that does not ask.
     pub hide_window: bool,
+    /// The most bytes one pipe read takes, so the largest raw chunk a [`SpecRunner::run_streamed`]
+    /// sink sees. [`DEFAULT_READ_CHUNK`] unless a spec asks for more: the command runner reads in
+    /// 64 KiB slices, as Node's pipes hand them over (88.2-07, Pitfall 6).
+    pub read_chunk: usize,
 }
 
 impl ProcSpec {
@@ -78,6 +86,7 @@ impl ProcSpec {
             cancel: None,
             label,
             hide_window: false,
+            read_chunk: DEFAULT_READ_CHUNK,
         }
     }
 }
@@ -112,6 +121,9 @@ pub struct SpecOutput {
     pub cancelled: bool,
     /// Either stream produced more than `max_buffer` bytes.
     pub truncated: bool,
+    /// The signal number that ended the child (unix), when one did and the run was not cancelled or
+    /// timed out by GameLib. `code` is `None` then too.
+    pub signal: Option<i32>,
 }
 
 /// The one spawn seam of the engine and wine domain crates (D-17). Implemented only by

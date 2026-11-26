@@ -55,7 +55,7 @@ pub fn format_line(
 
 /// Exactly the characters JS `String.prototype.trim` strips: WhiteSpace plus LineTerminator. U+0085
 /// is not among them (it is whitespace to Rust's `char::is_whitespace`, not to JS).
-fn is_js_space(c: char) -> bool {
+pub fn is_js_space(c: char) -> bool {
     matches!(
         c,
         '\u{0009}'

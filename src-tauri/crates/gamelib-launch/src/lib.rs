@@ -14,6 +14,7 @@
 pub mod builders;
 pub mod ctx;
 pub mod prepare;
+pub mod runner;
 
 /// The cancel token a long op takes, re-exported so the shell, which owns the renderer's cancel, needs
 /// no `tokio-util` of its own.
@@ -31,12 +32,14 @@ use prepare::epic;
 use prepare::launch::{PrepareHost, PrepareLaunchArgs};
 use prepare::wine_begin::PrepareWineBeginArgs;
 use prepare::wine_finish::PrepareWineFinishArgs;
+use runner::call_runner::{call_runner, RunnerCallArgs, RunnerHost, SpawnClassArg};
+use runner::stream::{NullSink, OutputSink, UiOutputSink};
 use serde::Deserialize;
 use serde_json::Value;
 use std::future::Future;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::pin::Pin;
-use std::sync::OnceLock;
+use std::sync::{Arc, OnceLock};
 use std::task::{Context, Poll};
 use tokio::runtime::{Builder, Handle, Runtime};
 
@@ -48,6 +51,7 @@ pub const OPS: &[&str] = &[
     "launch_prepare",
     "launch_prepare_wine_begin",
     "launch_prepare_wine_finish",
+    "launch_runner_call",
     "launch_setup_env_vars",
     "launch_setup_wine_env_vars",
     "launch_setup_wrapper_env_vars",
@@ -154,6 +158,31 @@ async fn route(op: &str, args: &[Value], ctx: &LaunchCtx) -> Result<Value, Strin
                 .await
                 .map_err(|reason| format!("{op}:{reason}"))?;
             result_of(serde_json::to_value(reply))
+        }
+        // `callRunner`, helper class (88.2-07). Arguments `[args, host]`: the call (`RunnerCallArgs`) and the
+        // process facts the shell read (`RunnerHost`: the environment the child inherits and the `PATH`).
+        // Answers the `ExecResult`; a spawn failure, a signal or a non-zero exit is its `error`, a cancel its
+        // `abort`. A run has no timeout, so its shim lists the channel as unbounded (the abort id and the app
+        // shutdown still end it). A caller that watches the stream gets `runnerOutput` frames.
+        "launch_runner_call" => {
+            let [call @ Value::Object(_), host] = args else {
+                return Err(bad());
+            };
+            let call: RunnerCallArgs = serde_json::from_value(call.clone()).map_err(|_| bad())?;
+            let host: RunnerHost = match host {
+                Value::Null => RunnerHost::default(),
+                Value::Object(_) => serde_json::from_value(host.clone()).map_err(|_| bad())?,
+                _ => return Err(bad()),
+            };
+            if call.spawn_class == SpawnClassArg::Game {
+                return Err(format!("{op}:game-class-not-ported"));
+            }
+            let sink: Arc<dyn OutputSink> = match (&ctx.engine.ui, call.observe) {
+                (Some(ui), true) => Arc::new(UiOutputSink::new(ui.clone(), call.stream_id.clone())),
+                _ => Arc::new(NullSink),
+            };
+            let result = call_runner(ctx, call, &host, sink).await;
+            result_of(serde_json::to_value(result))
         }
         // The tier-1 `envVariables` of a game, raw (`{}` when none). Arguments `[appName, runner]`.
         "launch_known_fix_env" => {
@@ -527,8 +556,8 @@ mod tests {
     }
 
     #[test]
-    fn the_eleven_launch_ops_are_in_the_table() {
-        assert_eq!(OPS.len(), 11);
+    fn the_twelve_launch_ops_are_in_the_table() {
+        assert_eq!(OPS.len(), 12);
         assert!(OPS.iter().all(|op| op.starts_with("launch_")));
     }
 

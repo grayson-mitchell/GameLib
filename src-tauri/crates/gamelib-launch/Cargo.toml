@@ -19,6 +19,11 @@ gamelib-core = { path = "../gamelib-core" }
 # The system-information read and the anti-cheat lookup the prepare step logs (88.1-11, D-24), in process.
 # `gamelib-info` is a leaf: it never depends on this crate (proved with `cargo tree -p gamelib-info`).
 gamelib-info = { path = "../gamelib-info" }
+# The spawn seam (`SpawnClass::Helper` children, kill-on-close, the reaper) the runner's children go through
+# (88.2-07). Workspace crate, already in the lockfile.
+gamelib-proc = { path = "../gamelib-proc" }
+# The log entry types and the typed-target conversion the runner's log hand-off uses (88.2-07).
+gamelib-log = { path = "../gamelib-log" }
 # Same feature set as the wine crate (the shell calls `dispatch_sync` from plain worker threads).
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "sync", "process", "fs", "io-util"] }
 # The `Shutdown` token type; the version gamelib-core already locks.
@@ -38,8 +43,6 @@ gamelib-testutil = { path = "../gamelib-testutil" }
 tempfile = "3"
 # The English catalogue the Epic offline notification resolves through (the replay compares its real text).
 gamelib-i18n = { path = "../gamelib-i18n" }
-# The real spawn seam the Linux stub-gamescope smoke probes through.
-gamelib-proc = { path = "../gamelib-proc" }
 # Pitfall 12: the Rust shlex crate disagrees with npm shlex 2.1.2 on recorded vectors (an unterminated
 # quote is `None` rather than a typed error, `#` starts a comment, join quotes differently), so the
 # builders carry a port of the npm lexer and this crate is the differential reference in a unit test.

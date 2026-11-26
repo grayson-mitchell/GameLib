@@ -1797,6 +1797,7 @@ dependencies = [
  "gamelib-info",
  "gamelib-knownfix",
  "gamelib-launch",
+ "gamelib-log",
  "gamelib-proc",
  "gamelib-store",
  "gamelib-testutil",

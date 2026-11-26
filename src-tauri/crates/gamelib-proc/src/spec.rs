@@ -45,7 +45,6 @@ const REAP_LIMIT: Duration = Duration::from_secs(2);
 /// A stdout line longer than this is handed to `on_line` in pieces, so a child that never writes a
 /// newline cannot grow the line buffer without bound.
 const MAX_LINE: usize = 64 * 1024;
-const CHUNK: usize = 8 * 1024;
 
 /// Stateless: every `run` builds its own command and registers its own child.
 #[derive(Debug, Default, Clone, Copy)]
@@ -154,9 +153,10 @@ async fn pump<R: AsyncRead + Unpin>(
     mut reader: R,
     cap: &mut Capture,
     max: usize,
+    read_chunk: usize,
     mut tap: Tap<'_>,
 ) {
-    let mut chunk = vec![0u8; CHUNK];
+    let mut chunk = vec![0u8; read_chunk.max(1)];
     let mut pending: Vec<u8> = Vec::new();
     let mut carry = Utf8Carry::default();
     loop {
@@ -221,18 +221,23 @@ async fn drive(
     child: &mut tokio::process::Child,
     input: Option<String>,
     max: usize,
+    read_chunk: usize,
     out_cap: &mut Capture,
     err_cap: &mut Capture,
     out_tap: Tap<'_>,
     err_tap: Tap<'_>,
-) -> Option<i32> {
+) -> (Option<i32>, Option<i32>) {
     let stdin = child.stdin.take();
     let (Some(stdout), Some(stderr)) = (child.stdout.take(), child.stderr.take()) else {
-        return child.wait().await.ok().and_then(|s| s.code());
+        return child
+            .wait()
+            .await
+            .ok()
+            .map_or((None, None), |s| (s.code(), signal_of(&s)));
     };
     let mut in_f = pin!(feed(stdin, input));
-    let mut out_f = pin!(pump(stdout, out_cap, max, out_tap));
-    let mut err_f = pin!(pump(stderr, err_cap, max, err_tap));
+    let mut out_f = pin!(pump(stdout, out_cap, max, read_chunk, out_tap));
+    let mut err_f = pin!(pump(stderr, err_cap, max, read_chunk, err_tap));
     let (mut in_done, mut out_done, mut err_done) = (false, false, false);
     let status = loop {
         tokio::select! {
@@ -252,7 +257,20 @@ async fn drive(
         }
     })
     .await;
-    status.ok().and_then(|s| s.code())
+    status
+        .ok()
+        .map_or((None, None), |s| (s.code(), signal_of(&s)))
+}
+
+/// The signal number that ended a child, when one did (unix; always `None` on Windows).
+#[cfg(unix)]
+fn signal_of(status: &std::process::ExitStatus) -> Option<i32> {
+    std::os::unix::process::ExitStatusExt::signal(status)
+}
+
+#[cfg(not(unix))]
+fn signal_of(_status: &std::process::ExitStatus) -> Option<i32> {
+    None
 }
 
 async fn never() {
@@ -260,7 +278,7 @@ async fn never() {
 }
 
 enum End {
-    Exited(Option<i32>),
+    Exited(Option<i32>, Option<i32>),
     TimedOut,
     Cancelled,
 }
@@ -331,6 +349,7 @@ async fn run_spec(spec: ProcSpec, feed: Feed, shutdown: CancellationToken) -> Sp
             &mut child,
             spec.stdin.clone(),
             spec.max_buffer,
+            spec.read_chunk,
             &mut out_cap,
             &mut err_cap,
             out_tap,
@@ -349,20 +368,20 @@ async fn run_spec(spec: ProcSpec, feed: Feed, shutdown: CancellationToken) -> Sp
             }
         };
         tokio::select! {
-            code = driven => End::Exited(code),
+            (code, signal) = driven => End::Exited(code, signal),
             _ = timeout => End::TimedOut,
             _ = cancel => End::Cancelled,
             _ = shutdown.cancelled() => End::Cancelled,
         }
     };
 
-    if !matches!(end, End::Exited(_)) {
+    if !matches!(end, End::Exited(..)) {
         stop(&mut child).await;
     }
-    let (code, timed_out, cancelled) = match end {
-        End::Exited(code) => (code, false, false),
-        End::TimedOut => (None, true, false),
-        End::Cancelled => (None, false, true),
+    let (code, signal, timed_out, cancelled) = match end {
+        End::Exited(code, signal) => (code, signal, false, false),
+        End::TimedOut => (None, None, true, false),
+        End::Cancelled => (None, None, false, true),
     };
     SpecOutput {
         code,
@@ -371,6 +390,7 @@ async fn run_spec(spec: ProcSpec, feed: Feed, shutdown: CancellationToken) -> Sp
         timed_out,
         cancelled,
         truncated: out_cap.truncated || err_cap.truncated,
+        signal,
     }
 }
 
