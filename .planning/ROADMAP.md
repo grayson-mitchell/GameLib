@@ -1193,7 +1193,7 @@ Plans:
 **Research flag**: Needs deeper research (external binary output formats, Windows process-tree kill and quoting; parsers first with real captured transcripts)
 **Success Criteria** (what must be TRUE):
   1. A user can sign in to Epic and see their library, and install, update, repair, move and uninstall a game
-  2. An Epic game launches with the EOS overlay working
+  2. An Epic game launches; the EOS overlay installs, updates and is removed live on macOS, per-game enable and the overlay launch env match goldens on Windows and Linux, and the in-game overlay is checked in Phase 99 (91-CONTEXT D-06)
   3. Output parsers pass against real captured legendary transcripts
   4. The legendary TypeScript and its sidecar registrations are deleted in this phase
 
