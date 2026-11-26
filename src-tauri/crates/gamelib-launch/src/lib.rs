@@ -35,6 +35,7 @@ use prepare::launch::{PrepareHost, PrepareLaunchArgs};
 use prepare::wine_begin::PrepareWineBeginArgs;
 use prepare::wine_finish::PrepareWineFinishArgs;
 use runner::call_runner::{abort_run, call_runner, RunnerCallArgs, RunnerHost};
+use runner::script::{run_script_for_game, ScriptRunArgs};
 use runner::stream::{NullSink, OutputSink, UiOutputSink};
 use runner::wine_command::{launch_wine_command, LaunchWineCommandArgs};
 use serde::Deserialize;
@@ -59,6 +60,7 @@ pub const OPS: &[&str] = &[
     "launch_runner_abort",
     "launch_runner_call",
     "launch_runner_kill",
+    "launch_script_run",
     "launch_setup_env_vars",
     "launch_setup_wine_env_vars",
     "launch_setup_wrapper_env_vars",
@@ -250,6 +252,24 @@ async fn route(op: &str, args: &[Value], ctx: &LaunchCtx) -> Result<Value, Strin
                 _ => Arc::new(NullSink),
             };
             Ok(launch_wine_command(ctx, call, &host, sink).await.to_json())
+        }
+        // `runScriptForGame` (88.2-13). Arguments `[args, host]`: the script run (`ScriptRunArgs`: the script's path
+        // and stage, the game's facts, the settings and info JSON text and the game's log writer) and the process
+        // facts the shell read (`RunnerHost`: the environment the script inherits, laid over the `HEROIC_GAME_*`
+        // block). Answers `true` once the script has exited, whatever its code; a script that could not be started
+        // is an `Err` carrying the OS's text. A script runs as long as the user wrote it to, so its shim lists the
+        // channel as unbounded (the app shutdown still ends it).
+        "launch_script_run" => {
+            let [call @ Value::Object(_), host] = args else {
+                return Err(bad());
+            };
+            let call: ScriptRunArgs = serde_json::from_value(call.clone()).map_err(|_| bad())?;
+            let host: RunnerHost = match host {
+                Value::Null => RunnerHost::default(),
+                Value::Object(_) => serde_json::from_value(host.clone()).map_err(|_| bad())?,
+                _ => return Err(bad()),
+            };
+            run_script_for_game(ctx, call, &host).await.map(Value::Bool)
         }
         // Whether a game run is registered (D-07): the answer the quit check reads. Arguments `[]`.
         "launch_games_running" => {
@@ -715,8 +735,8 @@ mod tests {
     }
 
     #[test]
-    fn the_nineteen_launch_ops_are_in_the_table() {
-        assert_eq!(OPS.len(), 19);
+    fn the_twenty_launch_ops_are_in_the_table() {
+        assert_eq!(OPS.len(), 20);
         assert!(OPS.iter().all(|op| op.starts_with("launch_")));
     }
 
