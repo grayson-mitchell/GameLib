@@ -699,6 +699,23 @@ async fn a_real_powershell_run_writes_a_lnk_holding_the_launch_url() {
     env.push(("TEMP".to_string(), tmp.to_string_lossy().into_owned()));
     env.push(("TMP".to_string(), tmp.to_string_lossy().into_owned()));
     let system_root = std::env::var("SystemRoot").ok().map(PathBuf::from);
+    // Only Windows PowerShell's own modules. The fake profile has an empty LOCALAPPDATA, so PowerShell 5.1
+    // has no module-analysis cache and rescans every folder on PSModulePath to find the module behind
+    // `Add-Type`. On windows-latest the machine value includes the Az module set, and that scan took 23 to
+    // 28 s (measured 2026-11-26), enough to pass WRITE_SHORTCUT_TIMEOUT's 30 s on a loaded runner. A real
+    // profile keeps that cache, and the app hands PowerShell its whole process environment
+    // (`expansion_env`), so this is about the test's empty profile, not the app.
+    if let Some(root) = &system_root {
+        let modules = root
+            .join("System32")
+            .join("WindowsPowerShell")
+            .join("v1.0")
+            .join("Modules");
+        env.push((
+            "PSModulePath".to_string(),
+            modules.to_string_lossy().into_owned(),
+        ));
+    }
 
     let url = launch_url("2951630", "steam", true);
     let details = ShortcutDetails {
