@@ -2,18 +2,18 @@
 gsd_state_version: "1.0"
 milestone: v0.11
 milestone_name: Node Sidecar Retirement
-current_phase: 87
-current_phase_name: Engine, Wine and tools
+current_phase: "88.1"
+current_phase_name: Launch builders and prepare steps
 status: executing
-stopped_at: Completed 88.1-05-PLAN.md
-last_updated: "2026-11-25T18:31:53.076Z"
-last_activity: 2026-11-25
-last_activity_desc: Phase 87 execution started
-state_head: 0c486e78f056f845f4261dad90756d4ce19e7270
+stopped_at: Completed 88.1-21-PLAN.md
+last_updated: "2026-11-26T10:20:08.570Z"
+last_activity: 2026-11-26
+last_activity_desc: Phase 88.1 execution started
+state_head: 88483995a2d9a13ca894a01eb1f36355db0eeb6e
 progress:
   total_phases: 25
   completed_phases: 23
-  total_plans: 266
+  total_plans: 295
   completed_plans: 531
   percent: 92
 ---
@@ -25,7 +25,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-25)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 87 — Engine, Wine and tools
+**Current focus:** Phase 88.1 — Launch builders and prepare steps
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -76,10 +76,10 @@ See: .planning/PROJECT.md (updated 2026-11-25)
 
 ## Current Position
 
-Phase: 87 (Engine, Wine and tools) — EXECUTING
-Plan: 75 of 82
+Phase: 88.1 (Launch builders and prepare steps) — EXECUTING
+Plan: 22 of 24
 Status: Ready to execute
-Last activity: 2026-11-25 — Phase 87 execution started
+Last activity: 2026-11-26 — Phase 88.1 execution started
 Progress: [████████████████░░░░] 204/257 plans ([█████████░] 92%)
 
 ## Native-Install Arc Phase Map (21–25)
@@ -544,6 +544,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 88.1 P18 | 50min | 1 tasks | 52 files |
 | Phase 88.1 P19 | ~1h | 2 tasks | 22 files |
 | Phase 88.1 P20 | 5h | 3 tasks | 18 files |
+| Phase 88.1 P21 | 24 min | 2 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -1225,6 +1226,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 88.1]: 88.1-18: clearCache no longer empties the pci.ids name caches (Rust owns them, no clear verb); the fromVersionChange parameter is removed
 - [Phase 88.1]: 88.1-19: wine_manager_refresh deleted as a ninth channel with its updateWineVersionInfos shim; interim glue (launchAdapters.ts, knownFixLaunchReply.ts) is a named table in buildersSurvivors, not SCHEDULE rows
 - [Phase 88.1]: 88.1-20: operator chose push; 88.1 is proven on three OSes at 940bd9e73 (Rust legs green, Linux stub_gamescope 1 passed); test.yml recorded as failure on the known-unrelated suites, not fixed
+- [Phase 88.1]: 88.1-21: setupEnvVars reads only nvidiaPrime/showFps/enviromentOptions through SetupEnvView (no wine); Option<WineInstallation> on GameSettingsView rejected because ~22 .wine_version reads and the decode-failure-as-signal sites would silently accept wine-less settings
 
 ### Pending Todos
 
@@ -1511,8 +1513,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-25T07:46:13.314Z
-Stopped at: Completed 88.1-05-PLAN.md
+Last session: 2026-11-26T10:20:05.482Z
+Stopped at: Completed 88.1-21-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
