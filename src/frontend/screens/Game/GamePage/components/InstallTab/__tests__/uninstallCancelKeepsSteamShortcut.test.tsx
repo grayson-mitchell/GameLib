@@ -46,9 +46,12 @@ import IntegrationRows from '../IntegrationRows'
  * `.planning/debug/rf3-cancel-removes-shortcut.md`.
  *
  * The second describe is the hardening the user chose when the live probe (11
- * Cancels, mouse) did not reproduce it: provenance logging on every add/remove
- * from the Show in Steam row, and a held key (`event.repeat`) never toggling a
- * switch. Each guard test fails without its guard.
+ * Cancels, mouse) did not reproduce it: provenance logging on every add/remove from
+ * the row, a held key (`event.repeat`) never toggling a switch, and a pointer click
+ * within 500 ms of a dialog closing being ignored by a switch row. It simulates the
+ * two second events the cause could have been (a stray second click on the row once
+ * the dialog is gone at once, a key repeat) directly, since they cannot be made to
+ * happen from a single click in jsdom. Each guard test fails without its guard.
  */
 
 jest.mock('react-i18next', () => ({
@@ -276,7 +279,7 @@ async function closeUninstallDialogWithNo(
   )
 }
 
-describe('RF3 hardening: provenance logging and the held-key guard', () => {
+describe('RF3 hardening: provenance logging and the two activation guards', () => {
   it('logs one provenance line for a pointer click that removes the shortcut', async () => {
     const user = userEvent.setup()
     await renderPageWithShortcutOn()
@@ -331,5 +334,41 @@ describe('RF3 hardening: provenance logging and the held-key guard', () => {
 
     fireEvent.keyDown(row, { key: 'Enter' })
     await waitFor(() => expect(api.removeFromSteam).toHaveBeenCalledTimes(1))
+  })
+
+  it('a pointer click right after a dialog closes is ignored and logged; the same click after the window toggles', async () => {
+    const user = userEvent.setup()
+    await renderPageWithShortcutOn()
+    await closeUninstallDialogWithNo(user)
+
+    // The stray second click of a double click on No: the dialog is already gone
+    // (DangerZone unmounts it at once, no exit transition plays), so it lands on
+    // whatever the page has under the button.
+    await user.click(steamRow())
+    await act(() => new Promise((resolve) => setTimeout(resolve, 50)))
+    expectNoSteamChange()
+    expect(steamActivationLines()).toHaveLength(0)
+    const ignored = loggedLines().filter((line) =>
+      line.startsWith(
+        '[SwitchRow] ignored a pointer click on installTabShowInSteam'
+      )
+    )
+    expect(ignored).toHaveLength(1)
+    expect(ignored[0]).toMatch(
+      /event=click trusted=(true|false) detail=1 key=- repeat=false sinceDialogCloseMs=\d+/
+    )
+
+    await settle()
+    await user.click(steamRow())
+    await waitFor(() => expect(api.removeFromSteam).toHaveBeenCalledTimes(1))
+  })
+
+  it('only pointer clicks are ignored: a synthetic click (detail 0, as the gamepad sends) right after a dialog closes still toggles', async () => {
+    const user = userEvent.setup()
+    await renderPageWithShortcutOn()
+    await closeUninstallDialogWithNo(user)
+    fireEvent.click(steamRow())
+    await waitFor(() => expect(api.removeFromSteam).toHaveBeenCalledTimes(1))
+    await settle()
   })
 })

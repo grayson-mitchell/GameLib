@@ -1,6 +1,11 @@
 import type { KeyboardEvent, MouseEvent } from 'react'
 import classNames from 'classnames'
-import { activationOf, type RowActivation } from '../../actions/rowActivation'
+import {
+  activationOf,
+  isStalePointerClick,
+  logIgnoredStaleClick,
+  type RowActivation
+} from '../../actions/rowActivation'
 
 interface RowFailureProps {
   message: string
@@ -71,8 +76,12 @@ export function RowFailure({
  * "Adding..." or "Removing..."; nothing is swapped for a spinner. While busy
  * or disabled the row ignores clicks and keys.
  *
- * RF3: a held key (`event.repeat`) acts once, on the press, never on the repeats
- * the OS streams while it stays down.
+ * RF3: two more presses never toggle. A held key (`event.repeat`) acts once, on
+ * the press, never on the repeats the OS streams while it stays down. And a
+ * pointer click within 500 ms of a dialog closing is ignored and logged: it is
+ * the second half of a double click (or a bounce) on the dialog's button, now
+ * landing on the row the dialog uncovered. A synthetic click (detail 0, the
+ * gamepad's) and a fresh key press still toggle at once.
  *
  * Hook-free on purpose, so it can be called as a plain function in a test.
  */
@@ -97,7 +106,12 @@ export function SwitchRow({
 
   // `event` is optional: the row's unit tests call the handlers with none.
   const onClick = (event?: MouseEvent<HTMLDivElement>) => {
-    toggle(activationOf('click', event))
+    const activation = activationOf('click', event)
+    if (!inert && isStalePointerClick(activation)) {
+      logIgnoredStaleClick(id, activation)
+      return
+    }
+    toggle(activation)
   }
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {

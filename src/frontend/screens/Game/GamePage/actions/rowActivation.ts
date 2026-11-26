@@ -1,4 +1,7 @@
-import { msSinceDialogClose } from 'frontend/components/UI/Dialog/dialogCloseClock'
+import {
+  STALE_CLICK_WINDOW_MS,
+  msSinceDialogClose
+} from 'frontend/components/UI/Dialog/dialogCloseClock'
 
 /**
  * RF3 (debug session rf3-cancel-removes-shortcut): where an Install-tab switch
@@ -51,6 +54,22 @@ export function activationOf(
   }
 }
 
+/**
+ * True for a pointer click that landed within `STALE_CLICK_WINDOW_MS` of a dialog
+ * closing. A pointer click carries `detail >= 1` (the click count: the probe saw
+ * detail=1 on every real press in the WebView); a synthetic `.click()`, which is
+ * how the gamepad's main action activates the focused control, carries 0 and is
+ * never ignored.
+ */
+export function isStalePointerClick(activation: RowActivation): boolean {
+  return (
+    activation.type === 'click' &&
+    activation.detail > 0 &&
+    activation.sinceDialogCloseMs !== null &&
+    activation.sinceDialogCloseMs < STALE_CLICK_WINDOW_MS
+  )
+}
+
 /** `event=click trusted=true detail=1 key=- repeat=false sinceDialogCloseMs=312` */
 export function describeActivation(activation: RowActivation): string {
   const since =
@@ -93,5 +112,17 @@ export function logShowInSteamActivation({
     `[Shortcuts] Show in Steam activation: action=${action} ` +
       `${activation ? describeActivation(activation) : 'event=retry'} ` +
       `appName=${appName} runner=${runner}`
+  )
+}
+
+/** The line for a click a switch row ignored as a stale second click. */
+export function logIgnoredStaleClick(
+  rowId: string,
+  activation: RowActivation
+): void {
+  logInfoQuietly(
+    `[SwitchRow] ignored a pointer click on ${rowId}: ` +
+      `${describeActivation(activation)} (a dialog closed under ` +
+      `${STALE_CLICK_WINDOW_MS} ms before; a stale second click, not a toggle)`
   )
 }
