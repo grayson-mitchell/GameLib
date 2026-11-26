@@ -1,0 +1,25 @@
+[
+  {
+    "name": "redact-code-plain",
+    "kind": "redact",
+    "input": {
+      "command": [
+        "launch",
+        "app-1",
+        "--code",
+        "code-123"
+      ],
+      "env": {},
+      "runnerPath": "/opt/legendary"
+    },
+    "output": "/opt/legendary launch app-1 --code <redacted>"
+  },
+  {
+    "name": "sanitize-gog-all-keys",
+    "kind": "sanitize-gog",
+    "input": {
+      "line": "{\"access_token\":\"at-synth\",\"session_id\":\"sid-synth\",\"refresh_token\":\"rt-synth\",\"user_id\":\"uid-synth\",\"expires_in\":3600}"
+    },
+    "output": "{\"access_token\":\"<redacted>\",\"session_id\":\"<redacted>\",\"refresh_token\":\"<redacted>\",\"user_id\":\"<redacted>\",\"expires_in\":3600}\n"
+  }
+]

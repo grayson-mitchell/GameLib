@@ -4,7 +4,7 @@
  * `createCommandRunner` over a scripted spawn tracer on a fresh fake HOME and recorded as the golden
  * the Rust `gamelib-launch` runner has to reproduce. The golden exists before any Rust runner does.
  * `runWineCommand`, `getWinePath` and `runScriptForGame` are 88.2-04's, the redaction and sanitizer
- * vectors are 88.2-03's.
+ * vectors are 88.2-03's (the `redaction` slice at the end of this file).
  *
  * Slice `gamelib-launch/tests/fixtures/golden/runner/`:
  *   cases.json      built from the case tables below (write mode rewrites it, compare mode checks it)
@@ -82,6 +82,8 @@ import {
   createCommandRunner,
   getRunnerCallWithoutCredentials
 } from 'backend/commandRunner'
+import { authLogSanitizer as gogAuthLogSanitizer } from 'backend/storeManagers/gog/user'
+import { authLogSanitizer as nileAuthLogSanitizer } from 'backend/storeManagers/nile/user'
 import LogWriter from 'backend/logger/targetWriter'
 import { RunnerToLogPrefixMap } from 'backend/logger/constants'
 import type { Runner } from 'common/types'
@@ -1356,5 +1358,180 @@ describeSkipOnWindows('command runner oracle (88.2-01)', () => {
 
   it('an empty case list fails the manifest check', () => {
     expectEmptyCasesToFail(CRATE, SLICE, RUNNER_FLOOR)
+  })
+})
+
+// =============================================================================================
+// The redaction slice (88.2-03, D-11, D-25, prohibition 2)
+//
+// `getRunnerCallWithoutCredentials` and the gog and nile `authLogSanitizer` are pure functions the
+// Rust port (88.2-08) has to match byte for byte. Each vector is `{ name, kind, input, output }`:
+// the input is written here, the output is only ever recorded from the TS function (write mode),
+// never typed. Slice `gamelib-launch/tests/fixtures/golden/redaction/`:
+//   vectors.json    every vector, in table order
+//   MANIFEST.json   `{ count, floor }`
+// Every credential-shaped value is a synthetic string, and an env-diff vector runs on the pinned
+// base env of a fresh fake HOME (D-12, D-22), so no real variable or path reaches the file.
+// `null` in a vector's `env` stands for an `undefined` value (JSON has no undefined).
+// =============================================================================================
+
+const REDACTION_SLICE = 'redaction'
+/** The vector count this plan committed; a later edit may raise it, never lower it. */
+const REDACTION_FLOOR = 2
+
+type RedactionKind = 'redact' | 'sanitize-gog' | 'sanitize-nile'
+
+interface RedactInput {
+  /** An argv, or a LegendaryCommand object handed to the converter. */
+  command: string[] | Record<string, unknown>
+  env?: Record<string, string | null>
+  runnerPath: string
+  /** What the legendary command-array converter answers for an object command. */
+  converts?: string[]
+}
+
+interface SanitizeInput {
+  line: string
+}
+
+interface RedactionVector {
+  name: string
+  kind: RedactionKind
+  input: RedactInput | SanitizeInput
+}
+
+interface RecordedVector extends RedactionVector {
+  output: string
+}
+
+function redactionVectors(): RedactionVector[] {
+  return [
+    {
+      name: 'redact-code-plain',
+      kind: 'redact',
+      input: {
+        command: ['launch', 'app-1', '--code', 'code-123'],
+        env: {},
+        runnerPath: '/opt/legendary'
+      }
+    },
+    {
+      name: 'sanitize-gog-all-keys',
+      kind: 'sanitize-gog',
+      input: {
+        line: '{"access_token":"at-synth","session_id":"sid-synth","refresh_token":"rt-synth","user_id":"uid-synth","expires_in":3600}'
+      }
+    }
+  ]
+}
+
+function assertRedactionFloor(count: number): void {
+  if (count < REDACTION_FLOOR) {
+    throw new Error(
+      `redaction vectors: ${count} is below the floor of ${REDACTION_FLOOR}`
+    )
+  }
+}
+
+/** Runs one vector through the real TS function, on the pinned base env of a fresh fake HOME. */
+async function recordVector(vector: RedactionVector): Promise<string> {
+  return withEngineOracleProfile((profile) =>
+    withPinnedBaseEnv(profile.fake, () => {
+      if (vector.kind === 'sanitize-gog') {
+        return gogAuthLogSanitizer((vector.input as SanitizeInput).line)
+      }
+      if (vector.kind === 'sanitize-nile') {
+        return nileAuthLogSanitizer((vector.input as SanitizeInput).line)
+      }
+      const input = vector.input as RedactInput
+      const env = input.env
+        ? Object.fromEntries(
+            Object.entries(input.env).map(([key, value]) => [
+              key,
+              value ?? undefined
+            ])
+          )
+        : undefined
+      return getRunnerCallWithoutCredentials(
+        input.command as never,
+        env as never,
+        input.runnerPath,
+        () => [...(input.converts ?? [])]
+      )
+    })
+  )
+}
+
+describeSkipOnWindows('redaction and sanitizer vectors (88.2-03)', () => {
+  const built = redactionVectors()
+  const file = join(goldenDir(CRATE, REDACTION_SLICE), 'vectors.json')
+  const recorded = new Map<string, string>()
+
+  const committed = (): RecordedVector[] =>
+    JSON.parse(readFileSync(file, 'utf8')) as RecordedVector[]
+
+  afterAll(() => {
+    if (mode !== 'write') return
+    const vectors: RecordedVector[] = built.map((vector) => {
+      const output = recorded.get(vector.name)
+      if (output === undefined) throw new Error(`${vector.name}: not recorded`)
+      return { ...vector, output }
+    })
+    mkdirSync(dirname(file), { recursive: true })
+    writeFileSync(file, json(vectors))
+    syncManifest(
+      CRATE,
+      REDACTION_SLICE,
+      vectors.map((v) => ({ id: v.name })),
+      REDACTION_FLOOR
+    )
+  })
+
+  it.each(built.map((vector) => [vector.name, vector] as const))(
+    '%s',
+    async (_name, vector) => {
+      const output = await recordVector(vector)
+      if (mode === 'write') {
+        recorded.set(vector.name, output)
+        return
+      }
+      const stored = committed().find((v) => v.name === vector.name)
+      if (!stored)
+        throw new Error(`${vector.name} is missing from vectors.json`)
+      expect(stored).toEqual({ ...vector, output })
+    }
+  )
+
+  it('vectors.json lists exactly the vectors the builder produces, in order', () => {
+    if (mode !== 'compare') return
+    expect(
+      committed().map(({ name, kind, input }) => ({ name, kind, input }))
+    ).toEqual(built)
+  })
+
+  it('the committed MANIFEST agrees with the vector list and holds at least the floor', () => {
+    if (mode !== 'compare') return
+    const manifest = JSON.parse(
+      readFileSync(
+        join(goldenDir(CRATE, REDACTION_SLICE), 'MANIFEST.json'),
+        'utf8'
+      )
+    ) as { count: number; floor: number }
+    expect(new Set(built.map((v) => v.name)).size).toBe(built.length)
+    expect(manifest.floor).toBeGreaterThanOrEqual(REDACTION_FLOOR)
+    expect(manifest.count).toBe(built.length)
+    expect(manifest.count).toBeGreaterThanOrEqual(manifest.floor)
+  })
+
+  it('the vector list is at or above the floor, and an empty list is not', () => {
+    expect(() => assertRedactionFloor(built.length)).not.toThrow()
+    expect(() => assertRedactionFloor(0)).toThrow(/below the floor/)
+  })
+
+  it('the tracer vector redacts its credential', () => {
+    if (mode !== 'compare') return
+    const tracer = committed().find((v) => v.name === 'redact-code-plain')
+    expect(tracer?.output).toBe('/opt/legendary launch app-1 --code <redacted>')
+    expect(tracer?.output).not.toContain('code-123')
   })
 })

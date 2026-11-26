@@ -99,7 +99,7 @@ async function clearGogCookiesForLogout(deps: GOGLoginSeamDeps): Promise<void> {
   }
 }
 
-function authLogSanitizer(line: string) {
+export function authLogSanitizer(line: string) {
   try {
     const output = JSON.parse(line)
     output.access_token = '<redacted>'

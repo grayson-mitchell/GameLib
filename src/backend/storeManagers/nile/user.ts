@@ -117,7 +117,7 @@ async function clearAmazonCookiesForLogout(
   }
 }
 
-function authLogSanitizer(line: string) {
+export function authLogSanitizer(line: string) {
   try {
     const output = JSON.parse(line)
     output.url = '<redacted>'
