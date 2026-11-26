@@ -30,14 +30,29 @@ use gamelib_log::frame::FrameTarget;
 use gamelib_log::{Entry, Level, Prefix, TargetBatch};
 use gamelib_proc::kill_tree::kill_game_tree;
 use gamelib_proc::probe;
+use gamelib_proc::KillOutcome;
 use gamelib_store::host::StoreHost;
 use gamelib_testutil::FakeHome;
 use gamelib_wine::ctx::WineCtx;
 
 const STUB: &str = env!("CARGO_BIN_EXE_gamelib-launch-stub-game");
+const POLL: Duration = Duration::from_millis(100);
+const LIMIT: Duration = Duration::from_secs(15);
 
 fn lock<T>(m: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
     m.lock().unwrap_or_else(|e| e.into_inner())
+}
+
+/// Polls `pred` every 100 ms for up to 15 s; the panic names what it was waiting for.
+fn wait_until(what: &str, mut pred: impl FnMut() -> bool) {
+    let deadline = Instant::now() + LIMIT;
+    loop {
+        if pred() {
+            return;
+        }
+        assert!(Instant::now() < deadline, "timed out waiting for: {what}");
+        std::thread::sleep(POLL);
+    }
 }
 
 /// The pids the stub game recorded (the leader first), once the file is published.
@@ -296,4 +311,106 @@ async fn launch_tails_output_and_waits_for_the_grandchild() {
     // The log writer got the output, in order, as raw entries (the command line is a structured one).
     let written: String = lock(&recorded.raw).iter().cloned().collect();
     assert_eq!(written, expected_lines(20));
+}
+
+/// The stub in its `shell` mode: a stand-in for GameLib that runs `launch_runner_call` over a context rooted
+/// in `user_data`, with the fake profile applied (never a hand-rolled env literal). Its stderr goes to a file,
+/// so a leftover process can never hold a pipe the test waits on.
+fn shell(home: &FakeHome, user_data: &Path, call: &RunnerCallArgs) -> std::process::Child {
+    let args = serde_json::json!([call_json(call), null]);
+    let mut cmd = std::process::Command::new(STUB);
+    cmd.arg("shell")
+        .arg("--user-data")
+        .arg(user_data)
+        .arg("--args")
+        .arg(args.to_string())
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::from(
+            std::fs::File::create(home.root().join("shell.err")).expect("shell stderr file"),
+        ));
+    home.apply(&mut cmd);
+    cmd.spawn().expect("spawn the stand-in shell")
+}
+
+/// What the wire carries of a game call the test built (`RunnerCallArgs` is read from the wire only).
+fn call_json(call: &RunnerCallArgs) -> serde_json::Value {
+    serde_json::json!({
+        "streamId": call.stream_id,
+        "commandParts": call.command_parts,
+        "runner": {
+            "name": call.runner.name.as_str(),
+            "bin": call.runner.bin,
+            "logPrefix": call.runner.log_prefix,
+        },
+        "abortId": call.abort_id,
+        "trackKey": call.track_key,
+        "spawnClass": "game",
+    })
+}
+
+fn file_len(path: &Path) -> u64 {
+    std::fs::metadata(path).map(|m| m.len()).unwrap_or(0)
+}
+
+/// D-05: a crash, Force Quit or `kill -9` of GameLib leaves the game running. The shell stand-in runs the
+/// real launch op, the stub game it launched keeps writing its capture file after the shell is killed
+/// (SIGKILL on unix, TerminateProcess on Windows), and only then is it ended, by a stamp-checked
+/// `kill_game_tree` from this process.
+#[test]
+fn parent_sigkill_leaves_the_game_running() {
+    let home = FakeHome::new("stub-game-sigkill-");
+    let user_data = home.root().join("gamelib-data");
+    let pids_file = home.root().join("pids.txt");
+    let mut strays = Strays(Vec::new());
+
+    // No `--lines` and no exit: the game writes a line every 50 ms until it is ended.
+    let pids = pids_file.to_string_lossy().into_owned();
+    let mut call = game_call("sigkill", &["game", "--pids", &pids, "--child"]);
+    call.observe = false;
+    call.log_targets.clear();
+    let mut shell = shell(&home, &user_data, &call);
+    let shell_pid = shell.id();
+
+    wait_until("the game to publish both pids", || {
+        recorded_pids(&pids_file, 2).is_some()
+    });
+    let game = recorded_pids(&pids_file, 2).expect("pids");
+    strays.add(game[0]);
+    strays.add(game[1]);
+    let stamp = probe::start_time(game[0]);
+    let capture = capture_file(&user_data, RunnerName::Sideload, "sigkill");
+    wait_until("the game to write its capture file", || {
+        file_len(&capture) > 0
+    });
+    assert!(
+        probe::is_alive(shell_pid),
+        "the shell must still be running the op"
+    );
+
+    // The process that ran the op dies without any chance to clean up.
+    shell.kill().expect("kill the shell");
+    shell.wait().expect("reap the shell");
+    wait_until("the shell to be gone", || !probe::is_alive(shell_pid));
+
+    assert!(probe::is_alive(game[0]), "the game died with its parent");
+    assert!(
+        probe::is_alive(game[1]),
+        "the game's child died with its parent"
+    );
+    let before = file_len(&capture);
+    wait_until("the capture file to keep growing", || {
+        file_len(&capture) > before
+    });
+    assert!(probe::is_alive(game[0]) && probe::is_alive(game[1]));
+
+    // Another process ends the tree, with the stamp probed at launch.
+    let stamp = stamp.expect("the game's start stamp");
+    assert_eq!(
+        kill_game_tree(game[0], stamp, Duration::from_millis(1500)),
+        KillOutcome::Killed
+    );
+    wait_until("the game and its child to end", || {
+        !probe::is_alive(game[0]) && !probe::is_alive(game[1])
+    });
 }

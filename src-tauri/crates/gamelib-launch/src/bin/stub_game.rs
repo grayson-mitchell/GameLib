@@ -9,11 +9,26 @@
 //!   50 ms forever (the test that a game keeps writing after its parent is gone). Then it exits at
 //!   `--exit-after-ms` from its start, or idles.
 //! - `idle [--for-ms <ms>]`: does nothing, for `<ms>` milliseconds or forever.
+//! - `shell --user-data <dir> --args <json>`: the stand-in shell. Builds a `LaunchCtx` over a `StoreHost` rooted
+//!   at `<dir>` the way `gamelib-launch-cli` does (no keyring, no real profile), runs `launch_runner_call`
+//!   with the JSON array `<json>`, prints the reply and exits.
 
 use std::io::Write;
 use std::path::PathBuf;
 use std::process::{exit, Command, Stdio};
+use std::sync::Arc;
 use std::time::{Duration, Instant};
+
+use gamelib_core::clock::SystemClock;
+use gamelib_core::shutdown::Shutdown;
+use gamelib_engine::ctx::{EngineCtx, EnginePaths, Platform};
+use gamelib_info::ctx::{InfoCtx, InfoPaths, Platform as InfoPlatform};
+use gamelib_info::http::ReqwestHttp;
+use gamelib_knownfix::ctx::KnownFixCtx;
+use gamelib_launch::ctx::LaunchCtx;
+use gamelib_proc::SpecProcRunner;
+use gamelib_store::host::StoreHost;
+use gamelib_wine::ctx::WineCtx;
 
 /// How long the game waits before it creates its child (see the module doc).
 const CHILD_DELAY: Duration = Duration::from_millis(100);
@@ -23,8 +38,9 @@ fn main() {
     match args.first().map(String::as_str) {
         Some("idle") => idle(&args[1..]),
         Some("game") => game(&args[1..]),
+        Some("shell") => shell(&args[1..]),
         _ => {
-            eprintln!("usage: gamelib-launch-stub-game <game|idle> [flags]");
+            eprintln!("usage: gamelib-launch-stub-game <game|idle|shell> [flags]");
             exit(2);
         }
     }
@@ -113,5 +129,85 @@ fn game(args: &[String]) -> ! {
             exit(0)
         }
         None => idle(&[]),
+    }
+}
+
+fn platform() -> Platform {
+    if cfg!(target_os = "macos") {
+        Platform::Mac
+    } else if cfg!(windows) {
+        Platform::Windows
+    } else {
+        Platform::Linux
+    }
+}
+
+fn info_platform() -> InfoPlatform {
+    if cfg!(target_os = "macos") {
+        InfoPlatform::Mac
+    } else if cfg!(windows) {
+        InfoPlatform::Windows
+    } else {
+        InfoPlatform::Linux
+    }
+}
+
+fn shell(args: &[String]) -> ! {
+    let user_data = PathBuf::from(value(args, "--user-data").expect("--user-data <dir>"));
+    let op_args: Vec<serde_json::Value> =
+        match serde_json::from_str(value(args, "--args").expect("--args <json>")) {
+            Ok(serde_json::Value::Array(items)) => items,
+            _ => {
+                eprintln!("--args must be a JSON array");
+                exit(2);
+            }
+        };
+    let info = Arc::new(InfoCtx::new(
+        Arc::new(StoreHost::new()),
+        Arc::new(SystemClock),
+        info_platform(),
+        InfoPaths {
+            app_folder: user_data.clone(),
+            user_data: user_data.clone(),
+            temp: user_data.join("temp"),
+            public_dir: None,
+        },
+        "0.0.0".to_string(),
+        Shutdown::new(),
+        Arc::new(ReqwestHttp::new()),
+    ));
+    let engine = Arc::new(
+        EngineCtx::new(
+            Arc::new(StoreHost::new()),
+            Arc::new(SystemClock),
+            platform(),
+            EnginePaths {
+                app_folder: user_data.clone(),
+                tools_path: user_data.join("tools"),
+                user_home: user_data.join("home"),
+                temp: user_data.join("temp"),
+                user_data: user_data.clone(),
+            },
+            Shutdown::new(),
+        )
+        .with_proc(Arc::new(SpecProcRunner)),
+    );
+    let knownfix = Arc::new(KnownFixCtx::new(
+        engine.clone(),
+        None,
+        gamelib_knownfix::report::RELAY_URL_PENDING_SENTINEL,
+        "0.0.0",
+    ));
+    let wine = Arc::new(WineCtx::new(engine.clone(), user_data.join("tools")));
+    let ctx = LaunchCtx::new(engine, knownfix, wine, info);
+    match gamelib_launch::dispatch_sync("launch_runner_call", &op_args, &ctx) {
+        Ok(reply) => {
+            println!("{reply}");
+            exit(0)
+        }
+        Err(e) => {
+            eprintln!("{e}");
+            exit(2)
+        }
     }
 }
