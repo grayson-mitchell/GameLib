@@ -13,7 +13,9 @@ use std::time::Duration;
 use gamelib_proc::probe;
 use tokio_util::sync::CancellationToken;
 
-use super::registry::SharedGame;
+use std::sync::atomic::Ordering;
+
+use super::registry::GameEntry;
 
 /// How often the leader's liveness is looked at.
 pub const LEADER_POLL: Duration = Duration::from_millis(100);
@@ -45,9 +47,11 @@ pub enum Ended {
 }
 
 /// Waits for `end` and reaps the leader. Returns [`Ended::Shutdown`] the moment `shutdown` fires, never
-/// having signalled anything.
-pub async fn wait_end(game: &SharedGame, end: GameEnd, shutdown: &CancellationToken) -> Ended {
-    let pid = lock(game).pid;
+/// having signalled anything. The reap marks the entry `ended` under the handle's lock, so a kill through
+/// the registry never signals a group whose leader this run has reaped.
+pub async fn wait_end(entry: &GameEntry, end: GameEnd, shutdown: &CancellationToken) -> Ended {
+    let game = &entry.handle;
+    let pid = entry.pid;
     while probe::is_alive(pid) {
         if cancelled_during(shutdown, LEADER_POLL).await {
             return Ended::Shutdown;
@@ -68,7 +72,10 @@ pub async fn wait_end(game: &SharedGame, end: GameEnd, shutdown: &CancellationTo
         }
     }
     // The leader has exited, so this returns at once.
-    Ended::Finished(lock(game).reap_status().ok())
+    let mut handle = lock(game);
+    let status = handle.reap_status().ok();
+    entry.ended.store(true, Ordering::SeqCst);
+    Ended::Finished(status)
 }
 
 /// Sleeps `period`; true when `shutdown` fired first.
@@ -80,6 +87,6 @@ async fn cancelled_during(shutdown: &CancellationToken, period: Duration) -> boo
     }
 }
 
-fn lock(game: &SharedGame) -> std::sync::MutexGuard<'_, gamelib_proc::GameHandle> {
+fn lock(game: &super::registry::SharedGame) -> std::sync::MutexGuard<'_, gamelib_proc::GameHandle> {
     game.lock().unwrap_or_else(|e| e.into_inner())
 }

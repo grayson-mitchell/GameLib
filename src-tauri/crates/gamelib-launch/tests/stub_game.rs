@@ -1,7 +1,8 @@
 //! The game class against a stub game (88.2-10): the launch arm (the output reaches the capture file, the
 //! sink and the window in order, and the call resolves only after a grandchild has ended) and the
-//! parent-SIGKILL arm (a game survives the death of the process that ran the op). The quit-kill arm is
-//! 88.2-11's.
+//! parent-SIGKILL arm (a game survives the death of the process that ran the op), and (88.2-11) the
+//! quit-kill arm (`launch_tracked_kill_all` ends a running game's tree and the run reads as an abort), the
+//! filtered tracked kill and the abort id reaching a game.
 //!
 //! Runs on macOS, Linux and Windows: the stub (`gamelib-launch-stub-game`, feature `harness`) is the game,
 //! and every wait polls to a deadline (no fixed sleep decides a result). Every run is on a fresh `FakeHome`,
@@ -20,6 +21,7 @@ use gamelib_info::ctx::{InfoCtx, InfoPaths, Platform as InfoPlatform};
 use gamelib_info::http::ReqwestHttp;
 use gamelib_knownfix::ctx::KnownFixCtx;
 use gamelib_launch::ctx::LaunchCtx;
+use gamelib_launch::dispatch;
 use gamelib_launch::game::capture::capture_file;
 use gamelib_launch::runner::call_runner::{
     call_runner, ExecResult, RunnerCallArgs, RunnerHost, RunnerProps, SpawnClassArg,
@@ -413,4 +415,169 @@ fn parent_sigkill_leaves_the_game_running() {
     wait_until("the game and its child to end", || {
         !probe::is_alive(game[0]) && !probe::is_alive(game[1])
     });
+}
+
+/// Starts the stub game as a game-class call on its own task and waits until it is registered, its pids are
+/// published and (for the capture file) it has written something. Answers the run's handle and the pids.
+async fn start_game(
+    ctx: &LaunchCtx,
+    recorded: &Arc<Recorded>,
+    home: &FakeHome,
+    track_key: &str,
+    strays: &mut Strays,
+) -> (tokio::task::JoinHandle<ExecResult>, Vec<u32>) {
+    let pids_file = home.root().join(format!("{track_key}-pids.txt"));
+    let pids = pids_file.to_string_lossy().into_owned();
+    let call = game_call(track_key, &["game", "--pids", &pids, "--child"]);
+    let host = RunnerHost {
+        env: BTreeMap::new(),
+        path: String::new(),
+    };
+    let run = {
+        let (ctx, recorded) = (ctx.clone(), recorded.clone());
+        tokio::spawn(async move { call_runner(&ctx, call, &host, recorded).await })
+    };
+    wait_async("the game to be registered and publish both pids", || {
+        ctx.registry.games_running() && recorded_pids(&pids_file, 2).is_some()
+    })
+    .await;
+    let game = recorded_pids(&pids_file, 2).expect("pids");
+    strays.add(game[0]);
+    strays.add(game[1]);
+    (run, game)
+}
+
+/// `wait_until` for a test that runs on a tokio runtime: it yields instead of blocking the worker.
+async fn wait_async(what: &str, mut pred: impl FnMut() -> bool) {
+    let deadline = Instant::now() + LIMIT;
+    loop {
+        if pred() {
+            return;
+        }
+        assert!(Instant::now() < deadline, "timed out waiting for: {what}");
+        tokio::time::sleep(POLL).await;
+    }
+}
+
+async fn finished(run: tokio::task::JoinHandle<ExecResult>) -> ExecResult {
+    tokio::time::timeout(LIMIT, run)
+        .await
+        .expect("the run did not settle after the kill")
+        .expect("the run task")
+}
+
+/// SC4, the quit-kill arm: the quit's Yes is `launch_tracked_kill_all`. It ends a running game and the
+/// grandchild it started (probed from outside, never through the registry), the run settles as an abort,
+/// and `launch_games_running` reads false afterwards.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn quit_kill_ends_the_game_tree_and_reads_as_abort() {
+    let home = FakeHome::new("stub-game-quit-");
+    let recorded = Arc::new(Recorded::default());
+    let ctx = ctx_over(home.root(), recorded.clone());
+    let mut strays = Strays(Vec::new());
+    let (run, game) = start_game(&ctx, &recorded, &home, "quit-kill", &mut strays).await;
+
+    assert_eq!(
+        dispatch("launch_games_running", &[], &ctx).await,
+        Ok(serde_json::json!(true))
+    );
+    assert!(probe::is_alive(game[0]) && probe::is_alive(game[1]));
+
+    let started = Instant::now();
+    let killed = dispatch("launch_tracked_kill_all", &[], &ctx).await;
+    assert_eq!(killed, Ok(serde_json::json!(1)));
+    assert!(
+        started.elapsed() < Duration::from_secs(3),
+        "the kill outlasted the child grace: {:?}",
+        started.elapsed()
+    );
+    assert!(
+        !probe::is_alive(game[0]) && !probe::is_alive(game[1]),
+        "the game or its child survived the quit-kill"
+    );
+
+    let result = finished(run).await;
+    assert_eq!(result.error, None, "a kill is not an error: {result:?}");
+    assert_eq!(result.abort, Some(true));
+    assert_eq!(
+        dispatch("launch_games_running", &[], &ctx).await,
+        Ok(serde_json::json!(false))
+    );
+    // Nothing is left to kill, and the registrant the kill took has been given back.
+    assert_eq!(
+        dispatch("launch_tracked_kill_all", &[], &ctx).await,
+        Ok(serde_json::json!(0))
+    );
+    // `drain` answers the names still registered: the kill's registrant is not among them.
+    assert!(ctx
+        .engine
+        .shutdown
+        .drain(Duration::from_millis(50))
+        .is_empty());
+}
+
+/// The TS filter: a runner or key that matches nothing ends nothing and leaves the game running; the game's
+/// own `{ runner, key }` ends it.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_filtered_tracked_kill_ends_only_the_game_it_names() {
+    let home = FakeHome::new("stub-game-filter-");
+    let recorded = Arc::new(Recorded::default());
+    let ctx = ctx_over(home.root(), recorded.clone());
+    let mut strays = Strays(Vec::new());
+    let (run, game) = start_game(&ctx, &recorded, &home, "filter-key", &mut strays).await;
+
+    for filter in [
+        serde_json::json!({ "runner": "sideload", "key": "not-this-one" }),
+        serde_json::json!({ "runner": "nile" }),
+        serde_json::json!({ "key": "not-this-one" }),
+    ] {
+        assert_eq!(
+            dispatch("launch_tracked_kill", std::slice::from_ref(&filter), &ctx).await,
+            Ok(serde_json::json!(0)),
+            "{filter}"
+        );
+    }
+    assert!(
+        probe::is_alive(game[0]) && probe::is_alive(game[1]),
+        "a filter that matched nothing ended the game"
+    );
+    assert!(ctx.registry.games_running());
+
+    let own = serde_json::json!({ "runner": "sideload", "key": "filter-key" });
+    assert_eq!(
+        dispatch("launch_tracked_kill", &[own], &ctx).await,
+        Ok(serde_json::json!(1))
+    );
+    let result = finished(run).await;
+    assert_eq!(result.abort, Some(true));
+    assert!(!probe::is_alive(game[0]) && !probe::is_alive(game[1]));
+}
+
+/// The abort id reaches a game run too (`run_abort` alone finds only helper runs): the tree ends and the run
+/// settles as an abort. An id nothing answers to is `false`.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn the_abort_id_ends_a_game_run_through_its_handle() {
+    let home = FakeHome::new("stub-game-abort-");
+    let recorded = Arc::new(Recorded::default());
+    let ctx = ctx_over(home.root(), recorded.clone());
+    let mut strays = Strays(Vec::new());
+    let (run, game) = start_game(&ctx, &recorded, &home, "abort-key", &mut strays).await;
+
+    assert_eq!(
+        dispatch("launch_runner_abort", &[serde_json::json!("nobody")], &ctx).await,
+        Ok(serde_json::json!(false))
+    );
+    assert!(probe::is_alive(game[0]));
+    assert_eq!(
+        dispatch(
+            "launch_runner_abort",
+            &[serde_json::json!("abort-key")],
+            &ctx
+        )
+        .await,
+        Ok(serde_json::json!(true))
+    );
+    let result = finished(run).await;
+    assert_eq!(result.abort, Some(true));
+    assert!(!probe::is_alive(game[0]) && !probe::is_alive(game[1]));
 }

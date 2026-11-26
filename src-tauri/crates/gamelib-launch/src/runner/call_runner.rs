@@ -8,7 +8,7 @@
 //! - **Dedup (SC2).** Two identical joinable calls in flight share one spawn and one result. A call that
 //!   observes the stream neither joins nor registers (49-REVIEW WR-01).
 //! - **Abort.** A run registers an abort token under its abort id; [`run_abort`] cancels it and the run
-//!   ends as `{ abort: true }`. A tracked kill ([`kill_tracked`]) and the app shutdown end a run the same
+//!   ends as `{ abort: true }`. A tracked kill (`TrackedRegistry::kill_tracked`) and the app shutdown end a run the same
 //!   way.
 //! - **Logs.** The `Running command` line goes to the general log and to each of the caller's writers,
 //!   with `Game Output:` when an app name is found; every chunk then goes to each writer. The command
@@ -30,11 +30,12 @@ use tokio_util::sync::CancellationToken;
 use super::redact::get_runner_call_without_credentials;
 use super::sanitize::LogSanitizer;
 use super::stream::{ChunkWindow, LaunchLogSink, LogHandOff, LogTargets, OutputSink};
-use super::{lock, Flight, Registered, RunnerEvent, RunnerName};
+use super::{lock, Flight, Registered, RunnerEvent, RunnerName, RunnerTables};
 use crate::ctx::LaunchCtx;
 use crate::game::capture;
 use crate::game::end::{self, Ended, GameEnd};
-use crate::game::registry::GameGuard;
+use crate::game::registry::{GameGuard, RunIds};
+use crate::game::spawn::GameSpawn;
 
 /// The label every runner child is registered under (shown when one needs the hard kill).
 pub const RUNNER_LABEL: &str = "runner-call";
@@ -489,7 +490,20 @@ impl Run {
     /// is registered while it lasts, and it resolves when the game and its group have ended. Nothing in
     /// GameLib holds a pipe to the game. A run dropped by the shutdown token stops tailing and signals
     /// nothing, and the game keeps running.
-    async fn execute_game(&self, capture_name: &str, track_key: &str, end: GameEnd) -> ExecResult {
+    async fn execute_game(&self, capture_name: &str, ids: RunIds, end: GameEnd) -> ExecResult {
+        // The tables note a game's run as they do a helper's (a recording context keeps the order).
+        let tables = &self.ctx.runner;
+        tables.note(RunnerEvent::AbortCreate(ids.abort_id.clone()));
+        tables.note(RunnerEvent::Track {
+            runner: ids.runner.clone(),
+            key: ids.key.clone(),
+        });
+        let _removed = AbortNote {
+            tables: Arc::clone(&self.ctx.runner),
+            id: ids.abort_id.clone(),
+            token: self.abort.clone(),
+        };
+
         let path = capture::capture_path(&self.ctx, self.runner, capture_name);
         if let Err(e) = capture::create_capture(&path) {
             return self.classify_failure(
@@ -499,22 +513,24 @@ impl Run {
         }
 
         // The merged environment replaces the inherited one, as the helper path does.
-        let mut cmd = std::process::Command::new(&self.program);
-        cmd.args(&self.argv)
-            .env_clear()
-            .envs(self.env.iter().map(|(k, v)| (k, v)));
-        if let Some(cwd) = &self.cwd {
-            cmd.current_dir(cwd);
-        }
-        let handle = match gamelib_proc::spawn_game_tracked(cmd, Some(&path)) {
+        let spawn = GameSpawn {
+            program: &self.program,
+            argv: &self.argv,
+            env: &self.env,
+            cwd: self.cwd.as_deref(),
+            capture: &path,
+        };
+        let handle = match self.ctx.game_spawner.spawn(&spawn) {
             Ok(handle) => handle,
-            Err(e) => return self.classify_failure(&e.to_string(), false),
+            Err(e) => return self.classify_failure(&format!("spawn {}: {e}", self.program), false),
         };
         self.output.spawned(handle.pid);
-        let id = self
-            .ctx
-            .registry
-            .register_game(self.runner.as_str(), track_key, handle);
+        let id = self.ctx.registry.register_game(
+            ids,
+            self.ctx.engine.clock.now_ms(),
+            self.abort.clone(),
+            handle,
+        );
         let _registered = GameGuard::new(Arc::clone(&self.ctx.registry), id);
         let Some(entry) = self.ctx.registry.entry(id) else {
             return failed_to_run(&self.safe_command, "the game's run was not registered");
@@ -525,7 +541,7 @@ impl Run {
         let tail = capture::tail(&path, 0, move |text| chunk(Pipe::Stdout, text), finished);
         let token = self.ctx.engine.shutdown.token();
         let wait = async {
-            let ended = end::wait_end(&entry.handle, end, &token).await;
+            let ended = end::wait_end(&entry, end, &token).await;
             // The final drain of the capture file runs after this.
             let _ = done.send(true);
             ended
@@ -551,7 +567,8 @@ impl Run {
             lock(&self.stderr).join("")
         );
         self.error_handler(&joined);
-        if self.abort.is_cancelled() {
+        // Ended by a registry kill (a stop, a quit) or by the abort id: a cancellation, never an error.
+        if entry.was_killed() || self.abort.is_cancelled() {
             return self.classify_failure("aborted", true);
         }
         let (code, signal) = match status {
@@ -576,6 +593,22 @@ fn exit_signal(status: &std::process::ExitStatus) -> Option<i32> {
     }
 }
 
+/// Notes a game run's abort id given back when the run ends, including when it is dropped.
+struct AbortNote {
+    tables: Arc<RunnerTables>,
+    id: String,
+    token: CancellationToken,
+}
+
+impl Drop for AbortNote {
+    fn drop(&mut self) {
+        self.tables.note(RunnerEvent::AbortRemove {
+            id: self.id.clone(),
+            aborted: self.token.is_cancelled(),
+        });
+    }
+}
+
 /// Gives a run's table entries back when it settles, including when it panics.
 struct TableGuard {
     ctx: LaunchCtx,
@@ -584,6 +617,8 @@ struct TableGuard {
     abort_id: String,
     track: (String, String),
     token: CancellationToken,
+    /// The run's entry in the tracked registry, given back with the tables'.
+    _helper: GameGuard,
 }
 
 impl Drop for TableGuard {
@@ -767,14 +802,21 @@ pub async fn call_runner(
     // A game is the user's process: it never joins another run (single flight is the TS's until 88.3), is
     // registered in the tracked registry rather than the helper tables, and is tailed in this call.
     if args.spawn_class == SpawnClassArg::Game {
+        let ids = RunIds {
+            runner: runner.as_str().to_string(),
+            key: track_key,
+            abort_id,
+            stream_id: args.stream_id.clone(),
+        };
         return run
-            .execute_game(&capture_name, &track_key, GameEnd::default())
+            .execute_game(&capture_name, ids, GameEnd::default())
             .await;
     }
 
     let (sender, receiver) = watch::channel::<Option<ExecResult>>(None);
 
     // Join a run in flight, or become the run: decided under one lock, with no await inside it.
+    let mut helper_entry = None;
     let joined = {
         let mut flights = lock(&ctx.runner.flights);
         let existing = joinable
@@ -804,6 +846,15 @@ pub async fn call_runner(
                     token: abort.clone(),
                 },
             );
+            helper_entry = Some(ctx.registry.register_helper(
+                RunIds {
+                    runner: runner.as_str().to_string(),
+                    key: track_key.clone(),
+                    abort_id: abort_id.clone(),
+                    stream_id: args.stream_id.clone(),
+                },
+                abort.clone(),
+            ));
         }
         existing
     };
@@ -829,6 +880,10 @@ pub async fn call_runner(
         abort_id,
         track: (runner.as_str().to_string(), track_key),
         token: abort,
+        _helper: GameGuard::helper(
+            Arc::clone(&ctx.registry),
+            helper_entry.expect("a run that did not join registered itself"),
+        ),
     };
 
     // The run is its own task, so a caller that drops its future neither stops the child nor strands
@@ -858,16 +913,16 @@ pub fn run_abort(ctx: &LaunchCtx, abort_id: &str) -> bool {
     }
 }
 
-/// Ends the run registered under `(runner, key)` on purpose (the TS `killTracked`): a stopped game, a
-/// cancel, a quit. The run answers `{ abort: true }`. Answers how many it ended (0 or 1).
-pub fn kill_tracked(ctx: &LaunchCtx, runner: RunnerName, key: &str) -> usize {
-    match lock(&ctx.runner.tracked).get(&(runner.as_str().to_string(), key.to_string())) {
-        Some(registered) => {
-            registered.token.cancel();
-            1
-        }
-        None => 0,
+/// `run_abort` for a run of either class: a helper through its abort table, a game through the tracked
+/// registry (it ends the game's tree through its own handle and the run answers `{ abort: true }`).
+/// `false` when nothing answers to `abort_id`.
+pub async fn abort_run(ctx: &LaunchCtx, abort_id: &str) -> bool {
+    if run_abort(ctx, abort_id) {
+        return true;
     }
+    ctx.registry
+        .abort_game(&ctx.engine.shutdown, abort_id)
+        .await
 }
 
 #[cfg(test)]

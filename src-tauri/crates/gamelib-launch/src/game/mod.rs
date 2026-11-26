@@ -6,8 +6,9 @@
 //! - [`capture`]: the capture file's name and mode, and the tailer that turns its growth into chunks.
 //! - [`end`]: when a game run is over (`close`: leader and its whole group; `exit`: the leader plus the
 //!   TS drain grace).
-//! - [`registry`]: register and unregister of a run's `GameHandle` (the registry's kills, reads and ops
-//!   are 88.2-11).
+//! - [`registry`]: the tracked registry: register and unregister of a run, the running-game read and the
+//!   kills (88.2-11).
+//! - [`spawn`]: the seam a game is spawned through.
 //!
 //! Nothing here holds a pipe to the game (Pitfall 5): a game holding the read end of a pipe whose writer
 //! died can take SIGPIPE, so the game's output goes to a file and GameLib is only a reader of it.
@@ -15,3 +16,4 @@
 pub mod capture;
 pub mod end;
 pub mod registry;
+pub mod spawn;

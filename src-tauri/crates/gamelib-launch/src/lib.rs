@@ -34,7 +34,7 @@ use prepare::epic;
 use prepare::launch::{PrepareHost, PrepareLaunchArgs};
 use prepare::wine_begin::PrepareWineBeginArgs;
 use prepare::wine_finish::PrepareWineFinishArgs;
-use runner::call_runner::{call_runner, RunnerCallArgs, RunnerHost};
+use runner::call_runner::{abort_run, call_runner, RunnerCallArgs, RunnerHost};
 use runner::stream::{NullSink, OutputSink, UiOutputSink};
 use serde::Deserialize;
 use serde_json::Value;
@@ -50,16 +50,30 @@ pub const OPS: &[&str] = &[
     "launch_ask_force_uninstall",
     "launch_check_wine_before_launch",
     "launch_epic_service_offline",
+    "launch_games_running",
     "launch_known_fix_env",
     "launch_prepare",
     "launch_prepare_wine_begin",
     "launch_prepare_wine_finish",
+    "launch_runner_abort",
     "launch_runner_call",
+    "launch_runner_kill",
     "launch_setup_env_vars",
     "launch_setup_wine_env_vars",
     "launch_setup_wrapper_env_vars",
     "launch_setup_wrappers",
+    "launch_tracked_kill",
+    "launch_tracked_kill_all",
     "launch_verify_wine_prefix",
+];
+
+/// The ops that end a run. They are not cut short by the app shutdown: a quit-kill runs while the shutdown
+/// token may already be cancelled, and holds its own registrant and bound (`ExitBudget::DEFAULT.child_grace`).
+const KILL_OPS: &[&str] = &[
+    "launch_runner_abort",
+    "launch_runner_kill",
+    "launch_tracked_kill",
+    "launch_tracked_kill_all",
 ];
 
 /// Runs `op` over `args`. `Err` is only an unknown op, bad arguments, a shutdown, a wrong thread or a
@@ -68,7 +82,22 @@ pub async fn dispatch(op: &str, args: &[Value], ctx: &LaunchCtx) -> Result<Value
     let Some(name) = OPS.iter().copied().find(|o| *o == op) else {
         return Err(format!("unknown op: {op}"));
     };
+    if KILL_OPS.contains(&name) {
+        return unguarded(name, route(name, args, ctx)).await;
+    }
     guarded(name, ctx, route(name, args, ctx)).await
+}
+
+/// [`guarded`] without the shutdown cut-off and the "launch" registrant: a panic is still `<op>:panic`.
+async fn unguarded<F>(op: &str, work: F) -> Result<Value, String>
+where
+    F: Future<Output = Result<Value, String>>,
+{
+    let work = std::pin::pin!(work);
+    match (CatchUnwind(work)).await {
+        Ok(result) => result,
+        Err(()) => Err(format!("{op}:panic")),
+    }
 }
 
 /// Each plan adds its arms here, in step with `OPS`. Every arm is a thin wrapper over a function of
@@ -201,6 +230,69 @@ async fn route(op: &str, args: &[Value], ctx: &LaunchCtx) -> Result<Value, Strin
             let result = call_runner(ctx, call, &host, sink).await;
             result_of(serde_json::to_value(result))
         }
+        // Whether a game run is registered (D-07): the answer the quit check reads. Arguments `[]`.
+        "launch_games_running" => {
+            let [] = args else {
+                return Err(bad());
+            };
+            Ok(Value::Bool(ctx.registry.games_running()))
+        }
+        // `killAllTracked`: ends every registered run, games through their own handles and helpers through their
+        // tokens. Arguments `[]`. Answers how many it ended. Bounded by the exit budget's child grace.
+        "launch_tracked_kill_all" => {
+            let [] = args else {
+                return Err(bad());
+            };
+            Ok(Value::from(
+                ctx.registry.kill_all(&ctx.engine.shutdown).await,
+            ))
+        }
+        // `killTracked` with the TS filter. Arguments `[{ runner?, key? }]`: no field ends every run, `runner`
+        // alone every run of it, both one run. Answers how many it ended.
+        "launch_tracked_kill" => {
+            let [filter @ Value::Object(_)] = args else {
+                return Err(bad());
+            };
+            let filter: TrackedKillArgs =
+                serde_json::from_value(filter.clone()).map_err(|_| bad())?;
+            if !filter.valid() {
+                return Err(bad());
+            }
+            Ok(Value::from(
+                ctx.registry
+                    .kill_tracked(
+                        &ctx.engine.shutdown,
+                        filter.runner.as_deref(),
+                        filter.key.as_deref(),
+                    )
+                    .await,
+            ))
+        }
+        // Ends the run of the call that watches this stream. Arguments `[streamId]`. Answers how many it ended.
+        "launch_runner_kill" => {
+            let [Value::String(stream_id)] = args else {
+                return Err(bad());
+            };
+            if !run_id(stream_id) {
+                return Err(bad());
+            }
+            Ok(Value::from(
+                ctx.registry
+                    .kill_stream(&ctx.engine.shutdown, stream_id)
+                    .await,
+            ))
+        }
+        // `abortController.abort()` for a run of either class. Arguments `[abortId]`. Answers whether a run
+        // answered to the id; the run then answers `{ abort: true }`.
+        "launch_runner_abort" => {
+            let [Value::String(abort_id)] = args else {
+                return Err(bad());
+            };
+            if !run_id(abort_id) {
+                return Err(bad());
+            }
+            Ok(Value::Bool(abort_run(ctx, abort_id).await))
+        }
         // The tier-1 `envVariables` of a game, raw (`{}` when none). Arguments `[appName, runner]`.
         "launch_known_fix_env" => {
             let [Value::String(app_name), Value::String(runner)] = args else {
@@ -304,6 +396,27 @@ fn tools_host_arg(host: &Value) -> Option<ToolsHost> {
 /// An app name, app id or label: 1 to 256 UTF-16 units (the bound the known-fix ops hold names to).
 fn bounded_name(name: &str) -> bool {
     !name.is_empty() && name.encode_utf16().count() <= 256
+}
+
+/// An abort id or stream id: a bounded name with no path separator or control character (an id is an app
+/// name or a generated token, never a path).
+fn run_id(id: &str) -> bool {
+    bounded_name(id) && !id.chars().any(|c| c == '/' || c == '\\' || c.is_control())
+}
+
+/// The object argument of `launch_tracked_kill`.
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct TrackedKillArgs {
+    runner: Option<String>,
+    key: Option<String>,
+}
+
+impl TrackedKillArgs {
+    fn valid(&self) -> bool {
+        self.runner.as_deref().map_or(true, bounded_name)
+            && self.key.as_deref().map_or(true, bounded_name)
+    }
 }
 
 /// The object argument of `launch_ask_force_uninstall`.
@@ -581,8 +694,8 @@ mod tests {
     }
 
     #[test]
-    fn the_thirteen_launch_ops_are_in_the_table() {
-        assert_eq!(OPS.len(), 13);
+    fn the_eighteen_launch_ops_are_in_the_table() {
+        assert_eq!(OPS.len(), 18);
         assert!(OPS.iter().all(|op| op.starts_with("launch_")));
     }
 
@@ -652,6 +765,8 @@ mod tests {
             .all(|c| !matches!(c, crate::hooks::testing::HookCall::ForceUninstall { .. })));
     }
 
+    const ZERO_ARG_OPS: &[&str] = &["launch_games_running", "launch_tracked_kill_all"];
+
     #[tokio::test]
     async fn every_op_answers_a_fixed_bad_args_and_never_echoes_what_it_was_sent() {
         let home = FakeHome::new("launch-lib-");
@@ -665,6 +780,10 @@ mod tests {
                 vec![json!({"appName": secret, "bogus": secret})],
                 vec![json!(1), json!(2), json!(3)],
             ] {
+                // The two ops with no argument answer to `[]`; anything else is refused like the rest.
+                if args.is_empty() && ZERO_ARG_OPS.contains(op) {
+                    continue;
+                }
                 let err = dispatch(op, &args, &ctx).await.unwrap_err();
                 assert_eq!(err, format!("{op}:bad-args"), "{op} {args:?}");
                 assert!(!err.contains(secret));

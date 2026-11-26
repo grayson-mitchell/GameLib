@@ -10,6 +10,7 @@ use gamelib_knownfix::ctx::KnownFixCtx;
 use gamelib_wine::ctx::WineCtx;
 
 use crate::game::registry::TrackedRegistry;
+use crate::game::spawn::{GameSpawner, ProcGameSpawner};
 use crate::hooks::ManagerHooks;
 use crate::prepare::deps::WineManagerFacts;
 use crate::prepare::dialogs::LaunchDialogs;
@@ -54,6 +55,8 @@ pub struct LaunchCtx {
     /// The game runs in flight (88.2-10, D-07), each with its `GameHandle`: registered when a game-class call
     /// spawns, unregistered when it ends. A context owns its own, never a module-level one.
     pub registry: Arc<TrackedRegistry>,
+    /// How a game-class run starts its game: `gamelib_proc::spawn_game_tracked` unless a test sets a scripted one.
+    pub game_spawner: Arc<dyn GameSpawner>,
 }
 
 impl LaunchCtx {
@@ -76,6 +79,7 @@ impl LaunchCtx {
             errors: None,
             hooks: None,
             registry: Arc::new(TrackedRegistry::new()),
+            game_spawner: Arc::new(ProcGameSpawner),
         }
     }
 
@@ -94,6 +98,12 @@ impl LaunchCtx {
     /// The same context with the TS managers' hooks.
     pub fn with_hooks(mut self, hooks: Arc<dyn ManagerHooks>) -> LaunchCtx {
         self.hooks = Some(hooks);
+        self
+    }
+
+    /// The same context with another game spawner (a test's scripted one).
+    pub fn with_game_spawner(mut self, spawner: Arc<dyn GameSpawner>) -> LaunchCtx {
+        self.game_spawner = spawner;
         self
     }
 
