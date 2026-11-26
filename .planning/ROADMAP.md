@@ -1029,12 +1029,12 @@ Plans:
   3. The quit dialog gains a "game running" condition (D-27, a recorded behaviour change) read from the Rust running-game registry
   4. `commandRunner.ts` is deleted; closes on goldens, three-OS CI and a stub-game smoke (launch, quit-kill, survival of parent SIGKILL)
 
-**Plans:** 1/25 plans executed in 18 waves; planned 2026-11-26, re-sliced the same day so every plan fits the 100k smart-zone budget and stays below 15 files (goldens are recorded from the TS before each Rust slice, D-25; the quit prompt lands before games become Game-class)
+**Plans:** 2/25 plans executed in 18 waves; planned 2026-11-26, re-sliced the same day so every plan fits the 100k smart-zone budget and stays below 15 files (goldens are recorded from the TS before each Rust slice, D-25; the quit prompt lands before games become Game-class)
 
 Plans:
 **Wave 1**
 - [x] 88.2-01-PLAN.md — runnerTrace harness; goldens: callRunner (pairwise, dedup, abort, transcripts, every title); classes.json runner call sites
-- [ ] 88.2-02-PLAN.md — gamelib-proc unix: GameHandle, stamp-checked kill_game_tree, group_alive, terminate_one, orphan arms
+- [x] 88.2-02-PLAN.md — gamelib-proc unix: GameHandle, stamp-checked kill_game_tree, group_alive, terminate_one, orphan arms
 
 **Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 88.2-03-PLAN.md — Goldens: the credential redaction vectors and the gog and nile auth log sanitizers

@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: "88.2"
 current_phase_name: Command runner and game processes
 status: executing
-stopped_at: Completed 88.2-01-PLAN.md
-last_updated: "2026-11-26T11:07:46.861Z"
+stopped_at: Completed 88.2-02-PLAN.md
+last_updated: "2026-11-26T13:28:30.801Z"
 last_activity: 2026-11-26
 last_activity_desc: Phase 88.2 execution started
-state_head: f7a807279c14dcee18a9b6fc02689b5569efc072
+state_head: 8ba7e1db96c01c5656b824e8eb3ac06b1d05bfa8
 progress:
   total_phases: 25
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-25)
 ## Current Position
 
 Phase: 88.2 (Command runner and game processes) — EXECUTING
-Plan: 2 of 25
+Plan: 3 of 25
 Status: Ready to execute
 Last activity: 2026-11-26 — Phase 88.2 execution started
 Progress: [████████████████░░░░] 204/257 plans ([█████████░] 92%)
@@ -548,6 +548,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 88.1 P22 | 55 min | 2 tasks | 58 files |
 | Phase 88.1 P23 | 10 min | 2 tasks | 7 files |
 | Phase 88.2 P01 | 35 min | 2 tasks | 7 files |
+| Phase 88.2 P02 | 2h 16m | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -1234,6 +1235,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 88.1]: 88.1-23: the operator's 2026-11-26 pairwise-narrowing acceptance is an overrides entry on truth 2 in 88.1-VERIFICATION.md; status, score and overrides_applied are left for re-verification
 - [Phase 88.2]: 88.2-01: runnerTrace carries its own scripted runner; createSpawnTracer cannot script a signal, killedByUs or a held run and records only an env diff
 - [Phase 88.2]: 88.2-01: golden/runner holds 93 TS-recorded callRunner cases (floor 93); the census-gate source-scan titles are pinned as cases carrying the eight-flag list; two minor D-20 todos filed (chunk trim drops a boundary space, nile app name read before empty args dropped)
+- [Phase 88.2]: 88.2-02: kill_game_tree and GameHandle::kill_tree share terminate_known_group, which SIGKILLs only while the group is still alive after the grace (an emptied group's id may be recycled); macOS proc_pidinfo cannot read a zombie leader's start stamp, so the own handle relies on the unreaped leader, not a stamp, and a pid-only kill of a leaderless group answers Gone
 
 ### Pending Todos
 
@@ -1520,8 +1522,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-26T11:07:43.589Z
-Stopped at: Completed 88.2-01-PLAN.md
+Last session: 2026-11-26T13:28:27.777Z
+Stopped at: Completed 88.2-02-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
