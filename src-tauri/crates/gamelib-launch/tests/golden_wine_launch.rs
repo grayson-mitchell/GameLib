@@ -17,9 +17,6 @@
 //! (`golden/wine_launch/deltas.json`). A count floor lives here next to each replay (equal to the cases it
 //! compares), so editing the JSON alone cannot lower the bar.
 
-// Task 1 (the tracer) compares one case; the rest of the replay lands with Task 2, which removes this.
-#![allow(dead_code, unused_imports)]
-
 use std::collections::BTreeMap;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -41,7 +38,7 @@ use gamelib_launch::game::registry::TrackedRegistry;
 use gamelib_launch::game::spawn::{GameSpawn, GameSpawner};
 use gamelib_launch::runner::stream::{LaunchLogSink, LogHandOff, OutputSink};
 use gamelib_launch::runner::wine_command::{
-    launch_wine_command, LaunchWineCommandArgs, WineLaunchResult, WINE_RUNNER,
+    launch_wine_command, LaunchWineCommandArgs, WineLaunchResult,
 };
 use gamelib_launch::runner::{RunnerEvent, RunnerTables};
 use gamelib_log::frame::FrameTarget;
@@ -275,6 +272,13 @@ impl Rig {
             } else if let Some(text) = entry["text"].as_str() {
                 std::fs::create_dir_all(target.parent().unwrap()).unwrap();
                 std::fs::write(&target, text).unwrap();
+                #[cfg(unix)]
+                if let Some(mode) = entry["mode"].as_str() {
+                    use std::os::unix::fs::PermissionsExt;
+                    let bits = u32::from_str_radix(mode, 8).unwrap();
+                    std::fs::set_permissions(&target, std::fs::Permissions::from_mode(bits))
+                        .unwrap();
+                }
             } else {
                 panic!("unsupported seed entry: {entry}");
             }
@@ -973,6 +977,12 @@ fn replay_wine_launch(case: &LaunchCase) -> Result<(), String> {
     rig.seed(&case.setup.seed());
     let class = class_of(&case.call_site);
     let is_game = class == "game";
+    // `onSpawn` is a TS callback with no wire form (`helper-spawn-not-reported`): the game arm reports the pid
+    // to the output sink instead, so only a helper-class case may set it.
+    assert!(
+        !(case.args.on_spawn && is_game),
+        "{id}: a game case sets onSpawn"
+    );
 
     let wineserver = rig.expand(&case.setup.wineserver_path());
     let script: Vec<Step> = case
@@ -1433,4 +1443,633 @@ fn the_sideload_wine_launch_runs_as_a_game_with_the_ts_log_stream_and_track() {
         .expect("the tracer case");
     assert_eq!(class_of(&tracer.call_site), "game");
     run_case(&tracer);
+}
+
+// ---------------------------------------------------------------------------------------------
+// The 16 wine_command cases (gamelib-wine, 87) through the launch variant, with no delta applied
+// ---------------------------------------------------------------------------------------------
+
+fn wine_command_dir() -> PathBuf {
+    wine_fixtures().join("golden/wine_command")
+}
+
+fn wine_command_cases() -> Vec<Value> {
+    read_json(&wine_command_dir().join("cases.json"))
+        .as_array()
+        .unwrap()
+        .clone()
+}
+
+fn platform_of(name: &str) -> Platform {
+    match name {
+        "linux" => Platform::Linux,
+        "mac" => Platform::Mac,
+        other => panic!("unknown platform {other}"),
+    }
+}
+
+/// A scripted seam that also notes the post-exit mode each spec asked for (the one thing the engine's
+/// recorded spawn does not keep, and the golden's `resolveOn`).
+struct NotingRunner {
+    inner: Arc<ScriptedSpecRunner>,
+    posts: Mutex<Vec<gamelib_core::process::PostExit>>,
+}
+
+impl SpecRunner for NotingRunner {
+    fn run(&self, spec: ProcSpec, on_line: Option<LineSink>) -> BoxFuture<SpecOutput> {
+        lock(&self.posts).push(spec.post_exit);
+        self.inner.run(spec, on_line)
+    }
+
+    fn run_streamed(&self, spec: ProcSpec, on_chunk: ChunkSink) -> BoxFuture<SpecOutput> {
+        lock(&self.posts).push(spec.post_exit);
+        self.inner.run_streamed(spec, on_chunk)
+    }
+}
+
+fn scripted_runner(rig: &Rig, base: &[(String, String)], scripted: &Value) -> ScriptedSpecRunner {
+    let mut runner = ScriptedSpecRunner::new(base.to_vec());
+    for entry in scripted.as_array().unwrap() {
+        let program = rig.expand(entry["program"].as_str().unwrap());
+        let out = SpecOutput {
+            code: entry["code"].as_i64().map(|c| c as i32),
+            stdout: entry["stdout"].as_str().unwrap_or_default().to_string(),
+            stderr: entry["stderr"].as_str().unwrap_or_default().to_string(),
+            ..SpecOutput::default()
+        };
+        runner = match entry["argv"].as_array() {
+            Some(argv) => {
+                let argv: Vec<String> = argv
+                    .iter()
+                    .map(|a| rig.expand(a.as_str().unwrap()))
+                    .collect();
+                let refs: Vec<&str> = argv.iter().map(String::as_str).collect();
+                runner.on(&program, &refs, out)
+            }
+            None => runner.on_program(&program, out),
+        };
+    }
+    runner
+}
+
+/// The oracle's `PATH` for a case: the case's directories, then the scripted-bin directory.
+fn case_env(rig: &Rig, case: &Value) -> Vec<(String, String)> {
+    let mut dirs: Vec<String> = case["path"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .map(|p| rig.expand(p.as_str().unwrap()))
+        .collect();
+    dirs.push(rig.expand("<HOME>/scripted-bin"));
+    let mut env = rig.fake_home_env();
+    let path = std::env::join_paths(dirs).expect("the directories hold no separator");
+    env.push(("PATH".to_string(), path.to_string_lossy().into_owned()));
+    env
+}
+
+fn replay_wine_command(case: &Value) -> Result<(), String> {
+    let id = case["id"].as_str().unwrap();
+    let rig = Rig::new();
+    rig.seed(&case["seed"]);
+    let platform = platform_of(case["platform"].as_str().unwrap());
+    let env = case_env(&rig, case);
+    let scripted = Arc::new(scripted_runner(&rig, &env, &case["scripted"]));
+    let runner = Arc::new(NotingRunner {
+        inner: scripted.clone(),
+        posts: Mutex::new(Vec::new()),
+    });
+    let engine_log = Arc::new(RecordingLog::new());
+    let sink = Arc::new(RecordingLogSink::default());
+    let events = Arc::new(Mutex::new(Vec::new()));
+    let ctx = rig
+        .launch_ctx(platform, runner.clone(), engine_log.clone())
+        .with_log_sink(sink.clone())
+        .with_runner_tables(Arc::new(RunnerTables::recording_into(events.clone())));
+
+    let settings = rig.expand_deep(&case["settings"]);
+    let mut call = rig.expand_deep(&case["args"]);
+    let mut host = WineHost {
+        env: EnvSnapshot::from_pairs(env),
+        ..WineHost::default()
+    };
+    if case["useDefaultSettings"].as_bool() == Some(true) {
+        host.default_settings = Some(
+            serde_json::from_value::<GameSettingsView>(settings)
+                .map_err(|e| format!("{id}: settings: {e}"))?,
+        );
+    } else {
+        call["gameSettings"] = settings;
+    }
+    // One unclaimed log writer and an observer: the TS harness gave every case both.
+    call["logTargets"] = json!([{
+        "target": { "kind": "game", "appName": "sideload-app", "runner": "sideload", "type": "launch" },
+        "rotate": true
+    }]);
+    call["observe"] = json!(true);
+    call["spawnClass"] = json!("helper");
+    let args: LaunchWineCommandArgs =
+        serde_json::from_value(call).map_err(|e| format!("{id}: the call does not decode: {e}"))?;
+
+    let recorder = Arc::new(StreamRecorder::new(ctx.registry.clone()));
+    let rt = runtime();
+    let result = rt.block_on(launch_wine_command(&ctx, args, &host, recorder.clone()));
+    drop(rt);
+
+    let golden_dir = wine_command_dir().join("expected").join(id);
+    let golden = |name: &str| read_json(&golden_dir.join(name));
+
+    let want = golden("result.json");
+    if result.to_json() != want["result"] {
+        return Err(format!(
+            "{id}: result {}, want {}",
+            result.to_json(),
+            want["result"]
+        ));
+    }
+    let spawns = scripted.spawns();
+    let actual = rig.normalise(Value::Array(spawns.iter().map(|s| s.to_json()).collect()));
+    if actual != golden("spawns.json") {
+        return Err(format!(
+            "{id}: spawns {actual}, want {}",
+            golden("spawns.json")
+        ));
+    }
+    if !scripted.unscripted().is_empty() {
+        return Err(format!("{id}: unscripted {:?}", scripted.unscripted()));
+    }
+
+    // The runner options the TS chose: the environment is replaced, the command has no time limit and the
+    // wineserver wait has 30 minutes, the main command is tracked as `{ wine, key }` and resolves on `close`
+    // or, with resolveOnExit, on `exit` (the three the 87 replay left to this variant).
+    let wanted = golden("events.json");
+    let wanted = wanted.as_array().unwrap();
+    let options: Vec<&Value> = wanted
+        .iter()
+        .filter(|e| e["kind"] == "runOptions")
+        .collect();
+    if options.len() != spawns.len() {
+        return Err(format!("{id}: one runOptions event per spawn"));
+    }
+    let posts = lock(&runner.posts).clone();
+    let main = options.iter().rposition(|o| !o["track"].is_null());
+    for (index, (spawn, option)) in spawns.iter().zip(&options).enumerate() {
+        if option["replaceEnv"] != json!(spawn.replace_env) {
+            return Err(format!("{id}: spawn {index} replaceEnv"));
+        }
+        if spawn.label != "wine-command" {
+            return Err(format!("{id}: spawn {index} label {}", spawn.label));
+        }
+        let wanted_timeout = option["timeoutMs"]
+            .as_u64()
+            .map(std::time::Duration::from_millis);
+        if spawn.timeout != wanted_timeout {
+            return Err(format!("{id}: spawn {index} timeout {:?}", spawn.timeout));
+        }
+        if Some(index) == main {
+            let post = format!("{:?}", posts[index]);
+            let wanted_post = if option["resolveOn"] == "exit" {
+                "Grace(250ms)"
+            } else {
+                "UntilClosed"
+            };
+            if post != wanted_post {
+                return Err(format!(
+                    "{id}: the main spawn resolves with {post}, want {wanted_post}"
+                ));
+            }
+        } else if option["track"].is_null() && posts[index] != Default::default() {
+            return Err(format!("{id}: spawn {index} is not a plain wait"));
+        }
+    }
+    let tracks: Vec<Value> = lock(&events)
+        .iter()
+        .filter_map(|e| match e {
+            RunnerEvent::Track { runner, key } => {
+                Some(json!({ "runner": runner, "key": rig.norm_text(key) }))
+            }
+            _ => None,
+        })
+        .collect();
+    let wanted_tracks: Vec<Value> = main
+        .map(|i| options[i]["track"].clone())
+        .into_iter()
+        .collect();
+    if tracks != wanted_tracks {
+        return Err(format!(
+            "{id}: tracked as {tracks:?}, want {wanted_tracks:?}"
+        ));
+    }
+    // The list the TS left in the caller's hand is the argv of the main spawn (it built it in place); the
+    // Rust call builds on a copy and never touches the caller's.
+    if let Some(index) = main {
+        let after = rig.normalise(json!(spawns[index].argv));
+        if after != want["commandPartsAfter"] {
+            return Err(format!(
+                "{id}: the main argv is {after}, the TS left {}",
+                want["commandPartsAfter"]
+            ));
+        }
+    }
+
+    // The header, then every chunk to the writer and to the observer, in the order the TS wrote them.
+    let frames: Vec<Value> = lock(&sink.frames).clone();
+    let raws: Vec<String> = frames
+        .iter()
+        .filter_map(|f| f["raw"].as_str().map(str::to_string))
+        .collect();
+    let wanted_writes: Vec<&str> = wanted
+        .iter()
+        .filter(|e| e["kind"] == "logWriter")
+        .filter_map(|e| e["text"].as_str())
+        .collect();
+    match main {
+        Some(index) => {
+            let header = format!(
+                "Wine Command: {} {}\n\nGame Log:\n",
+                spawns[index].program,
+                spawns[index].argv.join(" ")
+            );
+            if raws.first() != Some(&header) {
+                return Err(format!(
+                    "{id}: the first write is {:?}, want {header:?}",
+                    raws.first()
+                ));
+            }
+            if frames[0]["rotate"] != json!(true) {
+                return Err(format!("{id}: an unclaimed writer's header carries rotate"));
+            }
+            if raws[1..].iter().map(String::as_str).collect::<Vec<_>>() != wanted_writes {
+                return Err(format!(
+                    "{id}: writer got {:?}, want {wanted_writes:?}",
+                    &raws[1..]
+                ));
+            }
+        }
+        None => {
+            if !frames.is_empty() {
+                return Err(format!("{id}: nothing ran, but the writer was written to"));
+            }
+        }
+    }
+    let wanted_output: Vec<&str> = wanted
+        .iter()
+        .filter(|e| e["kind"] == "output")
+        .filter_map(|e| e["data"].as_str())
+        .collect();
+    let got_output = lock(&recorder.chunks).clone();
+    if got_output.iter().map(String::as_str).collect::<Vec<_>>() != wanted_output {
+        return Err(format!(
+            "{id}: observer got {got_output:?}, want {wanted_output:?}"
+        ));
+    }
+
+    // What the TS warned and errored; the engine log carries fixed text.
+    let expected_log: Vec<(String, String)> = wanted
+        .iter()
+        .filter(|e| e["kind"] == "warning" || e["kind"] == "error")
+        .map(|e| {
+            let level = if e["kind"] == "warning" {
+                "warn"
+            } else {
+                "error"
+            };
+            (
+                level.to_string(),
+                e["message"].as_str().unwrap().to_string(),
+            )
+        })
+        .collect();
+    let actual_log: Vec<(String, String)> = engine_log
+        .lines()
+        .into_iter()
+        .filter(|(level, _)| *level == "warn" || *level == "error")
+        .map(|(level, text)| (level.to_string(), text))
+        .collect();
+    if actual_log != expected_log {
+        return Err(format!("{id}: log {actual_log:?}, want {expected_log:?}"));
+    }
+    // The general log: the debug line of a command that ran, and nothing the TS did not log.
+    let general = lock(&sink.general).clone();
+    let debug_lines = general
+        .iter()
+        .filter(|(level, prefix, text)| {
+            *level == Level::Debug
+                && *prefix == Prefix::Backend
+                && text.starts_with("Running Wine command:")
+        })
+        .count();
+    if debug_lines != usize::from(result.ran) || general.len() != debug_lines {
+        return Err(format!("{id}: the general log is {general:?}"));
+    }
+
+    if rig.tree() != comparable_tree(golden("tree.json")) {
+        return Err(format!(
+            "{id}: tree {}, want {}",
+            rig.tree(),
+            golden("tree.json")
+        ));
+    }
+    Ok(())
+}
+
+fn wine_command_folders() -> Vec<String> {
+    std::fs::read_dir(wine_command_dir().join("expected"))
+        .unwrap()
+        .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+        .collect()
+}
+
+/// The manifest rules every oracle suite carries: the count equals the cases, it is at or above the floor,
+/// and `expected/` holds one folder per case.
+fn check_manifest(
+    what: &str,
+    ids: Vec<String>,
+    manifest: &Value,
+    floor: usize,
+    folders: Vec<String>,
+) -> Result<(), String> {
+    check_floor(what, ids.len(), floor)?;
+    let count = manifest["count"].as_u64().unwrap_or(0) as usize;
+    if count != ids.len() {
+        return Err(format!(
+            "{what}: MANIFEST count {count} != {} cases",
+            ids.len()
+        ));
+    }
+    if manifest["floor"].as_u64().unwrap_or(0) < floor as u64 {
+        return Err(format!("{what}: MANIFEST floor is below {floor}"));
+    }
+    let (mut ids, mut have) = (ids, folders);
+    ids.sort();
+    have.sort();
+    if ids != have {
+        return Err(format!(
+            "{what}: expected/ folders {have:?} != case ids {ids:?}"
+        ));
+    }
+    Ok(())
+}
+
+#[test]
+fn the_manifests_hold_the_floors_and_one_expected_folder_per_case() {
+    let launch = launch_cases();
+    let launch_dir = fixtures().join("golden/wine_launch");
+    check_manifest(
+        "wine_launch",
+        launch.iter().map(|c| c.id.clone()).collect(),
+        &read_json(&launch_dir.join("MANIFEST.json")),
+        WINE_LAUNCH_FLOOR,
+        std::fs::read_dir(launch_dir.join("expected"))
+            .unwrap()
+            .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+            .collect(),
+    )
+    .unwrap();
+    check_manifest(
+        "wine_command",
+        wine_command_cases()
+            .iter()
+            .map(|c| c["id"].as_str().unwrap().to_string())
+            .collect(),
+        &read_json(&wine_command_dir().join("MANIFEST.json")),
+        WINE_COMMAND_FLOOR,
+        wine_command_folders(),
+    )
+    .unwrap();
+}
+
+#[test]
+fn an_empty_case_list_fails_the_manifest_guard() {
+    let manifest = read_json(&fixtures().join("golden/wine_launch/MANIFEST.json"));
+    assert!(check_manifest(
+        "wine_launch",
+        Vec::new(),
+        &manifest,
+        WINE_LAUNCH_FLOOR,
+        Vec::new()
+    )
+    .is_err());
+}
+
+#[test]
+fn every_wine_launch_golden_replays_through_the_variant() {
+    let all = launch_cases();
+    check_floor("wine_launch cases", all.len(), WINE_LAUNCH_FLOOR).unwrap();
+    let mut failures = Vec::new();
+    for case in &all {
+        if let Err(message) = replay_wine_launch(case) {
+            failures.push(message);
+        }
+    }
+    assert!(failures.is_empty(), "{}", failures.join("\n"));
+    println!(
+        "wine_launch: compared {} floor {WINE_LAUNCH_FLOOR}",
+        all.len()
+    );
+    assert_eq!(all.len(), WINE_LAUNCH_FLOOR);
+}
+
+#[test]
+fn the_wine_command_goldens_replay_through_the_variant_with_no_delta_applied() {
+    let all = wine_command_cases();
+    check_floor("wine_command cases", all.len(), WINE_COMMAND_FLOOR).unwrap();
+    let mut failures = Vec::new();
+    for case in &all {
+        if let Err(message) = replay_wine_command(case) {
+            failures.push(message);
+        }
+    }
+    assert!(failures.is_empty(), "{}", failures.join("\n"));
+    println!(
+        "wine_command: compared {} floor {WINE_COMMAND_FLOOR}",
+        all.len()
+    );
+    assert_eq!(all.len(), WINE_COMMAND_FLOOR);
+}
+
+/// The replay can fail: the same tracer with another argument, and a golden with another key, both differ.
+#[test]
+fn a_changed_call_or_a_changed_golden_fails_the_replay() {
+    let tracer = launch_cases()
+        .into_iter()
+        .find(|c| c.id == "wine-launch-sideload")
+        .expect("the tracer case");
+    replay_wine_launch(&tracer).expect("the recorded call replays");
+    let mut other_arg = tracer.clone();
+    other_arg.args.command_parts.push("--extra".to_string());
+    assert!(replay_wine_launch(&other_arg).is_err());
+    let mut other_key = tracer.clone();
+    other_key.args.track_key = Some("another-app".to_string());
+    assert!(replay_wine_launch(&other_key).is_err());
+}
+
+/// No entry of gamelib-wine's `deltas.json` is applied: it still holds exactly the three entries 87 wrote, and
+/// this crate's own `deltas.json` names every delta the launch replay compares under.
+#[test]
+fn the_launch_replay_applies_no_delta_of_the_wine_crate_and_names_its_own() {
+    let wine_deltas = read_json(&wine_command_dir().join("deltas.json"));
+    let mut keys: Vec<&str> = wine_deltas
+        .as_object()
+        .unwrap()
+        .keys()
+        .map(String::as_str)
+        .collect();
+    keys.sort_unstable();
+    assert_eq!(
+        keys,
+        [
+            "chunked-output-and-log-writers",
+            "command-parts-not-mutated",
+            "track-and-resolve-on"
+        ]
+    );
+    let launch_deltas = read_json(&fixtures().join("golden/wine_launch/deltas.json"));
+    for key in [
+        "shell-injected-env",
+        "caller-arrays-mutated",
+        "error-stack-trace",
+        "game-merged-streams",
+        "helper-spawn-not-reported",
+    ] {
+        assert!(
+            launch_deltas[key].as_str().is_some_and(|t| t.len() > 40),
+            "wine_launch/deltas.json lacks a reason for {key}"
+        );
+    }
+}
+
+/// `launch_wine_command` through `dispatch`: the wire shape of the call, the answer and a refusal.
+#[test]
+fn the_launch_wine_command_op_runs_a_command_and_refuses_a_bad_argument() {
+    let tracer = launch_cases()
+        .into_iter()
+        .find(|c| c.id == "wine-launch-sideload")
+        .expect("the tracer case");
+    let rig = Rig::new();
+    rig.seed(&tracer.setup.seed());
+    let wineserver = rig.expand(&tracer.setup.wineserver_path());
+    let script: Vec<Step> = tracer
+        .script
+        .iter()
+        .cloned()
+        .map(|mut step| {
+            step.program = step.program.map(|p| {
+                if p == "<WINESERVER>" {
+                    wineserver.clone()
+                } else {
+                    p
+                }
+            });
+            step
+        })
+        .collect();
+    let runner = Arc::new(CaseRunner::new(script));
+    let sink = Arc::new(RecordingLogSink::default());
+    let ctx = rig
+        .launch_ctx(
+            Platform::Linux,
+            runner.clone(),
+            Arc::new(RecordingLog::new()),
+        )
+        .with_game_spawner(Arc::new(CaseGameSpawner {
+            cases: runner.clone(),
+        }))
+        .with_log_sink(sink);
+    let call = rig.expand_deep(&json!({
+        "commandParts": ["<HOME>/Games/Game/game.exe", "-flag"],
+        "gameSettings": tracer.setup.settings(),
+        "wait": true,
+        "protonVerb": "waitforexitandrun",
+        "startFolder": "<HOME>/Games/Game",
+        "options": { "trackKey": "sideload-app" },
+        "spawnClass": "game",
+    }));
+    let host = json!({ "env": rig.pinned_env() });
+    let rt = runtime();
+    let answer = rt
+        .block_on(gamelib_launch::dispatch(
+            "launch_wine_command",
+            &[call.clone(), host.clone()],
+            &ctx,
+        ))
+        .expect("the op answers");
+    assert_eq!(answer["code"], 0);
+    // A game's two streams share one capture file: everything it printed is stdout.
+    assert_eq!(answer["stdout"], "game starting\nwarn: fsync\nready\n");
+    assert_eq!(runner.unused(), 0);
+
+    let mut unknown = call;
+    unknown["shell"] = json!("sh -c");
+    let refused = rt
+        .block_on(gamelib_launch::dispatch(
+            "launch_wine_command",
+            &[unknown, host],
+            &ctx,
+        ))
+        .unwrap_err();
+    assert_eq!(refused, "launch_wine_command:bad-args");
+}
+
+/// The two ends of a helper-class wine command over a real child: a `wine` that prints, leaves a background
+/// holder of its pipes and exits 3. `close` (the default) waits for every holder of a pipe and answers what
+/// the holder printed; `resolveOnExit` answers the drain grace after the exit, without it. Unix only: the
+/// stand-in wine is a shell script.
+#[cfg(unix)]
+#[test]
+fn a_real_helper_wine_command_resolves_on_close_or_on_exit() {
+    use std::os::unix::fs::PermissionsExt;
+    let setup = Setup {
+        kind: "wine".to_string(),
+        wineserver: false,
+        missing_bin: false,
+    };
+    let run = |resolve_on_exit: bool| -> (WineLaunchResult, std::time::Duration) {
+        let rig = Rig::new();
+        rig.seed(&setup.seed());
+        let bin = rig.expand(&setup.bin());
+        std::fs::write(
+            &bin,
+            "#!/bin/sh\necho started\n(sleep 1; echo late) &\nexit 3\n",
+        )
+        .unwrap();
+        std::fs::set_permissions(&bin, std::fs::Permissions::from_mode(0o755)).unwrap();
+        let ctx = rig.launch_ctx(
+            Platform::Linux,
+            Arc::new(gamelib_proc::spec::SpecProcRunner),
+            Arc::new(RecordingLog::new()),
+        );
+        let host = WineHost {
+            env: EnvSnapshot::from_pairs(rig.pinned_env()),
+            ..WineHost::default()
+        };
+        let args: LaunchWineCommandArgs = serde_json::from_value(rig.expand_deep(&json!({
+            "commandParts": ["game.exe"],
+            "gameSettings": setup.settings(),
+            "resolveOnExit": resolve_on_exit,
+            "spawnClass": "helper",
+        })))
+        .expect("decodes");
+        let started = std::time::Instant::now();
+        let result = runtime().block_on(launch_wine_command(
+            &ctx,
+            args,
+            &host,
+            Arc::new(gamelib_launch::runner::stream::NullSink),
+        ));
+        (result, started.elapsed())
+    };
+
+    let (closed, took) = run(false);
+    assert_eq!(closed.code, Some(3), "{closed:?}");
+    assert_eq!(closed.stdout, "started\nlate\n");
+    assert!(
+        took >= std::time::Duration::from_millis(900),
+        "close returned after {took:?}, before the pipe holder ended"
+    );
+    let (exited, _) = run(true);
+    assert_eq!(exited.code, Some(3), "{exited:?}");
+    assert_eq!(
+        exited.stdout, "started\n",
+        "resolveOnExit waited for the holder"
+    );
 }
