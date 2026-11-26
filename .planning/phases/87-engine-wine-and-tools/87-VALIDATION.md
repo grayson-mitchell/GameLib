@@ -469,6 +469,47 @@ Step 13 reds at P, each with its cause:
 What the two fix commits changed: `loginWindowSeamPredicateRemoved` (Finding 3) is green and no longer a pre-existing red. The `Supply-chain audit` red of Finding 7 is a `Cargo.lock` matter that CI, not this macOS proof, shows; the Rust steps 4 to 11 here are unchanged against `02d0bd26d` (same counts, same clippy result).
 The worktree was removed with `git worktree remove` afterwards.
 
+## CI proof (gap closure cycle 2)
+
+Collected 2026-11-26 (87-78 Task 3) with `gh run list`, `gh run view <id> --json jobs` and the leg logs. Operator decision at the Task 2 checkpoint, recorded verbatim:
+**`push-and-build`**, given directly to the orchestrating session; the 87-78 executor declined to act on it when relayed, so the orchestrator ran Task 3 itself. `gh release list`
+before: 12 entries, newest draft `GameLib v0.13.1`. `origin/main` was `c0f863946` (88.1-20), an ancestor of P.
+
+**Push 1** (`c0f863946..01f11c55e`, P = `02d0bd26d`): `git diff --name-only P HEAD` listed only `87-VALIDATION.md`; pre-push hook ran (no `--no-verify`). Results: Rust test success on all three
+legs (`45773050987`), Code check and Lint success, **Test failure** (`45773051045`: `loginWindowSeamPredicateRemoved` only, a false positive on `options.seam ?? {}` in the 94-09
+Humble harness `userHarness.ts:360`, red on main since `1eb10a76a`) and **Supply-chain audit failure** (`45773050965`: cargo-deny RUSTSEC-2026-0594, cookie 0.18.1 via tauri, red on main
+since at least `1c8d73a65`). Neither came from a cycle 2 commit. The operator chose to fix both before the release (question dialog, "Fix first, then release").
+
+**Fixes:** `f2bed5556` (the harness default rewritten as a destructuring default, same behaviour) and `c0e66d30e` (lockfile-only `cookie` 0.18.1 -> 0.18.3, the patched release;
+`cargo deny check advisories` ok). P moved to `c0e66d30e`; Task 1 re-ran at it (`### Re-run at the moved P` above). **Push 2** (`01f11c55e..c866ad57d`): Test, Supply-chain audit,
+Code check, Lint success; Rust test `45778198795` **windows-latest failure** twice (attempt 1 and a re-run of the failed job):
+`a_real_powershell_run_writes_a_lnk_holding_the_launch_url` (`gamelib-shortcuts/tests/golden_windows.rs:716`, 94-16) returned `powershell did not exit within 30000ms`. The operator chose to
+investigate. Measured on windows-latest on a throwaway branch (`diag/ps-lnk-timing`, deleted afterwards): PowerShell start-up is about 120 ms in every environment, but `Add-Type` with the
+test's empty fake profile takes 17.8 to 28 s (no module-analysis cache under the fake LOCALAPPDATA, and the machine PSModulePath includes the Az module set), against 150 to 700 ms with the
+runner's full environment. Fix `06e4d2844` (test-only, `cfg(windows)`): the test sets PSModulePath to `%SystemRoot%\System32\WindowsPowerShell\v1.0\Modules`; verified on windows-latest at
+11.5 to 16.9 s (3 alone, 2 in the suite, all green). The app is unaffected: it hands PowerShell its whole process environment (`shortcuts_dispatch.rs` `expansion_env`).
+P moved to `06e4d2844`. Task 1 was NOT re-run a third time: the commit is a `#[cfg(windows)]` test in a Windows-only test binary, which the macOS proof does not compile, so steps 1 to 18
+cannot differ from the `c0e66d30e` re-run (orchestrator decision, recorded as a deviation in the SUMMARY). **Push 3** (`c866ad57d..06e4d2844`): `git diff --name-only c0e66d30e HEAD` listed
+`87-VALIDATION.md` and `golden_windows.rs` only; `main..origin/main` 0; pre-push hook ran.
+
+**Final head `06e4d2844`**:
+
+| Workflow | Run | Result |
+|----------|-----|--------|
+| Rust test (rust-test.yml) | `45788376802` | success: `cargo-test (macos-latest)` `139800864846` success; `cargo-test (windows-latest)` `139800864959` success; `cargo-test (ubuntu-latest)` `139800864273` success |
+| Code check (codecheck.yml) | `45788376831` | success |
+| Test (test.yml) | `45788376752` | success |
+| Lint | `45788376891` | success |
+| Supply-chain audit | `45788376962` | success (first green since before 87-58) |
+
+Per-leg counts from the leg logs of run `45788376802` (each `Running` line paired with its `test result` line):
+
+| Leg | All test binaries | gamelib-engine | gamelib-wine | gamelib-shortcuts | `cargo test --bin gamelib-shell` |
+|-----|-------------------|----------------|--------------|-------------------|-----------------------------------|
+| macos-latest | 4084 passed, 0 failed | 384 (19 binaries) | 274 (10) | 148 | 1009 passed, 2 ignored |
+| windows-latest | 4481 passed, 0 failed | 198 (20; the unix-gated goldens compile to 0) | 256 (12) | 199 | 973 passed, 4 ignored |
+| ubuntu-latest | 4672 passed, 0 failed | 404 (20) | 341 (12) | 196 | 993 passed, 3 ignored |
+
 ## Signed builds (D-12)
 
 ### Phase 87 build (87-59, 2026-11-24)
@@ -600,3 +641,42 @@ Exactly one dispatch was made: `gh workflow run release-tauri.yml --ref release/
 The identities match, so the gate is `pending`: the live re-run (87-69) is owed.
 
 Gate (gap build): pending (identities match: signed Phase 87 gap build v0.13.1, run 45455431706, `release/v0.13.1` at 97d6d2052 = main 07b194604 + the version bump, same Identifier, Developer ID leaf, TeamIdentifier S7U223QWXJ and byte-identical designated requirement (sha256 68d712d0...) as the installed signed 0.13.0 build (run 45314401170) and the signed Phase 86 build v0.12.0 (run 45056179067); notarized and stapled; contains every 87-60 to 87-67 and 87-70 gap fix)
+
+
+### Phase 87 gap build 2 (87-78)
+
+Operator decision `push-and-build` (see "## CI proof (gap closure cycle 2)"). Same workflow (`release-tauri.yml`), same Apple secrets, `dry_run=false` from a version-bumped release branch, as 87-68.
+Exactly one dispatch was made: `gh workflow run release-tauri.yml --ref release/v0.13.2 -f dry_run=false`.
+
+- **Source:** branch `release/v0.13.2` at `c5d19ab53455da56abad29fbba109eb5f82b3809` = `06e4d2844` (main, the head of the three-OS green CI proof) + `c5d19ab53` `chore(87-78): bump version to 0.13.2`
+  (package.json, src-tauri/Cargo.toml, src-tauri/tauri.conf.json and the `gamelib-shell` entry of src-tauri/Cargo.lock, one line each). Cut in a separate worktree under the session scratchpad (removed
+  afterwards); the main checkout never left `main`. Two earlier local cuts of the branch (at `02d0bd26d` and `c0e66d30e`) were deleted unpushed when P moved.
+- **Run:** release-tauri.yml `45791635064`, `workflow_dispatch` on `release/v0.13.2`, `dry_run=false`; all three legs success (ubuntu-22.04, windows-latest, macos-latest aarch64).
+- **Artifact:** draft release `GameLib v0.13.2` (tag `v0.13.2`, draft, NOT published; 8 assets: the aarch64 app tar and dmg, the AppImage, the NSIS setup, their `.sig` files and `latest.json`).
+  `gh release list` after differs from before only by that draft (`diff`: one added line, `GameLib v0.13.2  Draft  v0.13.2  2026-11-26T09:35:44Z`). Downloaded into the session scratchpad:
+  - `GameLib_0.13.2_aarch64.app.tar.gz` (101551719 bytes), sha256 `b100616864ecb6bc0d18b7f08d29087e8d83010164a1a7ad8a54479309346748`
+  - `GameLib_0.13.2_aarch64.dmg` (100394488 bytes), sha256 `7fea07e99f96b8cd48a3aaf407f1d69960e4e0b7a5e3332d6650713ebe7b81b6`
+  - Checks ran on `GameLib.app` extracted from the app tar. `CFBundleShortVersionString` = `0.13.2`. Nothing was installed, opened or launched. The renderer assets are embedded compressed, so the
+    87-74 log string cannot be grepped from the binary; the build's content is established by its source commit above.
+- **`codesign -dv --verbose=4`:** `Identifier=com.gamelib.shell`; `Format=app bundle with Mach-O thin (arm64)`; `Authority=Developer ID Application: grayson mitchell (S7U223QWXJ)` -> `Developer ID Certification Authority`
+  -> `Apple Root CA`; `TeamIdentifier=S7U223QWXJ`; flags `0x10000(runtime)`; `Notarization Ticket=stapled`; `CDHash=edf24f35b2e8062cc92161803261c4281501a255`. `codesign --verify --deep --strict` passes.
+- **Designated requirement:** the `designated =>` line hashes to sha256 `68d712d0b6d7e715a10a8e79e81b6a50faf2098af411591169238f56d7888b91`, equal to the installed app's (`/Applications/GameLib.app`, `0.13.1`,
+  read now) and to the value recorded for 0.13.1, 0.13.0 and Phase 86.
+- **`spctl -a -vv`:** `accepted`, `source=Notarized Developer ID`, `origin=Developer ID Application: grayson mitchell (S7U223QWXJ)`.
+- **`xcrun stapler validate GameLib.app`:** stapled. The `.dmg` itself carries no stapled ticket (`does not have a ticket stapled to it`); the app inside is notarized and stapled.
+
+| Property | Installed 0.13.1 (87-68, run 45455431706) / 0.13.0 / Phase 86 | Phase 87 gap build 2 (run 45791635064) | Equal |
+|----------|------------------------------------------------------------------|----------------------------------------|-------|
+| Identifier | `com.gamelib.shell` | `com.gamelib.shell` | yes |
+| Leaf authority | Developer ID Application: grayson mitchell (S7U223QWXJ) | same | yes |
+| Chain | Developer ID Certification Authority -> Apple Root CA | same | yes |
+| TeamIdentifier | `S7U223QWXJ` | `S7U223QWXJ` | yes |
+| Designated requirement sha256 | `68d712d0b6d7e715a10a8e79e81b6a50faf2098af411591169238f56d7888b91` | `68d712d0b6d7e715a10a8e79e81b6a50faf2098af411591169238f56d7888b91` | yes |
+| spctl | accepted, Notarized Developer ID | accepted, Notarized Developer ID | yes |
+| stapler (app) | stapled | stapled | yes |
+| Version | 0.13.1 | 0.13.2 | differs, as intended (an upgrade) |
+| CDHash | `266b7378...` (0.13.1) | `edf24f35...` | differs, as expected for a different build |
+
+The identities match, so the gate is `pending`: the live re-run 2 (87-79) is owed.
+
+Gate (gap build 2): pending (identities match: signed Phase 87 gap build 2 v0.13.2, run 45791635064, `release/v0.13.2` at c5d19ab53 = main 06e4d2844 + the version bump, same Identifier, Developer ID leaf, TeamIdentifier S7U223QWXJ and designated requirement sha256 68d712d0... as 0.13.1, 0.13.0 and Phase 86; notarized and stapled)
