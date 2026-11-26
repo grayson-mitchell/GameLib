@@ -9,8 +9,8 @@
         "--code",
         "code-123"
       ],
-      "env": {},
-      "runnerPath": "/opt/legendary"
+      "runnerPath": "/opt/legendary",
+      "env": {}
     },
     "output": "/opt/legendary launch app-1 --code <redacted>"
   },
@@ -21,5 +21,1072 @@
       "line": "{\"access_token\":\"at-synth\",\"session_id\":\"sid-synth\",\"refresh_token\":\"rt-synth\",\"user_id\":\"uid-synth\",\"expires_in\":3600}"
     },
     "output": "{\"access_token\":\"<redacted>\",\"session_id\":\"<redacted>\",\"refresh_token\":\"<redacted>\",\"user_id\":\"<redacted>\",\"expires_in\":3600}\n"
+  },
+  {
+    "name": "redact-plain-code",
+    "kind": "redact",
+    "input": {
+      "command": [
+        "launch",
+        "app-1",
+        "--code",
+        "synth-code-val",
+        "--other",
+        "x"
+      ],
+      "runnerPath": "/opt/legendary"
+    },
+    "output": "/opt/legendary launch app-1 --code <redacted> --other x"
+  },
+  {
+    "name": "redact-ps-code",
+    "kind": "redact",
+    "input": {
+      "command": [
+        "-NoProfile",
+        "Start-Process",
+        "\"`\"/opt/legendary`\"\"",
+        "-Wait",
+        "-NoNewWindow",
+        "-ArgumentList",
+        "\"`\"launch`\"\",\"`\"app-1`\"\",\"`\"--code`\"\",\"`\"synth-code-val`\"\",\"`\"--other`\"\",\"`\"x`\"\""
+      ],
+      "runnerPath": "powershell"
+    },
+    "output": "powershell -NoProfile Start-Process \"`\"/opt/legendary`\"\" -Wait -NoNewWindow -ArgumentList \"`\"launch`\"\",\"`\"app-1`\"\",\"`\"--code`\"\",\"`\"<redacted>`\"\",\"`\"--other`\"\",\"`\"x`\"\""
+  },
+  {
+    "name": "redact-plain-token",
+    "kind": "redact",
+    "input": {
+      "command": [
+        "launch",
+        "app-1",
+        "--token",
+        "synth-token-val",
+        "--other",
+        "x"
+      ],
+      "runnerPath": "/opt/legendary"
+    },
+    "output": "/opt/legendary launch app-1 --token <redacted> --other x"
+  },
+  {
+    "name": "redact-ps-token",
+    "kind": "redact",
+    "input": {
+      "command": [
+        "-NoProfile",
+        "Start-Process",
+        "\"`\"/opt/legendary`\"\"",
+        "-Wait",
+        "-NoNewWindow",
+        "-ArgumentList",
+        "\"`\"launch`\"\",\"`\"app-1`\"\",\"`\"--token`\"\",\"`\"synth-token-val`\"\",\"`\"--other`\"\",\"`\"x`\"\""
+      ],
+      "runnerPath": "powershell"
+    },
+    "output": "powershell -NoProfile Start-Process \"`\"/opt/legendary`\"\" -Wait -NoNewWindow -ArgumentList \"`\"launch`\"\",\"`\"app-1`\"\",\"`\"--token`\"\",\"`\"<redacted>`\"\",\"`\"--other`\"\",\"`\"x`\"\""
+  },
+  {
+    "name": "redact-plain-code-verifier",
+    "kind": "redact",
+    "input": {
+      "command": [
+        "launch",
+        "app-1",
+        "--code-verifier",
+        "synth-code-verifier-val",
+        "--other",
+        "x"
+      ],
+      "runnerPath": "/opt/legendary"
+    },
+    "output": "/opt/legendary launch app-1 --code-verifier <redacted> --other x"
+  },
+  {
+    "name": "redact-ps-code-verifier",
+    "kind": "redact",
+    "input": {
+      "command": [
+        "-NoProfile",
+        "Start-Process",
+        "\"`\"/opt/legendary`\"\"",
+        "-Wait",
+        "-NoNewWindow",
+        "-ArgumentList",
+        "\"`\"launch`\"\",\"`\"app-1`\"\",\"`\"--code-verifier`\"\",\"`\"synth-code-verifier-val`\"\",\"`\"--other`\"\",\"`\"x`\"\""
+      ],
+      "runnerPath": "powershell"
+    },
+    "output": "powershell -NoProfile Start-Process \"`\"/opt/legendary`\"\" -Wait -NoNewWindow -ArgumentList \"`\"launch`\"\",\"`\"app-1`\"\",\"`\"--code-verifier`\"\",\"`\"<redacted>`\"\",\"`\"--other`\"\",\"`\"x`\"\""
+  },
+  {
+    "name": "redact-plain-password",
+    "kind": "redact",
+    "input": {
+      "command": [
+        "launch",
+        "app-1",
+        "--password",
+        "synth-password-val",
+        "--other",
+        "x"
+      ],
+      "runnerPath": "/opt/legendary"
+    },
+    "output": "/opt/legendary launch app-1 --password <redacted> --other x"
+  },
+  {
+    "name": "redact-ps-password",
+    "kind": "redact",
+    "input": {
+      "command": [
+        "-NoProfile",
+        "Start-Process",
+        "\"`\"/opt/legendary`\"\"",
+        "-Wait",
+        "-NoNewWindow",
+        "-ArgumentList",
+        "\"`\"launch`\"\",\"`\"app-1`\"\",\"`\"--password`\"\",\"`\"synth-password-val`\"\",\"`\"--other`\"\",\"`\"x`\"\""
+      ],
+      "runnerPath": "powershell"
+    },
+    "output": "powershell -NoProfile Start-Process \"`\"/opt/legendary`\"\" -Wait -NoNewWindow -ArgumentList \"`\"launch`\"\",\"`\"app-1`\"\",\"`\"--password`\"\",\"`\"<redacted>`\"\",\"`\"--other`\"\",\"`\"x`\"\""
+  },
+  {
+    "name": "redact-plain-serial",
+    "kind": "redact",
+    "input": {
+      "command": [
+        "launch",
+        "app-1",
+        "--serial",
+        "synth-serial-val",
+        "--other",
+        "x"
+      ],
+      "runnerPath": "/opt/legendary"
+    },
+    "output": "/opt/legendary launch app-1 --serial <redacted> --other x"
+  },
+  {
+    "name": "redact-ps-serial",
+    "kind": "redact",
+    "input": {
+      "command": [
+        "-NoProfile",
+        "Start-Process",
+        "\"`\"/opt/legendary`\"\"",
+        "-Wait",
+        "-NoNewWindow",
+        "-ArgumentList",
+        "\"`\"launch`\"\",\"`\"app-1`\"\",\"`\"--serial`\"\",\"`\"synth-serial-val`\"\",\"`\"--other`\"\",\"`\"x`\"\""
+      ],
+      "runnerPath": "powershell"
+    },
+    "output": "powershell -NoProfile Start-Process \"`\"/opt/legendary`\"\" -Wait -NoNewWindow -ArgumentList \"`\"launch`\"\",\"`\"app-1`\"\",\"`\"--serial`\"\",\"`\"<redacted>`\"\",\"`\"--other`\"\",\"`\"x`\"\""
+  },
+  {
+    "name": "redact-plain-client-id",
+    "kind": "redact",
+    "input": {
+      "command": [
+        "launch",
+        "app-1",
+        "--client-id",
+        "synth-client-id-val",
+        "--other",
+        "x"
+      ],
+      "runnerPath": "/opt/legendary"
+    },
+    "output": "/opt/legendary launch app-1 --client-id <redacted> --other x"
+  },
+  {
+    "name": "redact-ps-client-id",
+    "kind": "redact",
+    "input": {
+      "command": [
+        "-NoProfile",
+        "Start-Process",
+        "\"`\"/opt/legendary`\"\"",
+        "-Wait",
+        "-NoNewWindow",
+        "-ArgumentList",
+        "\"`\"launch`\"\",\"`\"app-1`\"\",\"`\"--client-id`\"\",\"`\"synth-client-id-val`\"\",\"`\"--other`\"\",\"`\"x`\"\""
+      ],
+      "runnerPath": "powershell"
+    },
+    "output": "powershell -NoProfile Start-Process \"`\"/opt/legendary`\"\" -Wait -NoNewWindow -ArgumentList \"`\"launch`\"\",\"`\"app-1`\"\",\"`\"--client-id`\"\",\"`\"<redacted>`\"\",\"`\"--other`\"\",\"`\"x`\"\""
+  },
+  {
+    "name": "redact-plain-access-token",
+    "kind": "redact",
+    "input": {
+      "command": [
+        "launch",
+        "app-1",
+        "--access-token",
+        "synth-access-token-val",
+        "--other",
+        "x"
+      ],
+      "runnerPath": "/opt/legendary"
+    },
+    "output": "/opt/legendary launch app-1 --access-token <redacted> --other x"
+  },
+  {
+    "name": "redact-ps-access-token",
+    "kind": "redact",
+    "input": {
+      "command": [
+        "-NoProfile",
+        "Start-Process",
+        "\"`\"/opt/legendary`\"\"",
+        "-Wait",
+        "-NoNewWindow",
+        "-ArgumentList",
+        "\"`\"launch`\"\",\"`\"app-1`\"\",\"`\"--access-token`\"\",\"`\"synth-access-token-val`\"\",\"`\"--other`\"\",\"`\"x`\"\""
+      ],
+      "runnerPath": "powershell"
+    },
+    "output": "powershell -NoProfile Start-Process \"`\"/opt/legendary`\"\" -Wait -NoNewWindow -ArgumentList \"`\"launch`\"\",\"`\"app-1`\"\",\"`\"--access-token`\"\",\"`\"<redacted>`\"\",\"`\"--other`\"\",\"`\"x`\"\""
+  },
+  {
+    "name": "redact-plain-refresh-token",
+    "kind": "redact",
+    "input": {
+      "command": [
+        "launch",
+        "app-1",
+        "--refresh-token",
+        "synth-refresh-token-val",
+        "--other",
+        "x"
+      ],
+      "runnerPath": "/opt/legendary"
+    },
+    "output": "/opt/legendary launch app-1 --refresh-token <redacted> --other x"
+  },
+  {
+    "name": "redact-ps-refresh-token",
+    "kind": "redact",
+    "input": {
+      "command": [
+        "-NoProfile",
+        "Start-Process",
+        "\"`\"/opt/legendary`\"\"",
+        "-Wait",
+        "-NoNewWindow",
+        "-ArgumentList",
+        "\"`\"launch`\"\",\"`\"app-1`\"\",\"`\"--refresh-token`\"\",\"`\"synth-refresh-token-val`\"\",\"`\"--other`\"\",\"`\"x`\"\""
+      ],
+      "runnerPath": "powershell"
+    },
+    "output": "powershell -NoProfile Start-Process \"`\"/opt/legendary`\"\" -Wait -NoNewWindow -ArgumentList \"`\"launch`\"\",\"`\"app-1`\"\",\"`\"--refresh-token`\"\",\"`\"<redacted>`\"\",\"`\"--other`\"\",\"`\"x`\"\""
+  },
+  {
+    "name": "redact-plain-adjacent-code-then-verifier",
+    "kind": "redact",
+    "input": {
+      "command": [
+        "register",
+        "--code",
+        "c-synth",
+        "--code-verifier",
+        "v-synth"
+      ],
+      "runnerPath": "/opt/legendary"
+    },
+    "output": "/opt/legendary register --code <redacted> --code-verifier <redacted>"
+  },
+  {
+    "name": "redact-plain-adjacent-verifier-then-code",
+    "kind": "redact",
+    "input": {
+      "command": [
+        "register",
+        "--code-verifier",
+        "v-synth",
+        "--code",
+        "c-synth"
+      ],
+      "runnerPath": "/opt/legendary"
+    },
+    "output": "/opt/legendary register --code-verifier <redacted> --code <redacted>"
+  },
+  {
+    "name": "redact-ps-adjacent-code-then-verifier",
+    "kind": "redact",
+    "input": {
+      "command": [
+        "-NoProfile",
+        "Start-Process",
+        "\"`\"/opt/legendary`\"\"",
+        "-Wait",
+        "-NoNewWindow",
+        "-ArgumentList",
+        "\"`\"register`\"\",\"`\"--code`\"\",\"`\"c-synth`\"\",\"`\"--code-verifier`\"\",\"`\"v-synth`\"\""
+      ],
+      "runnerPath": "powershell"
+    },
+    "output": "powershell -NoProfile Start-Process \"`\"/opt/legendary`\"\" -Wait -NoNewWindow -ArgumentList \"`\"register`\"\",\"`\"--code`\"\",\"`\"<redacted>`\"\",\"`\"--code-verifier`\"\",\"`\"<redacted>`\"\""
+  },
+  {
+    "name": "redact-plain-all-eight",
+    "kind": "redact",
+    "input": {
+      "command": [
+        "register",
+        "--code",
+        "synth-code-val",
+        "--token",
+        "synth-token-val",
+        "--code-verifier",
+        "synth-code-verifier-val",
+        "--password",
+        "synth-password-val",
+        "--serial",
+        "synth-serial-val",
+        "--client-id",
+        "synth-client-id-val",
+        "--access-token",
+        "synth-access-token-val",
+        "--refresh-token",
+        "synth-refresh-token-val"
+      ],
+      "runnerPath": "/opt/legendary"
+    },
+    "output": "/opt/legendary register --code <redacted> --token <redacted> --code-verifier <redacted> --password <redacted> --serial <redacted> --client-id <redacted> --access-token <redacted> --refresh-token <redacted>"
+  },
+  {
+    "name": "redact-ps-all-eight",
+    "kind": "redact",
+    "input": {
+      "command": [
+        "-NoProfile",
+        "Start-Process",
+        "\"`\"/opt/legendary`\"\"",
+        "-Wait",
+        "-NoNewWindow",
+        "-ArgumentList",
+        "\"`\"register`\"\",\"`\"--code`\"\",\"`\"synth-code-val`\"\",\"`\"--token`\"\",\"`\"synth-token-val`\"\",\"`\"--code-verifier`\"\",\"`\"synth-code-verifier-val`\"\",\"`\"--password`\"\",\"`\"synth-password-val`\"\",\"`\"--serial`\"\",\"`\"synth-serial-val`\"\",\"`\"--client-id`\"\",\"`\"synth-client-id-val`\"\",\"`\"--access-token`\"\",\"`\"synth-access-token-val`\"\",\"`\"--refresh-token`\"\",\"`\"synth-refresh-token-val`\"\""
+      ],
+      "runnerPath": "powershell"
+    },
+    "output": "powershell -NoProfile Start-Process \"`\"/opt/legendary`\"\" -Wait -NoNewWindow -ArgumentList \"`\"register`\"\",\"`\"--code`\"\",\"`\"<redacted>`\"\",\"`\"--token`\"\",\"`\"<redacted>`\"\",\"`\"--code-verifier`\"\",\"`\"<redacted>`\"\",\"`\"--password`\"\",\"`\"<redacted>`\"\",\"`\"--serial`\"\",\"`\"<redacted>`\"\",\"`\"--client-id`\"\",\"`\"<redacted>`\"\",\"`\"--access-token`\"\",\"`\"<redacted>`\"\",\"`\"--refresh-token`\"\",\"`\"<redacted>`\"\""
+  },
+  {
+    "name": "redact-plain-trailing-flag-no-value",
+    "kind": "redact",
+    "input": {
+      "command": [
+        "install",
+        "a",
+        "--password"
+      ],
+      "runnerPath": "/opt/legendary"
+    },
+    "output": "/opt/legendary install a --password <redacted>"
+  },
+  {
+    "name": "redact-ps-trailing-flag-no-value",
+    "kind": "redact",
+    "input": {
+      "command": [
+        "-NoProfile",
+        "Start-Process",
+        "\"`\"/opt/legendary`\"\"",
+        "-Wait",
+        "-NoNewWindow",
+        "-ArgumentList",
+        "\"`\"install`\"\",\"`\"a`\"\",\"`\"--password`\"\""
+      ],
+      "runnerPath": "powershell"
+    },
+    "output": "powershell -NoProfile Start-Process \"`\"/opt/legendary`\"\" -Wait -NoNewWindow -ArgumentList \"`\"install`\"\",\"`\"a`\"\",\"`\"--password`\"\""
+  },
+  {
+    "name": "redact-plain-flag-only",
+    "kind": "redact",
+    "input": {
+      "command": [
+        "--token"
+      ],
+      "runnerPath": "/opt/legendary"
+    },
+    "output": "/opt/legendary --token <redacted>"
+  },
+  {
+    "name": "redact-plain-repeated-flag",
+    "kind": "redact",
+    "input": {
+      "command": [
+        "auth",
+        "--code",
+        "first-synth",
+        "--code",
+        "second-synth"
+      ],
+      "runnerPath": "/opt/legendary"
+    },
+    "output": "/opt/legendary auth --code <redacted> --code second-synth"
+  },
+  {
+    "name": "redact-ps-repeated-flag",
+    "kind": "redact",
+    "input": {
+      "command": [
+        "-NoProfile",
+        "Start-Process",
+        "\"`\"/opt/legendary`\"\"",
+        "-Wait",
+        "-NoNewWindow",
+        "-ArgumentList",
+        "\"`\"auth`\"\",\"`\"--code`\"\",\"`\"first-synth`\"\",\"`\"--code`\"\",\"`\"second-synth`\"\""
+      ],
+      "runnerPath": "powershell"
+    },
+    "output": "powershell -NoProfile Start-Process \"`\"/opt/legendary`\"\" -Wait -NoNewWindow -ArgumentList \"`\"auth`\"\",\"`\"--code`\"\",\"`\"<redacted>`\"\",\"`\"--code`\"\",\"`\"second-synth`\"\""
+  },
+  {
+    "name": "redact-env-equal-value-skipped",
+    "kind": "redact",
+    "input": {
+      "command": [
+        "list"
+      ],
+      "runnerPath": "/opt/legendary",
+      "env": {
+        "PATH": "/usr/bin:/bin",
+        "LANG": "C.UTF-8"
+      }
+    },
+    "output": "/opt/legendary list"
+  },
+  {
+    "name": "redact-env-differing-value-printed",
+    "kind": "redact",
+    "input": {
+      "command": [
+        "list"
+      ],
+      "runnerPath": "/opt/legendary",
+      "env": {
+        "PATH": "/opt/bin:/usr/bin",
+        "LANG": "C.UTF-8"
+      }
+    },
+    "output": "PATH=/opt/bin:/usr/bin /opt/legendary list"
+  },
+  {
+    "name": "redact-env-new-variable-printed",
+    "kind": "redact",
+    "input": {
+      "command": [
+        "list"
+      ],
+      "runnerPath": "/opt/legendary",
+      "env": {
+        "LEGENDARY_CONFIG_PATH": "/cfg/legendary"
+      }
+    },
+    "output": "LEGENDARY_CONFIG_PATH=/cfg/legendary /opt/legendary list"
+  },
+  {
+    "name": "redact-env-value-with-space-quoted",
+    "kind": "redact",
+    "input": {
+      "command": [
+        "list"
+      ],
+      "runnerPath": "/opt/legendary",
+      "env": {
+        "WINEPREFIX": "/pfx/my prefix"
+      }
+    },
+    "output": "WINEPREFIX=\"/pfx/my prefix\" /opt/legendary list"
+  },
+  {
+    "name": "redact-env-already-quoted-value-kept",
+    "kind": "redact",
+    "input": {
+      "command": [
+        "list"
+      ],
+      "runnerPath": "/opt/legendary",
+      "env": {
+        "WINEPREFIX": "\"/pfx/my prefix\""
+      }
+    },
+    "output": "WINEPREFIX=\"/pfx/my prefix\" /opt/legendary list"
+  },
+  {
+    "name": "redact-env-undefined-value-printed-empty",
+    "kind": "redact",
+    "input": {
+      "command": [
+        "list"
+      ],
+      "runnerPath": "/opt/legendary",
+      "env": {
+        "EXTRA": null
+      }
+    },
+    "output": "EXTRA= /opt/legendary list"
+  },
+  {
+    "name": "redact-env-undefined-value-on-a-base-key",
+    "kind": "redact",
+    "input": {
+      "command": [
+        "list"
+      ],
+      "runnerPath": "/opt/legendary",
+      "env": {
+        "PATH": null
+      }
+    },
+    "output": "PATH= /opt/legendary list"
+  },
+  {
+    "name": "redact-env-empty-string-value",
+    "kind": "redact",
+    "input": {
+      "command": [
+        "list"
+      ],
+      "runnerPath": "/opt/legendary",
+      "env": {
+        "EXTRA": ""
+      }
+    },
+    "output": "EXTRA= /opt/legendary list"
+  },
+  {
+    "name": "redact-env-with-credentials-in-argv",
+    "kind": "redact",
+    "input": {
+      "command": [
+        "auth",
+        "--code",
+        "c-synth"
+      ],
+      "runnerPath": "/opt/legendary",
+      "env": {
+        "LEGENDARY_CONFIG_PATH": "/cfg/legendary",
+        "LANG": "C.UTF-8"
+      }
+    },
+    "output": "LEGENDARY_CONFIG_PATH=/cfg/legendary /opt/legendary auth --code <redacted>"
+  },
+  {
+    "name": "redact-env-order-kept",
+    "kind": "redact",
+    "input": {
+      "command": [
+        "list"
+      ],
+      "runnerPath": "/opt/legendary",
+      "env": {
+        "ZED": "z",
+        "ALPHA": "a",
+        "MID": "m"
+      }
+    },
+    "output": "ZED=z ALPHA=a MID=m /opt/legendary list"
+  },
+  {
+    "name": "redact-runner-path-with-space-quoted",
+    "kind": "redact",
+    "input": {
+      "command": [
+        "list"
+      ],
+      "runnerPath": "/opt/my runner/legendary"
+    },
+    "output": "\"/opt/my runner/legendary\" list"
+  },
+  {
+    "name": "redact-runner-path-already-quoted",
+    "kind": "redact",
+    "input": {
+      "command": [
+        "list"
+      ],
+      "runnerPath": "\"/opt/my runner/legendary\""
+    },
+    "output": "\"/opt/my runner/legendary\" list"
+  },
+  {
+    "name": "redact-part-with-space-quoted",
+    "kind": "redact",
+    "input": {
+      "command": [
+        "launch",
+        "my game"
+      ],
+      "runnerPath": "/opt/legendary"
+    },
+    "output": "/opt/legendary launch \"my game\""
+  },
+  {
+    "name": "redact-part-already-quoted-kept",
+    "kind": "redact",
+    "input": {
+      "command": [
+        "launch",
+        "\"my game\""
+      ],
+      "runnerPath": "/opt/legendary"
+    },
+    "output": "/opt/legendary launch \"my game\""
+  },
+  {
+    "name": "redact-part-half-quoted-gets-quoted",
+    "kind": "redact",
+    "input": {
+      "command": [
+        "launch",
+        "\"my game"
+      ],
+      "runnerPath": "/opt/legendary"
+    },
+    "output": "/opt/legendary launch \"\"my game\""
+  },
+  {
+    "name": "redact-empty-part-leaves-a-double-space",
+    "kind": "redact",
+    "input": {
+      "command": [
+        "launch",
+        "",
+        "a"
+      ],
+      "runnerPath": "/opt/legendary"
+    },
+    "output": "/opt/legendary launch  a"
+  },
+  {
+    "name": "redact-credential-value-with-space-is-not-quoted",
+    "kind": "redact",
+    "input": {
+      "command": [
+        "install",
+        "a",
+        "--password",
+        "pw with space"
+      ],
+      "runnerPath": "/opt/legendary"
+    },
+    "output": "/opt/legendary install a --password <redacted>"
+  },
+  {
+    "name": "redact-object-command-converted",
+    "kind": "redact",
+    "input": {
+      "command": {
+        "foo": 1
+      },
+      "runnerPath": "legendary",
+      "converts": [
+        "auth",
+        "--token",
+        "legendary-secret"
+      ]
+    },
+    "output": "legendary auth --token <redacted>"
+  },
+  {
+    "name": "redact-object-command-converts-to-nothing",
+    "kind": "redact",
+    "input": {
+      "command": {
+        "foo": 1
+      },
+      "runnerPath": "legendary",
+      "converts": []
+    },
+    "output": "legendary"
+  },
+  {
+    "name": "redact-object-command-converted-with-env",
+    "kind": "redact",
+    "input": {
+      "command": {
+        "foo": 1
+      },
+      "runnerPath": "/opt/legendary",
+      "converts": [
+        "launch",
+        "app-1",
+        "--code",
+        "c-synth"
+      ],
+      "env": {
+        "LEGENDARY_CONFIG_PATH": "/cfg/legendary"
+      }
+    },
+    "output": "LEGENDARY_CONFIG_PATH=/cfg/legendary /opt/legendary launch app-1 --code <redacted>"
+  },
+  {
+    "name": "redact-no-sensitive-flag-unchanged",
+    "kind": "redact",
+    "input": {
+      "command": [
+        "launch",
+        "app-1",
+        "--offline"
+      ],
+      "runnerPath": "/opt/legendary"
+    },
+    "output": "/opt/legendary launch app-1 --offline"
+  },
+  {
+    "name": "redact-empty-argv",
+    "kind": "redact",
+    "input": {
+      "command": [],
+      "runnerPath": "/opt/legendary"
+    },
+    "output": "/opt/legendary"
+  },
+  {
+    "name": "redact-ps-no-argument-list-unchanged",
+    "kind": "redact",
+    "input": {
+      "command": [
+        "-NoProfile",
+        "Start-Process"
+      ],
+      "runnerPath": "powershell"
+    },
+    "output": "powershell -NoProfile Start-Process"
+  },
+  {
+    "name": "redact-ps-argument-list-last-element",
+    "kind": "redact",
+    "input": {
+      "command": [
+        "-NoProfile",
+        "-ArgumentList"
+      ],
+      "runnerPath": "powershell"
+    },
+    "output": "powershell -NoProfile -ArgumentList"
+  },
+  {
+    "name": "redact-ps-flag-outside-argument-list-unchanged",
+    "kind": "redact",
+    "input": {
+      "command": [
+        "-NoProfile",
+        "--code",
+        "c-synth",
+        "-ArgumentList",
+        "\"`\"a`\"\""
+      ],
+      "runnerPath": "powershell"
+    },
+    "output": "powershell -NoProfile --code c-synth -ArgumentList \"`\"a`\"\""
+  },
+  {
+    "name": "redact-ps-backslash-in-value",
+    "kind": "redact",
+    "input": {
+      "command": [
+        "-NoProfile",
+        "Start-Process",
+        "\"`\"/opt/legendary`\"\"",
+        "-Wait",
+        "-NoNewWindow",
+        "-ArgumentList",
+        "\"`\"install`\"\",\"`\"a`\"\",\"`\"--password`\"\",\"`\"pw\\\\back\\\\slash`\"\""
+      ],
+      "runnerPath": "powershell"
+    },
+    "output": "powershell -NoProfile Start-Process \"`\"/opt/legendary`\"\" -Wait -NoNewWindow -ArgumentList \"`\"install`\"\",\"`\"a`\"\",\"`\"--password`\"\",\"`\"<redacted>`\"\""
+  },
+  {
+    "name": "redact-ps-runner-path-with-space",
+    "kind": "redact",
+    "input": {
+      "command": [
+        "-NoProfile",
+        "Start-Process",
+        "\"`\"C:\\Program Files\\legendary.exe`\"\"",
+        "-Wait",
+        "-NoNewWindow",
+        "-ArgumentList",
+        "\"`\"auth`\"\",\"`\"--token`\"\",\"`\"t-synth`\"\""
+      ],
+      "runnerPath": "powershell"
+    },
+    "output": "powershell -NoProfile Start-Process \"`\"C:\\Program Files\\legendary.exe`\"\" -Wait -NoNewWindow -ArgumentList \"`\"auth`\"\",\"`\"--token`\"\",\"`\"<redacted>`\"\""
+  },
+  {
+    "name": "sanitize-nile-full-line",
+    "kind": "sanitize-nile",
+    "input": {
+      "line": "{\"url\":\"https://example.invalid/x?code=u-synth\",\"code_verifier\":\"cv-synth\",\"serial\":\"ser-synth\",\"client_id\":\"cid-synth\",\"note\":\"kept\"}"
+    },
+    "output": "{\"url\":\"<redacted>\",\"code_verifier\":\"<redacted>\",\"serial\":\"<redacted>\",\"client_id\":\"<redacted>\",\"note\":\"kept\"}\n"
+  },
+  {
+    "name": "sanitize-gog-all-keys-trailing-newline-input",
+    "kind": "sanitize-gog",
+    "input": {
+      "line": "{\"access_token\":\"access_token-synth\",\"session_id\":\"session_id-synth\",\"refresh_token\":\"refresh_token-synth\",\"user_id\":\"user_id-synth\"}\n"
+    },
+    "output": "{\"access_token\":\"<redacted>\",\"session_id\":\"<redacted>\",\"refresh_token\":\"<redacted>\",\"user_id\":\"<redacted>\"}\n"
+  },
+  {
+    "name": "sanitize-gog-some-keys-absent",
+    "kind": "sanitize-gog",
+    "input": {
+      "line": "{\"access_token\":\"a-synth\",\"other\":\"kept\"}"
+    },
+    "output": "{\"access_token\":\"<redacted>\",\"other\":\"kept\",\"session_id\":\"<redacted>\",\"refresh_token\":\"<redacted>\",\"user_id\":\"<redacted>\"}\n"
+  },
+  {
+    "name": "sanitize-gog-no-token-keys",
+    "kind": "sanitize-gog",
+    "input": {
+      "line": "{\"other\":\"kept\",\"count\":2}"
+    },
+    "output": "{\"other\":\"kept\",\"count\":2,\"access_token\":\"<redacted>\",\"session_id\":\"<redacted>\",\"refresh_token\":\"<redacted>\",\"user_id\":\"<redacted>\"}\n"
+  },
+  {
+    "name": "sanitize-gog-empty-object",
+    "kind": "sanitize-gog",
+    "input": {
+      "line": "{}"
+    },
+    "output": "{\"access_token\":\"<redacted>\",\"session_id\":\"<redacted>\",\"refresh_token\":\"<redacted>\",\"user_id\":\"<redacted>\"}\n"
+  },
+  {
+    "name": "sanitize-gog-nested-objects",
+    "kind": "sanitize-gog",
+    "input": {
+      "line": "{\"outer\":{\"access_token\":\"nested-synth\",\"deep\":{\"session_id\":\"deeper-synth\"}},\"refresh_token\":\"t-synth\"}"
+    },
+    "output": "{\"outer\":{\"access_token\":\"nested-synth\",\"deep\":{\"session_id\":\"deeper-synth\"}},\"refresh_token\":\"<redacted>\",\"access_token\":\"<redacted>\",\"session_id\":\"<redacted>\",\"user_id\":\"<redacted>\"}\n"
+  },
+  {
+    "name": "sanitize-gog-key-order-other-than-replaced",
+    "kind": "sanitize-gog",
+    "input": {
+      "line": "{\"zebra\":1,\"refresh_token\":\"t-synth\",\"apple\":2,\"access_token\":\"a-synth\",\"mid\":3}"
+    },
+    "output": "{\"zebra\":1,\"refresh_token\":\"<redacted>\",\"apple\":2,\"access_token\":\"<redacted>\",\"mid\":3,\"session_id\":\"<redacted>\",\"user_id\":\"<redacted>\"}\n"
+  },
+  {
+    "name": "sanitize-gog-numbers-keep-json-formatting",
+    "kind": "sanitize-gog",
+    "input": {
+      "line": "{\"big\":12345678901234567890,\"float\":1.0,\"exp\":1e3,\"neg\":-0,\"small\":0.000001,\"n\":3}"
+    },
+    "output": "{\"big\":12345678901234567000,\"float\":1,\"exp\":1000,\"neg\":0,\"small\":0.000001,\"n\":3,\"access_token\":\"<redacted>\",\"session_id\":\"<redacted>\",\"refresh_token\":\"<redacted>\",\"user_id\":\"<redacted>\"}\n"
+  },
+  {
+    "name": "sanitize-gog-unicode-escapes-decoded",
+    "kind": "sanitize-gog",
+    "input": {
+      "line": "{\"access_token\":\"\\u0061bc\",\"name\":\"caf\\u00e9 \\ud83d\\ude00\",\"slash\":\"a\\/b\"}"
+    },
+    "output": "{\"access_token\":\"<redacted>\",\"name\":\"café 😀\",\"slash\":\"a/b\",\"session_id\":\"<redacted>\",\"refresh_token\":\"<redacted>\",\"user_id\":\"<redacted>\"}\n"
+  },
+  {
+    "name": "sanitize-gog-duplicate-key-last-wins",
+    "kind": "sanitize-gog",
+    "input": {
+      "line": "{\"access_token\":\"a-synth\",\"access_token\":\"b-synth\",\"x\":1}"
+    },
+    "output": "{\"access_token\":\"<redacted>\",\"x\":1,\"session_id\":\"<redacted>\",\"refresh_token\":\"<redacted>\",\"user_id\":\"<redacted>\"}\n"
+  },
+  {
+    "name": "sanitize-gog-array-keeps-array",
+    "kind": "sanitize-gog",
+    "input": {
+      "line": "[1,2,{\"a\":3}]"
+    },
+    "output": "[1,2,{\"a\":3}]\n"
+  },
+  {
+    "name": "sanitize-gog-non-json-line",
+    "kind": "sanitize-gog",
+    "input": {
+      "line": "Traceback: not json at all"
+    },
+    "output": "Traceback: not json at all"
+  },
+  {
+    "name": "sanitize-gog-empty-line",
+    "kind": "sanitize-gog",
+    "input": {
+      "line": ""
+    },
+    "output": ""
+  },
+  {
+    "name": "sanitize-gog-whitespace-only-line",
+    "kind": "sanitize-gog",
+    "input": {
+      "line": "   "
+    },
+    "output": "   "
+  },
+  {
+    "name": "sanitize-gog-two-objects-in-one-chunk",
+    "kind": "sanitize-gog",
+    "input": {
+      "line": "{\"access_token\":\"a-synth\"}\n{\"session_id\":\"b-synth\"}\n"
+    },
+    "output": "{\"access_token\":\"a-synth\"}\n{\"session_id\":\"b-synth\"}\n"
+  },
+  {
+    "name": "sanitize-gog-truncated-json",
+    "kind": "sanitize-gog",
+    "input": {
+      "line": "{\"access_token\":\"a-synt"
+    },
+    "output": "{\"access_token\":\"a-synt"
+  },
+  {
+    "name": "sanitize-gog-pretty-printed-input",
+    "kind": "sanitize-gog",
+    "input": {
+      "line": "{\n  \"access_token\": \"a-synth\",\n  \"x\": [1, 2]\n}\n"
+    },
+    "output": "{\"access_token\":\"<redacted>\",\"x\":[1,2],\"session_id\":\"<redacted>\",\"refresh_token\":\"<redacted>\",\"user_id\":\"<redacted>\"}\n"
+  },
+  {
+    "name": "sanitize-nile-all-keys-trailing-newline-input",
+    "kind": "sanitize-nile",
+    "input": {
+      "line": "{\"url\":\"url-synth\",\"code_verifier\":\"code_verifier-synth\",\"serial\":\"serial-synth\",\"client_id\":\"client_id-synth\"}\n"
+    },
+    "output": "{\"url\":\"<redacted>\",\"code_verifier\":\"<redacted>\",\"serial\":\"<redacted>\",\"client_id\":\"<redacted>\"}\n"
+  },
+  {
+    "name": "sanitize-nile-some-keys-absent",
+    "kind": "sanitize-nile",
+    "input": {
+      "line": "{\"url\":\"a-synth\",\"other\":\"kept\"}"
+    },
+    "output": "{\"url\":\"<redacted>\",\"other\":\"kept\",\"code_verifier\":\"<redacted>\",\"serial\":\"<redacted>\",\"client_id\":\"<redacted>\"}\n"
+  },
+  {
+    "name": "sanitize-nile-no-token-keys",
+    "kind": "sanitize-nile",
+    "input": {
+      "line": "{\"other\":\"kept\",\"count\":2}"
+    },
+    "output": "{\"other\":\"kept\",\"count\":2,\"url\":\"<redacted>\",\"code_verifier\":\"<redacted>\",\"serial\":\"<redacted>\",\"client_id\":\"<redacted>\"}\n"
+  },
+  {
+    "name": "sanitize-nile-empty-object",
+    "kind": "sanitize-nile",
+    "input": {
+      "line": "{}"
+    },
+    "output": "{\"url\":\"<redacted>\",\"code_verifier\":\"<redacted>\",\"serial\":\"<redacted>\",\"client_id\":\"<redacted>\"}\n"
+  },
+  {
+    "name": "sanitize-nile-nested-objects",
+    "kind": "sanitize-nile",
+    "input": {
+      "line": "{\"outer\":{\"url\":\"nested-synth\",\"deep\":{\"code_verifier\":\"deeper-synth\"}},\"serial\":\"t-synth\"}"
+    },
+    "output": "{\"outer\":{\"url\":\"nested-synth\",\"deep\":{\"code_verifier\":\"deeper-synth\"}},\"serial\":\"<redacted>\",\"url\":\"<redacted>\",\"code_verifier\":\"<redacted>\",\"client_id\":\"<redacted>\"}\n"
+  },
+  {
+    "name": "sanitize-nile-key-order-other-than-replaced",
+    "kind": "sanitize-nile",
+    "input": {
+      "line": "{\"zebra\":1,\"serial\":\"t-synth\",\"apple\":2,\"url\":\"a-synth\",\"mid\":3}"
+    },
+    "output": "{\"zebra\":1,\"serial\":\"<redacted>\",\"apple\":2,\"url\":\"<redacted>\",\"mid\":3,\"code_verifier\":\"<redacted>\",\"client_id\":\"<redacted>\"}\n"
+  },
+  {
+    "name": "sanitize-nile-numbers-keep-json-formatting",
+    "kind": "sanitize-nile",
+    "input": {
+      "line": "{\"big\":12345678901234567890,\"float\":1.0,\"exp\":1e3,\"neg\":-0,\"small\":0.000001,\"n\":3}"
+    },
+    "output": "{\"big\":12345678901234567000,\"float\":1,\"exp\":1000,\"neg\":0,\"small\":0.000001,\"n\":3,\"url\":\"<redacted>\",\"code_verifier\":\"<redacted>\",\"serial\":\"<redacted>\",\"client_id\":\"<redacted>\"}\n"
+  },
+  {
+    "name": "sanitize-nile-unicode-escapes-decoded",
+    "kind": "sanitize-nile",
+    "input": {
+      "line": "{\"url\":\"\\u0061bc\",\"name\":\"caf\\u00e9 \\ud83d\\ude00\",\"slash\":\"a\\/b\"}"
+    },
+    "output": "{\"url\":\"<redacted>\",\"name\":\"café 😀\",\"slash\":\"a/b\",\"code_verifier\":\"<redacted>\",\"serial\":\"<redacted>\",\"client_id\":\"<redacted>\"}\n"
+  },
+  {
+    "name": "sanitize-nile-duplicate-key-last-wins",
+    "kind": "sanitize-nile",
+    "input": {
+      "line": "{\"url\":\"a-synth\",\"url\":\"b-synth\",\"x\":1}"
+    },
+    "output": "{\"url\":\"<redacted>\",\"x\":1,\"code_verifier\":\"<redacted>\",\"serial\":\"<redacted>\",\"client_id\":\"<redacted>\"}\n"
+  },
+  {
+    "name": "sanitize-nile-array-keeps-array",
+    "kind": "sanitize-nile",
+    "input": {
+      "line": "[1,2,{\"a\":3}]"
+    },
+    "output": "[1,2,{\"a\":3}]\n"
+  },
+  {
+    "name": "sanitize-nile-non-json-line",
+    "kind": "sanitize-nile",
+    "input": {
+      "line": "Traceback: not json at all"
+    },
+    "output": "Traceback: not json at all"
+  },
+  {
+    "name": "sanitize-nile-empty-line",
+    "kind": "sanitize-nile",
+    "input": {
+      "line": ""
+    },
+    "output": ""
+  },
+  {
+    "name": "sanitize-nile-whitespace-only-line",
+    "kind": "sanitize-nile",
+    "input": {
+      "line": "   "
+    },
+    "output": "   "
+  },
+  {
+    "name": "sanitize-nile-two-objects-in-one-chunk",
+    "kind": "sanitize-nile",
+    "input": {
+      "line": "{\"url\":\"a-synth\"}\n{\"code_verifier\":\"b-synth\"}\n"
+    },
+    "output": "{\"url\":\"a-synth\"}\n{\"code_verifier\":\"b-synth\"}\n"
+  },
+  {
+    "name": "sanitize-nile-truncated-json",
+    "kind": "sanitize-nile",
+    "input": {
+      "line": "{\"url\":\"a-synt"
+    },
+    "output": "{\"url\":\"a-synt"
+  },
+  {
+    "name": "sanitize-nile-pretty-printed-input",
+    "kind": "sanitize-nile",
+    "input": {
+      "line": "{\n  \"url\": \"a-synth\",\n  \"x\": [1, 2]\n}\n"
+    },
+    "output": "{\"url\":\"<redacted>\",\"x\":[1,2],\"code_verifier\":\"<redacted>\",\"serial\":\"<redacted>\",\"client_id\":\"<redacted>\"}\n"
   }
 ]

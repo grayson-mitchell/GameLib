@@ -1377,7 +1377,7 @@ describeSkipOnWindows('command runner oracle (88.2-01)', () => {
 
 const REDACTION_SLICE = 'redaction'
 /** The vector count this plan committed; a later edit may raise it, never lower it. */
-const REDACTION_FLOOR = 2
+const REDACTION_FLOOR = 88
 
 type RedactionKind = 'redact' | 'sanitize-gog' | 'sanitize-nile'
 
@@ -1404,24 +1404,363 @@ interface RecordedVector extends RedactionVector {
   output: string
 }
 
+/** The eight flags the runner redacts, in the order the TS loop visits them. */
+const REDACTED_FLAGS = [
+  '--code',
+  '--token',
+  '--code-verifier',
+  '--password',
+  '--serial',
+  '--client-id',
+  '--access-token',
+  '--refresh-token'
+] as const
+
+/** The `-ArgumentList` argv callRunner builds on Windows (the same expression as commandRunner.ts). */
+function powershellArgv(runnerPath: string, parts: string[]): string[] {
+  const argsAsString = parts
+    .map((part) => part.replaceAll('\\', '\\\\'))
+    .map((part) => `"\`"${part}\`""`)
+    .join(',')
+  const argv = [
+    '-NoProfile',
+    'Start-Process',
+    `"\`"${runnerPath}\`""`,
+    '-Wait',
+    '-NoNewWindow'
+  ]
+  if (argsAsString) argv.push('-ArgumentList', argsAsString)
+  return argv
+}
+
+const slugOfFlag = (flag: string): string => flag.slice(2)
+const synthValue = (flag: string): string => `synth-${slugOfFlag(flag)}-val`
+const redact = (
+  name: string,
+  command: RedactInput['command'],
+  runnerPath: string,
+  extra: Partial<RedactInput> = {}
+): RedactionVector => ({
+  name,
+  kind: 'redact',
+  input: { command, runnerPath, ...extra }
+})
+const sanitize = (
+  name: string,
+  kind: 'sanitize-gog' | 'sanitize-nile',
+  line: string
+): RedactionVector => ({ name, kind, input: { line } })
+
+const GOG_KEYS = ['access_token', 'session_id', 'refresh_token', 'user_id']
+const NILE_KEYS = ['url', 'code_verifier', 'serial', 'client_id']
+
 function redactionVectors(): RedactionVector[] {
+  const LEG = '/opt/legendary'
+  const synthetic = synthValue
+  const tracer: RedactionVector[] = [
+    redact(
+      'redact-code-plain',
+      ['launch', 'app-1', '--code', 'code-123'],
+      LEG,
+      { env: {} }
+    ),
+    sanitize(
+      'sanitize-gog-all-keys',
+      'sanitize-gog',
+      '{"access_token":"at-synth","session_id":"sid-synth","refresh_token":"rt-synth","user_id":"uid-synth","expires_in":3600}'
+    )
+  ]
+  const flags: RedactionVector[] = REDACTED_FLAGS.flatMap((flag) => {
+    const parts = ['launch', 'app-1', flag, synthetic(flag), '--other', 'x']
+    return [
+      redact(`redact-plain-${slugOfFlag(flag)}`, parts, LEG),
+      redact(
+        `redact-ps-${slugOfFlag(flag)}`,
+        powershellArgv(LEG, parts),
+        'powershell'
+      )
+    ]
+  })
+  const allEight = REDACTED_FLAGS.flatMap((flag) => [flag, synthetic(flag)])
+  const adjacency: RedactionVector[] = [
+    redact(
+      'redact-plain-adjacent-code-then-verifier',
+      ['register', '--code', 'c-synth', '--code-verifier', 'v-synth'],
+      LEG
+    ),
+    redact(
+      'redact-plain-adjacent-verifier-then-code',
+      ['register', '--code-verifier', 'v-synth', '--code', 'c-synth'],
+      LEG
+    ),
+    redact(
+      'redact-ps-adjacent-code-then-verifier',
+      powershellArgv(LEG, [
+        'register',
+        '--code',
+        'c-synth',
+        '--code-verifier',
+        'v-synth'
+      ]),
+      'powershell'
+    ),
+    redact('redact-plain-all-eight', ['register', ...allEight], LEG),
+    redact(
+      'redact-ps-all-eight',
+      powershellArgv(LEG, ['register', ...allEight]),
+      'powershell'
+    )
+  ]
+  const trailing: RedactionVector[] = [
+    redact(
+      'redact-plain-trailing-flag-no-value',
+      ['install', 'a', '--password'],
+      LEG
+    ),
+    redact(
+      'redact-ps-trailing-flag-no-value',
+      powershellArgv(LEG, ['install', 'a', '--password']),
+      'powershell'
+    ),
+    redact('redact-plain-flag-only', ['--token'], LEG)
+  ]
+  const repeated: RedactionVector[] = [
+    redact(
+      'redact-plain-repeated-flag',
+      ['auth', '--code', 'first-synth', '--code', 'second-synth'],
+      LEG
+    ),
+    redact(
+      'redact-ps-repeated-flag',
+      powershellArgv(LEG, [
+        'auth',
+        '--code',
+        'first-synth',
+        '--code',
+        'second-synth'
+      ]),
+      'powershell'
+    )
+  ]
+  // The env diff is taken against the pinned base env (PATH, LANG, USER and the fake HOME's eight).
+  const env: RedactionVector[] = [
+    redact('redact-env-equal-value-skipped', ['list'], LEG, {
+      env: { PATH: PINNED_BASE.PATH, LANG: PINNED_BASE.LANG }
+    }),
+    redact('redact-env-differing-value-printed', ['list'], LEG, {
+      env: { PATH: '/opt/bin:/usr/bin', LANG: PINNED_BASE.LANG }
+    }),
+    redact('redact-env-new-variable-printed', ['list'], LEG, {
+      env: { LEGENDARY_CONFIG_PATH: '/cfg/legendary' }
+    }),
+    redact('redact-env-value-with-space-quoted', ['list'], LEG, {
+      env: { WINEPREFIX: '/pfx/my prefix' }
+    }),
+    redact('redact-env-already-quoted-value-kept', ['list'], LEG, {
+      env: { WINEPREFIX: '"/pfx/my prefix"' }
+    }),
+    redact('redact-env-undefined-value-printed-empty', ['list'], LEG, {
+      env: { EXTRA: null }
+    }),
+    redact('redact-env-undefined-value-on-a-base-key', ['list'], LEG, {
+      env: { PATH: null }
+    }),
+    redact('redact-env-empty-string-value', ['list'], LEG, {
+      env: { EXTRA: '' }
+    }),
+    redact(
+      'redact-env-with-credentials-in-argv',
+      ['auth', '--code', 'c-synth'],
+      LEG,
+      {
+        env: { LEGENDARY_CONFIG_PATH: '/cfg/legendary', LANG: PINNED_BASE.LANG }
+      }
+    ),
+    redact('redact-env-order-kept', ['list'], LEG, {
+      env: { ZED: 'z', ALPHA: 'a', MID: 'm' }
+    })
+  ]
+  const quoting: RedactionVector[] = [
+    redact(
+      'redact-runner-path-with-space-quoted',
+      ['list'],
+      '/opt/my runner/legendary'
+    ),
+    redact(
+      'redact-runner-path-already-quoted',
+      ['list'],
+      '"/opt/my runner/legendary"'
+    ),
+    redact('redact-part-with-space-quoted', ['launch', 'my game'], LEG),
+    redact('redact-part-already-quoted-kept', ['launch', '"my game"'], LEG),
+    redact('redact-part-half-quoted-gets-quoted', ['launch', '"my game'], LEG),
+    redact('redact-empty-part-leaves-a-double-space', ['launch', '', 'a'], LEG),
+    redact(
+      'redact-credential-value-with-space-is-not-quoted',
+      ['install', 'a', '--password', 'pw with space'],
+      LEG
+    )
+  ]
+  const legendaryObject: RedactionVector[] = [
+    redact('redact-object-command-converted', { foo: 1 }, 'legendary', {
+      converts: ['auth', '--token', 'legendary-secret']
+    }),
+    redact(
+      'redact-object-command-converts-to-nothing',
+      { foo: 1 },
+      'legendary',
+      {
+        converts: []
+      }
+    ),
+    redact('redact-object-command-converted-with-env', { foo: 1 }, LEG, {
+      converts: ['launch', 'app-1', '--code', 'c-synth'],
+      env: { LEGENDARY_CONFIG_PATH: '/cfg/legendary' }
+    })
+  ]
+  const unchanged: RedactionVector[] = [
+    redact(
+      'redact-no-sensitive-flag-unchanged',
+      ['launch', 'app-1', '--offline'],
+      LEG
+    ),
+    redact('redact-empty-argv', [], LEG),
+    redact(
+      'redact-ps-no-argument-list-unchanged',
+      ['-NoProfile', 'Start-Process'],
+      'powershell'
+    ),
+    redact(
+      'redact-ps-argument-list-last-element',
+      ['-NoProfile', '-ArgumentList'],
+      'powershell'
+    ),
+    redact(
+      'redact-ps-flag-outside-argument-list-unchanged',
+      ['-NoProfile', '--code', 'c-synth', '-ArgumentList', '"`"a`""'],
+      'powershell'
+    ),
+    redact(
+      'redact-ps-backslash-in-value',
+      powershellArgv(LEG, ['install', 'a', '--password', 'pw\\back\\slash']),
+      'powershell'
+    ),
+    redact(
+      'redact-ps-runner-path-with-space',
+      powershellArgv('C:\\Program Files\\legendary.exe', [
+        'auth',
+        '--token',
+        't-synth'
+      ]),
+      'powershell'
+    )
+  ]
+  const lines = {
+    gogFull: JSON.stringify({
+      access_token: 'at-synth',
+      session_id: 'sid-synth',
+      refresh_token: 'rt-synth',
+      user_id: 'uid-synth',
+      expires_in: 3600
+    }),
+    nileFull: JSON.stringify({
+      url: 'https://example.invalid/x?code=u-synth',
+      code_verifier: 'cv-synth',
+      serial: 'ser-synth',
+      client_id: 'cid-synth',
+      note: 'kept'
+    })
+  }
+  const sanitizers = (
+    kind: 'sanitize-gog' | 'sanitize-nile',
+    prefix: string,
+    keys: string[]
+  ): RedactionVector[] => {
+    const [first = 'k0', second = 'k1', third = 'k2'] = keys
+    return [
+      sanitize(
+        `${prefix}-all-keys-trailing-newline-input`,
+        kind,
+        `${JSON.stringify(Object.fromEntries(keys.map((k) => [k, `${k}-synth`])))}\n`
+      ),
+      sanitize(
+        `${prefix}-some-keys-absent`,
+        kind,
+        JSON.stringify({ [first]: 'a-synth', other: 'kept' })
+      ),
+      sanitize(
+        `${prefix}-no-token-keys`,
+        kind,
+        JSON.stringify({ other: 'kept', count: 2 })
+      ),
+      sanitize(`${prefix}-empty-object`, kind, '{}'),
+      sanitize(
+        `${prefix}-nested-objects`,
+        kind,
+        JSON.stringify({
+          outer: {
+            [first]: 'nested-synth',
+            deep: { [second]: 'deeper-synth' }
+          },
+          [third]: 't-synth'
+        })
+      ),
+      sanitize(
+        `${prefix}-key-order-other-than-replaced`,
+        kind,
+        JSON.stringify({
+          zebra: 1,
+          [third]: 't-synth',
+          apple: 2,
+          [first]: 'a-synth',
+          mid: 3
+        })
+      ),
+      sanitize(
+        `${prefix}-numbers-keep-json-formatting`,
+        kind,
+        '{"big":12345678901234567890,"float":1.0,"exp":1e3,"neg":-0,"small":0.000001,"n":3}'
+      ),
+      sanitize(
+        `${prefix}-unicode-escapes-decoded`,
+        kind,
+        `{"${first}":"\\u0061bc","name":"caf\\u00e9 \\ud83d\\ude00","slash":"a\\/b"}`
+      ),
+      sanitize(
+        `${prefix}-duplicate-key-last-wins`,
+        kind,
+        `{"${first}":"a-synth","${first}":"b-synth","x":1}`
+      ),
+      sanitize(`${prefix}-array-keeps-array`, kind, '[1,2,{"a":3}]'),
+      sanitize(`${prefix}-non-json-line`, kind, 'Traceback: not json at all'),
+      sanitize(`${prefix}-empty-line`, kind, ''),
+      sanitize(`${prefix}-whitespace-only-line`, kind, '   '),
+      sanitize(
+        `${prefix}-two-objects-in-one-chunk`,
+        kind,
+        `${JSON.stringify({ [first]: 'a-synth' })}\n${JSON.stringify({ [second]: 'b-synth' })}\n`
+      ),
+      sanitize(`${prefix}-truncated-json`, kind, `{"${first}":"a-synt`),
+      sanitize(
+        `${prefix}-pretty-printed-input`,
+        kind,
+        `{\n  "${first}": "a-synth",\n  "x": [1, 2]\n}\n`
+      )
+    ]
+  }
   return [
-    {
-      name: 'redact-code-plain',
-      kind: 'redact',
-      input: {
-        command: ['launch', 'app-1', '--code', 'code-123'],
-        env: {},
-        runnerPath: '/opt/legendary'
-      }
-    },
-    {
-      name: 'sanitize-gog-all-keys',
-      kind: 'sanitize-gog',
-      input: {
-        line: '{"access_token":"at-synth","session_id":"sid-synth","refresh_token":"rt-synth","user_id":"uid-synth","expires_in":3600}'
-      }
-    }
+    ...tracer,
+    ...flags,
+    ...adjacency,
+    ...trailing,
+    ...repeated,
+    ...env,
+    ...quoting,
+    ...legendaryObject,
+    ...unchanged,
+    sanitize('sanitize-nile-full-line', 'sanitize-nile', lines.nileFull),
+    ...sanitizers('sanitize-gog', 'sanitize-gog', GOG_KEYS),
+    ...sanitizers('sanitize-nile', 'sanitize-nile', NILE_KEYS)
   ]
 }
 
@@ -1533,5 +1872,41 @@ describeSkipOnWindows('redaction and sanitizer vectors (88.2-03)', () => {
     const tracer = committed().find((v) => v.name === 'redact-code-plain')
     expect(tracer?.output).toBe('/opt/legendary launch app-1 --code <redacted>')
     expect(tracer?.output).not.toContain('code-123')
+  })
+
+  it('each of the eight flags has a plain and a PowerShell vector whose recorded output carries <redacted>', () => {
+    if (mode !== 'compare') return
+    const vectors = committed()
+    for (const flag of REDACTED_FLAGS) {
+      for (const shape of ['plain', 'ps']) {
+        const vector = vectors.find(
+          (v) => v.name === `redact-${shape}-${slugOfFlag(flag)}`
+        )
+        expect(vector?.output).toContain(`${flag}`)
+        expect(vector?.output).toContain('<redacted>')
+        expect(vector?.output).not.toContain(synthValue(flag))
+      }
+    }
+  })
+
+  it('the non-JSON sanitizer vectors record the line returned unchanged', () => {
+    if (mode !== 'compare') return
+    for (const vector of committed()) {
+      if (
+        !/-(non-json-line|empty-line|whitespace-only-line|truncated-json|two-objects-in-one-chunk)$/.test(
+          vector.name
+        )
+      )
+        continue
+      expect(vector.output).toBe((vector.input as SanitizeInput).line)
+    }
+  })
+
+  it('no vector holds an operator path or a real home', () => {
+    if (mode !== 'compare') return
+    const text = readFileSync(file, 'utf8')
+    expect(text).not.toMatch(
+      /\/Users\/|\/home\/[a-z]|AppData|gamelib-engine-oracle/
+    )
   })
 })
