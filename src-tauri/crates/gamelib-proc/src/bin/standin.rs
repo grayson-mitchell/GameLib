@@ -7,7 +7,8 @@
 //!   helpers, one `tree` helper (a helper with a grandchild) and one `game` (Game class).
 //! - `idle`: does nothing, forever.
 //! - `tree`: waits for `go` on stdin, spawns one `idle` child, prints its pid, then idles.
-//! - `game --game-pids <path>`: spawns one `game-child` through a plain std `Command` (so it
+//! - `game --game-pids <path> [--wait-for <path>]`: waits (bounded) for `--wait-for`'s file to exist,
+//!   if given, then spawns one `game-child` through a plain std `Command` (so it
 //!   shares the game's session), records its pid in the file, then writes a line to stdout every
 //!   50 ms forever. Its stdout is a file or null, which is the Pitfall 5 point: the writes must
 //!   keep succeeding after the parent is gone.
@@ -28,7 +29,8 @@
 //! `tree` helper (and so its grandchild) alone through `ChildSet::terminate_one`, then printing `done`.
 //! `--game-stamp <path>` spawns the game through `spawn_game_tracked` and writes one
 //! line `<pid> <stamp>` to the path (before the manifest is printed), the record a later stamp-checked
-//! kill is given. `--spec-tree` runs one `spec-tree` child through `SpecProcRunner` (on a background
+//! kill is given. The game is told to wait for that file, so it creates its child only after the
+//! tracked spawn has put it in its Game Job (a grandchild created earlier would escape the Job). `--spec-tree` runs one `spec-tree` child through `SpecProcRunner` (on a background
 //! runtime thread, so the run stays in flight) and adds its pid to `helpers` and its grandchild's to
 //! `grandchildren`. `--no-reaper` skips starting the reaper (the negative control: a SIGKILL of the
 //! parent must then leave its helpers alive). `--leak-pipe` (unix) adds a fourth helper holding a
@@ -215,6 +217,9 @@ fn run_spec_tree() -> (u32, u32) {
 #[allow(clippy::zombie_processes)]
 fn game(args: &[String]) -> ! {
     let pids_path = flag(args, "--game-pids");
+    if has_flag(args, "--wait-for") {
+        wait_for_file(&flag(args, "--wait-for"));
+    }
     let child = self_command("game-child", &[])
         .spawn()
         .expect("spawn game child");
@@ -239,6 +244,15 @@ fn game_tree(args: &[String]) -> ! {
         .expect("spawn game child");
     std::fs::write(&pids_path, format!("{}\n", child.id())).expect("write game child pid");
     std::process::exit(0);
+}
+
+/// Polls until `path` exists, bounded.
+fn wait_for_file(path: &std::path::Path) {
+    let deadline = Instant::now() + Duration::from_secs(15);
+    while !path.exists() {
+        assert!(Instant::now() < deadline, "the gate file never appeared");
+        std::thread::sleep(Duration::from_millis(20));
+    }
 }
 
 /// Polls `path` until it holds a pid, bounded.
@@ -283,7 +297,13 @@ fn parent(args: &[String]) {
     let grandchild: u32 = line.trim().parse().expect("grandchild pid");
 
     let game_pids_arg = game_pids.to_string_lossy().into_owned();
-    let game_cmd = self_command("game", &["--game-pids", &game_pids_arg]);
+    let mut game_args = vec!["--game-pids", game_pids_arg.as_str()];
+    let game_stamp_arg = has_flag(args, "--game-stamp")
+        .then(|| flag(args, "--game-stamp").to_string_lossy().into_owned());
+    if let Some(gate) = &game_stamp_arg {
+        game_args.extend(["--wait-for", gate.as_str()]);
+    }
+    let game_cmd = self_command("game", &game_args);
     // The handle (or child) is held until exit; dropping a `Child` never kills it, but holding it
     // keeps the unreaped-leader shape the shell has.
     let (game_pid, _game_hold): (u32, Box<dyn std::any::Any>) = if has_flag(args, "--game-stamp") {

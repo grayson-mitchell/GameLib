@@ -7,7 +7,6 @@
 //! accumulates strays.
 
 use gamelib_proc::probe::is_alive;
-#[cfg(unix)]
 use gamelib_proc::{kill_tree::kill_game_tree, KillOutcome};
 use gamelib_testutil::FakeHome;
 use std::io::{BufRead, BufReader, Write};
@@ -74,7 +73,6 @@ struct Paths {
     /// Where the Node stand-in sidecar writes its two children's pids.
     node_pids: PathBuf,
     /// Where the stand-in writes the game's `<pid> <stamp>` record (`--game-stamp`).
-    #[cfg_attr(not(unix), allow(dead_code))]
     game_stamp: PathBuf,
 }
 
@@ -572,7 +570,6 @@ fn graceful_quit_kills_spec_child_and_grandchild() {
 }
 
 /// The game's `<pid> <stamp>` record the stand-in wrote for `--game-stamp`.
-#[cfg(unix)]
 fn read_game_stamp(paths: &Paths) -> (u32, u64) {
     let text = std::fs::read_to_string(&paths.game_stamp).expect("the stand-in wrote a game stamp");
     let mut fields = text.split_whitespace();
@@ -587,12 +584,12 @@ fn read_game_stamp(paths: &Paths) -> (u32, u64) {
     (pid, stamp)
 }
 
-/// SC2, the concurrency edge: a SIGKILL of the parent leaves the game and its grandchild alive (a
-/// Game is never in the reaper's set), and a stamp-checked kill from a different process (this
-/// test) then removes both. Liveness is probed from outside with `probe::is_alive`.
-#[cfg(unix)]
-#[test]
-fn sigkill_spares_game_then_stamped_kill_removes_its_tree() {
+/// SC2, the concurrency edge: a hard kill of the parent leaves the game and its grandchild alive (a
+/// Game is never in the reaper's set or a kill-on-close Job), and a stamp-checked kill from a
+/// different process (this test) then removes both. Liveness is probed from outside with
+/// `probe::is_alive`. Shared by the unix and Windows arms; on Windows it proves that a named Game
+/// Job without kill-on-close can be reopened by name after its creator died (flagged assumption A5).
+fn parent_killed_game_spared_then_stamped_kill_removes_its_tree() {
     let home = FakeHome::new("gamelib-proc-orphans");
     let paths = Paths::new(&home);
     let stamp_path = paths.game_stamp.to_string_lossy().into_owned();
@@ -624,11 +621,24 @@ fn sigkill_spares_game_then_stamped_kill_removes_its_tree() {
     });
 }
 
-/// The kill is stamp-checked (prohibition 5 at the mechanism): a stamp that is not the leader's
-/// start stamp, the shape of a recycled pid, answers `NotOurs` and signals nothing.
 #[cfg(unix)]
 #[test]
-fn stamped_kill_with_a_wrong_stamp_signals_nothing() {
+fn sigkill_spares_game_then_stamped_kill_removes_its_tree() {
+    parent_killed_game_spared_then_stamped_kill_removes_its_tree();
+}
+
+/// The Windows arm of the above and the proof of flagged assumption A5: `TerminateProcess` on the
+/// stand-in parent closes its handles, the Game Job (no kill-on-close) keeps the game and its
+/// grandchild running, and `kill_game_tree` reopens that Job by name and terminates both.
+#[cfg(windows)]
+#[test]
+fn terminate_parent_spares_game_then_stamped_kill_removes_its_tree() {
+    parent_killed_game_spared_then_stamped_kill_removes_its_tree();
+}
+
+/// The kill is stamp-checked (prohibition 5 at the mechanism): a stamp that is not the leader's
+/// start stamp, the shape of a recycled pid, answers `NotOurs` and signals nothing.
+fn wrong_stamp_kill_signals_nothing() {
     let home = FakeHome::new("gamelib-proc-orphans");
     let paths = Paths::new(&home);
     let stamp_path = paths.game_stamp.to_string_lossy().into_owned();
@@ -652,6 +662,18 @@ fn stamped_kill_with_a_wrong_stamp_signals_nothing() {
             "game process {g} must survive a wrong-stamp kill"
         );
     }
+}
+
+#[cfg(unix)]
+#[test]
+fn stamped_kill_with_a_wrong_stamp_signals_nothing() {
+    wrong_stamp_kill_signals_nothing();
+}
+
+#[cfg(windows)]
+#[test]
+fn windows_stamped_kill_with_a_wrong_stamp_signals_nothing() {
+    wrong_stamp_kill_signals_nothing();
 }
 
 /// The own-handle path: the test spawns a `game-tree` game through `spawn_game_tracked`, whose
@@ -728,8 +750,7 @@ fn own_handle_kill_reaches_a_grandchild_after_the_leader_exits() {
 /// One helper's tree ended by pid (`ChildSet::terminate_one`): the tree helper and its grandchild go;
 /// the two idle helpers and the game are untouched (T-88.2-04). A graceful quit afterwards still
 /// drains the rest.
-#[test]
-fn terminate_one_kills_a_helper_and_its_grandchild() {
+fn terminate_one_ends_a_helper_and_its_grandchild_only() {
     let home = FakeHome::new("gamelib-proc-orphans");
     let paths = Paths::new(&home);
     let mut run = Run::start_with(&home, &paths, &["--terminate-one"]);
@@ -762,4 +783,17 @@ fn terminate_one_kills_a_helper_and_its_grandchild() {
         !is_alive(idle_1) && !is_alive(idle_2)
     });
     assert_helpers_die_and_game_survives(&run, &paths);
+}
+
+#[cfg(unix)]
+#[test]
+fn terminate_one_kills_a_helper_and_its_grandchild() {
+    terminate_one_ends_a_helper_and_its_grandchild_only();
+}
+
+/// Windows: the helper's own kill-on-close Job is terminated, so the helper and its grandchild go.
+#[cfg(windows)]
+#[test]
+fn windows_terminate_one_kills_a_helper_and_its_grandchild() {
+    terminate_one_ends_a_helper_and_its_grandchild_only();
 }
