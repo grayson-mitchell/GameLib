@@ -503,7 +503,7 @@ fn platform_of(name: &str) -> Platform {
 
 fn spawn_shape(spawn: &RecordedSpawn) -> Value {
     json!({
-        "program": spawn.program,
+        "program": one_separator(&spawn.program),
         "argv": spawn.argv,
         "timeoutMs": spawn.timeout.map(|t| t.as_millis() as u64),
         "replaceEnv": spawn.replace_env,
@@ -652,7 +652,18 @@ fn expected_spawns(raw: &Value, deltas: &Deltas, home: &str, scenario: &Value) -
         );
         kept.extend([legendary, gogdl, comet, nile]);
     }
+    for spawn in &mut kept {
+        let program = one_separator(spawn["program"].as_str().expect("program"));
+        spawn["program"] = json!(program);
+    }
     Value::Array(kept)
+}
+
+/// A spawned program's path with one separator, so a recorded `/pins/bin/comet` and what a Windows join
+/// makes of it (`/pins/bin\comet`) compare equal. The recording was made on macOS; the separator is the
+/// host's, not a behaviour the golden pins (the Windows leg of 88.1-20's CI).
+fn one_separator(program: &str) -> String {
+    program.replace('\\', "/")
 }
 
 /// The scripted machine of one scenario: a fake profile, the context over the scripted runner, the host
@@ -986,7 +997,7 @@ fn run_sequence(case: &Value, deltas: &Deltas) -> Vec<String> {
         .runner
         .spawns()
         .iter()
-        .map(|s| format!("{} {}", json!(s.program), json!(s.argv)))
+        .map(|s| format!("{} {}", json!(one_separator(&s.program)), json!(s.argv)))
         .collect();
     want_all.sort();
     got_all.sort();

@@ -140,7 +140,7 @@ jobs:
       - name: cargo test (gamelib-core, gamelib-scan, gamelib-depot, gamelib-steamfiles, gamelib-steamcm, gamelib-steampoll, gamelib-i18n, gamelib-log, gamelib-store, gamelib-info, gamelib-engine, gamelib-wine, gamelib-knownfix, gamelib-launch, gamelib-humble and gamelib-shortcuts crates)
         shell: bash
         working-directory: src-tauri
-        run: cargo test -p gamelib-scan -p gamelib-scan-cli -p gamelib-depot -p gamelib-depot-cli -p gamelib-steamfiles -p gamelib-steamfiles-cli -p gamelib-steamcm -p gamelib-steamcm-cli -p gamelib-steampoll -p gamelib-steampoll-cli -p gamelib-i18n -p gamelib-core -p gamelib-log -p gamelib-store -p gamelib-store-cli -p gamelib-info -p gamelib-info-cli -p gamelib-engine -p gamelib-engine-cli -p gamelib-wine -p gamelib-wine-cli -p gamelib-knownfix -p gamelib-knownfix-cli -p gamelib-launch -p gamelib-launch-cli -p gamelib-humble -p gamelib-shortcuts
+        run: cargo test -p gamelib-scan -p gamelib-scan-cli -p gamelib-depot -p gamelib-depot-cli -p gamelib-steamfiles -p gamelib-steamfiles-cli -p gamelib-steamcm -p gamelib-steamcm-cli -p gamelib-steampoll -p gamelib-steampoll-cli -p gamelib-i18n -p gamelib-core -p gamelib-log -p gamelib-store -p gamelib-store-cli -p gamelib-info -p gamelib-info-cli -p gamelib-engine -p gamelib-engine-cli -p gamelib-wine -p gamelib-wine-cli -p gamelib-knownfix -p gamelib-knownfix-cli -p gamelib-launch -p gamelib-launch-cli -p gamelib-humble -p gamelib-shortcuts --no-fail-fast
       # Phase 73 D-15: the depot codecs (xz2/lzma-sys, zstd, zlib-rs) must be statically linked so the
       # shipped binary needs no system liblzma/zstd/zlib. Fails if the CLI links any of them dynamically.
       - name: static codec linkage (gamelib-depot-cli)
