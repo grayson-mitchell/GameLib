@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: "88.2"
 current_phase_name: Command runner and game processes
 status: executing
-stopped_at: Completed 88.2-05-PLAN.md
-last_updated: "2026-11-26T16:59:35.733Z"
+stopped_at: Completed 88.2-06-PLAN.md
+last_updated: "2026-11-26T17:13:16.781Z"
 last_activity: 2026-11-26
 last_activity_desc: Phase 88.2 execution started
-state_head: 877cf7507376e317365b09a0c0211cb4f117de45
+state_head: ca77a54a8b938c436c41a18ffea0348bdfa4ec57
 progress:
   total_phases: 25
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-25)
 ## Current Position
 
 Phase: 88.2 (Command runner and game processes) — EXECUTING
-Plan: 6 of 25
+Plan: 7 of 25
 Status: Ready to execute
 Last activity: 2026-11-26 — Phase 88.2 execution started
 Progress: [████████████████░░░░] 204/257 plans ([█████████░] 92%)
@@ -552,6 +552,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 88.2 P03 | 25 min | 2 tasks | 7 files |
 | Phase 88.2 P04 | 50 min | 2 tasks | 5 files |
 | Phase 88.2 P05 | 50 min | 2 tasks | 7 files |
+| Phase 88.2 P06 | 40 min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -1243,6 +1244,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 88.2]: 88.2-04: the wine launch, winepath and script goldens share one oracle file and the commandRunner.test.ts census; deltas.json in each slice holds shell-injected-env, caller-arrays-mutated and error-stack-trace
 - [Phase 88.2]: 88.2-05: errorHandler goldens recorded against the real English i18next catalog (jest.unmock), not the key-echoing mock; two deltas (english-catalog, interpolation-escaping) documented
 - [Phase 88.2]: 88.2-05: spawnAsync goldens script the runner; real SIGKILL and abort of a real child stay with spawn_async_real.rs (88.2-14)
+- [Phase 88.2]: 88.2-06: GameJob.create_for refuses a pre-existing Job of the same name; the Windows leader-only kill checks the stamp on the handle it terminates; Windows kill_game_tree keeps Gone for a dead leader (88.2-19 to decide whether to try the Job)
 
 ### Pending Todos
 
@@ -1529,8 +1531,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-26T16:59:32.598Z
-Stopped at: Completed 88.2-05-PLAN.md
+Last session: 2026-11-26T17:13:13.555Z
+Stopped at: Completed 88.2-06-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
