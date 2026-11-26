@@ -1,0 +1,4 @@
+{
+  "shell-injected-env": "The sidecar process this TS ran in carried GAMELIB_SHELL_EXE, GAMELIB_APP_ROOT, GAMELIB_STEAM_ROOT_DEFAULT and GAMELIB_STORE_BOOT, injected by src-tauri/src/sidecar.rs. A spawn from the shell own environment does not carry them, so the Rust runner env is the golden env without those four keys. No golden here holds them (the cases run on the pinned base env), so the Rust side adds none and the delta only records the rule for the cases that compare against a sidecar-run recording.",
+  "random-abort-id": "A call with no abortId and no app name takes Math.random().toString() as its abort id and track key. The cases pin Math.random to a fixed value, so the golden holds that string; the Rust runner takes a unique id of its own and the comparison replaces it."
+}

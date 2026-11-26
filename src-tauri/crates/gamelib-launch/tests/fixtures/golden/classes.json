@@ -9,5 +9,13 @@
   "prepare_wine.registry": "helper",
   "prepare_wine.galaxy_winepath": "helper",
   "prepare_wine.galaxy_sc_create": "helper",
-  "prepare_wine.dxvk": "helper"
+  "prepare_wine.dxvk": "helper",
+  "runner.call": "helper",
+  "runner.call.launch": "game",
+  "runner.wine_command": "helper",
+  "runner.wine_command.launch": "game",
+  "runner.wine_command.wineserver_wait": "helper",
+  "runner.wine_path": "helper",
+  "runner.script": "helper",
+  "runner.spawn_async": "helper"
 }

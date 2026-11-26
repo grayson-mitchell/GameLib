@@ -1,0 +1,38 @@
+[
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "legendary"
+    },
+    "rotate": true,
+    "line": {
+      "level": "INFO",
+      "prefix": "",
+      "message": "Running command: <TOOLS>/legendary/legendary list --json \n\n"
+    }
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "legendary"
+    },
+    "rotate": false,
+    "raw": "[{\"app_name\": \"alpha\"}"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "legendary"
+    },
+    "rotate": false,
+    "raw": "[cli] INFO: fetching\n"
+  },
+  {
+    "target": {
+      "kind": "runner",
+      "runner": "legendary"
+    },
+    "rotate": false,
+    "raw": ",{\"app_name\": \"beta\"}]\n"
+  }
+]

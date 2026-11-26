@@ -1,0 +1,9 @@
+{
+  "results": [
+    {
+      "stdout": "[{\"app_name\": \"alpha\"},{\"app_name\": \"beta\"}]",
+      "stderr": "[cli] INFO: fetching",
+      "fullCommand": "<TOOLS>/legendary/legendary list --json"
+    }
+  ]
+}

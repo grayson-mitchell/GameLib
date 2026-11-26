@@ -1,0 +1,44 @@
+[
+  {
+    "id": "runner-tracer-legendary-list",
+    "note": "the end-to-end tracer: spawn, log frames, stream and result of one callRunner",
+    "callSite": "runner.call",
+    "platform": "linux",
+    "calls": [
+      {
+        "runner": {
+          "name": "legendary",
+          "bin": "legendary",
+          "dir": "<TOOLS>/legendary"
+        },
+        "commandParts": [
+          "list",
+          "--json"
+        ],
+        "options": {
+          "abortId": "tracer-list",
+          "observe": true
+        }
+      }
+    ],
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "[{\"app_name\": \"alpha\"}"
+          },
+          {
+            "stream": "stderr",
+            "text": "[cli] INFO: fetching\n"
+          },
+          {
+            "stream": "stdout",
+            "text": ",{\"app_name\": \"beta\"}]\n"
+          }
+        ],
+        "code": 0
+      }
+    ]
+  }
+]

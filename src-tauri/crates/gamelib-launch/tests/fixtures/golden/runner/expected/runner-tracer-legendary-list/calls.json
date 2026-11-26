@@ -1,0 +1,17 @@
+[
+  {
+    "seam": "abort.create",
+    "id": "tracer-list"
+  },
+  {
+    "seam": "errorHandler",
+    "error": "[{\"app_name\": \"alpha\"},{\"app_name\": \"beta\"}][cli] INFO: fetching",
+    "appName": "",
+    "runner": "legendary"
+  },
+  {
+    "seam": "abort.remove",
+    "id": "tracer-list",
+    "aborted": false
+  }
+]
