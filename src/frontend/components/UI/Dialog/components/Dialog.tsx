@@ -17,6 +17,7 @@ import CloseIcon from '@mui/icons-material/Close'
 
 import useSettingsState from 'frontend/state/settingsState'
 import { useSuppressStoreEmbed } from 'frontend/components/UI/NavShell/StoreEmbedSuppressionContext'
+import { markDialogClosed } from '../dialogCloseClock'
 
 interface DialogProps {
   className?: string
@@ -113,6 +114,21 @@ export const Dialog: React.FC<DialogProps> = ({
     setOpen(false)
     onClose()
   }, [onClose])
+
+  // Only the close stamp below reads this; the MuiDialog keeps the spelled-out
+  // form that `dialogWindowChrome.test.ts` pins.
+  const isOpen = open && requestedOpen
+
+  // RF3: stamp the close, so a switch row can tell a stale second click (the
+  // other half of a double click on No) from a deliberate one. Two moments, since
+  // there are two ways a dialog goes: `open` turning false (the exit transition
+  // then plays and the backdrop still takes clicks), and the unmount, which is how
+  // every consumer that renders `{show && <Dialog />}` closes it, with no
+  // transition at all. The later stamp wins, so the window runs from the last one.
+  useEffect(() => {
+    if (!isOpen) markDialogClosed()
+  }, [isOpen])
+  useEffect(() => markDialogClosed, [])
 
   return (
     <MuiDialog
