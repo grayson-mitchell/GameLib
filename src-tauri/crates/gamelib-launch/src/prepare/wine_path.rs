@@ -135,6 +135,7 @@ mod tests {
         for bin in ["wine", "wineserver"] {
             let path = wine.with_file_name(bin);
             std::fs::write(&path, "").unwrap();
+            #[cfg(unix)]
             std::fs::set_permissions(&path, std::os::unix::fs::PermissionsExt::from_mode(0o755))
                 .unwrap();
         }
