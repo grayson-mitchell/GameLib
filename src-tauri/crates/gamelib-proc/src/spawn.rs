@@ -194,7 +194,6 @@ pub struct GameHandle {
     /// Windows: the game's named Game Job, `None` when it could not be created (the kill is then
     /// leader-only). Nothing on unix, where the group is the tree.
     #[cfg(windows)]
-    #[allow(dead_code)]
     job: Option<crate::job::GameJob>,
 }
 
@@ -266,28 +265,63 @@ impl GameHandle {
         }
     }
 
-    /// Whether any process of the game's group (the leader's own session and group) is still
-    /// running. The leader's zombie does not count, so this is the answer after the leader has
-    /// exited.
-    #[cfg(unix)]
+    /// Whether any process of the game's tree is still running. Unix: any member of the leader's
+    /// own session and group; the leader's zombie does not count, so this is the answer after the
+    /// leader has exited. Windows: the Game Job's active process count, or the leader's liveness
+    /// when the game has no Job.
     pub fn group_alive(&self) -> bool {
-        probe::group_alive(self.pid)
-    }
-
-    /// Ends the whole game tree through this handle: SIGTERM to the group, poll `group_alive`,
-    /// SIGKILL if members remain after `grace`. No stamp read: the handle owns the leader and,
-    /// unless it was reaped, the pid cannot have been recycled (see `wait_leader_exit`). `Gone`
-    /// when the group is already empty.
-    #[cfg(unix)]
-    pub fn kill_tree(&mut self, grace: std::time::Duration) -> crate::kill_tree::KillOutcome {
-        match i32::try_from(self.pid) {
-            Ok(pgid) => crate::kill_tree::terminate_known_group(pgid, grace),
-            Err(_) => crate::kill_tree::KillOutcome::Gone,
+        #[cfg(unix)]
+        {
+            probe::group_alive(self.pid)
+        }
+        #[cfg(windows)]
+        {
+            match self.job.as_ref().and_then(|job| job.active_processes()) {
+                Some(active) => active > 0,
+                // No Job (or no answer from it): the handle's open process handle pins the pid, so
+                // the leader's liveness is the best that can be said.
+                None => probe::is_alive(self.pid),
+            }
         }
     }
 
-    /// Reaps the leader. Call it only after the game's group is empty (`group_alive()` false on
-    /// unix): until the leader is reaped its pid, and so its pgid, cannot be recycled.
+    /// Ends the whole game tree through this handle, polling `group_alive` up to `grace`. Unix:
+    /// SIGTERM to the group, SIGKILL if members remain after `grace`; no stamp read, because the
+    /// handle owns the leader and, unless it was reaped, the pid cannot have been recycled (see
+    /// `wait_leader_exit`). Windows: there is no graceful signal, so the Game Job is terminated
+    /// outright (the leader alone through `Child::kill` when the game has no Job) and `grace` only
+    /// bounds the wait for the tree to end. `Gone` when the tree is already gone.
+    pub fn kill_tree(&mut self, grace: std::time::Duration) -> crate::kill_tree::KillOutcome {
+        #[cfg(unix)]
+        {
+            match i32::try_from(self.pid) {
+                Ok(pgid) => crate::kill_tree::terminate_known_group(pgid, grace),
+                Err(_) => crate::kill_tree::KillOutcome::Gone,
+            }
+        }
+        #[cfg(windows)]
+        {
+            use std::time::{Duration, Instant};
+            if !self.group_alive() {
+                return crate::kill_tree::KillOutcome::Gone;
+            }
+            let jobbed = self.job.as_ref().is_some_and(|job| job.terminate());
+            if !jobbed {
+                if let Err(e) = self.child.kill() {
+                    crate::diag::diag(&format!("game leader: Child::kill failed: {e}"));
+                }
+            }
+            let deadline = Instant::now() + grace;
+            while Instant::now() < deadline && self.group_alive() {
+                std::thread::sleep(Duration::from_millis(20));
+            }
+            crate::kill_tree::KillOutcome::Killed
+        }
+    }
+
+    /// Reaps the leader. Call it only after the game's tree is gone (`group_alive()` false): on
+    /// unix, until the leader is reaped its pid, and so its pgid, cannot be recycled. On Windows
+    /// this drops the handle's hold on the process.
     pub fn reap(mut self) -> std::io::Result<()> {
         self.child.wait().map(|_| ())
     }
