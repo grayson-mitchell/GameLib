@@ -1084,9 +1084,11 @@ Plans:
 - [ ] 88.2-25-PLAN.md — Clean-worktree proof, push checkpoint and three-OS CI with the orphan arms, the stub-game smoke and Windows quoting (D-30: no signed build)
 
 **Cross-cutting constraints:** <!-- gsd:generated -->
-- No 88.2 commit lands before 88.1-20's push: its push check needs nothing outside .planning/ between its candidate head and the push (wave-1 preconditions)
 - Flagged assumption (spec-less edge probe): SVC-03's edge-coverage row is `unclassified` and unresolved; the D-14 matrix stands in for edge coverage and is not claimed as a verified edge
 - D-20: a recorded behaviour that looks wrong is kept and filed as a todo with the three triage keys
+- Reversibility: costly (D-26) — the hook channel is the contract the managers implement until 91/92
+
+- No 88.2 commit lands before 88.1-20's push: its push check needs nothing outside .planning/ between its candidate head and the push (wave-1 preconditions)
 
 ### Phase 88.3: Launch funnel, re-adoption and the live gate (INSERTED)
 
