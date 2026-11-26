@@ -1,0 +1,2179 @@
+[
+  {
+    "id": "spawn-async-plain",
+    "note": "the end-to-end tracer: spawn, onOutput order and result of one createSpawnAsync call",
+    "command": "tar",
+    "args": [
+      "-xf",
+      "a"
+    ],
+    "options": {
+      "cwd": "/x"
+    },
+    "observe": true,
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "o1"
+          },
+          {
+            "stream": "stderr",
+            "text": "e1"
+          },
+          {
+            "stream": "stdout",
+            "text": "o2"
+          },
+          {
+            "stream": "stderr",
+            "text": "e2"
+          },
+          {
+            "stream": "stdout",
+            "text": "o3"
+          }
+        ],
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "spawnAsync--createspawnasync-one-run-call-no-timeout-windowshide-false-no-replaceenv",
+    "note": "the unbounded run: the opt-out reason, windowsHide false, replaceEnv false and no env",
+    "command": "tar",
+    "args": [
+      "-xf",
+      "a"
+    ],
+    "options": {
+      "cwd": "/x"
+    },
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "o1"
+          },
+          {
+            "stream": "stderr",
+            "text": "e1"
+          },
+          {
+            "stream": "stdout",
+            "text": "o2"
+          }
+        ],
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "spawnAsync--createspawnasync-options-env-replaces-the-environment",
+    "note": "an env passed in options is the whole env of the child (replaceEnv true)",
+    "command": "x",
+    "args": [],
+    "options": {
+      "env": {
+        "A": "1"
+      }
+    },
+    "script": [
+      {}
+    ]
+  },
+  {
+    "id": "spawnAsync--createspawnasync-a-positive-timeout-becomes-timeoutms-signal-and-windowshide-pass-through",
+    "note": "timeoutMs 500, a signal handed through and windowsHide true, all on one run",
+    "command": "x",
+    "args": [],
+    "options": {
+      "timeout": 500,
+      "signal": "before-run",
+      "windowsHide": true
+    },
+    "script": [
+      {}
+    ]
+  },
+  {
+    "id": "spawnAsync--createspawnasync-onoutput-receives-every-chunk-of-both-streams-in-order",
+    "note": "both streams reach onOutput in arrival order",
+    "command": "x",
+    "args": [],
+    "observe": true,
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "a"
+          },
+          {
+            "stream": "stderr",
+            "text": "b"
+          },
+          {
+            "stream": "stdout",
+            "text": "c"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "spawnAsync--createspawnasync-keeps-only-the-last-50-chunks",
+    "note": "sixty stdout chunks answer with the last fifty",
+    "command": "x",
+    "args": [],
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "0,"
+          },
+          {
+            "stream": "stdout",
+            "text": "1,"
+          },
+          {
+            "stream": "stdout",
+            "text": "2,"
+          },
+          {
+            "stream": "stdout",
+            "text": "3,"
+          },
+          {
+            "stream": "stdout",
+            "text": "4,"
+          },
+          {
+            "stream": "stdout",
+            "text": "5,"
+          },
+          {
+            "stream": "stdout",
+            "text": "6,"
+          },
+          {
+            "stream": "stdout",
+            "text": "7,"
+          },
+          {
+            "stream": "stdout",
+            "text": "8,"
+          },
+          {
+            "stream": "stdout",
+            "text": "9,"
+          },
+          {
+            "stream": "stdout",
+            "text": "10,"
+          },
+          {
+            "stream": "stdout",
+            "text": "11,"
+          },
+          {
+            "stream": "stdout",
+            "text": "12,"
+          },
+          {
+            "stream": "stdout",
+            "text": "13,"
+          },
+          {
+            "stream": "stdout",
+            "text": "14,"
+          },
+          {
+            "stream": "stdout",
+            "text": "15,"
+          },
+          {
+            "stream": "stdout",
+            "text": "16,"
+          },
+          {
+            "stream": "stdout",
+            "text": "17,"
+          },
+          {
+            "stream": "stdout",
+            "text": "18,"
+          },
+          {
+            "stream": "stdout",
+            "text": "19,"
+          },
+          {
+            "stream": "stdout",
+            "text": "20,"
+          },
+          {
+            "stream": "stdout",
+            "text": "21,"
+          },
+          {
+            "stream": "stdout",
+            "text": "22,"
+          },
+          {
+            "stream": "stdout",
+            "text": "23,"
+          },
+          {
+            "stream": "stdout",
+            "text": "24,"
+          },
+          {
+            "stream": "stdout",
+            "text": "25,"
+          },
+          {
+            "stream": "stdout",
+            "text": "26,"
+          },
+          {
+            "stream": "stdout",
+            "text": "27,"
+          },
+          {
+            "stream": "stdout",
+            "text": "28,"
+          },
+          {
+            "stream": "stdout",
+            "text": "29,"
+          },
+          {
+            "stream": "stdout",
+            "text": "30,"
+          },
+          {
+            "stream": "stdout",
+            "text": "31,"
+          },
+          {
+            "stream": "stdout",
+            "text": "32,"
+          },
+          {
+            "stream": "stdout",
+            "text": "33,"
+          },
+          {
+            "stream": "stdout",
+            "text": "34,"
+          },
+          {
+            "stream": "stdout",
+            "text": "35,"
+          },
+          {
+            "stream": "stdout",
+            "text": "36,"
+          },
+          {
+            "stream": "stdout",
+            "text": "37,"
+          },
+          {
+            "stream": "stdout",
+            "text": "38,"
+          },
+          {
+            "stream": "stdout",
+            "text": "39,"
+          },
+          {
+            "stream": "stdout",
+            "text": "40,"
+          },
+          {
+            "stream": "stdout",
+            "text": "41,"
+          },
+          {
+            "stream": "stdout",
+            "text": "42,"
+          },
+          {
+            "stream": "stdout",
+            "text": "43,"
+          },
+          {
+            "stream": "stdout",
+            "text": "44,"
+          },
+          {
+            "stream": "stdout",
+            "text": "45,"
+          },
+          {
+            "stream": "stdout",
+            "text": "46,"
+          },
+          {
+            "stream": "stdout",
+            "text": "47,"
+          },
+          {
+            "stream": "stdout",
+            "text": "48,"
+          },
+          {
+            "stream": "stdout",
+            "text": "49,"
+          },
+          {
+            "stream": "stdout",
+            "text": "50,"
+          },
+          {
+            "stream": "stdout",
+            "text": "51,"
+          },
+          {
+            "stream": "stdout",
+            "text": "52,"
+          },
+          {
+            "stream": "stdout",
+            "text": "53,"
+          },
+          {
+            "stream": "stdout",
+            "text": "54,"
+          },
+          {
+            "stream": "stdout",
+            "text": "55,"
+          },
+          {
+            "stream": "stdout",
+            "text": "56,"
+          },
+          {
+            "stream": "stdout",
+            "text": "57,"
+          },
+          {
+            "stream": "stdout",
+            "text": "58,"
+          },
+          {
+            "stream": "stdout",
+            "text": "59,"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "spawnAsync--createspawnasync-a-spawn-error-rejects",
+    "note": "the runner rejects with a spawn ENOENT; spawnAsync rejects with the same error",
+    "command": "x",
+    "args": [],
+    "script": [
+      {
+        "throws": "ENOENT"
+      }
+    ]
+  },
+  {
+    "id": "spawnAsync--createspawnasync-option-s-throws-a-typeerror-naming-it-before-any-run",
+    "note": "the unsupported option shell: a TypeError before the runner is reached",
+    "tsOnly": true,
+    "command": "x",
+    "args": [],
+    "options": {
+      "unsupported": "shell"
+    },
+    "script": []
+  },
+  {
+    "id": "spawn-async-env-absent",
+    "note": "no env in options: env null, replaceEnv false",
+    "command": "x",
+    "args": [
+      "--flag",
+      "value"
+    ],
+    "options": {},
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "ok\n"
+          }
+        ],
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "spawn-async-env-present",
+    "note": "an env in options: the whole env is handed over, replaceEnv true",
+    "command": "x",
+    "args": [
+      "--flag",
+      "value"
+    ],
+    "options": {
+      "env": {
+        "A": "1",
+        "B": "two words"
+      }
+    },
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "ok\n"
+          }
+        ],
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "spawn-async-env-empty-object",
+    "note": "an empty env object still counts as passed: replaceEnv true with an empty env",
+    "command": "x",
+    "args": [
+      "--flag",
+      "value"
+    ],
+    "options": {
+      "env": {}
+    },
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "ok\n"
+          }
+        ],
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "spawn-async-cwd-absent",
+    "note": "no cwd in options: the run carries no cwd",
+    "command": "x",
+    "args": [
+      "--flag",
+      "value"
+    ],
+    "options": {},
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "ok\n"
+          }
+        ],
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "spawn-async-timeout-zero",
+    "note": "timeout 0 is no cap (child_process semantics): the unbounded opt-out",
+    "command": "x",
+    "args": [
+      "--flag",
+      "value"
+    ],
+    "options": {
+      "timeout": 0
+    },
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "ok\n"
+          }
+        ],
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "spawn-async-timeout-negative",
+    "note": "a negative timeout is no cap",
+    "command": "x",
+    "args": [
+      "--flag",
+      "value"
+    ],
+    "options": {
+      "timeout": -5
+    },
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "ok\n"
+          }
+        ],
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "spawn-async-timeout-nan",
+    "note": "a NaN timeout is no cap",
+    "command": "x",
+    "args": [
+      "--flag",
+      "value"
+    ],
+    "options": {
+      "timeout": "NaN"
+    },
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "ok\n"
+          }
+        ],
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "spawn-async-timeout-infinity",
+    "note": "an infinite timeout is not finite, so no cap",
+    "command": "x",
+    "args": [
+      "--flag",
+      "value"
+    ],
+    "options": {
+      "timeout": "Infinity"
+    },
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "ok\n"
+          }
+        ],
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "spawn-async-timeout-one-ms",
+    "note": "the smallest positive cap becomes timeoutMs 1",
+    "command": "x",
+    "args": [
+      "--flag",
+      "value"
+    ],
+    "options": {
+      "timeout": 1
+    },
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "ok\n"
+          }
+        ],
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "spawn-async-timeout-fractional",
+    "note": "a fractional positive cap is passed as is",
+    "command": "x",
+    "args": [
+      "--flag",
+      "value"
+    ],
+    "options": {
+      "timeout": 0.5
+    },
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "ok\n"
+          }
+        ],
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "spawn-async-timeout-elapsed",
+    "note": "a positive cap that elapses: the runner reports timedOut with code null, partial output kept",
+    "command": "x",
+    "args": [
+      "--flag",
+      "value"
+    ],
+    "options": {
+      "timeout": 200
+    },
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "partial"
+          },
+          {
+            "stream": "stderr",
+            "text": "warn"
+          }
+        ],
+        "code": null,
+        "signal": "SIGKILL",
+        "timedOut": true
+      }
+    ],
+    "observe": true
+  },
+  {
+    "id": "spawn-async-abort-mid-run",
+    "note": "a signal aborted while the child runs: the call resolves (never rejects) with aborted true and code null",
+    "command": "x",
+    "args": [
+      "--flag",
+      "value"
+    ],
+    "options": {
+      "signal": "mid-run"
+    },
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "before-abort"
+          }
+        ],
+        "hold": true
+      }
+    ],
+    "observe": true
+  },
+  {
+    "id": "spawn-async-abort-before-run",
+    "note": "a signal that is already aborted: the runner answers aborted at once, the call resolves",
+    "command": "x",
+    "args": [
+      "--flag",
+      "value"
+    ],
+    "options": {
+      "signal": "before-run"
+    },
+    "script": [
+      {
+        "hold": true
+      }
+    ]
+  },
+  {
+    "id": "spawn-async-windowshide-true",
+    "note": "windowsHide true is passed through",
+    "command": "x",
+    "args": [
+      "--flag",
+      "value"
+    ],
+    "options": {
+      "windowsHide": true
+    },
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "ok\n"
+          }
+        ],
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "spawn-async-windowshide-false",
+    "note": "windowsHide false is the same as the default",
+    "command": "x",
+    "args": [
+      "--flag",
+      "value"
+    ],
+    "options": {
+      "windowsHide": false
+    },
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "ok\n"
+          }
+        ],
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "spawn-async-nonzero-exit",
+    "note": "a non-zero exit code is reported, not thrown",
+    "command": "x",
+    "args": [
+      "--flag",
+      "value"
+    ],
+    "options": {},
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stderr",
+            "text": "boom\n"
+          }
+        ],
+        "code": 3
+      }
+    ],
+    "observe": true
+  },
+  {
+    "id": "spawn-async-no-output",
+    "note": "no chunks: stdout and stderr are empty strings",
+    "command": "x",
+    "args": [
+      "--flag",
+      "value"
+    ],
+    "options": {},
+    "script": [
+      {
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "spawn-async-no-on-output",
+    "note": "output with no onOutput: the result still carries the chunks, the stream is null",
+    "command": "x",
+    "args": [
+      "--flag",
+      "value"
+    ],
+    "options": {},
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "a"
+          },
+          {
+            "stream": "stderr",
+            "text": "b"
+          }
+        ],
+        "code": 0
+      }
+    ]
+  },
+  {
+    "id": "spawn-async-stdout-fifty",
+    "note": "exactly fifty stdout chunks: none dropped",
+    "command": "x",
+    "args": [
+      "--flag",
+      "value"
+    ],
+    "options": {},
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "o0,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o1,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o2,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o3,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o4,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o5,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o6,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o7,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o8,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o9,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o10,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o11,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o12,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o13,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o14,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o15,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o16,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o17,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o18,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o19,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o20,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o21,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o22,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o23,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o24,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o25,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o26,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o27,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o28,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o29,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o30,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o31,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o32,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o33,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o34,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o35,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o36,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o37,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o38,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o39,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o40,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o41,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o42,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o43,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o44,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o45,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o46,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o47,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o48,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o49,"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "spawn-async-stdout-fifty-one",
+    "note": "fifty-one stdout chunks: the first is dropped",
+    "command": "x",
+    "args": [
+      "--flag",
+      "value"
+    ],
+    "options": {},
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "o0,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o1,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o2,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o3,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o4,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o5,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o6,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o7,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o8,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o9,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o10,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o11,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o12,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o13,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o14,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o15,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o16,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o17,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o18,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o19,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o20,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o21,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o22,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o23,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o24,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o25,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o26,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o27,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o28,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o29,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o30,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o31,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o32,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o33,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o34,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o35,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o36,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o37,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o38,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o39,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o40,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o41,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o42,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o43,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o44,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o45,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o46,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o47,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o48,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o49,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o50,"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "spawn-async-stderr-over-fifty",
+    "note": "seventy stderr chunks: the last fifty, and stdout untouched",
+    "command": "x",
+    "args": [
+      "--flag",
+      "value"
+    ],
+    "options": {},
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "only-out"
+          },
+          {
+            "stream": "stderr",
+            "text": "e0,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e1,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e2,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e3,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e4,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e5,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e6,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e7,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e8,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e9,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e10,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e11,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e12,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e13,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e14,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e15,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e16,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e17,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e18,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e19,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e20,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e21,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e22,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e23,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e24,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e25,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e26,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e27,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e28,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e29,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e30,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e31,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e32,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e33,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e34,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e35,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e36,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e37,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e38,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e39,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e40,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e41,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e42,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e43,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e44,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e45,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e46,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e47,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e48,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e49,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e50,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e51,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e52,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e53,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e54,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e55,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e56,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e57,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e58,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e59,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e60,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e61,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e62,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e63,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e64,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e65,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e66,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e67,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e68,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e69,"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "spawn-async-both-over-fifty-interleaved",
+    "note": "sixty chunks on each stream, interleaved: each stream keeps its own last fifty and onOutput sees all one hundred and twenty",
+    "command": "x",
+    "args": [
+      "--flag",
+      "value"
+    ],
+    "options": {},
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "o0,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e0,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o1,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e1,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o2,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e2,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o3,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e3,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o4,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e4,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o5,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e5,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o6,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e6,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o7,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e7,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o8,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e8,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o9,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e9,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o10,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e10,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o11,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e11,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o12,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e12,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o13,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e13,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o14,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e14,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o15,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e15,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o16,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e16,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o17,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e17,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o18,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e18,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o19,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e19,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o20,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e20,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o21,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e21,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o22,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e22,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o23,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e23,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o24,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e24,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o25,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e25,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o26,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e26,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o27,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e27,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o28,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e28,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o29,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e29,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o30,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e30,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o31,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e31,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o32,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e32,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o33,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e33,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o34,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e34,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o35,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e35,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o36,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e36,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o37,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e37,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o38,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e38,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o39,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e39,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o40,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e40,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o41,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e41,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o42,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e42,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o43,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e43,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o44,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e44,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o45,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e45,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o46,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e46,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o47,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e47,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o48,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e48,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o49,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e49,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o50,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e50,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o51,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e51,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o52,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e52,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o53,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e53,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o54,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e54,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o55,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e55,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o56,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e56,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o57,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e57,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o58,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e58,"
+          },
+          {
+            "stream": "stdout",
+            "text": "o59,"
+          },
+          {
+            "stream": "stderr",
+            "text": "e59,"
+          }
+        ]
+      }
+    ],
+    "observe": true
+  },
+  {
+    "id": "spawn-async-chunks-not-trimmed",
+    "note": "chunks are joined as they arrive: whitespace and a chunk boundary inside a token are kept",
+    "command": "x",
+    "args": [
+      "--flag",
+      "value"
+    ],
+    "options": {},
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "  lead"
+          },
+          {
+            "stream": "stdout",
+            "text": "ing\n"
+          },
+          {
+            "stream": "stderr",
+            "text": "tr"
+          },
+          {
+            "stream": "stderr",
+            "text": "ail  "
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "spawn-async-spawn-error-eacces",
+    "note": "a spawn error with another code rejects the same way",
+    "command": "x",
+    "args": [
+      "--flag",
+      "value"
+    ],
+    "options": {},
+    "script": [
+      {
+        "throws": "EACCES"
+      }
+    ]
+  },
+  {
+    "id": "spawn-async-spawn-error-with-timeout",
+    "note": "a spawn error with a cap set still rejects; no result is built",
+    "command": "x",
+    "args": [
+      "--flag",
+      "value"
+    ],
+    "options": {
+      "timeout": 500
+    },
+    "script": [
+      {
+        "throws": "ENOENT"
+      }
+    ]
+  },
+  {
+    "id": "spawn-async-option-detached",
+    "note": "the unsupported option detached: a TypeError before any run",
+    "command": "x",
+    "args": [
+      "--flag",
+      "value"
+    ],
+    "options": {
+      "unsupported": "detached"
+    },
+    "script": [],
+    "tsOnly": true
+  },
+  {
+    "id": "spawn-async-option-stdio",
+    "note": "the unsupported option stdio: a TypeError before any run",
+    "command": "x",
+    "args": [
+      "--flag",
+      "value"
+    ],
+    "options": {
+      "unsupported": "stdio"
+    },
+    "script": [],
+    "tsOnly": true
+  },
+  {
+    "id": "spawn-async-option-shell-with-valid-options",
+    "note": "an unsupported option beside valid ones still throws before any run",
+    "command": "x",
+    "args": [
+      "--flag",
+      "value"
+    ],
+    "options": {
+      "unsupported": "shell",
+      "cwd": "/x",
+      "timeout": 500
+    },
+    "script": [],
+    "tsOnly": true
+  },
+  {
+    "id": "spawn-async-all-options",
+    "note": "every allowed option at once: cwd, env, a cap, a signal and windowsHide",
+    "command": "x",
+    "args": [
+      "--flag",
+      "value"
+    ],
+    "options": {
+      "cwd": "/x",
+      "env": {
+        "A": "1"
+      },
+      "timeout": 500,
+      "signal": "before-run",
+      "windowsHide": true
+    },
+    "script": [
+      {
+        "chunks": [
+          {
+            "stream": "stdout",
+            "text": "ok"
+          }
+        ],
+        "code": 0
+      }
+    ],
+    "observe": true
+  }
+]

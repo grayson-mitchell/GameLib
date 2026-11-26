@@ -1,0 +1,3 @@
+{
+  "rejected": "spawnAsync: unsupported option \"detached\" (allowed: cwd, env, timeout, signal, windowsHide)"
+}

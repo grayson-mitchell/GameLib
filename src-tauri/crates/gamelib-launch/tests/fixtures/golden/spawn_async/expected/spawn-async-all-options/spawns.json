@@ -1,0 +1,22 @@
+[
+  {
+    "program": "x",
+    "argv": [
+      "--flag",
+      "value"
+    ],
+    "env": {
+      "A": "1"
+    },
+    "cwd": "/x",
+    "replaceEnv": true,
+    "resolveOn": null,
+    "track": null,
+    "timeout": null,
+    "timeoutMs": 500,
+    "windowsHide": true,
+    "hasSignal": true,
+    "callSite": "runner.spawn_async",
+    "class": "helper"
+  }
+]

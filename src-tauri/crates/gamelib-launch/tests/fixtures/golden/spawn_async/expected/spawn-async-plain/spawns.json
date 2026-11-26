@@ -1,0 +1,23 @@
+[
+  {
+    "program": "tar",
+    "argv": [
+      "-xf",
+      "a"
+    ],
+    "env": null,
+    "cwd": "/x",
+    "replaceEnv": false,
+    "resolveOn": null,
+    "track": null,
+    "timeout": {
+      "none": true,
+      "reason": "spawnAsync callers (installers, archive moves, cxbottle, ps) run unbounded; callers own cancellation"
+    },
+    "timeoutMs": null,
+    "windowsHide": false,
+    "hasSignal": false,
+    "callSite": "runner.spawn_async",
+    "class": "helper"
+  }
+]

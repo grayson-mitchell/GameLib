@@ -1,0 +1,3 @@
+{
+  "shell-injected-env": "The sidecar process this TS ran in carried GAMELIB_SHELL_EXE, GAMELIB_APP_ROOT, GAMELIB_STEAM_ROOT_DEFAULT and GAMELIB_STORE_BOOT, injected by src-tauri/src/sidecar.rs. A spawn from the shell own environment does not carry them, so a Rust spawn_async that inherits the process env is the golden env without those four keys. No golden here holds them (an env is recorded only when the case passes one, and none passes those keys), so the delta only records the rule for a case compared against a sidecar-run recording."
+}

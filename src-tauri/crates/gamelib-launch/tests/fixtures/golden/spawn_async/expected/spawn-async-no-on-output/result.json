@@ -1,0 +1,7 @@
+{
+  "code": 0,
+  "stdout": "a",
+  "stderr": "b",
+  "timedOut": false,
+  "aborted": false
+}

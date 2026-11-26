@@ -1,0 +1,17 @@
+[
+  {
+    "program": "x",
+    "argv": [],
+    "env": null,
+    "cwd": null,
+    "replaceEnv": false,
+    "resolveOn": null,
+    "track": null,
+    "timeout": null,
+    "timeoutMs": 500,
+    "windowsHide": true,
+    "hasSignal": true,
+    "callSite": "runner.spawn_async",
+    "class": "helper"
+  }
+]
