@@ -28,7 +28,8 @@ use tokio::sync::watch;
 use tokio_util::sync::CancellationToken;
 
 use super::redact::get_runner_call_without_credentials;
-use super::stream::{ChunkWindow, LogHandOff, LogTargets, OutputSink};
+use super::sanitize::LogSanitizer;
+use super::stream::{ChunkWindow, LaunchLogSink, LogHandOff, LogTargets, OutputSink};
 use super::{lock, Flight, Registered, RunnerEvent, RunnerName};
 use crate::ctx::LaunchCtx;
 
@@ -124,6 +125,10 @@ pub struct RunnerCallArgs {
     /// The caller's log writers, the runner's own last (the order the TS writes in).
     #[serde(default)]
     pub log_targets: Vec<LogHandOff>,
+    /// The named sanitizer the text written to the log writers goes through (the TS `logSanitizer`);
+    /// the observer and the result window always get the raw chunk.
+    #[serde(default)]
+    pub log_sanitizer: Option<LogSanitizer>,
     #[serde(default)]
     pub abort_id: Option<String>,
     #[serde(default)]
@@ -313,9 +318,42 @@ struct Run {
     skip_error_handler: bool,
     abort: CancellationToken,
     targets: Arc<Mutex<LogTargets>>,
+    log_sanitizer: Option<LogSanitizer>,
     output: Arc<dyn OutputSink>,
     stdout: Arc<Mutex<ChunkWindow>>,
     stderr: Arc<Mutex<ChunkWindow>>,
+}
+
+/// The chunk callback of a run: each chunk to the caller's writers (through `sanitizer` when the call
+/// names one), then the observer, then the window. The sanitizer sees the writers' text only; the
+/// observer and the window get the chunk as the pipe delivered it (the TS order in `onChunk`).
+fn chunk_callback(
+    targets: Arc<Mutex<LogTargets>>,
+    sanitizer: Option<LogSanitizer>,
+    log: Arc<dyn LaunchLogSink>,
+    output: Arc<dyn OutputSink>,
+    stdout: Arc<Mutex<ChunkWindow>>,
+    stderr: Arc<Mutex<ChunkWindow>>,
+) -> ChunkSink {
+    Box::new(move |pipe, text| {
+        {
+            let mut targets = lock(&targets);
+            if !targets.is_empty() {
+                let to_log = match sanitizer {
+                    Some(sanitizer) => sanitizer.apply(text),
+                    None => text.to_string(),
+                };
+                let batches = targets.batches(|_| vec![Entry::Raw(to_log.clone())]);
+                log.submit(batches);
+            }
+        }
+        output.chunk(pipe, text);
+        let window = match pipe {
+            Pipe::Stdout => &stdout,
+            Pipe::Stderr => &stderr,
+        };
+        lock(window).push_trimmed(text);
+    })
 }
 
 impl Run {
@@ -328,28 +366,16 @@ impl Run {
         }
     }
 
-    /// The chunk callback: each chunk to the caller's writers, then the observer, then the window.
+    /// The chunk callback of this run (see [`chunk_callback`]).
     fn chunk_sink(&self) -> ChunkSink {
-        let targets = Arc::clone(&self.targets);
-        let output = Arc::clone(&self.output);
-        let log = Arc::clone(&self.ctx.log_sink);
-        let stdout = Arc::clone(&self.stdout);
-        let stderr = Arc::clone(&self.stderr);
-        Box::new(move |pipe, text| {
-            {
-                let mut targets = lock(&targets);
-                if !targets.is_empty() {
-                    let batches = targets.batches(|_| vec![Entry::Raw(text.to_string())]);
-                    log.submit(batches);
-                }
-            }
-            output.chunk(pipe, text);
-            let window = match pipe {
-                Pipe::Stdout => &stdout,
-                Pipe::Stderr => &stderr,
-            };
-            lock(window).push_trimmed(text);
-        })
+        chunk_callback(
+            Arc::clone(&self.targets),
+            self.log_sanitizer,
+            Arc::clone(&self.ctx.log_sink),
+            Arc::clone(&self.output),
+            Arc::clone(&self.stdout),
+            Arc::clone(&self.stderr),
+        )
     }
 
     /// `classifyFailure`.
@@ -676,6 +702,7 @@ pub async fn call_runner(
         skip_error_handler: args.skip_error_handler,
         abort: abort.clone(),
         targets,
+        log_sanitizer: args.log_sanitizer,
         output: sink,
         stdout: Arc::new(Mutex::new(ChunkWindow::new())),
         stderr: Arc::new(Mutex::new(ChunkWindow::new())),
@@ -830,6 +857,107 @@ mod tests {
         assert_eq!(signal_name(15), "SIGTERM");
         assert_eq!(signal_name(9), "SIGKILL");
         assert_eq!(signal_name(31), "SIG31");
+    }
+
+    /// Records what a log sink and an output sink are given.
+    #[derive(Default)]
+    struct Recorded {
+        written: Mutex<Vec<String>>,
+        streamed: Mutex<Vec<String>>,
+    }
+
+    impl LaunchLogSink for Recorded {
+        fn stamp(&self) -> (u64, i32) {
+            (0, 0)
+        }
+        fn submit(&self, batches: Vec<gamelib_log::TargetBatch>) {
+            for batch in batches {
+                for entry in batch.entries {
+                    if let Entry::Raw(text) = entry {
+                        lock(&self.written).push(text);
+                    }
+                }
+            }
+        }
+        fn general(&self, _prefix: Prefix, _level: Level, _msg: &str) {}
+    }
+
+    impl OutputSink for Recorded {
+        fn chunk(&self, _pipe: Pipe, text: &str) {
+            lock(&self.streamed).push(text.to_string());
+        }
+    }
+
+    fn one_runner_writer() -> Arc<Mutex<LogTargets>> {
+        Arc::new(Mutex::new(LogTargets::resolve(vec![LogHandOff {
+            target: gamelib_log::frame::FrameTarget {
+                kind: "runner".to_string(),
+                app_name: None,
+                runner: Some("gog".to_string()),
+                log_type: None,
+            },
+            disabled: false,
+            rotate: false,
+        }])))
+    }
+
+    /// The TS `onChunk` order: the log writers get the sanitized text, `onOutput` and the window the raw one.
+    #[test]
+    fn a_gog_token_reaches_the_log_sanitized_while_the_stream_and_the_window_get_it_raw() {
+        let recorded = Arc::new(Recorded::default());
+        let stdout = Arc::new(Mutex::new(ChunkWindow::new()));
+        let stderr = Arc::new(Mutex::new(ChunkWindow::new()));
+        let mut sink = chunk_callback(
+            one_runner_writer(),
+            Some(LogSanitizer::GogAuth),
+            recorded.clone(),
+            recorded.clone(),
+            stdout.clone(),
+            stderr,
+        );
+        let chunk = r#"{"access_token":"at-synth","user_id":"u-synth","expires_in":3600}"#;
+        sink(Pipe::Stdout, chunk);
+
+        let written = lock(&recorded.written).clone();
+        assert_eq!(written.len(), 1);
+        assert!(
+            !written[0].contains("at-synth") && !written[0].contains("u-synth"),
+            "the log got {:?}",
+            written[0]
+        );
+        assert!(written[0].contains("\"access_token\":\"<redacted>\""));
+        assert_eq!(*lock(&recorded.streamed), vec![chunk.to_string()]);
+        assert_eq!(lock(&stdout).join(""), chunk);
+    }
+
+    #[test]
+    fn a_call_that_names_no_sanitizer_writes_the_chunk_as_it_came() {
+        let recorded = Arc::new(Recorded::default());
+        let mut sink = chunk_callback(
+            one_runner_writer(),
+            None,
+            recorded.clone(),
+            recorded.clone(),
+            Arc::new(Mutex::new(ChunkWindow::new())),
+            Arc::new(Mutex::new(ChunkWindow::new())),
+        );
+        sink(Pipe::Stderr, "token=SECRET");
+        assert_eq!(*lock(&recorded.written), vec!["token=SECRET".to_string()]);
+    }
+
+    #[test]
+    fn a_sanitizer_is_read_from_the_wire_and_an_unknown_one_is_refused() {
+        let args: RunnerCallArgs = serde_json::from_str(
+            r#"{"commandParts":["x"],"runner":{"name":"gog","bin":"b","logPrefix":"Gog"},
+                "logSanitizer":"nileAuth"}"#,
+        )
+        .expect("named");
+        assert_eq!(args.log_sanitizer, Some(LogSanitizer::NileAuth));
+        let bad: Result<RunnerCallArgs, _> = serde_json::from_str(
+            r#"{"commandParts":["x"],"runner":{"name":"gog","bin":"b","logPrefix":"Gog"},
+                "logSanitizer":"maskSecret"}"#,
+        );
+        assert!(bad.is_err());
     }
 
     #[test]

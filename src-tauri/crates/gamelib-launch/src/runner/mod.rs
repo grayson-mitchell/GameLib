@@ -1,11 +1,12 @@
 //! The command runner's helper path (88.2-07, D-02, D-21): `callRunner` ported from `commandRunner.ts`.
-//! [`redact`] is the credential redaction, [`stream`] the log hand-off, the sinks and the chunk window,
+//! [`redact`] is the credential redaction, [`sanitize`] the named auth log sanitizers, [`stream`] the log hand-off, the sinks and the chunk window,
 //! [`call_runner`] the run itself, and this file holds the state a context keeps across calls: the
 //! in-flight table, the abort table and the PowerShell probe ([`RunnerTables`]), and the seam the
 //! runner's `errorHandler` is reached through ([`RunnerErrors`]).
 
 pub mod call_runner;
 pub mod redact;
+pub mod sanitize;
 pub mod stream;
 
 use std::collections::HashMap;

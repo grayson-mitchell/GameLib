@@ -176,6 +176,7 @@ impl Rig {
             wrappers: Vec::new(),
             log_message_prefix: None,
             log_targets: Vec::new(),
+            log_sanitizer: None,
             abort_id: Some(abort_id.into()),
             track_key: None,
             cwd: None,

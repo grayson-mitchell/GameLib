@@ -678,6 +678,7 @@ fn replay(case: &Case, rig: &Rig) -> Result<(), String> {
             wrappers: Vec::new(),
             log_message_prefix: o.log_message_prefix.clone(),
             log_targets,
+            log_sanitizer: None,
             abort_id: o.abort_id.clone(),
             track_key: o.track_key.clone(),
             cwd: o.cwd.as_deref().map(|c| rig.expand(c)),
