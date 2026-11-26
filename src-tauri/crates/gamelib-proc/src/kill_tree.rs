@@ -1,5 +1,7 @@
-//! Unix process-group termination. Windows has no group-signal equivalent; its tree kill is the
-//! per-helper Job Object in `job.rs`, so this module is empty there.
+//! Process-tree termination. Unix signals process groups. Windows has no group signal; its helper
+//! tree kill is the per-helper Job Object in `job.rs`, and its stamp-checked game tree kill
+//! (`kill_game_tree`) terminates the game's named Game Job, so only that function lives here.
+//! With `job.rs`, this is where `TerminateProcess` is called.
 
 /// How a stamp-checked game tree kill ended.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -17,6 +19,102 @@ pub enum KillOutcome {
 pub use unix::{kill_game_tree, kill_process_group, terminate_group};
 #[cfg(unix)]
 pub(crate) use unix::{signal_group, terminate_known_group};
+#[cfg(windows)]
+pub use win::kill_game_tree;
+
+#[cfg(windows)]
+mod win {
+    use super::KillOutcome;
+    use crate::diag::diag;
+    use crate::job::GameJob;
+    use crate::probe;
+    use std::os::windows::io::{AsRawHandle, FromRawHandle, OwnedHandle};
+    use std::time::{Duration, Instant};
+    use windows_sys::Win32::Foundation::{GetLastError, ERROR_INVALID_PARAMETER};
+    use windows_sys::Win32::System::Threading::{
+        OpenProcess, TerminateProcess, WaitForSingleObject, PROCESS_QUERY_LIMITED_INFORMATION,
+        PROCESS_TERMINATE,
+    };
+
+    /// How long a terminated Job gets to empty before the kill stops waiting for it.
+    const TERMINATE_SETTLE: Duration = Duration::from_secs(1);
+
+    /// Kills the tree of a game GameLib recorded as `pid` plus start `stamp` (`probe::start_time`
+    /// at spawn), for the case where GameLib holds no `Child` for it (re-adoption after a
+    /// restart, quit-kill).
+    ///
+    /// Prohibition 5 at the mechanism: nothing is terminated unless the pid's creation time equals
+    /// `stamp`, so a recycled pid is never touched, and the Game Job opened afterwards carries both
+    /// the pid and the stamp in its name. `Gone` when the leader is not alive, `NotOurs` on a stamp
+    /// mismatch. Windows has no graceful signal, so `grace` only bounds the wait for the tree to
+    /// end after it has been terminated.
+    ///
+    /// When no Game Job of that name exists (the game never had one, or it was never created) only
+    /// the stamped leader is terminated and the line `game job not found; leader only` is logged.
+    pub fn kill_game_tree(pid: u32, stamp: u64, grace: Duration) -> KillOutcome {
+        if !probe::is_alive(pid) {
+            return KillOutcome::Gone;
+        }
+        if probe::start_time(pid) != Some(stamp) {
+            return KillOutcome::NotOurs;
+        }
+        match GameJob::open(pid, stamp) {
+            Some(job) => {
+                job.terminate();
+                let deadline = Instant::now() + grace.min(TERMINATE_SETTLE);
+                while Instant::now() < deadline && job.active_processes().is_some_and(|n| n > 0) {
+                    std::thread::sleep(Duration::from_millis(20));
+                }
+                KillOutcome::Killed
+            }
+            None => {
+                diag("game job not found; leader only");
+                terminate_stamped_leader(pid, stamp, grace)
+            }
+        }
+    }
+
+    /// Terminates the process `pid` if, and only if, the handle opened for it reports creation
+    /// time `stamp`. The check and the terminate use one handle, so the pid cannot be recycled
+    /// between them.
+    fn terminate_stamped_leader(pid: u32, stamp: u64, grace: Duration) -> KillOutcome {
+        // SAFETY: OpenProcess takes plain values and returns null on failure.
+        let raw = unsafe {
+            OpenProcess(
+                PROCESS_TERMINATE | PROCESS_QUERY_LIMITED_INFORMATION,
+                0,
+                pid,
+            )
+        };
+        if raw.is_null() {
+            // SAFETY: GetLastError has no preconditions.
+            let err = unsafe { GetLastError() };
+            if err == ERROR_INVALID_PARAMETER {
+                return KillOutcome::Gone;
+            }
+            diag(&format!("game leader: OpenProcess failed (error {err})"));
+            return KillOutcome::NotOurs;
+        }
+        // SAFETY: `raw` is a valid, uniquely-owned handle; OwnedHandle closes it on drop.
+        let handle = unsafe { OwnedHandle::from_raw_handle(raw as _) };
+        if probe::creation_time(handle.as_raw_handle() as _) != Some(stamp) {
+            return KillOutcome::NotOurs;
+        }
+        // SAFETY: `handle` is a valid process handle with terminate rights.
+        if unsafe { TerminateProcess(handle.as_raw_handle() as _, 1) } == 0 {
+            // SAFETY: GetLastError has no preconditions.
+            let err = unsafe { GetLastError() };
+            diag(&format!(
+                "game leader: TerminateProcess failed (error {err})"
+            ));
+            return KillOutcome::NotOurs;
+        }
+        let wait_ms = u32::try_from(grace.min(TERMINATE_SETTLE).as_millis()).unwrap_or(1000);
+        // SAFETY: `handle` is a valid process handle; a process handle is signalled on exit.
+        unsafe { WaitForSingleObject(handle.as_raw_handle() as _, wait_ms) };
+        KillOutcome::Killed
+    }
+}
 
 #[cfg(unix)]
 mod unix {

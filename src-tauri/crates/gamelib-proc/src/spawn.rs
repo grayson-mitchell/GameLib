@@ -113,6 +113,12 @@ pub fn spawn_helper_tokio(
 /// GameLib nor the closing of GameLib's terminal reaches it. It is never put in a Job, never
 /// registered in the `ChildSet` and never `kill_on_drop`.
 pub fn spawn_game(mut cmd: Command, log: Option<&Path>) -> std::io::Result<Child> {
+    prepare_game(&mut cmd, log)?;
+    cmd.spawn()
+}
+
+/// The stdio and session setup every `SpawnClass::Game` spawn shares.
+fn prepare_game(cmd: &mut Command, log: Option<&Path>) -> std::io::Result<()> {
     cmd.stdin(Stdio::null());
     match log {
         Some(path) => {
@@ -141,33 +147,84 @@ pub fn spawn_game(mut cmd: Command, log: Option<&Path>) -> std::io::Result<Child
             });
         }
     }
+    Ok(())
+}
+
+/// Windows: spawns the game outside GameLib's own Job, so a Job that kills on close (one GameLib
+/// was started in) cannot take the game with it. When that Job forbids breakaway the spawn is
+/// refused with access denied, and the game is created plainly instead, inside the parent's Job.
+/// This replaces any creation flags the caller set on `cmd`.
+#[cfg(windows)]
+fn spawn_outside_parent_job(cmd: &mut Command) -> std::io::Result<Child> {
+    use std::os::windows::process::CommandExt;
+    use windows_sys::Win32::Foundation::ERROR_ACCESS_DENIED;
+    use windows_sys::Win32::System::Threading::CREATE_BREAKAWAY_FROM_JOB;
+
+    cmd.creation_flags(CREATE_BREAKAWAY_FROM_JOB);
+    match cmd.spawn() {
+        Err(e) if e.raw_os_error() == Some(ERROR_ACCESS_DENIED as i32) => {
+            crate::diag::diag("game spawn: breakaway refused; created inside the parent's job");
+            cmd.creation_flags(0);
+            cmd.spawn()
+        }
+        other => other,
+    }
+}
+
+#[cfg(not(windows))]
+fn spawn_outside_parent_job(cmd: &mut Command) -> std::io::Result<Child> {
     cmd.spawn()
 }
 
 /// A running `SpawnClass::Game` child that GameLib can later prove is the same process.
 ///
-/// Built by `spawn_game_tracked`, which goes through `spawn_game` unchanged: own session, no Job,
-/// never in the `ChildSet`, never `kill_on_drop`, and no pipe to the game. Dropping the handle
-/// does not touch the game.
+/// Built by `spawn_game_tracked`, which sets the game up as `spawn_game` does: own session on unix,
+/// never in the `ChildSet`, never `kill_on_drop`, and no pipe to the game. On Windows the game is
+/// created outside GameLib's Job and put in its own named Game Job, which does not kill on close.
+/// Dropping the handle does not touch the game.
 #[derive(Debug)]
 pub struct GameHandle {
     child: Child,
     /// The game leader's pid; on unix also its process group id (it is its own session leader).
     pub pid: u32,
     /// `probe::start_time(pid)` read right after the spawn: what a later pid-only kill checks
-    /// before it signals anything. `None` where the platform has no cheap stamp, and for a game
-    /// that had already exited by the time it was read.
+    /// before it signals anything. `None` for a game that had already exited by the time it was
+    /// read (and, on macOS, for an exited leader that is still a zombie).
     pub stamp: Option<u64>,
+    /// Windows: the game's named Game Job, `None` when it could not be created (the kill is then
+    /// leader-only). Nothing on unix, where the group is the tree.
+    #[cfg(windows)]
+    #[allow(dead_code)]
+    job: Option<crate::job::GameJob>,
 }
 
 /// As `spawn_game`, returning a `GameHandle` that carries the leader's pid and start stamp.
-pub fn spawn_game_tracked(cmd: Command, log: Option<&Path>) -> std::io::Result<GameHandle> {
-    let child = spawn_game(cmd, log)?;
+///
+/// Windows: the game is created with `CREATE_BREAKAWAY_FROM_JOB` (plainly when the parent's Job
+/// refuses that), then put in the Job `Local\GameLib-Game-<pid>-<stamp>`, created without
+/// kill-on-close. A descendant the game creates before the assignment is not in the Job.
+pub fn spawn_game_tracked(mut cmd: Command, log: Option<&Path>) -> std::io::Result<GameHandle> {
+    prepare_game(&mut cmd, log)?;
+    let child = spawn_outside_parent_job(&mut cmd)?;
     let pid = child.id();
+    let stamp = probe::start_time(pid);
+    #[cfg(windows)]
+    let job = {
+        use std::os::windows::io::AsRawHandle;
+        match stamp {
+            Some(stamp) => crate::job::GameJob::create_for(child.as_raw_handle(), pid, stamp),
+            None => {
+                crate::diag::diag("game job: no start stamp for the game; leader-only kill");
+                None
+            }
+        }
+    };
     Ok(GameHandle {
         child,
         pid,
-        stamp: probe::start_time(pid),
+        stamp,
+        #[cfg(windows)]
+        job,
     })
 }
 

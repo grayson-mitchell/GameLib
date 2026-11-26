@@ -8,8 +8,8 @@ pub fn is_alive(pid: u32) -> bool {
 }
 
 /// An opaque per-process start stamp, used to detect pid reuse before signalling a pid we do not
-/// own a `Child` for. `None` where the platform offers no cheap stamp (Windows) or the process is
-/// gone.
+/// own a `Child` for. `None` where the platform offers no cheap stamp or the process is gone (on
+/// Windows the creation time from `GetProcessTimes`, a FILETIME as a `u64`).
 pub fn start_time(pid: u32) -> Option<u64> {
     imp::start_time(pid)
 }
@@ -22,6 +22,13 @@ pub fn group_alive(pgid: u32) -> bool {
         Ok(p) if p > 1 => imp::group_alive(pgid),
         _ => false,
     }
+}
+
+/// Windows: the creation time of the process `handle` names, read through that handle so a caller
+/// holding it can check a stamp and then act on the very same process.
+#[cfg(windows)]
+pub(crate) fn creation_time(handle: windows_sys::Win32::Foundation::HANDLE) -> Option<u64> {
+    imp::creation_time(handle)
 }
 
 #[cfg(target_os = "linux")]
@@ -166,9 +173,9 @@ mod imp {
 
 #[cfg(windows)]
 mod imp {
-    use windows_sys::Win32::Foundation::CloseHandle;
+    use windows_sys::Win32::Foundation::{CloseHandle, FILETIME, HANDLE};
     use windows_sys::Win32::System::Threading::{
-        GetExitCodeProcess, OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION,
+        GetExitCodeProcess, GetProcessTimes, OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION,
     };
 
     /// `STILL_ACTIVE` as `GetExitCodeProcess` reports it.
@@ -189,8 +196,33 @@ mod imp {
         ok != 0 && code == STILL_ACTIVE_CODE
     }
 
-    pub fn start_time(_pid: u32) -> Option<u64> {
-        None
+    pub fn start_time(pid: u32) -> Option<u64> {
+        // SAFETY: OpenProcess takes plain values and returns null on failure; the handle is
+        // closed below and never escapes this function.
+        let h = unsafe { OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid) };
+        if h.is_null() {
+            return None;
+        }
+        let t = creation_time(h);
+        // SAFETY: `h` was opened above and is closed exactly once.
+        unsafe { CloseHandle(h) };
+        t
+    }
+
+    /// The creation FILETIME of the process `handle` names (it needs query rights), 100 ns ticks
+    /// since 1601 as one `u64`. `None` when the call fails.
+    pub fn creation_time(handle: HANDLE) -> Option<u64> {
+        let zero = FILETIME {
+            dwLowDateTime: 0,
+            dwHighDateTime: 0,
+        };
+        let (mut created, mut exited, mut kernel, mut user) = (zero, zero, zero, zero);
+        // SAFETY: `handle` is a valid process handle supplied by the caller and the four
+        // FILETIMEs outlive the call.
+        let ok =
+            unsafe { GetProcessTimes(handle, &mut created, &mut exited, &mut kernel, &mut user) };
+        (ok != 0)
+            .then(|| (u64::from(created.dwHighDateTime) << 32) | u64::from(created.dwLowDateTime))
     }
 
     /// Windows has no process groups; a game tree there is a Job (88.2-06).
@@ -229,6 +261,14 @@ mod tests {
         for bad in [0, 1, u32::MAX] {
             assert!(!group_alive(bad), "pgid {bad}");
         }
+    }
+
+    #[test]
+    fn this_process_has_a_start_stamp_that_is_stable() {
+        let pid = std::process::id();
+        let first = start_time(pid);
+        assert!(first.is_some_and(|t| t > 0), "own start stamp readable");
+        assert_eq!(start_time(pid), first);
     }
 
     #[cfg(unix)]
