@@ -1003,6 +1003,10 @@ Plans:
 **Wave 15** *(blocked on Wave 14 completion)*
 - [x] 88.1-20-PLAN.md — Clean-worktree proof, push checkpoint and three-OS CI with the Linux stub-gamescope smoke (D-30: no signed build)
 
+**Cross-cutting constraints:** <!-- gsd:generated -->
+- Flagged assumption (spec-less edge probe): SVC-03's edge-coverage row is `unclassified` and unresolved; the D-14 matrix stands in for edge coverage and is not claimed as a verified edge
+- D-20: a recorded behaviour that looks wrong is kept and filed as a todo with the three triage keys
+
 **Gap closure** *(from 88.1-VERIFICATION, 2026-11-26; gap waves 1-4, run with `/gsd-execute-phase 88.1 --gaps-only`; split 2026-11-26 at the plan check so the CR-01 tracer ends its own plan)*
 - [ ] 88.1-21-PLAN.md — CR-01: setupEnvVars reads a wine-free SetupEnvView; the Windows `{}` builders golden recorded from the pre-port TS; shell arm and CLI reproduction tests
 - [ ] 88.1-22-PLAN.md — WR-01: WineInstallation ignores a legacy key; ten more builders goldens recorded from the pre-port TS (legacy-key wine env first, setupEnvVars per platform, the Windows wine env); the full regression set
