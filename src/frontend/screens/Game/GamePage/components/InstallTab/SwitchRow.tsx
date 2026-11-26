@@ -71,6 +71,9 @@ export function RowFailure({
  * "Adding..." or "Removing..."; nothing is swapped for a spinner. While busy
  * or disabled the row ignores clicks and keys.
  *
+ * RF3: a held key (`event.repeat`) acts once, on the press, never on the repeats
+ * the OS streams while it stays down.
+ *
  * Hook-free on purpose, so it can be called as a plain function in a test.
  */
 export function SwitchRow({
@@ -99,7 +102,9 @@ export function SwitchRow({
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key !== ' ' && event.key !== 'Enter') return
+    // Still claimed on a repeat, so a held Space never scrolls the page.
     event.preventDefault()
+    if (event.repeat) return
     toggle(activationOf('keydown', event))
   }
 

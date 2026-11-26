@@ -46,8 +46,9 @@ import IntegrationRows from '../IntegrationRows'
  * `.planning/debug/rf3-cancel-removes-shortcut.md`.
  *
  * The second describe is the hardening the user chose when the live probe (11
- * Cancels, mouse) did not reproduce it. First, provenance logging: one line on
- * every add/remove from the Show in Steam row, naming the event that did it.
+ * Cancels, mouse) did not reproduce it: provenance logging on every add/remove
+ * from the Show in Steam row, and a held key (`event.repeat`) never toggling a
+ * switch. Each guard test fails without its guard.
  */
 
 jest.mock('react-i18next', () => ({
@@ -275,7 +276,7 @@ async function closeUninstallDialogWithNo(
   )
 }
 
-describe('RF3 hardening: provenance logging', () => {
+describe('RF3 hardening: provenance logging and the held-key guard', () => {
   it('logs one provenance line for a pointer click that removes the shortcut', async () => {
     const user = userEvent.setup()
     await renderPageWithShortcutOn()
@@ -315,5 +316,20 @@ describe('RF3 hardening: provenance logging', () => {
     const since = /sinceDialogCloseMs=(\d+)/.exec(line)
     expect(since).not.toBeNull()
     expect(Number(since?.[1])).toBeGreaterThanOrEqual(500)
+  })
+
+  it('a held key (event.repeat) never toggles the switch; a fresh press still does', async () => {
+    await renderPageWithShortcutOn()
+    const row = steamRow()
+    // fireEvent returns false when the handler called preventDefault (Space would
+    // otherwise scroll the page once per repeat).
+    expect(fireEvent.keyDown(row, { key: 'Enter', repeat: true })).toBe(false)
+    expect(fireEvent.keyDown(row, { key: ' ', repeat: true })).toBe(false)
+    await act(() => new Promise((resolve) => setTimeout(resolve, 50)))
+    expect(api.removeFromSteam).not.toHaveBeenCalled()
+    expect(steamActivationLines()).toHaveLength(0)
+
+    fireEvent.keyDown(row, { key: 'Enter' })
+    await waitFor(() => expect(api.removeFromSteam).toHaveBeenCalledTimes(1))
   })
 })
