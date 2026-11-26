@@ -34,8 +34,12 @@ pub enum WineKind {
 /// One wine installation as the settings store it (`WineInstallation` in `common/types.ts`). Serialised
 /// like `JSON.stringify` of the TS object: an absent field is left out (an empty string stays), which
 /// is how discovery answers the renderer.
+///
+/// An unknown key, such as a stored wine's legacy key, is ignored on decode and so dropped on
+/// re-serialisation, as `wine_valid`'s `persisted_wine` and `check_wine`'s `wine_of` already treat it
+/// (WR-01); an unknown `type` or a missing `bin` still fails. The renderer-facing six-key check is the
+/// shell's `parse_wine_installation` (T-87-22), which is unchanged.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
-#[serde(deny_unknown_fields)]
 pub struct WineInstallation {
     pub bin: String,
     pub name: String,

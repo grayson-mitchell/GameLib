@@ -459,7 +459,6 @@ async fn the_wine_valid_op_refuses_a_bad_argument() {
     for bad in [
         vec![],
         vec![json!("not-an-object")],
-        vec![json!({ "bin": "/b", "name": "n", "type": "wine", "extra": 1 })],
         vec![json!({ "bin": "/b", "name": "n", "type": "lutris" })],
         vec![json!(null), json!({ "unknownKey": 1 })],
         vec![json!(null), json!(null), json!(null)],
@@ -473,6 +472,17 @@ async fn the_wine_valid_op_refuses_a_bad_argument() {
     // No wine selected is a plain `false`.
     assert_eq!(
         gamelib_wine::dispatch("wine_valid", &[json!(null)], &ctx).await,
+        Ok(json!(false))
+    );
+    // WR-01 (88.1-22): a stored wine's legacy key is ignored, not refused (the wine does not exist, so
+    // it is `false`, the answer without the key); the renderer-facing six-key check is the shell's.
+    assert_eq!(
+        gamelib_wine::dispatch(
+            "wine_valid",
+            &[json!({ "bin": "/b", "name": "n", "type": "wine", "legacy": 1 })],
+            &ctx
+        )
+        .await,
         Ok(json!(false))
     );
 }
