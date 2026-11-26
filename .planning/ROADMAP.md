@@ -950,7 +950,7 @@ Plans:
   2. Anti-cheat at launch, `check_wine_before_launch`, `download_default_wine` (D-28), `isMacSonomaOrHigher`, `isEpicServiceOffline`, `removeQuoteIfNecessary` and system info behave as before
   3. The builder TS, `gamescopeCommand.ts`, `utils/systeminfo` and the replaced `utils.ts` rows are deleted; closes on goldens, three-OS CI and a Linux stub-gamescope smoke
 
-**Plans:** 21/24 plans executed (20 in 15 waves + 4 gap closure); planned 2026-11-25 (goldens are recorded from the TS before each Rust slice, D-25); gap closure planned 2026-11-26 from 88.1-VERIFICATION (CR-01, WR-01, the truth-2 decision)
+**Plans:** 22/24 plans executed (20 in 15 waves + 4 gap closure); planned 2026-11-25 (goldens are recorded from the TS before each Rust slice, D-25); gap closure planned 2026-11-26 from 88.1-VERIFICATION (CR-01, WR-01, the truth-2 decision)
 
 Plans:
 **Wave 1**
@@ -1009,7 +1009,7 @@ Plans:
 
 **Gap closure** *(from 88.1-VERIFICATION, 2026-11-26; gap waves 1-4, run with `/gsd-execute-phase 88.1 --gaps-only`; split 2026-11-26 at the plan check so the CR-01 tracer ends its own plan)*
 - [x] 88.1-21-PLAN.md — CR-01: setupEnvVars reads a wine-free SetupEnvView; the Windows `{}` builders golden recorded from the pre-port TS; shell arm and CLI reproduction tests
-- [ ] 88.1-22-PLAN.md — WR-01: WineInstallation ignores a legacy key; ten more builders goldens recorded from the pre-port TS (legacy-key wine env first, setupEnvVars per platform, the Windows wine env); the full regression set
+- [x] 88.1-22-PLAN.md — WR-01: WineInstallation ignores a legacy key; ten more builders goldens recorded from the pre-port TS (legacy-key wine env first, setupEnvVars per platform, the Windows wine env); the full regression set
 - [ ] 88.1-23-PLAN.md — The operator-accepted pairwise narrowing as a truth-2 override; SVC-03's edge-coverage row classified; the review ledger closed (WR-02..04 and IN-02 to triaged todos)
 - [ ] 88.1-24-PLAN.md — Gap-closure proof at a candidate head, push checkpoint, three-OS CI with the new cases observed on windows-latest
 

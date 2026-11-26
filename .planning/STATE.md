@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: "88.1"
 current_phase_name: Launch builders and prepare steps
 status: executing
-stopped_at: Completed 88.1-21-PLAN.md
-last_updated: "2026-11-26T10:20:08.570Z"
+stopped_at: Completed 88.1-22-PLAN.md
+last_updated: "2026-11-26T10:49:48.416Z"
 last_activity: 2026-11-26
 last_activity_desc: Phase 88.1 execution started
-state_head: 88483995a2d9a13ca894a01eb1f36355db0eeb6e
+state_head: 216206ebca75e5a4d4f30890eccb7fe86334c8b8
 progress:
   total_phases: 25
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-25)
 ## Current Position
 
 Phase: 88.1 (Launch builders and prepare steps) — EXECUTING
-Plan: 22 of 24
+Plan: 23 of 24
 Status: Ready to execute
 Last activity: 2026-11-26 — Phase 88.1 execution started
 Progress: [████████████████░░░░] 204/257 plans ([█████████░] 92%)
@@ -545,6 +545,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 88.1 P19 | ~1h | 2 tasks | 22 files |
 | Phase 88.1 P20 | 5h | 3 tasks | 18 files |
 | Phase 88.1 P21 | 24 min | 2 tasks | 14 files |
+| Phase 88.1 P22 | 55 min | 2 tasks | 58 files |
 
 ## Accumulated Context
 
@@ -1227,6 +1228,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 88.1]: 88.1-19: wine_manager_refresh deleted as a ninth channel with its updateWineVersionInfos shim; interim glue (launchAdapters.ts, knownFixLaunchReply.ts) is a named table in buildersSurvivors, not SCHEDULE rows
 - [Phase 88.1]: 88.1-20: operator chose push; 88.1 is proven on three OSes at 940bd9e73 (Rust legs green, Linux stub_gamescope 1 passed); test.yml recorded as failure on the known-unrelated suites, not fixed
 - [Phase 88.1]: 88.1-21: setupEnvVars reads only nvidiaPrime/showFps/enviromentOptions through SetupEnvView (no wine); Option<WineInstallation> on GameSettingsView rejected because ~22 .wine_version reads and the decode-failure-as-signal sites would silently accept wine-less settings
+- [Phase 88.1]: [88.1-22] WineInstallation drops unknown keys on decode (WR-01); strictness stays at the shell's parse_wine_installation; the crate wine_valid op now accepts a legacy key
 
 ### Pending Todos
 
@@ -1513,8 +1515,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-26T10:20:05.482Z
-Stopped at: Completed 88.1-21-PLAN.md
+Last session: 2026-11-26T10:49:45.237Z
+Stopped at: Completed 88.1-22-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
