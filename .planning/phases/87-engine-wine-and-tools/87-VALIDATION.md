@@ -373,6 +373,8 @@ Measured by plan 87-78 Task 1, 2026-11-26, from a `git worktree add --detach` ch
 with its own `pnpm install --frozen-lockfile`, `pnpm exec vite build`, `pnpm build:sidecar-sea` and a cold `src-tauri/target`. The default `TMPDIR` (`/var/folders/...`) was kept, so the checkout is not inside
 `os.tmpdir()` (the 87-68 finding 2 hazard). 87-68's table, copied verbatim and extended with step 18 (`pnpm lint-translations`), with the 87-68 counts for comparison.
 
+**Superseded by "Re-run at the moved P" below (P = `c0e66d30e`); this first run is kept as history.**
+
 **Candidate head P = `02d0bd26da05e259004ba29cd6465b89bcb37d41`** (main). It is `756c4b2c8` (88.1's last docs commit when the proof's first pass finished) plus one commit, `02d0bd26d`
 `fix(87-78): 87-74's three pre-push gate reds, a dead export and two ratchet baselines`, which touches only `src/frontend/screens/Game/GamePage/actions/rowActivation.ts`,
 `meta/knip-baseline.txt` and `meta/backendDiCeilings/frontend-screens-game.json`; see "Findings" below. Every step was re-run at P after that commit (the worktree was moved to P with
@@ -420,6 +422,52 @@ The worktree was clean after the run (`git status --short` empty) and was remove
 6. **`nativeSeamPortComplete.test.ts` read the transient `meta/runTs.__probe__.cjs`** another suite writes and deletes (`ENOENT`, 8 tests): the race already logged in `deferred-items.md` under 87-68. It and `phase70PassthroughCensus.test.ts` passed on a re-run alone (118 tests).
 7. **Pre-existing reds, recorded not fixed:** the `Supply-chain audit` workflow (cargo-deny, RUSTSEC-2026-0594) and the `gamelib-depot` `tests/fetch.rs` timing tests (`deferred-items.md` 87-58); the depot timing tests passed in step 6 here.
    No red step was caused by a Phase 88 or 88.1 commit; 88.1's open verification gap (CR-01 Windows `setupEnvVars`) is a Windows-leg matter this macOS proof cannot show and CI will.
+
+### Re-run at the moved P (2026-11-26)
+
+The table above is the proof at `02d0bd26d` and is kept as history. P then moved, because main was pushed (`origin/main` = `01f11c55e`, the commit that recorded the section above) and CI on that head showed two reds that
+already existed on main. The operator chose to fix both before the release, and a non-`.planning` commit after P moves P and re-runs Task 1, so this is the same 18 steps again at the new head:
+
+- `f2bed5556` `fix(87-78): the Humble user harness defaults its seam script without a seam?-shaped expression`: `src/backend/humble/__tests__/oracle/userHarness.ts` (1 line). A false positive in the `loginWindowSeamPredicateRemoved` gate (Finding 3 above).
+- `c0e66d30e` `fix(87-78): bump cookie to 0.18.3 for RUSTSEC-2026-0594`: `src-tauri/Cargo.lock` (cookie 0.18.1 to 0.18.3), the supply-chain audit red (Finding 7 above).
+
+**Candidate head P = `c0e66d30eb86f2bcde93344db9f5ddb0f4ee4d80`** (main). `git diff --stat 02d0bd26d c0e66d30e -- . ':!.planning'` lists exactly those two files (3 insertions, 3 deletions); `02d0bd26d` is an ancestor of `c0e66d30e`.
+Run from a fresh `git worktree add --detach` checkout (removed afterwards) with its own `pnpm install --frozen-lockfile`, `pnpm exec vite build`, `pnpm build:sidecar-sea` and a cold `src-tauri/target`, default `TMPDIR` kept
+(so the checkout is not inside `os.tmpdir()`), `git status --short` empty before and after the run.
+
+Ancestry: unchanged. The 36 distinct hashes in the 87-71 to 87-77 SUMMARYs were ancestors of `02d0bd26d`, which is an ancestor of P, so they are all ancestors of P.
+P carries 363 commits beyond 0.13.1's source (`07b194604`): 195 are Phase 88 and 88.1 (scope `88` or `88.1`), 91 are Phase 94, and 32 are 87-71 to 87-78 (29 at `02d0bd26d`, plus `01f11c55e`, `f2bed5556` and `c0e66d30e`). `origin/main` (`01f11c55e`) is an
+ancestor of P and P is 2 commits ahead of it.
+
+| Step | Command (unchanged from the table above) | Outcome at P = `c0e66d30e` |
+|------|------------------------------------------|----------------------------|
+| 1 | `pnpm install --frozen-lockfile` | pass |
+| 2 | `pnpm exec vite build` | pass |
+| 3 | `pnpm build:sidecar-sea` | pass |
+| 4 | `cargo test -p gamelib-safety -p gamelib-testutil` | pass, 95 passed, 0 red |
+| 5 | `cargo test -p gamelib-proc` | pass, 50 passed, 0 red |
+| 6 | the 28-package `cargo test ... --no-fail-fast` step (194 test binaries) | pass, 3728 passed, 0 red, 9 ignored |
+| 7 | static codec linkage (`cargo build -p gamelib-depot-cli`, `otool -L`) | pass (Security, CoreFoundation, libiconv, libSystem only) |
+| 8 | `cargo test -p gamelib-engine --features testing` | pass, 404 passed, 0 red |
+| 9 | `cargo test -p gamelib-wine --features testing` | pass, 341 passed, 0 red |
+| 10 | `cargo test --bin gamelib-shell` | pass, 1009 passed, 0 red, 2 ignored |
+| 11 | darwin clippy ratchet (`cargo +1.99.1 clippy --workspace --all-targets --message-format=json`, `node meta/clippyRatchet.cjs --list`) | pass, `PASS (darwin, toolchain 1.99.1)` |
+| 12 | `pnpm check:ipc-contract` | pass |
+| 13 | `pnpm test` (jest, 6 projects) | red, pre-existing, environmental or transient only: 1109 suites passed (5 skipped), 25533 tests passed (38 skipped), 223 s; 5 suites red (15 tests): `genI18nGateScope` A-17 (1), `iconGeometry.oracle` (5), `valveClient` symlink (1), `phase70PassthroughCensus` (1, the transient `meta/runTs.__probe__.cjs` race), `shimAbiGate` (7, `spawn Unknown system error -88`). `loginWindowSeamPredicateRemoved` PASSES now (it was red at `02d0bd26d`). `nativeSeamPortComplete` passed this time. `realCapture.oracle` skipped (the untracked `recorded/real` fixture dir is not in a clean checkout). `phase70PassthroughCensus` and `shimAbiGate` re-run green alone (`pnpm exec jest` on both files, 2 suites passed, 9 tests) |
+| 14 | `pnpm smoke:exit-check -- --mode eof` | pass, `sidecarExitCheck [eof]: PASS (exit latency 7 ms)` |
+| 15 | `pnpm smoke:sidecar` | pass, built, READY written, exited 0 on stdin EOF |
+| 16 | pre-push gate set: `pnpm codecheck`, `lint`, `prettier`, `i18n --fail-on-update`, `find-deadcode`, `boundaries`, `steam-line-ceiling`, `backend-di-ceilings`, `gameinfo-narrowing-ceiling` | all nine pass (exit 0 each); lint 0 errors, 578 warnings |
+| 17 | `pnpm planning-gates` | pass, 12/12 |
+| 18 | `pnpm lint-translations` | pass (0 hard failures) |
+
+Step 13 reds at P, each with its cause:
+
+- `genI18nGateScope` A-17, `iconGeometry.oracle` (golden folder never committed) and `valveClient` "rejects a symlink entry" (`/usr/bin/unzip` symlink permission error): the same three pre-existing reds as Findings 2, 4 and 5 above, unchanged. None touches `userHarness.ts` or `Cargo.lock`.
+- `phase70PassthroughCensus`: the transient file race of Finding 6 (`ENOENT` on `meta/runTs.__probe__.cjs`, written and deleted by another suite), hitting this census suite instead of `nativeSeamPortComplete`. Passes alone.
+- `shimAbiGate` (7 tests, all `spawn Unknown system error -88` from `spawnArgv` at `meta/__tests__/shimAbiGate.test.ts:151`): new in the sense that it was green at `02d0bd26d`, but it did not reproduce (the suite passes alone in 27 s, and takes 74 s in the full run). The two commits since touch a Humble test harness and `Cargo.lock`, and the suite compiles the C shim and disassembles it with an external toolchain, so neither is on its path. Cause not established; it looks like an exec failure under full-suite load (errno 88 on Darwin is `EBADMACHO`, which fits a toolchain file being rewritten by a concurrent suite). Recorded, not fixed.
+
+What the two fix commits changed: `loginWindowSeamPredicateRemoved` (Finding 3) is green and no longer a pre-existing red. The `Supply-chain audit` red of Finding 7 is a `Cargo.lock` matter that CI, not this macOS proof, shows; the Rust steps 4 to 11 here are unchanged against `02d0bd26d` (same counts, same clippy result).
+The worktree was removed with `git worktree remove` afterwards.
 
 ## Signed builds (D-12)
 
