@@ -251,29 +251,34 @@ hand; nothing below asks the transcript for an app log line.
 
 ## Required literals
 
-Sinks are `gamelib.log` unless stated. Authored by 87-71 at HEAD `df0a29cd9`, before 87-72 to 87-77 are coded. Rows whose emitter
-or control a gap cycle 2 plan writes are CONDITIONAL with `re-check: 87-79 Task 1`: 87-79 re-greps each against the gap build 2
-source (`release/v0.13.2`) before the first launch. For each ABSENT row the presence case is named, and the emitter was
-confirmed to exist at HEAD so the absence stays falsifiable.
+Sinks are `gamelib.log` unless stated. Authored by 87-71 at HEAD `df0a29cd9`, before 87-72 to 87-77 were coded. Rows whose
+emitter or control a gap cycle 2 plan wrote carried `re-check: 87-79 Task 1`; 87-79 Task 1 re-grepped each on 2026-11-27 at the
+gap build 2 source (`06e4d2844`, which `release/v0.13.2` = `c5d19ab53` extends only by the version bump) and wrote the
+resolution into its Status cell; the evidence is under `## Pre-run re-check`. For each ABSENT row the presence case is named, and
+the emitter was confirmed to exist at that source so the absence stays falsifiable.
 
 | Literal | Emitter | Sink | Status |
 |---|---|---|---|
 | `Engine: <key> launch blocked before pre-flight while offline (<arm>)` (the refusal's WARNING line, item 1) and `Engine: <key> offline gate: ... verdict=blocked:crossover-missing` (the gate's reading line) | `launch/step.rs` (`step.warn`, `offline_gate_line`), re-run 1 resolved both REACHABLE as amended | `gamelib.log` as `[Shell]` | REACHABLE (re-run 1 launch 2 emitted both; re-run 1 resolved them) |
 | `[engine-notice] key=<k> tag=engine-download-failed ... display=pending`, then `display=confirmed` or `display=unconfirmed` (the refusal's display lines, item 1) | `launch/dialogs.rs:188` (pending) and `settled_line` (`:71`) | `gamelib.log` as `[Shell]` | REACHABLE (re-run 1 launch 2) |
-| `Stopping Display Power Saver Blocker` after a refused launch (item 1) | `launcher.ts:442` (`logInfo`), reached on the refused path only after 87-73 ends it | `gamelib.log` as `[INFO] [Backend]` | CONDITIONAL on 87-73; `re-check: 87-79 Task 1` |
-| 87-76's fixed-text skipped-warning line, its exact text left for the re-check (item 1) | the TS renderer or backend path 87-76 adds beside `launch()` in `helpers/library.ts` | `gamelib.log` as `[Frontend]` or `[Backend]` | CONDITIONAL on 87-76; `re-check: 87-79 Task 1` |
+| `Stopping Display Power Saver Blocker` after a refused launch (item 1) | `launcher.ts:442` (`logInfo`), reached on the refused path only after 87-73 ends it | `gamelib.log` as `[INFO] [Backend]` | REACHABLE as amended (87-79 Task 1): the emitter moved to `releaseDisplaySleepBlock`, `launcher.ts:141-147` (the literal at `:144`), called on the refused return at `:275` before `done`, on a rejected engine step `:265`, a failed Wine check `:320` and the normal end `:413`. It logs only when a blocker id is held; the blocker starts at `:222-225` (`Preventing display from sleep`) before the engine step (`:249`), so the refused path always holds one. Scored as: after the refusal's WARNING line in the same `gamelib-launch-2.log`, at least one `Stopping Display Power Saver Blocker` line |
+| `Offline warning skipped: the engine refuses this launch offline` (87-76's fixed-text skipped-warning line, item 1) | `launch()` in `src/frontend/helpers/library.ts:314-324`, through `window.api.logInfo`, only when `notPlayableOffline` (`GamePage/index.tsx:209`: offline and not `canRunOffline`) and `getEngineState(...).offlineLaunchRefused === true` (`engineRefusesOfflineLaunch`, `:204-215`); the field is set by `get_engine_state` from `offline_gate_verdict` (`state/engine_state.rs:465-466`), the same function the step's gate calls (`launch/step.rs:606`) | `gamelib.log` as `[INFO] [Frontend]` (`native_router.rs:390` -> `log_dispatch::log_from_renderer`, `Prefix::Frontend`, `log_dispatch.rs:54`) | REACHABLE as amended (87-79 Task 1): the exact text is above; the sink is `[Frontend]`, not `[Backend]`; one line per press, before the refusal's WARNING line |
 | the generic offline warning (item 2): the dialog text "This game might not work properly offline. Do you want to play anyway?" | `launch()` in `helpers/library.ts:258-273` | an observation row (a renderer dialog; no log line) | REACHABLE as an observation; its presence is read by the operator, and it is item 1's presence case |
 | `engine=crossover` with `reason=cx-healthy` (item 3) | the engine's selection line (`engine=<id> ... reason=<reason>`), seen in re-run 1 launches 1 and 3 | `gamelib.log` as `[Shell]` | REACHABLE (re-run 1) |
-| **ABSENT** `Engine: launch deadline for key <k> cancelled (launcher-exited)` within 60 s of a Play in item 3. The plan text spelled the literal `launch deadline cancelled (launcher-exited)`; the emitter's real text is `Engine: launch deadline for key {key} cancelled ({reason})` (`launch/deadline.rs:195`), so the grep is `cancelled (launcher-exited)` | `deadline::cancel`, `launch/deadline.rs:195`, reason `launcher-exited` | `gamelib.log` as `[Shell]` | CONDITIONAL on 87-77; `re-check: 87-79 Task 1`. Presence case: re-run 1 launch 1 logged 7 of them |
+| **ABSENT** `Engine: launch deadline for key <k> cancelled (launcher-exited)` within 60 s of a Play in item 3. The plan text spelled the literal `launch deadline cancelled (launcher-exited)`; the emitter's real text is `Engine: launch deadline for key {key} cancelled ({reason})` (`launch/deadline.rs:195`), so the grep is `cancelled (launcher-exited)` | `deadline::cancel`, `launch/deadline.rs:195`, reason `launcher-exited` | `gamelib.log` as `[Shell]` | REACHABLE as amended (87-79 Task 1). Presence case: re-run 1 launch 1 logged 7 of them; the emitter is unchanged at `launch/deadline.rs:195`, reached from `end_engine_launch` (`launch/step.rs:1021-1024`) when the TS launch command settles. 87-77 adds no log line (the kill at `step.rs:813-828` is silent on success). Amendment: legendary hands off and exits about 1 s after Play on a working cold bottle too (RF1 record D3 and isolating run B), and the command settles on stdio `close` (`commandRunner.ts:372`, `process/runner.ts:288`), so whether a working launch logs this line inside 60 s depends on whether the game's wine child holds legendary's pipes, which the source cannot settle. The line within 60 s together with no game exe in the 60 s `ps` capture is RF1 (`issue`); the line within 60 s with the game exe present at 60 s is recorded as an observation, not RF1, and item 3 is then scored on the `ps` evidence |
 | `Engine: <key> launch deadline fired (` and `Engine: <key> launch deadline notice surface=in-app pushed=<b> raise=false`, plus `[engine-notice] key=<k> tag=launch-deadline-unconfirmed dispatched=notify raise=false` (item 5) | `launch/deadline.rs:250` and `:288`, `launch/dialogs.rs:207` | `gamelib.log` as `[Shell]` | REACHABLE as amended in re-run 1 (the `fired for key` line at `deadline.rs:223` has no `(` and is not counted) |
-| `Removed the game bottle` (`[INFO] [Backend]`, `utils/uninstaller.ts`) and the engine's `removePerGameBottle: ...` warn lines (`bottles/remove_per_game.rs`, `[WARNING] [Shell]`) (item 6) | 87-70's `removeOwnBottle` and 87-66's engine op, re-run 1 resolved REACHABLE as amended; the route moves with 87-75 | `gamelib.log` | CONDITIONAL on 87-75 (the route's order changes); `re-check: 87-79 Task 1` |
-| **ABSENT** the uninstall's `is-protected-root` refusal for the named game (`[safety] uninstall refused: is-protected-root`) (item 6) | the D-14 pre-flight in `utils/uninstaller.ts`; the `is-protected-root` reason string exists at HEAD in `utils/uninstaller.ts` and `components/UI/RemovalRefusedNotice` | `gamelib.log` as `[Backend]` | CONDITIONAL on 87-75; `re-check: 87-79 Task 1`. Presence case: re-run 1 launch 4, 19:20:22Z |
-| **ABSENT** a Steam shortcut removal line during item 6's Cancel (`was successfully removed from Steam` and the image removal, `[Shortcuts]`) | `gamelib-shortcuts` `steam/mod.rs:460` (the message text); the emitter exists at HEAD | `gamelib.log` as `[Shell]` or `[Backend]` | CONDITIONAL on 87-74; `re-check: 87-79 Task 1`. Presence case: re-run 1 launch 4 at 19:16:59Z |
+| `Removed the game bottle` (`[INFO] [Backend]`, `utils/uninstaller.ts`) and the engine's `removePerGameBottle: ...` warn lines (`bottles/remove_per_game.rs`, `[WARNING] [Shell]`) (item 6) | 87-70's `removeOwnBottle` and 87-66's engine op, re-run 1 resolved REACHABLE as amended; the route moves with 87-75 | `gamelib.log` | REACHABLE as amended (87-79 Task 1): `Removed the game bottle` at `utils/uninstaller.ts:196` (`[INFO] [Backend]`) on the op's `removed` reply; the route is Confirm -> `window.api.uninstall` -> the D-14 pre-flight only for `storedPrefixRemovalTarget` (`:108-117`), which is `undefined` for the shared default prefix, so no pre-flight runs for the named game -> `game.uninstall` -> `removePrefix` (`:219-226`) -> `removeOwnBottle` (`:156-205`). The engine op's seven `removePerGameBottle:` warn sites are at `bottles/remove_per_game.rs:214-324` (`[WARNING] [Shell]`) and appear only on a refused or failed removal; a refusal also logs `[safety] remove-bottle refused: <reason>` (`safety/refusal.ts:21-23`). A successful removal is scored by the bottle directory gone, `Removed the game bottle` x1, 0 `removePerGameBottle:` and the sibling bytes |
+| **ABSENT** the uninstall's `is-protected-root` refusal for the named game (`[safety] uninstall refused: is-protected-root`) (item 6) | the D-14 pre-flight in `utils/uninstaller.ts:395-423`, which logs through `pushRemovalRefusal` (`safety/refusal.ts:29-36`, line format `[safety] ${kind} ${outcome}: ${reason}` at `:21-23`); the reason word is in `common/types/safety.ts:26` and the guard's `Reason::IsProtectedRoot` (`gamelib-safety` `remove.rs:73`, `:80`) | `gamelib.log` as `[WARNING] [Backend]` | REACHABLE (87-79 Task 1): the emitter and its reason exist at the gap build 2 source, so the absence is falsifiable; after 87-75 the pre-flight is skipped for a stored default prefix (`storedPrefixRemovalTarget`), so the line is expected absent. Presence case: re-run 1 launch 4, 19:20:22Z, and still emitted at this source for a game whose stored prefix is a custom, protected path |
+| **ABSENT** a Steam shortcut removal during item 6's Cancel: `[Shortcuts] Show in Steam activation: action=remove event=... trusted=... detail=... key=... repeat=... sinceDialogCloseMs=... appName=... runner=...` | `logShowInSteamActivation`, `GamePage/actions/rowActivation.ts:101-117`, called first in `handleAddToSteam` (`useSteamShortcut.ts:44-51`), the only renderer path to `removeFromSteam`, on every add and remove from the Show in Steam row (87-74 debug session, `6d7c1485c`) | `gamelib.log` as `[INFO] [Frontend]` (`window.api.logInfo`, the same renderer chain as the skipped-warning row) | REACHABLE as amended (87-79 Task 1). The row's old literal, `was successfully removed from Steam`, is IMPOSSIBLE as a log line at this source: since 94-22 the removal is Rust's `steam_remove` (`gamelib-shortcuts` `steam/mod.rs:452-540`), whose success text goes only to the OS notification (`notify_frontend`, `:145-166`, through `ShellShortcutsUi`, `shortcuts_dispatch.rs:178-183`), and it is amended to the observation row "a `Removed from Steam` system notification" below. Presence case for the new literal in the same launch: the approved Show in Steam add before Cancel logs `action=add` (when the switch was already on, 87-74's dev-build live check logged both actions). A Cancel that removes logs `action=remove`; the `shortcuts.vdf` hash after Cancel must equal its after-add value (F9) |
+| `[SwitchRow] ignored a pointer click on installTabShowInSteam: event=click ... (a dialog closed under 500 ms before; a stale second click, not a toggle)` (item 6, evidence, not scored) | `logIgnoredStaleClick`, `rowActivation.ts:120-130`, called from `SwitchRow.tsx:108-115` when a pointer click (`detail > 0`) lands within `STALE_CLICK_WINDOW_MS` = 500 (`Dialog/dialogCloseClock.ts:26`) of a dialog close; the row id is `installTabShowInSteam` (`InstallTab/IntegrationRows.tsx:113`) | `gamelib.log` as `[INFO] [Frontend]` | REACHABLE (87-79 Task 1), an evidence row: 0 or more lines. One or more during Cancel confirm 87-74's hop 9 (a second click landing on the row) and that the guard dropped it; a count is recorded, never a pass or issue by itself |
 
 Observation rows (no log line; scored by the operator's report, with the matching file state): the refusal dialog text
 "(offline)" and the absence of the generic warning before it (item 1); the game page showing Play again after the dialog closes
 (item 1, 2); the system notification and the in-app notice at 180 s and which application is frontmost (item 5); the Show in
-Steam switch's state before and after Cancel (item 6); the disabled bottle toggle's label and box in three themes (item 7).
+Steam switch's state before and after Cancel (item 6); no `Removed from Steam` system notification during Cancel (item 6; the
+amended form of the old `was successfully removed from Steam` log row, whose text at the gap build 2 source reaches only the OS
+notification; its presence case is the `Added to Steam` notification of the approved add); the disabled bottle toggle's label and
+box in three themes (item 7).
 
 ## Structural Reachability Review
 
@@ -314,14 +319,14 @@ No item uses a local fixture, a DummyStore or an `http://` origin, so there is n
 |---|---|---|---|
 | offline refusal warn and `offline gate:` reading | `launch/step.rs` | `ctx.log` -> `ShellEngineLog` -> redactor -> `shell_log_at` -> `gamelib.log` as `[Shell]` | REACHABLE (re-run 1) |
 | `[engine-notice] ... display=` lines | `launch/dialogs.rs:188`, `:71` | same chain | REACHABLE (re-run 1) |
-| `Stopping Display Power Saver Blocker` | `launcher.ts:442` | `logInfo` -> the RPC `log` frame -> `gamelib.log` as `[Backend]` | CONDITIONAL on 87-73 (the refused path reaches it after the fix) |
-| 87-76's skipped-warning line | 87-76's line, location unknown until written | renderer `[Frontend]` or backend `[Backend]`, both into `gamelib.log` | CONDITIONAL on 87-76 |
+| `Stopping Display Power Saver Blocker` | `launcher.ts:442` | `logInfo` -> the RPC `log` frame -> `gamelib.log` as `[Backend]` | REACHABLE as amended (87-79 Task 1): `releaseDisplaySleepBlock`, `launcher.ts:144`, called on the refused return `:275`; see `## Required literals` |
+| 87-76's skipped-warning line | 87-76's line, location unknown until written | renderer `[Frontend]` or backend `[Backend]`, both into `gamelib.log` | REACHABLE as amended (87-79 Task 1): `Offline warning skipped: the engine refuses this launch offline`, `helpers/library.ts:320-322` via `window.api.logInfo` -> `native_router.rs:390` -> `[INFO] [Frontend]` |
 | `engine=crossover ... reason=cx-healthy` | the engine selection line | `[Shell]` chain | REACHABLE (re-run 1) |
-| `cancelled (launcher-exited)` (absent) | `launch/deadline.rs:195` | `[Shell]` chain | CONDITIONAL on 87-77 |
+| `cancelled (launcher-exited)` (absent) | `launch/deadline.rs:195` | `[Shell]` chain | REACHABLE as amended (87-79 Task 1): emitter unchanged; a `launcher-exited` line inside 60 s is RF1 only with no game exe in the 60 s `ps` capture (see `## Required literals`) |
 | deadline fired and notice (`raise=false`) | `launch/deadline.rs:250`, `:288`; `launch/dialogs.rs:207` | `[Shell]` chain | REACHABLE as amended (re-run 1) |
-| `Removed the game bottle`, `removePerGameBottle:` | `utils/uninstaller.ts`; `bottles/remove_per_game.rs` | `[Backend]` or `[Shell]` | CONDITIONAL on 87-75 |
-| `is-protected-root` (absent) | `utils/uninstaller.ts` | `[Backend]` | CONDITIONAL on 87-75 |
-| Steam shortcut removal (absent) | `gamelib-shortcuts` `steam/mod.rs:460` | `[Shell]` or `[Backend]` | CONDITIONAL on 87-74 |
+| `Removed the game bottle`, `removePerGameBottle:` | `utils/uninstaller.ts`; `bottles/remove_per_game.rs` | `[Backend]` or `[Shell]` | REACHABLE as amended (87-79 Task 1): `uninstaller.ts:196`; `remove_per_game.rs:214-324` on refusal or failure only |
+| `is-protected-root` (absent) | `utils/uninstaller.ts` | `[Backend]` | REACHABLE (87-79 Task 1): `safety/refusal.ts:21-36` writes `[safety] uninstall refused: is-protected-root` from the pre-flight at `uninstaller.ts:395-423`; expected absent for a stored default prefix |
+| Steam shortcut removal (absent) | `gamelib-shortcuts` `steam/mod.rs:460` | `[Shell]` or `[Backend]` | REACHABLE as amended (87-79 Task 1): the removal's log signal is `[Shortcuts] Show in Steam activation: action=remove` (`rowActivation.ts:113`, `[INFO] [Frontend]`); `was successfully removed from Steam` is IMPOSSIBLE as a log line at this source (OS notification only, `steam/mod.rs:524-529`) and is amended to an observation row |
 
 A signed build has no terminal sink, so every required line is read from the archived `gamelib-launch-N.log`, never from the
 transcript and never from the sidecar's stdout. The surfaces that carry no log line at all (the generic warning dialog, the
@@ -401,12 +406,12 @@ Each gesture was traced to the component that renders its control, in the state 
 
 | Item | Gesture | Component and what it does in that state | Verdict |
 |---|---|---|---|
-| 1 | press Play offline; read the modal refusal and then the Play button | `MainButton.tsx` (Play); `launch()` in `helpers/library.ts:258-273` shows the generic warning when `notPlayableOffline`, which 87-76 skips when the engine will refuse; the refusal is the engine dialog; the button state is the page's `playClicked` latch (RF2) that 87-73 fixes | CONDITIONAL on 87-73 and 87-76; `re-check: 87-79 Task 1` |
+| 1 | press Play offline; read the modal refusal and then the Play button | `MainButton.tsx` (Play); `launch()` in `helpers/library.ts:258-273` shows the generic warning when `notPlayableOffline`, which 87-76 skips when the engine will refuse; the refusal is the engine dialog; the button state is the page's `playClicked` latch (RF2) that 87-73 fixes | REACHABLE as amended (87-79 Task 1); see `## Pre-run re-check`, `### UI gestures re-traced`, item 1 |
 | 2 | press Play offline with CrossOver healthy, read the warning, OK | the same `launch()` warning, unchanged for a launch the engine would allow | REACHABLE (presence case) |
-| 3 | press Play twice, then the sibling | `MainButton.tsx` Play; the launch path is 87-77's | CONDITIONAL on 87-77; `re-check: 87-79 Task 1` |
+| 3 | press Play twice, then the sibling | `MainButton.tsx` Play; the launch path is 87-77's | REACHABLE as amended (87-79 Task 1); see `## Pre-run re-check`, `### UI gestures re-traced`, item 3 |
 | 4 | press Stop on the running game | `MainButton.tsx:109` renders Stop while `is.playing`; 87-65 routes a CrossOver overlay's Stop to the bottle's wineserver | REACHABLE |
 | 5 | watch the notice at 180 s | the system notification from the shell and the in-app notice `SteamEngineLaunchNotice` | REACHABLE |
-| 6 | open the Install tab's Show in Steam row, turn it on; open the uninstall dialog; Cancel; open it again; bottle toggle on; confirm | `InstallTab/IntegrationRows.tsx` (the Show in Steam `SwitchRow`) and `UninstallModal/index.tsx` (the footer at its bottom holds Confirm `uninstallGame` and Cancel `onClose`; the toggle `uninstallCheckbox` named by `bottleName`); the close paths and the stray activation of the Steam row are 87-74's | CONDITIONAL on 87-74 and 87-75; `re-check: 87-79 Task 1` |
+| 6 | open the Install tab's Show in Steam row, turn it on; open the uninstall dialog; Cancel; open it again; bottle toggle on; confirm | `InstallTab/IntegrationRows.tsx` (the Show in Steam `SwitchRow`) and `UninstallModal/index.tsx` (the footer at its bottom holds Confirm `uninstallGame` and Cancel `onClose`; the toggle `uninstallCheckbox` named by `bottleName`); the close paths and the stray activation of the Steam row are 87-74's | REACHABLE as amended (87-79 Task 1); see `## Pre-run re-check`, `### UI gestures re-traced`, item 6 |
 | 7 | select a theme in app Settings; open the uninstall dialog of the P5 (e) game; read the disabled toggle and note | `UninstallModal/index.tsx:278-298` (`ToggleSwitch ... disabled={disableDeleteWine}`) and the `default-wine-warning` note `:308`; `disableDeleteWine` is true only when `perGameBottle` is empty and the stored prefix equals the default (`:130-134`) | REACHABLE when P5 (e) names a game; otherwise the named fallback |
 
 The themes for item 7's legibility check are Midnight Mirage, Gruvbox Dark and Dracula, each selected before the dialog is
@@ -421,6 +426,154 @@ opened.
 - DXVK install and restore on a bottle-backed game: hidden by design (`GamesSettings/index.tsx:276`), kept blocked as in 87-59.
 - A `-DXMT` copy while no feed's `winemac.so` exports the macdrv metal-view symbols (re-run 1 item 6 scored it on the skip line).
 - GPTK and bottled Steam as engines (D-20): not engines the engine step selects, so no item scores them.
+
+## Pre-run re-check
+
+Run by 87-79 Task 1 on 2026-11-27, before any launch of gap build 2. Read-only: nothing was launched, installed, copied, edited or
+restored on the operator's profile, bottles, Steam shortcuts or licence, and `/Applications/GameLib.app` is still the signed 0.13.1
+build. The checks are `git show` and `git grep` at the gap build 2 source, `codesign -dv`, `defaults read`, `ls`, and `jq` key
+reads of the store records and `GamesConfig` (names, appNames, install directories, configured executables and bottle names
+only). No `shortcuts.vdf` content was read and the licence was not touched.
+
+### Gap build 2 identity
+
+The line below is copied verbatim from `87-VALIDATION.md` under `### Phase 87 gap build 2 (87-78)`. Its status is `pending`,
+not `blocked`, so the re-run proceeds on the signed build.
+
+Gate (gap build 2): pending (identities match: signed Phase 87 gap build 2 v0.13.2, run 45791635064, `release/v0.13.2` at c5d19ab53 = main 06e4d2844 + the version bump, same Identifier, Developer ID leaf, TeamIdentifier S7U223QWXJ and designated requirement sha256 68d712d0... as 0.13.1, 0.13.0 and Phase 86; notarized and stapled)
+
+- Source under test: `release/v0.13.2` at `c5d19ab53455da56abad29fbba109eb5f82b3809` = main `06e4d28445f90aac3136387370c11e29a0716a27`
+  plus one version-bump commit. `git diff --name-only 06e4d2844 c5d19ab53` lists exactly `package.json`, `src-tauri/Cargo.lock`,
+  `src-tauri/Cargo.toml` and `src-tauri/tauri.conf.json`, so every grep below was made at `06e4d2844` (`git show 06e4d2844:<path>`)
+  and reads the shipped production code. Every path and line number below is at that commit.
+- Every gap cycle 2 fix is in it (`git merge-base --is-ancestor <c> 06e4d2844`, all true): 87-73 `747741cb5` `3d2967bdf`; 87-75
+  `aaa359ab9` `1d8971f90` `d41bb6aaf`; 87-76 `c83c6273c` `bbbc325ab`; 87-77 `3dc67f794`; the RF3 debug session (87-74's close)
+  `cdb012218` `bb14bf27d` `6d7c1485c` `ae0f0ecce` `7339ef23a` and `149b6cc26` (the commit 87-74's update says item 6 needs).
+- Installed now (read-only): `/Applications/GameLib.app` `CFBundleShortVersionString` = `0.13.1`, `Identifier=com.gamelib.shell`,
+  `TeamIdentifier=S7U223QWXJ`, `CDHash=266b7378d08b90e305efe37d2573270b01b146dd` (87-68's 0.13.1 build, the contract's baseline).
+  Gap build 2's `CDHash` is `edf24f35b2e8062cc92161803261c4281501a255` (87-78's record); P8 re-reads it after the install. No
+  GameLib process was running at the check (`pgrep -fl 'gamelib-shell|GameLib\.app'` printed nothing).
+
+### Literal rows, resolved
+
+Each row of `## Required literals` was re-grepped at `06e4d2844`. The Status cells there now carry these resolutions. The engine
+lines' chain (`ctx.log` -> `ShellEngineLog` -> redactor -> `gamelib.log` as `[Shell]`) and the sidecar's `logInfo` -> `[Backend]`
+chain are unchanged from re-run 1's resolution. The renderer chain for the two new `[Frontend]` rows is `window.api.logInfo` ->
+the `logInfo` send channel -> `native_router.rs:390` -> `log_dispatch::log_from_renderer` -> `Prefix::Frontend` (`log_dispatch.rs:54`).
+
+| Row | Item | Resolution | Exact literal and evidence |
+|---|---|---|---|
+| offline refusal WARNING and `offline gate:` reading | 1 | REACHABLE (re-confirmed) | `launch blocked before pre-flight while offline ({arm})` at `launch/step.rs:620` (`step.warn`, prefixed `Engine: <key> `), the gate's reading `offline gate: request-offline=... context-online=... on-bottle=... override=...` at `:368`; both inside the gate at `:603-626`, which now gets its verdict from `offline_gate_verdict` (`:455-477`, 87-76) |
+| `[engine-notice] ... display=pending`, then `confirmed` / `unconfirmed` | 1 | REACHABLE (re-confirmed) | `launch/dialogs.rs:188`: `[engine-notice] key={key} tag={tag} dispatched=in-app-dialog+notify dialog-frame-sent={sent} display=pending` |
+| `Stopping Display Power Saver Blocker` after the refusal | 1 | REACHABLE as amended | exact text `Stopping Display Power Saver Blocker` (`[INFO] [Backend]`), `launcher.ts:144` in `releaseDisplaySleepBlock` (`:141-147`), called on the refused return `:275` before `done`; the blocker starts at `:222-225` (`Preventing display from sleep`) before the engine step at `:249`, so the refused path always holds an id to stop. The old `:442` site is gone (87-73) |
+| 87-76's skipped-warning line | 1 | REACHABLE as amended | exact text `Offline warning skipped: the engine refuses this launch offline` (`[INFO] [Frontend]`, not `[Backend]`), `helpers/library.ts:320-322`, reached when `notPlayableOffline` (`GamePage/index.tsx:209`) and `offlineLaunchRefused === true` (`engineRefusesOfflineLaunch`, `library.ts:204-215`); the field is `get_engine_state`'s call of `offline_gate_verdict` (`state/engine_state.rs:465-466`), the step's own function, so the state and the refusal cannot disagree |
+| generic offline warning dialog | 2 (presence of 1) | REACHABLE as an observation | text `This game might not work properly offline. Do you want to play anyway?` at `library.ts:340`, shown at `:326-360` when the skip does not apply; OK resolves `{status: 'abort'}`, a dismissal without a button resolves abort through 87-73's `launchDialogLifecycle` (`:177`) |
+| `engine=crossover ... reason=cx-healthy` | 3 | REACHABLE (re-confirmed) | `bottles/registry.rs:62`: `engine=crossover build={} reason={reason}` |
+| **ABSENT** `cancelled (launcher-exited)` within 60 s | 3 | REACHABLE as amended | `Engine: launch deadline for key {key} cancelled ({})` at `launch/deadline.rs:195`, reason `launcher-exited` (`:60`), from `end_engine_launch` (`step.rs:1021-1024`). Amended: legendary exits about 1 s after hand-off on a working cold bottle too, so the line inside 60 s is RF1 only with no game exe in the 60 s `ps` capture; with the exe present it is an observation and item 3 is scored on `ps` |
+| deadline fired and notice (`raise=false`) | 5 | REACHABLE (re-confirmed) | `deadline.rs:250` `Engine: {key} launch deadline fired ({label}) with no game process seen; not stopping anything`; `:288` `Engine: {key} launch deadline notice surface=in-app pushed={pushed} raise=false`; `dialogs.rs:207` `[engine-notice] key={key} tag={tag} dispatched=notify raise=false` |
+| `Removed the game bottle` and `removePerGameBottle:` | 6 | REACHABLE as amended | `Removed the game bottle` (`[INFO] [Backend]`) at `utils/uninstaller.ts:196`; seven `removePerGameBottle: ...` warns at `bottles/remove_per_game.rs:214-324` on refusal or failure only; route order after 87-75: pre-flight only for a non-default stored prefix (`storedPrefixRemovalTarget`, `:108-117`), then `game.uninstall`, then `removePrefix` (`:219-226`) -> `removeOwnBottle` (`:156-205`) |
+| **ABSENT** `[safety] uninstall refused: is-protected-root` | 6 | REACHABLE | format `[safety] ${kind} ${outcome}: ${reason}` (`safety/refusal.ts:21-23`, `[WARNING] [Backend]`), pushed from the pre-flight at `uninstaller.ts:395-423`; reason word at `common/types/safety.ts:26` and `gamelib-safety` `remove.rs:73`, `:80`. Falsifiable: the emitter still fires for a custom protected stored prefix; for the named game (stored prefix = the shared default) the pre-flight is skipped, so absence is expected |
+| **ABSENT** Steam shortcut removal during Cancel | 6 | REACHABLE as amended (new literal); the old literal IMPOSSIBLE as a log line, amended to an observation | new literal `[Shortcuts] Show in Steam activation: action=remove event=... trusted=... detail=... key=... repeat=... sinceDialogCloseMs=... appName=... runner=...` (`[INFO] [Frontend]`), `rowActivation.ts:101-117`, logged first in `handleAddToSteam` (`useSteamShortcut.ts:44-51`), the only renderer path to `removeFromSteam`; presence case in the same launch: the approved add logs `action=add`. Old literal `was successfully removed from Steam`: since 94-22 it is Rust's `steam_remove` (`gamelib-shortcuts` `steam/mod.rs:452-540`) and its success text reaches only the OS notification (`notify_frontend`, `:145-166`; `ShellShortcutsUi`, `shortcuts_dispatch.rs:178-183`), never `gamelib.log`; it is now the observation "no `Removed from Steam` notification during Cancel" |
+| `[SwitchRow] ignored a pointer click on installTabShowInSteam` (added row) | 6 | REACHABLE, evidence only | exact head `[SwitchRow] ignored a pointer click on installTabShowInSteam: event=click trusted=... detail=... key=- repeat=... sinceDialogCloseMs=... (a dialog closed under 500 ms before; a stale second click, not a toggle)` (`rowActivation.ts:120-130`, `[INFO] [Frontend]`), from `SwitchRow.tsx:108-115` for a pointer click within `STALE_CLICK_WINDOW_MS` = 500 (`Dialog/dialogCloseClock.ts:26`) of a dialog close; row id `installTabShowInSteam` (`IntegrationRows.tsx:113`). Counted, never scored on its own; one during Cancel confirms 87-74's hop 9 and that the guard held |
+
+IMPOSSIBLE rows: one literal, `was successfully removed from Steam` as a `gamelib.log` line, amended to an observation row and to
+the REACHABLE `[Shortcuts] Show in Steam activation: action=remove` literal; it is never scored from the log. No other row is
+IMPOSSIBLE.
+
+ABSENT rows, presence case still logs at this source: `cancelled (launcher-exited)` (emitter unchanged, re-run 1 launch 1 logged
+7); `[safety] uninstall refused: is-protected-root` (emitter and reason unchanged, reached for a custom stored prefix);
+`Show in Steam activation: action=remove` (same emitter as `action=add`, which the approved add logs in launch 3).
+
+### UI gestures re-traced
+
+| Item | Gesture traced at `06e4d2844` | Resolution |
+|---|---|---|
+| 1 | Play -> `launch()` with `notPlayableOffline = isOffline && !gameInfo.canRunOffline` (`GamePage/index.tsx:209`, passed at `:489`) -> `engineRefusesOfflineLaunch` reads `getEngineState` -> on `true` logs the skip line and calls `proceedToLaunch()` (`library.ts:314-324`), no generic dialog -> the backend `launcher.ts` engine step with `offline: !deps.onlineMonitor.isOnline()` (`:259`) -> `step.rs:603-626` refuses with the `engine-download-failed` dialog, reason `offline` -> the TS refused return (`launcher.ts:274-284`) stops the blocker, sends `done` and answers `{status: 'abort'}` -> the page's latch is released by the `done` frame (`GamePage/index.tsx:384`, `handleGameStatus` -> `releasesPlayClickedForFrame`) and by `handlePlay`'s `finally` | REACHABLE as amended: the warning skip needs the renderer to read the game as not playable offline (re-run 1 saw the generic warning for Trash Goblin, so `canRunOffline` is false for it) and the state read to answer `offlineLaunchRefused: true` (CrossOver missing under the sandbox, pin absent); if the game has a pending update, `proceedToLaunch` shows the update dialog first, which is not the generic warning |
+| 2 | the same `launch()`; with CrossOver healthy and the pin installed `offlineLaunchRefused` is false, so the warning at `library.ts:326-360` shows; OK resolves abort; Play returns through `handlePlay`'s `finally` | REACHABLE (presence case) |
+| 3 | Play online -> no warning -> `select_engine_for_launch` -> pre-flight `Healthy`, CrossOver selection, `Prepared`, not switched (`prepare_left_server_warm`, `step.rs:485-496`) -> `kill_bottle_wineserver` (`step.rs:813-828`; `bottles/lifecycle.rs:105-149`, CrossOver's `wineserver -k` with `WINEPREFIX` the game's bottle) when `ctx.ledger.games_running_in(bottle)` is empty and the bin dir is known -> mark running -> launch | REACHABLE as amended: the kill logs nothing on success; on a timeout or failure it logs `killBottleWineServerWith: wineserver -k for bottle "<bottle>" was killed by its timeout` or `... failed ...` (`lifecycle.rs:132-146`, `[WARNING] [Shell]`), counted in item 3. The nile `--wine-prefix <shared prefix>` contribution the RF1 record kept open is not touched by 87-77 |
+| 6 | Show in Steam: `SwitchRow id="installTabShowInSteam"` (`IntegrationRows.tsx:113`) -> `onToggle(activation)` -> `handleAddToSteam` logs the activation, then adds or removes. Cancel: the dialog's No button `onClick={onClose}` (`UninstallModal/index.tsx:338`; `:200`, `:226` in the other branches); nothing in the file calls Steam; after close a pointer click on the row within 500 ms is dropped and logged (`SwitchRow.tsx:108-115`) and a key repeat is ignored. Removal: the toggle `uninstallCheckbox` (`:279`) names the bottle when `getPerGameBottleName` equals the stored `wineCrossoverBottle` (`:110-116`), enabled (`disableDeleteWine` false, `:132-135`); Yes `onClick={uninstallGame}` (`:333`) -> `window.api.uninstall(..., deletePrefixChecked, ...)` -> the 87-75 route above | REACHABLE as amended: Cancel has no code path to `removeFromSteam` (87-74 trace, guards added; cause not proven, T-87-143 mitigated); the removal reaches the bottle op with no protected-root pre-flight for a game on the shared default prefix |
+| 7 | see P5 (e) below: no game is in the disabled state, so the fallback surface applies | REACHABLE through the fallback |
+
+### State the operator's profile is in (read-only)
+
+- `appFolder` is the gamelib profile, `~/Library/Application Support/gamelib` (no override key in `config.json`); the engines dir is
+  `tools/steam-engines` under it (`engines.rs:54`).
+- **The pinned engine IS installed.** `~/Library/Application Support/gamelib/tools/steam-engines/` holds `wine-staging-11.20` and
+  `dxvk-macOS-v1.10.3-20230507-repack`; the current pin at the gap build 2 source is `wine-staging-11.20` (`pins.rs:82`). Item 1
+  needs it absent, so it is moved aside at the checkpoint after the P3 `ditto` copy and with the operator's recorded approval. It
+  was not touched here.
+- `tools/wine/` holds `Wine-11.21` and `Wine-Staging-macOS-latest`.
+- The default prefix is `~/Games/GameLib/Prefixes/shared` (`defaultSettings.winePrefix`).
+- Per-game bottles present under `~/Library/Application Support/CrossOver/Bottles/`: `GameLib-gog-1192621307`,
+  `GameLib-gog-1542190742`, `GameLib-legendary-54f7949350c949c6a2c47f12e7b15636`,
+  `GameLib-nile-amzn1.adg.product.1d092246-e48f-40f6-83f-a10e499e2d`.
+- Changed since re-run 1: Racine's install directory now exists and it is on its own per-game bottle; Bloody Hell's install
+  directory is missing.
+
+### P5 (d) candidate list (item 5)
+
+Procedure as `## Preflight` P5 (d): the installed games of the four store records, with `appName`, title, install directory and
+configured executable; `GamesConfig/` holds 109 files and none of the four Windows games below sets `targetExe`.
+
+| Title | Store, appName | Install dir | Configured exe | Bottle | Rule met |
+|---|---|---|---|---|---|
+| Trash Goblin | legendary, `54f7949350c949c6a2c47f12e7b15636` | `~/Games/GameLib/TrashGoblin` (present) | `TrashGoblin.exe` (installed.json `executable`) | `GameLib-legendary-54f7949350c949c6a2c47f12e7b15636` | rule (1) in the stored record only: a relative path, which legendary joins to the install dir, and legendary hands off and exits about 1 s after Play (RF1 record D3), so the launcher-stays-up premise is unlikely |
+| Racine | gog, `1192621307` | `~/Games/GameLib/Racine` (present) | `Racine.exe` (`goggame-1192621307.info` primary play task, no `workingDir`) | `GameLib-gog-1192621307` | rule (1) in the stored record only, as above (gogdl builds the full path) |
+| Caravan SandWitch | nile, `amzn1.adg.product.1d092246-e48f-40f6-83fd-924af905ca9b` | `~/Games/GameLib/Caravan SandWitch` (present) | `CaravanSandWitch.exe` (`fuel.json` `Main.Command`) | `GameLib-nile-amzn1.adg.product.1d092246-e48f-40f6-83f-a10e499e2d` | rule (1) in the stored record only, as above (nile joins it) |
+
+Excluded: Bloody Hell (gog `1542190742`, install directory missing), SOMA (legendary, Mac), Balrum (gog, osx) and the three
+sideloaded apps (all Mac). No title meets rule (2) (a launcher stub starting the real game from outside the install directory)
+or rule (3) (an executable outside the install directory's four forms). So no title is a confirmed candidate: whether a
+stored-relative executable reaches `ps` without its install path is a live read. The operator picks one of the three, accepting
+that a match inside 180 s scores item 5 `blocked` (premise failed), or records "none", and item 5 scores `blocked` with the gap
+named.
+
+### P5 (e) candidate list (item 7)
+
+Procedure as P5 (e): installed Windows non-Steam games whose install directory exists, whose stored `wineCrossoverBottle`
+differs from `per_game_bottle_name(runner, appName)` (`game_engine.rs:62-74`, computed here for each) and whose stored
+`winePrefix` equals the default.
+
+| Title | Dir exists | Stored bottle = per-game name | Stored prefix = default | Disabled toggle |
+|---|---|---|---|---|
+| Trash Goblin | yes | yes | yes | no (enabled, names the bottle) |
+| Racine | yes | yes | yes | no (enabled, names the bottle) |
+| Caravan SandWitch | yes | yes | yes | no (enabled, names the bottle) |
+| Bloody Hell | no | no (none stored) | no (its own prefix) | not a candidate (missing on disk) |
+
+**None.** The fallback surface is Settings > General > **Start Minimized** (`ToggleSwitch htmlId="startInTray"`,
+`screens/Settings/components/TraySettings.tsx:31-38`, rendered by `GeneralSettings/index.tsx:44`), disabled as
+`!exitToTray || noTrayIcon`: `defaultSettings.exitToTray` is not stored (the hook defaults it to false) and `noTrayIcon` is false,
+so it is disabled now with no change to the profile. It is the same `ToggleSwitch` component, whose disabled style
+(`.hiddenCheckbox[disabled] + .toggleSwitchWrapper`) is the one 87-67 made legible (`disabledContrast.test.ts`). It sits on the
+Settings page background, not the dialog's, so item 7's result names this surface and says the dialog variant was not read.
+
+### Live re-check owed
+
+1. P8 on the installed gap build 2: `CFBundleShortVersionString` `0.13.2`, `CDHash=edf24f35b2e8062cc92161803261c4281501a255`,
+   `Identifier=com.gamelib.shell`, the Developer ID leaf, `TeamIdentifier=S7U223QWXJ` and the designated requirement sha256
+   `68d712d0...`; a mismatch scores every item `blocked` (D-12). Today the app is still 0.13.1 (`266b7378...`).
+2. Item 1: the pin moved aside (P3 copy and approval first) and its absence shown by `ls -la tools/steam-engines/`; the
+   `Connectivity: ... offline via` line before the press. In `gamelib-launch-2.log`, in order: the `[Frontend]` skip line x1, the
+   `[Shell]` `launch blocked before pre-flight while offline (crossover-missing)` WARNING, the `display=pending` line, then
+   `Stopping Display Power Saver Blocker` at least once. A generic warning dialog before the refusal, or no skip line, scores
+   `issue`. An update dialog is not the generic warning.
+3. Item 2: the pin present (it is now; moved back after launch 2 only), `reason=cx-healthy`, the generic warning read by the
+   operator, and 0 skip lines for that press.
+4. Item 3: `ps` at 10 s and 60 s is primary; count `cancelled (launcher-exited)` per launch with its timestamp against Play and
+   read it with the amended rule; count `killBottleWineServerWith:` (expected 0; a non-zero count is recorded with the bottle).
+   If Caravan SandWitch (nile) exits early while Trash Goblin stays up, the result names the nile `--wine-prefix` contribution
+   the RF1 record left open.
+5. Item 5: no confirmed P5 (d) candidate; the operator's pick or "none" goes into `notes.log` before launch 1.
+6. Item 6: the operator reads the Show in Steam switch (`aria-checked`) before and after Cancel; `action=add` x1 if turned on,
+   `action=remove` x0 during Cancel, the `[SwitchRow] ignored a pointer click on installTabShowInSteam` count, no `Removed from
+   Steam` notification, and the `shortcuts.vdf` hash after Cancel equal to its after-add value. The removal: the dialog toggle
+   names the bottle, `Removed the game bottle` x1, `[safety] uninstall refused: is-protected-root` x0, `removePerGameBottle:` x0,
+   the bottle directory gone, then the sibling compare with the app closed. The game to remove is the operator's P5 (c) choice.
+7. Item 7: the fallback surface (Start Minimized) read in Midnight Mirage, Gruvbox Dark and Dracula, unless the operator names a
+   game in the disabled state; the result records which surface was read.
+8. The P5 inputs (a) to (e) are named by the operator before launch 1; Claude names candidates only and never picks a bottle to
+   destroy.
 
 ## Summary
 
