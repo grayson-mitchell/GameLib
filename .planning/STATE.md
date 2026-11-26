@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: "88.1"
 current_phase_name: Launch builders and prepare steps
 status: executing
-stopped_at: Completed 88.1-22-PLAN.md
-last_updated: "2026-11-26T10:49:48.416Z"
+stopped_at: Completed 88.1-23-PLAN.md
+last_updated: "2026-11-26T10:52:44.108Z"
 last_activity: 2026-11-26
 last_activity_desc: Phase 88.1 execution started
-state_head: 216206ebca75e5a4d4f30890eccb7fe86334c8b8
+state_head: 02269203f8cca21ce695876f0665d92badf5c213
 progress:
   total_phases: 25
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-25)
 ## Current Position
 
 Phase: 88.1 (Launch builders and prepare steps) — EXECUTING
-Plan: 23 of 24
+Plan: 24 of 24
 Status: Ready to execute
 Last activity: 2026-11-26 — Phase 88.1 execution started
 Progress: [████████████████░░░░] 204/257 plans ([█████████░] 92%)
@@ -546,6 +546,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 88.1 P20 | 5h | 3 tasks | 18 files |
 | Phase 88.1 P21 | 24 min | 2 tasks | 14 files |
 | Phase 88.1 P22 | 55 min | 2 tasks | 58 files |
+| Phase 88.1 P23 | 10 min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -1229,6 +1230,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 88.1]: 88.1-20: operator chose push; 88.1 is proven on three OSes at 940bd9e73 (Rust legs green, Linux stub_gamescope 1 passed); test.yml recorded as failure on the known-unrelated suites, not fixed
 - [Phase 88.1]: 88.1-21: setupEnvVars reads only nvidiaPrime/showFps/enviromentOptions through SetupEnvView (no wine); Option<WineInstallation> on GameSettingsView rejected because ~22 .wine_version reads and the decode-failure-as-signal sites would silently accept wine-less settings
 - [Phase 88.1]: [88.1-22] WineInstallation drops unknown keys on decode (WR-01); strictness stays at the shell's parse_wine_installation; the crate wine_valid op now accepts a legacy key
+- [Phase 88.1]: 88.1-23: the operator's 2026-11-26 pairwise-narrowing acceptance is an overrides entry on truth 2 in 88.1-VERIFICATION.md; status, score and overrides_applied are left for re-verification
 
 ### Pending Todos
 
@@ -1515,8 +1517,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-26T10:49:45.237Z
-Stopped at: Completed 88.1-22-PLAN.md
+Last session: 2026-11-26T10:52:40.926Z
+Stopped at: Completed 88.1-23-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
