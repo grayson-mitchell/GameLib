@@ -9,6 +9,7 @@ use gamelib_info::ctx::InfoCtx;
 use gamelib_knownfix::ctx::KnownFixCtx;
 use gamelib_wine::ctx::WineCtx;
 
+use crate::game::registry::TrackedRegistry;
 use crate::hooks::ManagerHooks;
 use crate::prepare::deps::WineManagerFacts;
 use crate::prepare::dialogs::LaunchDialogs;
@@ -50,6 +51,9 @@ pub struct LaunchCtx {
     /// shell sets the sidecar-backed one; the CLI and a headless run leave it `None`, and every hook is then
     /// unavailable (a title falls back to the app name, a forced uninstall does not happen).
     pub hooks: Option<Arc<dyn ManagerHooks>>,
+    /// The game runs in flight (88.2-10, D-07), each with its `GameHandle`: registered when a game-class call
+    /// spawns, unregistered when it ends. A context owns its own, never a module-level one.
+    pub registry: Arc<TrackedRegistry>,
 }
 
 impl LaunchCtx {
@@ -71,6 +75,7 @@ impl LaunchCtx {
             runner: Arc::new(RunnerTables::new()),
             errors: None,
             hooks: None,
+            registry: Arc::new(TrackedRegistry::new()),
         }
     }
 

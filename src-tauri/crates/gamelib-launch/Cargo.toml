@@ -30,13 +30,23 @@ tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "sync"
 tokio-util = "0.7"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+# Only the stub-game binary's `shell` mode builds a context over a `StoreHost`, as the CLI does (88.2-10).
+# A workspace crate already in the lockfile, behind the `harness` feature so no shipped build carries it.
+gamelib-store = { path = "../gamelib-store", optional = true }
 
 [features]
 # Test seams: the known-fix crate's (and through it the engine's and wine's) scripted fakes.
 testing = ["gamelib-knownfix/testing"]
+# The stub-game binary behind tests/stub_game.rs. Never part of a shipped build.
+harness = ["testing", "dep:gamelib-store"]
+
+[[bin]]
+name = "gamelib-launch-stub-game"
+path = "src/bin/stub_game.rs"
+required-features = ["harness"]
 
 [dev-dependencies]
-gamelib-launch = { path = ".", features = ["testing"] }
+gamelib-launch = { path = ".", features = ["testing", "harness"] }
 # The unit tests build an `EngineCtx` over a `StoreHost`, as the CLI does.
 gamelib-store = { path = "../gamelib-store" }
 gamelib-testutil = { path = "../gamelib-testutil" }

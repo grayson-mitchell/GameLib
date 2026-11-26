@@ -13,6 +13,7 @@
 
 pub mod builders;
 pub mod ctx;
+pub mod game;
 pub mod hooks;
 pub mod prepare;
 pub mod runner;
@@ -33,7 +34,7 @@ use prepare::epic;
 use prepare::launch::{PrepareHost, PrepareLaunchArgs};
 use prepare::wine_begin::PrepareWineBeginArgs;
 use prepare::wine_finish::PrepareWineFinishArgs;
-use runner::call_runner::{call_runner, RunnerCallArgs, RunnerHost, SpawnClassArg};
+use runner::call_runner::{call_runner, RunnerCallArgs, RunnerHost};
 use runner::stream::{NullSink, OutputSink, UiOutputSink};
 use serde::Deserialize;
 use serde_json::Value;
@@ -193,9 +194,6 @@ async fn route(op: &str, args: &[Value], ctx: &LaunchCtx) -> Result<Value, Strin
                 Value::Object(_) => serde_json::from_value(host.clone()).map_err(|_| bad())?,
                 _ => return Err(bad()),
             };
-            if call.spawn_class == SpawnClassArg::Game {
-                return Err(format!("{op}:game-class-not-ported"));
-            }
             let sink: Arc<dyn OutputSink> = match (&ctx.engine.ui, call.observe) {
                 (Some(ui), true) => Arc::new(UiOutputSink::new(ui.clone(), call.stream_id.clone())),
                 _ => Arc::new(NullSink),

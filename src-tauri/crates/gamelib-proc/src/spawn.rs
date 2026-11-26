@@ -325,4 +325,11 @@ impl GameHandle {
     pub fn reap(mut self) -> std::io::Result<()> {
         self.child.wait().map(|_| ())
     }
+
+    /// As `reap`, answering the leader's exit status, through a borrow so a handle shared with a
+    /// registry can be reaped where it sits. Blocks until the leader has exited: call it only after
+    /// the leader is known to be gone (`probe::is_alive(pid)` false), when it returns at once.
+    pub fn reap_status(&mut self) -> std::io::Result<std::process::ExitStatus> {
+        self.child.wait()
+    }
 }

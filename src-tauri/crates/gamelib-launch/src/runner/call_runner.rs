@@ -32,6 +32,9 @@ use super::sanitize::LogSanitizer;
 use super::stream::{ChunkWindow, LaunchLogSink, LogHandOff, LogTargets, OutputSink};
 use super::{lock, Flight, Registered, RunnerEvent, RunnerName};
 use crate::ctx::LaunchCtx;
+use crate::game::capture;
+use crate::game::end::{self, Ended, GameEnd};
+use crate::game::registry::GameGuard;
 
 /// The label every runner child is registered under (shown when one needs the hard kill).
 pub const RUNNER_LABEL: &str = "runner-call";
@@ -51,7 +54,8 @@ pub struct RunnerProps {
     pub log_prefix: String,
 }
 
-/// Which spawn class a call asks for. The helper path is this plan's; the game path is 88.2-10's.
+/// Which spawn class a call asks for: a store CLI is a helper (tied to GameLib's life), a game is the user's
+/// process and outlives GameLib (88.2-10).
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum SpawnClassArg {
@@ -454,15 +458,19 @@ impl Run {
         if out.cancelled {
             return self.classify_failure("aborted", true);
         }
-        if let Some(signal) = out.signal {
+        self.settle(out.code, out.signal)
+    }
+
+    /// The result of a run that ended on its own: a signal and a non-zero exit are errors (a store CLI that
+    /// caught SIGTERM and failed, or an abort when the user cancelled), anything else is the windows' text.
+    fn settle(&self, code: Option<i32>, signal: Option<i32>) -> ExecResult {
+        if let Some(signal) = signal {
             return self.classify_failure(
                 &format!("Process terminated with signal {}", signal_name(signal)),
                 false,
             );
         }
-        // A non-zero exit without a signal (a store CLI that caught SIGTERM and failed) is an error,
-        // or an abort when the user cancelled.
-        if let Some(code) = out.code {
+        if let Some(code) = code {
             if code != 0 {
                 return self.classify_failure(&format!("Process exited with code {code}"), false);
             }
@@ -474,6 +482,97 @@ impl Run {
             error: None,
             abort: None,
         }
+    }
+
+    /// The game class (88.2-10, D-05, D-29): the game spawns into its own session (or Game Job) writing a
+    /// private capture file, Rust tails the file into the log writers, the observer and the window, the run
+    /// is registered while it lasts, and it resolves when the game and its group have ended. Nothing in
+    /// GameLib holds a pipe to the game. A run dropped by the shutdown token stops tailing and signals
+    /// nothing, and the game keeps running.
+    async fn execute_game(&self, capture_name: &str, track_key: &str, end: GameEnd) -> ExecResult {
+        let path = capture::capture_path(&self.ctx, self.runner, capture_name);
+        if let Err(e) = capture::create_capture(&path) {
+            return self.classify_failure(
+                &format!("could not create the game's output file: {}", e.kind()),
+                false,
+            );
+        }
+
+        // The merged environment replaces the inherited one, as the helper path does.
+        let mut cmd = std::process::Command::new(&self.program);
+        cmd.args(&self.argv)
+            .env_clear()
+            .envs(self.env.iter().map(|(k, v)| (k, v)));
+        if let Some(cwd) = &self.cwd {
+            cmd.current_dir(cwd);
+        }
+        let handle = match gamelib_proc::spawn_game_tracked(cmd, Some(&path)) {
+            Ok(handle) => handle,
+            Err(e) => return self.classify_failure(&e.to_string(), false),
+        };
+        self.output.spawned(handle.pid);
+        let id = self
+            .ctx
+            .registry
+            .register_game(self.runner.as_str(), track_key, handle);
+        let _registered = GameGuard::new(Arc::clone(&self.ctx.registry), id);
+        let Some(entry) = self.ctx.registry.entry(id) else {
+            return failed_to_run(&self.safe_command, "the game's run was not registered");
+        };
+
+        let (done, finished) = watch::channel(false);
+        let mut chunk = self.chunk_sink();
+        let tail = capture::tail(&path, 0, move |text| chunk(Pipe::Stdout, text), finished);
+        let token = self.ctx.engine.shutdown.token();
+        let wait = async {
+            let ended = end::wait_end(&entry.handle, end, &token).await;
+            // The final drain of the capture file runs after this.
+            let _ = done.send(true);
+            ended
+        };
+        let (_, ended) = tokio::join!(tail, wait);
+
+        let status = match ended {
+            Ended::Finished(status) => status,
+            // GameLib is going away; the reply is dropped and the game is left running.
+            Ended::Shutdown => {
+                return ExecResult {
+                    stdout: String::new(),
+                    stderr: String::new(),
+                    full_command: self.safe_command.clone(),
+                    error: None,
+                    abort: Some(true),
+                }
+            }
+        };
+        let joined = format!(
+            "{}{}",
+            lock(&self.stdout).join(""),
+            lock(&self.stderr).join("")
+        );
+        self.error_handler(&joined);
+        if self.abort.is_cancelled() {
+            return self.classify_failure("aborted", true);
+        }
+        let (code, signal) = match status {
+            Some(status) => (status.code(), exit_signal(&status)),
+            None => (None, None),
+        };
+        self.settle(code, signal)
+    }
+}
+
+/// The signal that ended a child, where the platform has one.
+fn exit_signal(status: &std::process::ExitStatus) -> Option<i32> {
+    #[cfg(unix)]
+    {
+        use std::os::unix::process::ExitStatusExt;
+        status.signal()
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = status;
+        None
     }
 }
 
@@ -576,13 +675,6 @@ pub async fn call_runner(
         full_runner_path = "powershell".to_string();
     }
 
-    if args.spawn_class == SpawnClassArg::Game {
-        return failed_to_run(
-            &full_runner_path,
-            "the game spawn class is not available on the runner path yet",
-        );
-    }
-
     let safe_command =
         get_runner_call_without_credentials(&parts, &args.env.0, &host.env, &full_runner_path);
 
@@ -637,6 +729,49 @@ pub async fn call_runner(
         .unwrap_or_else(|| format!("runner-{serial}"));
     let track_key = args.track_key.clone().unwrap_or_else(|| abort_id.clone());
     let abort = CancellationToken::new();
+
+    let mut env: BTreeMap<String, String> = host.env.clone();
+    for (key, value) in &args.env.0 {
+        env.insert(key.clone(), value.clone());
+    }
+    // The capture file is named for the app, or for the tracked key when the command names no app.
+    let capture_name = if app_name.is_empty() {
+        track_key.clone()
+    } else {
+        app_name.clone()
+    };
+
+    let run = Run {
+        ctx: ctx.clone(),
+        program: bin,
+        argv: parts,
+        cwd: args
+            .cwd
+            .clone()
+            .filter(|c| !c.is_empty())
+            .or_else(|| args.runner.dir.clone()),
+        env: env.into_iter().collect(),
+        safe_command: safe_command.clone(),
+        app_name,
+        runner,
+        log_prefix,
+        skip_error_handler: args.skip_error_handler,
+        abort: abort.clone(),
+        targets,
+        log_sanitizer: args.log_sanitizer,
+        output: sink,
+        stdout: Arc::new(Mutex::new(ChunkWindow::new())),
+        stderr: Arc::new(Mutex::new(ChunkWindow::new())),
+    };
+
+    // A game is the user's process: it never joins another run (single flight is the TS's until 88.3), is
+    // registered in the tracked registry rather than the helper tables, and is tailed in this call.
+    if args.spawn_class == SpawnClassArg::Game {
+        return run
+            .execute_game(&capture_name, &track_key, GameEnd::default())
+            .await;
+    }
+
     let (sender, receiver) = watch::channel::<Option<ExecResult>>(None);
 
     // Join a run in flight, or become the run: decided under one lock, with no await inside it.
@@ -687,33 +822,6 @@ pub async fn call_runner(
         key: track_key.clone(),
     });
 
-    let mut env: BTreeMap<String, String> = host.env.clone();
-    for (key, value) in &args.env.0 {
-        env.insert(key.clone(), value.clone());
-    }
-
-    let run = Run {
-        ctx: ctx.clone(),
-        program: bin,
-        argv: parts,
-        cwd: args
-            .cwd
-            .clone()
-            .filter(|c| !c.is_empty())
-            .or_else(|| args.runner.dir.clone()),
-        env: env.into_iter().collect(),
-        safe_command: safe_command.clone(),
-        app_name,
-        runner,
-        log_prefix,
-        skip_error_handler: args.skip_error_handler,
-        abort: abort.clone(),
-        targets,
-        log_sanitizer: args.log_sanitizer,
-        output: sink,
-        stdout: Arc::new(Mutex::new(ChunkWindow::new())),
-        stderr: Arc::new(Mutex::new(ChunkWindow::new())),
-    };
     let guard = TableGuard {
         ctx: ctx.clone(),
         key: joinable.then(|| key.clone()),
