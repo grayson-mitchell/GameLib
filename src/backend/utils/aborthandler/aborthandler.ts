@@ -1,11 +1,21 @@
 import { LogPrefix, logError } from 'backend/logger'
 
 /**
+ * What a registry can be given (Phase 88.2, 88.2-16, D-02): Rust owns the abort table of the runner calls it runs, so an id the
+ * TypeScript map does not hold may still name a run there. `forwardAbort` asks Rust to end the run that answers to `id` and
+ * answers whether one did (`runnerAbort`, narrowed to a boolean by the boot that passes it). A rejected or lost forward counts as
+ * "no run answered". Without it the registry behaves as it always has.
+ */
+export interface AbortRegistryDeps {
+  forwardAbort?: (id: string) => Promise<boolean>
+}
+
+/**
  * The abort-controller registry of one boot (D-05, 66.4-13): the Map lives in this closure, built once by
  * the 'abort-registry' boot step. Every consumer reaches it through a Pick of this type, so quit and stdin
  * EOF (`abortAll`) cancel exactly the jobs the rest of the backend registered.
  */
-export function createAbortRegistry() {
+export function createAbortRegistry(deps?: AbortRegistryDeps) {
   const abortControllers = new Map<string, AbortController>()
 
   function create(id: string): AbortController {
@@ -15,30 +25,7 @@ export function createAbortRegistry() {
     return abortController
   }
 
-  function call(id: string) {
-    if (abortControllers.has(id)) {
-      const abortController = abortControllers.get(id)!
-      if (abortController) {
-        // debug/steam-cancel-abort-thread-a: a controller that was FOUND but is
-        // already aborted is an idempotent no-op, not a failure — a caller can
-        // legitimately call this twice for the same id in the same cancel
-        // (e.g. downloadqueue.ts's stopCurrentDownload() calls
-        // callAbortController(appName) directly, then also calls
-        // SteamGame.stop(), which calls callAbortController(this.appId) again
-        // for the identical id). Previously this fell through to the
-        // "Could not find a matching abort controller" error log below even
-        // though the controller WAS found — a misleading false alarm on every
-        // double-abort, observed on real hardware as an [ERROR][Backend] log
-        // during an otherwise-successful cancel. Only a GENUINE lookup miss
-        // (id never registered, or already deleteAbortController'd) should
-        // reach the error log now.
-        if (!abortController.signal.aborted) {
-          abortController.abort()
-        }
-        return
-      }
-    }
-
+  function logNotFound(id: string) {
     logError(
       [
         'Aborting not possible. Could not find a matching abort controller for',
@@ -46,6 +33,58 @@ export function createAbortRegistry() {
       ],
       LogPrefix.Backend
     )
+  }
+
+  /** Aborts the local controller for `id`, if the map holds one; answers whether it did. */
+  function abortLocal(id: string): boolean {
+    const abortController = abortControllers.get(id)
+    if (!abortController) return false
+    // debug/steam-cancel-abort-thread-a: a controller that was FOUND but is
+    // already aborted is an idempotent no-op, not a failure — a caller can
+    // legitimately call this twice for the same id in the same cancel
+    // (e.g. downloadqueue.ts's stopCurrentDownload() calls
+    // callAbortController(appName) directly, then also calls
+    // SteamGame.stop(), which calls callAbortController(this.appId) again
+    // for the identical id). Previously this fell through to the
+    // "Could not find a matching abort controller" error log (`logNotFound`) even
+    // though the controller WAS found — a misleading false alarm on every
+    // double-abort, observed on real hardware as an [ERROR][Backend] log
+    // during an otherwise-successful cancel. Only a GENUINE lookup miss
+    // (id never registered, or already deleteAbortController'd) should
+    // reach the error log now.
+    if (!abortController.signal.aborted) {
+      abortController.abort()
+    }
+    return true
+  }
+
+  /** Asks Rust to end the run that answers to `id`; never throws and never rejects. */
+  function forward(id: string): Promise<boolean> {
+    const { forwardAbort } = deps ?? {}
+    if (!forwardAbort) return Promise.resolve(false)
+    try {
+      return forwardAbort(id).then(
+        (found) => found === true,
+        () => false
+      )
+    } catch {
+      return Promise.resolve(false)
+    }
+  }
+
+  function call(id: string) {
+    const foundLocally = abortLocal(id)
+    if (!deps?.forwardAbort) {
+      if (!foundLocally) logNotFound(id)
+      return
+    }
+    // D-02: Rust owns the abort table of its runner calls, so the id goes there too, whether or not the map held it. The
+    // not-found line is written only when neither side knew the id, which is known once Rust has answered.
+    const forwarded = forward(id)
+    if (foundLocally) return
+    void forwarded.then((foundInRust) => {
+      if (!foundInRust) logNotFound(id)
+    })
   }
 
   function abortAll() {
@@ -66,8 +105,10 @@ export function createAbortRegistry() {
     // `call`'s own `abortControllers.delete` calls (via
     // `delete`, invoked from `callRunner`'s `.finally`) can't
     // invalidate iteration.
+    // Local controllers only (88.2-16): on quit Rust ends its own runs through the shutdown budget, and a forward here would
+    // leave an invoke in flight at exit.
     for (const key of Array.from(abortControllers.keys())) {
-      call(key)
+      abortLocal(key)
     }
   }
 

@@ -166,4 +166,98 @@ describe('aborthandler (debug/steam-cancel-abort-thread-a)', () => {
       expect(controllerB.signal.aborted).toBe(false)
     })
   })
+  // 88.2-16 (D-02): Rust owns the abort table of the runner calls it runs, so `call(id)` forwards the id there.
+  describe('forwardAbort (88.2-16, D-02)', () => {
+    const notFound = (id: string) => [
+      [
+        'Aborting not possible. Could not find a matching abort controller for',
+        id
+      ],
+      'Backend'
+    ]
+
+    it('an id Rust found, that the map does not hold, logs nothing', async () => {
+      const forwardAbort = jest.fn().mockResolvedValue(true)
+      const forwarding = createAbortRegistry({ forwardAbort })
+
+      forwarding.call('rust-only')
+      await Promise.resolve()
+      await Promise.resolve()
+
+      expect(forwardAbort).toHaveBeenCalledWith('rust-only')
+      expect(logError).not.toHaveBeenCalled()
+    })
+
+    it('an id neither side knew logs the not-found line once, after Rust answered', async () => {
+      let answer: (found: boolean) => void = () => undefined
+      const forwardAbort = jest.fn(
+        () =>
+          new Promise<boolean>((resolve) => {
+            answer = resolve
+          })
+      )
+      const forwarding = createAbortRegistry({ forwardAbort })
+
+      forwarding.call('nobody')
+      expect(logError).not.toHaveBeenCalled()
+      answer(false)
+      await Promise.resolve()
+      await Promise.resolve()
+
+      expect(logError).toHaveBeenCalledTimes(1)
+      expect(logError).toHaveBeenCalledWith(...notFound('nobody'))
+    })
+
+    it('a local id is aborted and still forwarded, with no error line whatever Rust answers', async () => {
+      const forwardAbort = jest.fn().mockResolvedValue(false)
+      const forwarding = createAbortRegistry({ forwardAbort })
+      const controller = forwarding.create('both')
+
+      forwarding.call('both')
+      await Promise.resolve()
+      await Promise.resolve()
+
+      expect(controller.signal.aborted).toBe(true)
+      expect(forwardAbort).toHaveBeenCalledWith('both')
+      expect(logError).not.toHaveBeenCalled()
+    })
+
+    it('a forward that rejects or throws counts as not found, and never rejects the caller', async () => {
+      const rejecting = createAbortRegistry({
+        forwardAbort: () => Promise.reject(new Error('lost'))
+      })
+      const throwing = createAbortRegistry({
+        forwardAbort: () => {
+          throw new Error('no transport')
+        }
+      })
+
+      expect(() => rejecting.call('a')).not.toThrow()
+      expect(() => throwing.call('b')).not.toThrow()
+      await Promise.resolve()
+      await Promise.resolve()
+      await Promise.resolve()
+
+      expect(logError).toHaveBeenCalledTimes(2)
+      expect(logError).toHaveBeenCalledWith(...notFound('a'))
+      expect(logError).toHaveBeenCalledWith(...notFound('b'))
+    })
+
+    it('abortAll aborts the local controllers and forwards nothing', () => {
+      const forwardAbort = jest.fn().mockResolvedValue(true)
+      const forwarding = createAbortRegistry({ forwardAbort })
+      const controller = forwarding.create('id-1')
+
+      forwarding.abortAll()
+
+      expect(controller.signal.aborted).toBe(true)
+      expect(forwardAbort).not.toHaveBeenCalled()
+    })
+
+    it('with no deps a miss logs synchronously, exactly as before', () => {
+      createAbortRegistry().call('nope')
+      expect(logError).toHaveBeenCalledTimes(1)
+      expect(logError).toHaveBeenCalledWith(...notFound('nope'))
+    })
+  })
 })
