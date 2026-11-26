@@ -367,6 +367,60 @@ clippy ratchet `PASS (darwin, toolchain 1.99.1)` and `PASS (win32, toolchain 1.9
 D-13's "gamelib-engine and gamelib-wine goldens observed running on every leg" holds as in 87-58: for **gamelib-wine on all three legs** (the Winetricks, DXVK, DXMT and runtime goldens, the per-game guard and the pure winetricks suite
 run on Windows too) and for **gamelib-engine on macos-latest and ubuntu-latest only**, because the bottle and CrossOver code is macOS-only and every engine golden is `#![cfg(unix)]`; Windows runs `twin_vectors` (9), the engine and wine lib tests and the shell tests.
 
+## Gap closure proof (cycle 2, 87-78)
+
+Measured by plan 87-78 Task 1, 2026-11-26, from a `git worktree add --detach` checkout (removed afterwards, `git worktree list` shows the main checkout and the eight worktrees that existed before)
+with its own `pnpm install --frozen-lockfile`, `pnpm exec vite build`, `pnpm build:sidecar-sea` and a cold `src-tauri/target`. The default `TMPDIR` (`/var/folders/...`) was kept, so the checkout is not inside
+`os.tmpdir()` (the 87-68 finding 2 hazard). 87-68's table, copied verbatim and extended with step 18 (`pnpm lint-translations`), with the 87-68 counts for comparison.
+
+**Candidate head P = `02d0bd26da05e259004ba29cd6465b89bcb37d41`** (main). It is `756c4b2c8` (88.1's last docs commit when the proof's first pass finished) plus one commit, `02d0bd26d`
+`fix(87-78): 87-74's three pre-push gate reds, a dead export and two ratchet baselines`, which touches only `src/frontend/screens/Game/GamePage/actions/rowActivation.ts`,
+`meta/knip-baseline.txt` and `meta/backendDiCeilings/frontend-screens-game.json`; see "Findings" below. Every step was re-run at P after that commit (the worktree was moved to P with
+`git checkout --detach` and every step 1 to 18 ran again from the frozen-lockfile install), so the proof is at one head. The first pass ran at `0521d20d3` (88.1's docs head, the `main` HEAD after the
+last SUMMARY commit of 87-71..87-77) and found the three reds the fix removes; its Rust counts were identical to P's.
+
+Ancestry: 36 distinct commit hashes found in the 87-71 to 87-77 SUMMARYs resolve in this repo and every one is an ancestor of P (`git merge-base --is-ancestor`, 0 exceptions).
+P carries 360 commits beyond 0.13.1's source (`07b194604`): 195 are Phase 88 and 88.1 (scope `88` or `88.1` in the subject), 91 are Phase 94, and 29 are 87-71 to 87-78. `git diff --name-only 07b194604 P`
+lists 13543 files outside `.planning/` because of that history. `origin/main` is `c0f863946` (88.1-20), an ancestor of P; P is 16 commits ahead of it (13 at the start of the plan, plus 3 added while it ran).
+
+| Step | Command (as rust-test.yml / pre-push run it) | Outcome at P (87-68 at its P) |
+|------|-----------------------------------------------|-------------------------------|
+| 1 | `pnpm install --frozen-lockfile` | pass |
+| 2 | `pnpm exec vite build` | pass |
+| 3 | `pnpm build:sidecar-sea` | pass (arm64 SEA sidecar built) |
+| 4 | `cargo test -p gamelib-safety -p gamelib-testutil` | pass, 95 passed, 0 red (95) |
+| 5 | `cargo test -p gamelib-proc` | pass, 50 passed, 0 red (47) |
+| 6 | the 28-package `cargo test -p gamelib-scan ... -p gamelib-humble -p gamelib-shortcuts --no-fail-fast` step of rust-test.yml (194 test binaries) | pass, 3728 passed, 0 red, 9 ignored (2956, 7; the step gained gamelib-humble and gamelib-shortcuts) |
+| 7 | static codec linkage (`cargo build -p gamelib-depot-cli`, `otool -L`, no lzma/zstd/zlib) | pass (macOS leg form; links Security, CoreFoundation, libiconv, libSystem only) |
+| 8 | `cargo test -p gamelib-engine --features testing` | pass, 404 passed, 0 red (381) |
+| 9 | `cargo test -p gamelib-wine --features testing` | pass, 341 passed, 0 red (341) |
+| 10 | `cargo test --bin gamelib-shell` | pass, 1009 passed, 0 red, 2 ignored (870, 2) |
+| 11 | darwin clippy ratchet: `cargo +1.99.1 clippy --workspace --all-targets --message-format=json` then `node meta/clippyRatchet.cjs --list` | pass, `PASS (darwin, toolchain 1.99.1)` |
+| 12 | `pnpm check:ipc-contract` | pass (ipc_contract.rs and ipcSchemaSnapshot.json up to date) |
+| 13 | `pnpm test` (jest, 6 projects) | red, pre-existing and environmental only: 1109 suites passed (5 skipped), 25532 tests passed (38 skipped), 245 s; 5 suites red (16 tests), none caused by a cycle 2 commit, see "Findings" 2 to 5 (1108 suites / 24256 tests, 0 red at 87-68's P). `nativeSeamPortComplete.test.ts` (8 tests, a transient file race) and `phase70PassthroughCensus.test.ts` re-ran green alone, 118 passed |
+| 14 | `pnpm smoke:exit-check -- --mode eof` | pass, `sidecarExitCheck [eof]: PASS (exit latency 8 ms)` |
+| 15 | `pnpm smoke:sidecar` | pass, built, READY written, exited 0 on stdin EOF |
+| 16 | pre-push gate set: `pnpm codecheck`, `lint`, `prettier`, `i18n --fail-on-update`, `find-deadcode`, `boundaries`, `steam-line-ceiling`, `backend-di-ceilings`, `gameinfo-narrowing-ceiling` | all nine pass (exit 0 each) at P; lint 0 errors, 578 warnings. At `0521d20d3` `find-deadcode` and `backend-di-ceilings` were red (Finding 1) |
+| 17 | `pnpm planning-gates` | pass, 12/12 |
+| 18 | `pnpm lint-translations` | pass |
+
+The worktree was clean after the run (`git status --short` empty) and was removed with `git worktree remove`.
+
+### Findings
+
+1. **A gap plan broke two pre-push gates and one more ratchet (87-74), Rule 1.** At `0521d20d3` `pnpm find-deadcode` failed on three lines and `pnpm backend-di-ceilings` on one: `exports | src/frontend/screens/Game/GamePage/actions/rowActivation.ts | describeActivation`
+   (the function is used only inside the file, so it need not be exported); two `knip-baseline.txt` lines (`@testing-library/dom`, `@testing-library/user-event`) that no longer match because 87-74's `uninstallCancelKeepsSteamShortcut.test.tsx`
+   now imports both (the ratchet is shrink-only and asks for their removal); and `uninstallCancelKeepsSteamShortcut.test.tsx has 1 (jestMock) and no baseline entry`. Left alone, the pre-push hook would have blocked the push of the 87-74 commits.
+   Fixed on main in `02d0bd26d` (un-export, drop the two baseline lines, one `jestMock` baseline entry in `frontend-screens-game.json` as 87-68's `4cf38d88c` did for 87-67). `pnpm find-deadcode`, `pnpm backend-di-ceilings`,
+   `prettier --check` on the two checkable files (the `.txt` baseline has no prettier parser) and the 14 jest suites under `GamePage/actions`, `GamePage/components/InstallTab` and the two `backendDiCeilings` meta suites (373 tests) pass, and P moved to that commit.
+2. **`genI18nGateScope` "A-17 ANTI-ROT" is red, pre-existing** (`meta/i18nForkTouchedFiles.json` last changed in `2b1d7ce01`, 2026-11-23, no cycle 2 commit touches it): recorded in `deferred-items.md` under 87-17 and carried by the orchestrator as known red on main. Not fixed here.
+3. **`loginWindowSeamPredicateRemoved` (REQ-39-03, scope `src/backend/humble`) is red, pre-existing**: `src/backend/humble/__tests__/oracle/userHarness.ts:360` (`options.seam ?? {}`) comes from `1eb10a76a` (`test(94-09)`, Phase 94), not from 87-71 to 87-78. Not fixed here.
+4. **`iconGeometry.oracle.test.ts` is red (5 tests), pre-existing**: the `icon_geometry` golden folder under `src-tauri/crates/gamelib-shortcuts/tests/fixtures/golden/` was never committed (`git ls-files` lists none; `5cadce7b4` `feat(94-14)` says "golden replay pending Mac goldens"; test from `92ab71110`, Phase 94). It fails the same way in the main checkout. Not fixed here.
+5. **`valveClient.test.ts` "rejects a symlink entry" is red, environmental**: `/usr/bin/unzip` reports `symlink error: Permission denied` when extracting `bins_win64.symlink.fixture.zip` (reproduced by hand outside jest, in this executor's shell), so the cause string is `unzip extraction failed` and not `regular file`. The test and `valveClient.ts` are unchanged since `a3f93e43f` (2026-11-14), and the suite fails the same way in the main checkout. Not caused by any cycle 2 commit; not fixed here.
+6. **`nativeSeamPortComplete.test.ts` read the transient `meta/runTs.__probe__.cjs`** another suite writes and deletes (`ENOENT`, 8 tests): the race already logged in `deferred-items.md` under 87-68. It and `phase70PassthroughCensus.test.ts` passed on a re-run alone (118 tests).
+7. **Pre-existing reds, recorded not fixed:** the `Supply-chain audit` workflow (cargo-deny, RUSTSEC-2026-0594) and the `gamelib-depot` `tests/fetch.rs` timing tests (`deferred-items.md` 87-58); the depot timing tests passed in step 6 here.
+   No red step was caused by a Phase 88 or 88.1 commit; 88.1's open verification gap (CR-01 Windows `setupEnvVars`) is a Windows-leg matter this macOS proof cannot show and CI will.
+
 ## Signed builds (D-12)
 
 ### Phase 87 build (87-59, 2026-11-24)
