@@ -1,8 +1,8 @@
 ---
-status: fixed-pending-live
+status: resolved
 trigger: "RF1: non-Steam CrossOver launches started by GameLib (engine=crossover reason=cx-healthy) exit within 1 to 2 s on the signed 0.13.1 build, while Wine-Staging launches and a shell-run of the logged command work."
 created: 2026-11-25
-updated: 2026-11-25
+updated: 2026-11-26
 ---
 
 # Debug: RF1, CrossOver launches exit within two seconds
@@ -281,3 +281,7 @@ section above), so this plan started from `root-cause-named` with high confidenc
 - **Still open:** the live proof (re-run 2 item 3, scored by 87-79: two plain CrossOver launches in a row of Trash Goblin and
   Caravan SandWitch stay up). The nile `--wine-prefix <shared prefix>` observation was not replayed and is not changed by this fix;
   if Caravan SandWitch still exits after it, that is the second contribution the record kept open.
+
+## Live proof
+
+2026-11-26, re-run 2 item 3 (87-79, signed 0.13.2, launch 1): four CrossOver launches held 78 s to about 10 min, 4 `cancelled (first-match)`, 0 `cancelled (launcher-exited)`; item 4's Stop ended the game and its wineserver within 2 s.

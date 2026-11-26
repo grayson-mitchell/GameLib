@@ -53,3 +53,9 @@ when item 3 passes.
 demo-status probe started running and the launch spawns against that warm server, while the restore branch's switch kills it first and
 launches cold (confidence medium; the isolating shell run is 87-77's first step). See
 `.planning/debug/rf1-crossover-launches-exit-within-two-seconds.md`; 87-77 fixes it.
+
+## Resolved 2026-11-26
+
+Resolved by 87-77; proven live in re-run 2 item 3 (`87-RERUN-2-HUMAN-UAT.md`, 87-79) on the signed 0.13.2 build: four
+`engine=crossover reason=cx-healthy` launches (Trash Goblin three times, Caravan SandWitch once) each kept the game process 78 s
+to about 10 min, every deadline ended `cancelled (first-match)`, and 0 `cancelled (launcher-exited)` lines.

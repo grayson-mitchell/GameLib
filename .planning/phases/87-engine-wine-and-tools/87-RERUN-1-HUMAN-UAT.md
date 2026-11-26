@@ -600,3 +600,16 @@ issues: 2
 pending: 0
 skipped: 0
 blocked: 2
+
+## Re-run 2 (87-79)
+
+Re-run 2 (`87-RERUN-2-HUMAN-UAT.md`, run by 87-79 on the signed gap build 2, 0.13.2, 2026-11-26) re-scores the results below.
+The re-run 1 results above are left as written.
+
+| Re-run 1 result | Re-run 2 item | Re-run 2 result |
+|---|---|---|
+| item 1 issue (RF2 the launch never ended; RF5 the generic warning first) | 1 (offline refusal) and 2 (the warning's presence case) | 1 pass, 2 pass |
+| item 3 blocked (no 180 s hold title) | 5 | blocked (no title, again) |
+| item 5 blocked (RF1, CrossOver launches exit) | 3 (launches stay up) and 4 (Stop) | 3 pass, 4 pass |
+| item 7 issue (RF3 Cancel removed the shortcut; RF4 is-protected-root) | 6 | pass |
+| item 7's disabled-toggle legibility half (not runnable) | 7 | pass, on the Start Minimized fallback surface |
