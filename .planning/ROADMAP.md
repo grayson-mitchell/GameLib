@@ -1029,7 +1029,7 @@ Plans:
   3. The quit dialog gains a "game running" condition (D-27, a recorded behaviour change) read from the Rust running-game registry
   4. `commandRunner.ts` is deleted; closes on goldens, three-OS CI and a stub-game smoke (launch, quit-kill, survival of parent SIGKILL)
 
-**Plans:** 7/25 plans executed in 18 waves; planned 2026-11-26, re-sliced the same day so every plan fits the 100k smart-zone budget and stays below 15 files (goldens are recorded from the TS before each Rust slice, D-25; the quit prompt lands before games become Game-class)
+**Plans:** 8/25 plans executed in 18 waves; planned 2026-11-26, re-sliced the same day so every plan fits the 100k smart-zone budget and stays below 15 files (goldens are recorded from the TS before each Rust slice, D-25; the quit prompt lands before games become Game-class)
 
 Plans:
 **Wave 1**
@@ -1044,7 +1044,7 @@ Plans:
 - [x] 88.2-07-PLAN.md — Rust call_runner helper path: redacted command line, log hand-off, dedup, abort, 50-chunk window; golden_runner and runner_real
 
 **Wave 3** *(blocked on Wave 2 completion)*
-- [ ] 88.2-08-PLAN.md — Rust redaction vectors and the named auth log sanitizers; golden_redaction and golden_runner's sanitizer cases
+- [x] 88.2-08-PLAN.md — Rust redaction vectors and the named auth log sanitizers; golden_redaction and golden_runner's sanitizer cases
 
 **Wave 4** *(blocked on Wave 3 completion)*
 - [ ] 88.2-09-PLAN.md — Rust errorHandler and askForceUninstall over the ManagerHooks seam (game_title, force_uninstall)
