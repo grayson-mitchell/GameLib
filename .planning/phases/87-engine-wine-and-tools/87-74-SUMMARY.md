@@ -8,42 +8,83 @@ requires:
     provides: "87-71 (RERUN-1 findings RF1-RF6) and 87-69 (the re-run 1 evidence for RF3)"
 provides:
   - "RF3 traced hop by hop: every static path from the uninstall dialog to window.api.removeFromSteam is ruled out, and the one reachable class (a second activation that lands on the Show in Steam row after the dialog is gone) is named"
-  - "No code change and no test: the plan's own stop rule fired (Task 1 prohibition: never guess a fix)"
+  - "No code change and no test at the halt: the plan's own stop rule fired (Task 1 prohibition: never guess a fix)"
+  - "Completed 2026-11-26 through debug session rf3-cancel-removes-shortcut: a jsdom regression for every close path, Show in Steam activation-provenance logging, and two SwitchRow guards (held-key repeat; pointer click within 500 ms of a dialog close), each red before green"
 affects: [87-79, 87-RERUN-2-HUMAN-UAT item 6]
 actuals:
   tokens: 0
-  tasks: 0
-  commits: 0
+  tasks: 2
+  commits: 6
 plan_head_before: 90dc2c918ed579d0247f49d125f34d8e71cb2adc
-plan_head_after: 90dc2c918ed579d0247f49d125f34d8e71cb2adc
+plan_head_after: 149b6cc265e4e68b5a4ad44074140894b3382313
 tech-stack:
   added: []
-  patterns: []
+  patterns:
+    - "A Dialog stamps its close (dialogCloseClock); a SwitchRow ignores a pointer click (detail >= 1) within 500 ms of it and logs the drop; gamepad clicks (detail 0) and fresh keys still act"
 key-files:
-  created: []
-  modified: []
+  created:
+    - src/frontend/components/UI/Dialog/dialogCloseClock.ts
+    - src/frontend/components/UI/Dialog/__tests__/dialogCloseClock.test.tsx
+    - src/frontend/screens/Game/GamePage/actions/rowActivation.ts
+    - src/frontend/screens/Game/GamePage/components/InstallTab/__tests__/uninstallCancelKeepsSteamShortcut.test.tsx
+  modified:
+    - src/frontend/components/UI/Dialog/components/Dialog.tsx
+    - src/frontend/screens/Game/GamePage/actions/useSteamShortcut.ts
+    - src/frontend/screens/Game/GamePage/components/InstallTab/SwitchRow.tsx
+    - src/frontend/screens/Game/GamePage/components/InstallTab/__tests__/installTabSource.test.ts
+    - src/frontend/screens/Game/GamePage/__tests__/longRunningCallSiteGuard.test.ts
 key-decisions:
   - "Stopped at Task 1 without a code change: reading names no deterministic path from a dialog close to removeFromSteam, and the plan forbids guessing a fix"
-requirements-completed: []
+  - "2026-11-26, user decision after a live probe that did not reproduce: log and harden rather than leave T-87-143 open. The cut is in SwitchRow, not Dialog: one row is the proven sink, and a document-level swallower would touch every Dialog consumer"
+requirements-completed: [SVC-02]
 coverage:
   - id: D1
     description: "The RF3 event chain traced with file:line per hop, or the hops ruled out"
     requirement: SVC-02
-    verification: []
+    verification:
+      - ".planning/debug/resolved/rf3-cancel-removes-shortcut.md (H1-H4 eliminated; live probe, 11 Cancels, no second event)"
     human_judgment: true
-    rationale: "A trace by reading, with no failing test: the cause needs a live observation (see Next steps) before a fix can be tested"
+    rationale: "Every hop is ruled out or named; the re-run 1 activation stays unproven because it did not reproduce live"
   - id: D2
     description: "Cancel and every other close path of the uninstall dialog change nothing (regression test)"
     requirement: SVC-02
-    verification: []
-    human_judgment: true
-    rationale: "Not delivered: no cause was named, so no test that fails at HEAD could be written (Task 1 and Task 2 not executed)"
+    verification:
+      - "src/frontend/screens/Game/GamePage/components/InstallTab/__tests__/uninstallCancelKeepsSteamShortcut.test.tsx"
+      - "src/frontend/components/UI/Dialog/__tests__/dialogCloseClock.test.tsx"
+    human_judgment: false
+    rationale: "Close paths (No, header close, Escape, backdrop) leave removeFromSteam, addToSteam and uninstall uncalled; the held-key and click-after-No cases failed at the parent commit (5 failed / 10) and pass now"
 duration: 40min
-completed: 2026-11-25
-status: halted
+completed: 2026-11-26
+status: complete
 ---
 
 # Phase 87 Plan 74: RF3 trace (uninstall dialog Cancel removed the Steam shortcut) Summary
+
+> **Update 2026-11-26: complete.** The halt below was picked up by debug session
+> `.planning/debug/resolved/rf3-cancel-removes-shortcut.md`. Outcome:
+>
+> - **Cause:** still unproven. The removal at 19:16:59Z was real and could only come from the Show in Steam row's
+>   `onToggle`. The later refused uninstall (19:20:22Z), other `shortcuts.vdf` writers, a pointerdown close and a
+>   display-only change are all eliminated. A live probe (mouse, no controller, 11 Cancels) gave one click per press
+>   and restored focus to the Library nav tab, never to a switch row. RF3 did not reproduce.
+> - **Correction to the trace below:** a DOM harness exists (jsdom, RTL 14, user-event 14). Also, the uninstall dialog
+>   unmounts at once on No (`DangerZone.tsx:132`), so no 500 ms exit transition plays.
+> - **Delivered (user decision: log and harden):**
+>   - `cdb012218`: close-path regression test.
+>   - `bb14bf27d`: Dialog close stamp.
+>   - `6d7c1485c`: `[Shortcuts] Show in Steam activation:` provenance line.
+>   - `ae0f0ecce`: SwitchRow ignores `event.repeat`.
+>   - `7339ef23a`: SwitchRow drops a pointer click within 500 ms of a dialog close and logs `[SwitchRow] ignored a pointer click`.
+>   - `149b6cc26`: comment fix.
+>
+>   Each guard was red at its parent commit and green after it. Frontend: 396 suites, 6872 tests pass.
+> - **Live check (dev build):** turning Show in Steam off and on logged two activation lines. Three Cancels logged
+>   nothing.
+> - **T-87-143:** mitigated, not root-caused.
+> - **For 87-RERUN-2 item 6:** the build must include `149b6cc26`. Expect no `Show in Steam activation:` or
+>   `ignored a pointer click` line during Cancel. One `ignored a pointer click` line would confirm hop 9.
+>
+> The original halted trace follows unchanged, as history.
 
 **Plan halted at its own stop rule: `removeFromSteam` has exactly one renderer caller (the Show in Steam row), the uninstall dialog has no path to it, and the only reachable hop is a second user activation landing on the row after the dialog unmounts; no code or test changed.**
 
@@ -163,7 +204,7 @@ None.
 
 ## Threat Flags
 
-None. T-87-143 (a dialog close removing the user's Steam shortcut) stays open: no mitigation was applied.
+None. T-87-143 (a dialog close removing the user's Steam shortcut) was open at the halt; it is now mitigated by the 2026-11-26 guards (see the update at the top).
 
 ## Self-Check: PASSED
 
