@@ -1029,7 +1029,7 @@ Plans:
   3. The quit dialog gains a "game running" condition (D-27, a recorded behaviour change) read from the Rust running-game registry
   4. `commandRunner.ts` is deleted; closes on goldens, three-OS CI and a stub-game smoke (launch, quit-kill, survival of parent SIGKILL)
 
-**Plans:** 4/25 plans executed in 18 waves; planned 2026-11-26, re-sliced the same day so every plan fits the 100k smart-zone budget and stays below 15 files (goldens are recorded from the TS before each Rust slice, D-25; the quit prompt lands before games become Game-class)
+**Plans:** 5/25 plans executed in 18 waves; planned 2026-11-26, re-sliced the same day so every plan fits the 100k smart-zone budget and stays below 15 files (goldens are recorded from the TS before each Rust slice, D-25; the quit prompt lands before games become Game-class)
 
 Plans:
 **Wave 1**
@@ -1039,7 +1039,7 @@ Plans:
 **Wave 2** *(blocked on Wave 1 completion)*
 - [x] 88.2-03-PLAN.md — Goldens: the credential redaction vectors and the gog and nile auth log sanitizers
 - [x] 88.2-04-PLAN.md — Goldens: the wine launch variant (header, chunks, track, resolveOn), launch scripts and winepath; the commandRunner.test.ts census closed
-- [ ] 88.2-05-PLAN.md — Goldens: spawnAsync and errorHandler/askForceUninstall
+- [x] 88.2-05-PLAN.md — Goldens: spawnAsync and errorHandler/askForceUninstall
 - [ ] 88.2-06-PLAN.md — gamelib-proc Windows: GetProcessTimes stamp, named non-kill-on-close Game Job, kill over the Job, Windows orphan arms
 - [ ] 88.2-07-PLAN.md — Rust call_runner helper path: redacted command line, log hand-off, dedup, abort, 50-chunk window; golden_runner and runner_real
 
