@@ -12,8 +12,10 @@
 //! and the renderer's dialog frame) with the notice text rendered from the bundled `locales` in the user's
 //! language, both installed in the context.
 //!
-//! D-21: the only child processes an op may start are `reg.exe` (the Windows Desktop folder) and
-//! `powershell.exe` (the Windows `.lnk` writer), through `SpecProcRunner` as a helper, hidden and bounded. The crate reads no environment variable; this file
+//! D-21: the only child processes an op may start are `reg.exe` (the Windows Desktop folder, now only the
+//! fallback: the Desktop is read natively through `RegGetValueW`, UTF-16, installed in the context as
+//! `Win32ShellFolders`) and `powershell.exe` (the Windows `.lnk` writer), through `SpecProcRunner` as a
+//! helper, hidden and bounded. The crate reads no environment variable; this file
 //! supplies the home, the app data folder, the Linux Desktop folder and the Windows expansion
 //! environment.
 //!
@@ -309,14 +311,18 @@ pub(crate) fn build_ctx(
 ) -> ShortcutsCtx {
     // The Windows `.lnk` writer hands PowerShell exactly this snapshot (plus its own variables).
     let system_root = system_root_of(&expand_env);
-    ShortcutsCtx::new(host, Arc::new(SystemClock), platform, shutdown)
+    let ctx = ShortcutsCtx::new(host, Arc::new(SystemClock), platform, shutdown)
         .with_paths(paths)
         .with_proc(Arc::new(SpecProcRunner))
         .with_base_env(expand_env.clone())
         .with_system_root(system_root)
         .with_http(Arc::new(ReqwestHttp::new()))
         .with_expand_env(expand_env)
-        .with_log(Arc::new(ShellShortcutsLog))
+        .with_log(Arc::new(ShellShortcutsLog));
+    // The Windows shell folders are read natively (RegGetValueW); `reg.exe` stays the fallback.
+    #[cfg(windows)]
+    let ctx = ctx.with_shell_folders(Arc::new(gamelib_shortcuts::registry::Win32ShellFolders));
+    ctx
 }
 
 /// Builds the one context and stores it. Called from `run_setup` after the store host opened and
@@ -461,6 +467,16 @@ mod tests {
             Some(title) => vec![json!({ "appName": "App", "runner": "legendary", "title": title })],
             None => vec![json!({ "appName": "App", "runner": "legendary" })],
         }
+    }
+
+    #[test]
+    fn the_native_shell_folder_reader_is_installed_on_windows_only() {
+        let home = FakeHome::new("gamelib-shortcuts-dispatch-");
+        let ctx = test_ctx(&home, platform());
+        #[cfg(windows)]
+        assert!(ctx.shell_folders.is_some());
+        #[cfg(not(windows))]
+        assert!(ctx.shell_folders.is_none());
     }
 
     #[test]

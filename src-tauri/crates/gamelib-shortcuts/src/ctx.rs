@@ -12,6 +12,7 @@ use gamelib_store::host::StoreHost;
 use serde::{Deserialize, Serialize};
 
 use crate::http::{Http, NoHttp};
+use crate::registry::ShellFolderSource;
 
 /// The platform the app runs on, as the shell reports it (the crate never asks the OS).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -177,6 +178,10 @@ pub struct ShortcutsCtx {
     /// registered and reaped with GameLib. `None` headless; an op that needs a child then answers as
     /// if the child had not run.
     pub proc: Option<Arc<dyn SpecRunner>>,
+    /// The native registry reader the shell installs on Windows (`RegGetValueW`, UTF-16). `None` (headless,
+    /// every golden) means `reg.exe` through [`ShortcutsCtx::proc`] alone; a source with no answer falls
+    /// back to `reg.exe` too.
+    pub shell_folders: Option<Arc<dyn ShellFolderSource>>,
     /// The process environment `%VAR%` in a registry value expands against, snapshotted by the shell
     /// (Windows only). The crate reads no environment variable of its own.
     pub expand_env: Vec<(String, String)>,
@@ -228,6 +233,7 @@ impl ShortcutsCtx {
             shutdown,
             paths: ShortcutPaths::default(),
             proc: None,
+            shell_folders: None,
             expand_env: Vec::new(),
             base_env: Vec::new(),
             system_root: None,
@@ -253,6 +259,12 @@ impl ShortcutsCtx {
     /// Installs the spawn seam.
     pub fn with_proc(mut self, proc: Arc<dyn SpecRunner>) -> ShortcutsCtx {
         self.proc = Some(proc);
+        self
+    }
+
+    /// Installs the native registry reader for the Windows shell folders.
+    pub fn with_shell_folders(mut self, source: Arc<dyn ShellFolderSource>) -> ShortcutsCtx {
+        self.shell_folders = Some(source);
         self
     }
 

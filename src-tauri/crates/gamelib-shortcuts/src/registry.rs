@@ -2,11 +2,15 @@
 //! `readWindowsShellFolder` and its helpers in `backend/sidecar/knownFolders.ts`.
 //!
 //! The Desktop of a Windows user is a registry known folder (`User Shell Folders`), often redirected to
-//! OneDrive, so it cannot be guessed from the home directory. `reg.exe query` runs as a hidden, bounded
-//! helper through the injected `SpecRunner` (a GUI process that spawned a console would flash a window),
-//! its output is parsed, `%VAR%` is expanded against the shell-supplied environment and the result must be
-//! an absolute path. Anything else, a failed or timed-out query included, is `None`, and `None` means "no
-//! Desktop path": the caller never falls back to `<home>\Desktop`.
+//! OneDrive, so it cannot be guessed from the home directory. The primary read is the injected native
+//! [`ShellFolderSource`] (`RegGetValueW`, UTF-16, so a redirect outside the console code page arrives
+//! intact; quick 261128-7wv). `reg.exe query` is the fallback, used when no source is installed or it has
+//! no answer: it runs as a hidden, bounded helper through the injected `SpecRunner` (a GUI process that
+//! spawned a console would flash a window) and prints in the console code page, so its output can carry
+//! U+FFFD, which is rejected. Either way the value goes through one pipeline: `%VAR%` is expanded against
+//! the shell-supplied environment and the result must be an absolute path. Anything else, a failed or
+//! timed-out query included, is `None`, and `None` means "no Desktop path": the caller never falls back
+//! to `<home>\Desktop`.
 //!
 //! The crate reads no environment variable: the expansion environment is an argument.
 //!
@@ -27,6 +31,10 @@ use regex::{Captures, Regex};
 pub const USER_SHELL_FOLDERS_KEY: &str =
     "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders";
 
+/// The same key as a subkey of `HKEY_CURRENT_USER`, the form `RegGetValueW` takes.
+pub const USER_SHELL_FOLDERS_SUBKEY: &str =
+    "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders";
+
 /// How long `reg.exe query` may run (the TS `REG_QUERY_TIMEOUT_MS`).
 pub const REG_QUERY_TIMEOUT: Duration = Duration::from_millis(5_000);
 
@@ -43,6 +51,107 @@ impl WindowsShellFolder {
         match self {
             WindowsShellFolder::Desktop => "Desktop",
             WindowsShellFolder::Personal => "Personal",
+        }
+    }
+}
+
+/// The native reader of a `User Shell Folders` value, installed by the shell on Windows. It returns the
+/// raw, unexpanded data of a `REG_SZ` or `REG_EXPAND_SZ` value, or `None` when the value cannot be read.
+/// It takes the typed folder, not a name, so only the two known values can ever be read.
+pub trait ShellFolderSource: Send + Sync {
+    fn read(&self, folder: WindowsShellFolder) -> Option<String>;
+}
+
+/// The Windows registry API (`RegGetValueW` on `HKEY_CURRENT_USER`): UTF-16 data, so no console code
+/// page is involved. The value is returned unexpanded (`RRF_NOEXPAND`); `%VAR%` stays literal for
+/// [`expand_windows_env`].
+#[cfg(windows)]
+pub struct Win32ShellFolders;
+
+#[cfg(windows)]
+impl ShellFolderSource for Win32ShellFolders {
+    fn read(&self, folder: WindowsShellFolder) -> Option<String> {
+        use windows_sys::Win32::Foundation::ERROR_SUCCESS;
+        use windows_sys::Win32::System::Registry::{
+            RegGetValueW, HKEY_CURRENT_USER, RRF_NOEXPAND, RRF_RT_REG_EXPAND_SZ, RRF_RT_REG_SZ,
+        };
+
+        const MAX_U16: u32 = 32_768;
+        const FLAGS: u32 = RRF_RT_REG_SZ | RRF_RT_REG_EXPAND_SZ | RRF_NOEXPAND;
+        let wide = |s: &str| -> Vec<u16> { s.encode_utf16().chain(std::iter::once(0)).collect() };
+        let (sub, val) = (wide(USER_SHELL_FOLDERS_SUBKEY), wide(folder.value_name()));
+
+        // Size query (bytes, including the terminating NUL).
+        let mut bytes: u32 = 0;
+        // SAFETY: `sub` and `val` are NUL-terminated and outlive the call; a null data pointer with a
+        // valid `bytes` out-pointer is the documented size query.
+        let st = unsafe {
+            RegGetValueW(
+                HKEY_CURRENT_USER,
+                sub.as_ptr(),
+                val.as_ptr(),
+                FLAGS,
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
+                &mut bytes,
+            )
+        };
+        if st != ERROR_SUCCESS || bytes == 0 || bytes / 2 > MAX_U16 {
+            return None;
+        }
+        let mut buf = vec![0u16; (bytes as usize).div_ceil(2)];
+        let mut len = (buf.len() * 2) as u32;
+        // SAFETY: `buf` holds `len` bytes exactly (len == buf.len() * 2), the invariant RegGetValueW
+        // relies on for the write; the pointers are valid for the duration of the call.
+        let st = unsafe {
+            RegGetValueW(
+                HKEY_CURRENT_USER,
+                sub.as_ptr(),
+                val.as_ptr(),
+                FLAGS,
+                std::ptr::null_mut(),
+                buf.as_mut_ptr().cast(),
+                &mut len,
+            )
+        };
+        // Any other status, ERROR_MORE_DATA (a value that grew between the calls) included, is no answer.
+        if st != ERROR_SUCCESS {
+            return None;
+        }
+        let units = ((len as usize) / 2).min(buf.len());
+        let end = buf[..units].iter().position(|&c| c == 0).unwrap_or(units);
+        Some(String::from_utf16_lossy(&buf[..end]))
+    }
+}
+
+/// Why no Desktop path was found. [`ShellFolderMiss::reason`] is one fixed phrase per variant, so a log
+/// line can say why without ever carrying the value (it holds the user's name, T-28-04).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ShellFolderMiss {
+    /// Neither a native source nor a `SpecRunner` is installed.
+    NoReader,
+    /// The `reg.exe` query failed, timed out or was cancelled.
+    QueryFailed,
+    /// The `reg.exe` output held no matching value line.
+    ValueAbsent,
+    /// A `%VAR%` in the value is not in the expansion environment.
+    UnsetVariable,
+    /// The value is empty or not an absolute path.
+    NotAbsolute,
+    /// The value holds U+FFFD.
+    Mangled,
+}
+
+impl ShellFolderMiss {
+    /// A fixed phrase, never the value or the path.
+    pub fn reason(self) -> &'static str {
+        match self {
+            ShellFolderMiss::NoReader => "no registry reader",
+            ShellFolderMiss::QueryFailed => "the reg.exe query failed, timed out or was cancelled",
+            ShellFolderMiss::ValueAbsent => "the value is absent",
+            ShellFolderMiss::UnsetVariable => "a %VAR% in the value is unset",
+            ShellFolderMiss::NotAbsolute => "the value is not an absolute path",
+            ShellFolderMiss::Mangled => "the value holds U+FFFD, the reg.exe console code page",
         }
     }
 }
@@ -327,17 +436,37 @@ pub fn win32_normalize(path: &str) -> String {
     String::from_utf16_lossy(&out)
 }
 
-/// The redirected location of a Windows shell folder, or `None` when it cannot be read: the query failed,
-/// timed out or was cancelled, the value is absent, a variable is unset, the result is not an absolute
-/// path, or it holds U+FFFD (`reg.exe` prints in the console code page, so a path outside it comes back
-/// mangled; the registry default `%USERPROFILE%\Desktop` is ASCII and covers the OneDrive case).
-///
-/// One registry query per call: both callers are user-initiated, so there is no cache.
-pub async fn read_windows_shell_folder(
-    proc: &dyn SpecRunner,
+/// The one acceptance pipeline both the native and the `reg.exe` answer go through: expand `%VAR%`, require
+/// a non-empty absolute path, reject U+FFFD, normalise. The check order is the TS's: absolute before U+FFFD.
+fn accept_shell_folder_value(
+    raw: &str,
+    env: &[(String, String)],
+) -> Result<PathBuf, ShellFolderMiss> {
+    let expanded = expand_windows_env(raw, env).ok_or(ShellFolderMiss::UnsetVariable)?;
+    if expanded.is_empty() || !win32_is_absolute(&expanded) {
+        return Err(ShellFolderMiss::NotAbsolute);
+    }
+    if expanded.contains('\u{FFFD}') {
+        return Err(ShellFolderMiss::Mangled);
+    }
+    Ok(PathBuf::from(win32_normalize(&expanded)))
+}
+
+/// The redirected location of a Windows shell folder: the native `source` first, then `reg.exe` through
+/// `proc`. A native answer, accepted or not, is final (`reg.exe` would return the same data, only mangled
+/// by the console code page); the fallback is for "no native answer". `Err` says why there is no path.
+pub async fn read_windows_shell_folder_from(
+    source: Option<&dyn ShellFolderSource>,
+    proc: Option<&dyn SpecRunner>,
     folder: WindowsShellFolder,
     env: &[(String, String)],
-) -> Option<PathBuf> {
+) -> Result<PathBuf, ShellFolderMiss> {
+    if let Some(raw) = source.and_then(|s| s.read(folder)) {
+        return accept_shell_folder_value(&raw, env);
+    }
+    let Some(proc) = proc else {
+        return Err(ShellFolderMiss::NoReader);
+    };
     let name = folder.value_name();
     let mut spec = ProcSpec::new("shortcuts-reg", "reg.exe");
     spec.argv = vec![
@@ -351,15 +480,27 @@ pub async fn read_windows_shell_folder(
     spec.hide_window = true;
     let out = proc.run(spec, None).await;
     if out.code != Some(0) || out.timed_out || out.cancelled {
-        return None;
+        return Err(ShellFolderMiss::QueryFailed);
     }
-    let raw = parse_reg_query_value(&out.stdout, name)?;
-    let expanded = expand_windows_env(&raw, env)?;
-    if !expanded.is_empty() && win32_is_absolute(&expanded) && !expanded.contains('\u{FFFD}') {
-        Some(PathBuf::from(win32_normalize(&expanded)))
-    } else {
-        None
-    }
+    let raw = parse_reg_query_value(&out.stdout, name).ok_or(ShellFolderMiss::ValueAbsent)?;
+    accept_shell_folder_value(&raw, env)
+}
+
+/// The `reg.exe` read alone, as [`read_windows_shell_folder_from`] with no native source: the location,
+/// or `None` when the query failed, timed out or was cancelled, the value is absent, a variable is unset,
+/// the result is not an absolute path, or it holds U+FFFD (`reg.exe` prints in the console code page, so
+/// a path outside it comes back mangled; the registry default `%USERPROFILE%\Desktop` is ASCII and covers
+/// the OneDrive case).
+///
+/// One registry query per call: both callers are user-initiated, so there is no cache.
+pub async fn read_windows_shell_folder(
+    proc: &dyn SpecRunner,
+    folder: WindowsShellFolder,
+    env: &[(String, String)],
+) -> Option<PathBuf> {
+    read_windows_shell_folder_from(None, Some(proc), folder, env)
+        .await
+        .ok()
 }
 
 /// The Windows Desktop folder, or `None` (D-12: then there is no Desktop path).
@@ -420,6 +561,191 @@ mod tests {
         }
         for no in ["", "a", "C:a", "C:", "Z:Desktop", ".\\a"] {
             assert!(!win32_is_absolute(no), "{no}");
+        }
+    }
+
+    use crate::testing::ScriptedRunner;
+    use gamelib_core::process::SpecOutput;
+
+    /// A source answering the same raw value for any folder, recording what it was asked.
+    struct FakeSource {
+        answer: Option<String>,
+        asked: std::sync::Mutex<Vec<WindowsShellFolder>>,
+    }
+
+    impl FakeSource {
+        fn answering(answer: Option<&str>) -> FakeSource {
+            FakeSource {
+                answer: answer.map(str::to_string),
+                asked: std::sync::Mutex::new(Vec::new()),
+            }
+        }
+    }
+
+    impl ShellFolderSource for FakeSource {
+        fn read(&self, folder: WindowsShellFolder) -> Option<String> {
+            if let Ok(mut asked) = self.asked.lock() {
+                asked.push(folder);
+            }
+            self.answer.clone()
+        }
+    }
+
+    fn reg_stdout(value: &str) -> SpecOutput {
+        SpecOutput {
+            code: Some(0),
+            stdout: format!("\r\nHKEY\\x\r\n    Desktop    REG_SZ    {value}\r\n\r\n"),
+            ..SpecOutput::default()
+        }
+    }
+
+    #[test]
+    fn the_subkey_is_the_key_without_its_hive() {
+        assert_eq!(
+            USER_SHELL_FOLDERS_KEY,
+            format!("HKCU\\{USER_SHELL_FOLDERS_SUBKEY}")
+        );
+    }
+
+    #[tokio::test]
+    async fn a_native_answer_keeps_every_character_and_spawns_nothing() {
+        let source = FakeSource::answering(Some("C:\\Users\\Zoë\\OneDrive\\.\\デスクトップ"));
+        let runner = ScriptedRunner::answering(SpecOutput::default());
+        let got = read_windows_shell_folder_from(
+            Some(&source),
+            Some(&runner),
+            WindowsShellFolder::Desktop,
+            &[],
+        )
+        .await;
+        assert_eq!(
+            got,
+            Ok(PathBuf::from("C:\\Users\\Zoë\\OneDrive\\デスクトップ"))
+        );
+        assert!(runner.spawns().is_empty());
+        assert_eq!(
+            source.asked.lock().map(|a| a.clone()).unwrap_or_default(),
+            vec![WindowsShellFolder::Desktop]
+        );
+    }
+
+    #[tokio::test]
+    async fn a_native_answer_expands_against_the_environment() {
+        let source = FakeSource::answering(Some("%USERPROFILE%\\Desktop"));
+        let runner = ScriptedRunner::answering(SpecOutput::default());
+        let got = read_windows_shell_folder_from(
+            Some(&source),
+            Some(&runner),
+            WindowsShellFolder::Desktop,
+            &env(&[("USERPROFILE", "C:\\Users\\Zoë")]),
+        )
+        .await;
+        assert_eq!(got, Ok(PathBuf::from("C:\\Users\\Zoë\\Desktop")));
+        assert!(runner.spawns().is_empty());
+    }
+
+    #[tokio::test]
+    async fn no_native_answer_falls_back_to_one_hidden_bounded_reg_query() {
+        let source = FakeSource::answering(None);
+        let runner = ScriptedRunner::answering(reg_stdout("Z:\\GameLibOracle\\Desktop"));
+        let got = read_windows_shell_folder_from(
+            Some(&source),
+            Some(&runner),
+            WindowsShellFolder::Desktop,
+            &[],
+        )
+        .await;
+        assert_eq!(got, Ok(PathBuf::from("Z:\\GameLibOracle\\Desktop")));
+        let spawns = runner.spawns();
+        assert_eq!(spawns.len(), 1);
+        assert_eq!(spawns[0].program, "reg.exe");
+        assert!(spawns[0].hide_window);
+        assert_eq!(spawns[0].timeout, Some(REG_QUERY_TIMEOUT));
+    }
+
+    #[tokio::test]
+    async fn a_rejected_native_answer_does_not_fall_back() {
+        let runner = ScriptedRunner::answering(reg_stdout("Z:\\GameLibOracle\\Desktop"));
+        for (raw, miss) in [
+            ("Desktop", ShellFolderMiss::NotAbsolute),
+            ("", ShellFolderMiss::NotAbsolute),
+            ("%NOPE%\\Desktop", ShellFolderMiss::UnsetVariable),
+            ("C:\\Users\\\u{FFFD}\\Desktop", ShellFolderMiss::Mangled),
+        ] {
+            let source = FakeSource::answering(Some(raw));
+            let got = read_windows_shell_folder_from(
+                Some(&source),
+                Some(&runner),
+                WindowsShellFolder::Desktop,
+                &[],
+            )
+            .await;
+            assert_eq!(got, Err(miss), "{raw:?}");
+        }
+        assert!(runner.spawns().is_empty());
+    }
+
+    #[tokio::test]
+    async fn each_reg_exe_failure_names_its_miss() {
+        let mangled = ScriptedRunner::answering(reg_stdout("C:\\Users\\\u{FFFD}\\Desktop"));
+        assert_eq!(
+            read_windows_shell_folder_from(None, Some(&mangled), WindowsShellFolder::Desktop, &[])
+                .await,
+            Err(ShellFolderMiss::Mangled)
+        );
+        let failed = ScriptedRunner::answering(SpecOutput {
+            code: Some(1),
+            ..SpecOutput::default()
+        });
+        assert_eq!(
+            read_windows_shell_folder_from(None, Some(&failed), WindowsShellFolder::Desktop, &[])
+                .await,
+            Err(ShellFolderMiss::QueryFailed)
+        );
+        let absent = ScriptedRunner::answering(SpecOutput {
+            code: Some(0),
+            stdout: "nothing to see".to_string(),
+            ..SpecOutput::default()
+        });
+        assert_eq!(
+            read_windows_shell_folder_from(None, Some(&absent), WindowsShellFolder::Desktop, &[])
+                .await,
+            Err(ShellFolderMiss::ValueAbsent)
+        );
+        assert_eq!(
+            read_windows_shell_folder_from(None, None, WindowsShellFolder::Desktop, &[]).await,
+            Err(ShellFolderMiss::NoReader)
+        );
+    }
+
+    #[test]
+    fn every_miss_has_a_fixed_reason() {
+        for miss in [
+            ShellFolderMiss::NoReader,
+            ShellFolderMiss::QueryFailed,
+            ShellFolderMiss::ValueAbsent,
+            ShellFolderMiss::UnsetVariable,
+            ShellFolderMiss::NotAbsolute,
+            ShellFolderMiss::Mangled,
+        ] {
+            assert!(!miss.reason().is_empty());
+        }
+    }
+
+    /// A read-only probe of the real HKCU: the values Windows itself writes for every profile.
+    #[cfg(windows)]
+    #[test]
+    fn the_real_registry_answers_desktop_and_documents() {
+        for folder in [WindowsShellFolder::Desktop, WindowsShellFolder::Personal] {
+            let got = Win32ShellFolders.read(folder);
+            let value = got.unwrap_or_else(|| panic!("no value for {}", folder.value_name()));
+            assert!(!value.is_empty());
+            assert!(
+                win32_is_absolute(&value) || value.starts_with('%'),
+                "{}: not absolute or %-prefixed",
+                folder.value_name()
+            );
+            assert!(!value.contains('\u{FFFD}') && !value.contains('\0'));
         }
     }
 

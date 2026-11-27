@@ -39,14 +39,30 @@ pub fn shortcuts_exist_at(
     desktop.as_deref().is_some_and(present) || menu.as_deref().is_some_and(present)
 }
 
-/// The Windows Desktop folder, read from the registry (D-12); `None` off Windows. On Windows no answer (no
-/// runner, a failed query, an absent value) means there is no Desktop path, never a guessed one.
+/// The Windows Desktop folder, read from the registry (D-12): the native source first, then `reg.exe`;
+/// `None` off Windows. On Windows no answer (no reader, a failed query, an absent or rejected value)
+/// means there is no Desktop path, never a guessed one, and one line says why. The line carries a fixed
+/// phrase only: the value holds the user's name (T-28-04).
 pub(crate) async fn windows_desktop_for(ctx: &ShortcutsCtx) -> Option<PathBuf> {
-    match (ctx.platform, ctx.proc.as_deref()) {
-        (Platform::Windows, Some(proc)) => {
-            registry::windows_desktop_dir(proc, &ctx.expand_env).await
+    if ctx.platform != Platform::Windows {
+        return None;
+    }
+    match registry::read_windows_shell_folder_from(
+        ctx.shell_folders.as_deref(),
+        ctx.proc.as_deref(),
+        registry::WindowsShellFolder::Desktop,
+        &ctx.expand_env,
+    )
+    .await
+    {
+        Ok(dir) => Some(dir),
+        Err(miss) => {
+            ctx.note(&format!(
+                "shortcuts desktop: no Windows Desktop folder ({})",
+                miss.reason()
+            ));
+            None
         }
-        _ => None,
     }
 }
 
@@ -184,6 +200,76 @@ mod tests {
         let ctx = windows_ctx(&home, Some(Arc::clone(&failed)));
         assert!(shortcuts_exist(&ctx, Some("Plain Game")).await);
         assert_eq!(failed.spawns().len(), 1);
+    }
+
+    struct FixedSource(Option<String>);
+
+    impl registry::ShellFolderSource for FixedSource {
+        fn read(&self, _folder: registry::WindowsShellFolder) -> Option<String> {
+            self.0.clone()
+        }
+    }
+
+    #[derive(Default)]
+    struct RecordingLog(std::sync::Mutex<Vec<String>>);
+
+    impl crate::ctx::ShortcutsLog for RecordingLog {
+        fn line(&self, text: &str) {
+            if let Ok(mut lines) = self.0.lock() {
+                lines.push(text.to_string());
+            }
+        }
+    }
+
+    impl RecordingLog {
+        fn lines(&self) -> Vec<String> {
+            self.0.lock().map(|l| l.clone()).unwrap_or_default()
+        }
+    }
+
+    /// Windows only: the Desktop path is a real directory the link is seeded under, and a Windows path
+    /// (drive letter, backslashes) is only a usable path on Windows.
+    #[cfg(windows)]
+    #[tokio::test]
+    async fn a_native_source_finds_the_desktop_link_without_spawning() {
+        let home = FakeHome::new("gamelib-shortcuts-exists-");
+        let one_drive = home.root().join("OneDrive");
+        let desktop = one_drive.join("デスクトップ");
+        let runner = Arc::new(ScriptedRunner::answering(SpecOutput::default()));
+        // The native answer carries a `.` segment, which normalises away.
+        let raw = format!("{}\\.\\デスクトップ", one_drive.display());
+        let source = FixedSource(Some(raw));
+        let ctx =
+            windows_ctx(&home, Some(Arc::clone(&runner))).with_shell_folders(Arc::new(source));
+        let (desktop_link, _) =
+            shortcut_files(Platform::Windows, &ctx.paths, "Plain Game", Some(&desktop));
+        let desktop_link = desktop_link.expect("a Desktop link path");
+        std::fs::create_dir_all(desktop_link.parent().expect("a parent")).expect("desktop dir");
+        std::fs::write(&desktop_link, "").expect("desktop link");
+        assert!(shortcuts_exist(&ctx, Some("Plain Game")).await);
+        assert!(runner.spawns().is_empty());
+    }
+
+    #[tokio::test]
+    async fn a_missing_desktop_writes_one_line_without_the_value() {
+        let home = FakeHome::new("gamelib-shortcuts-exists-");
+        let log = Arc::new(RecordingLog::default());
+        let secret = "C:\\Users\\Zoë-Secret\\Desktop".to_string();
+        // A relative answer is rejected; the line must name the reason and never the value.
+        let ctx = windows_ctx(&home, None)
+            .with_shell_folders(Arc::new(FixedSource(Some("Zoë-Secret".to_string()))))
+            .with_log(Arc::clone(&log) as Arc<dyn crate::ctx::ShortcutsLog>);
+        assert!(!shortcuts_exist(&ctx, Some("Plain Game")).await);
+        let lines = log.lines();
+        assert_eq!(lines.len(), 1, "{lines:?}");
+        assert!(lines[0].starts_with("shortcuts desktop: no Windows Desktop folder ("));
+        assert!(!lines[0].contains("Zoë") && !lines[0].contains(&secret));
+        // No source and no runner: still exactly one line, a different reason.
+        let log = Arc::new(RecordingLog::default());
+        let ctx = windows_ctx(&home, None)
+            .with_log(Arc::clone(&log) as Arc<dyn crate::ctx::ShortcutsLog>);
+        assert!(!shortcuts_exist(&ctx, Some("Plain Game")).await);
+        assert_eq!(log.lines().len(), 1);
     }
 
     #[tokio::test]
