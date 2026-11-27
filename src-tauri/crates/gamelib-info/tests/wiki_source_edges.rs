@@ -346,7 +346,8 @@ async fn pcgamingwiki_reads_a_cargoquery_answer_without_cargoquery_as_no_gog_id(
     assert!(seen[0].contains("action=cargoquery"), "{seen:?}");
     assert!(seen[1].contains("list=search"), "{seen:?}");
     assert!(seen[2].contains("pageid=12"), "{seen:?}");
-    let lines = denied.lines.0.lock().unwrap();
+    // A copy, not the guard: the cases below await, and a MutexGuard must not live across that.
+    let lines = denied.lines.0.lock().unwrap().clone();
     assert!(
         lines
             .iter()
@@ -359,7 +360,6 @@ async fn pcgamingwiki_reads_a_cargoquery_answer_without_cargoquery_as_no_gog_id(
             "{line}"
         );
     }
-    drop(lines);
 
     // An empty object and a null `cargoquery` are the same answer.
     for body in [json!({}), json!({ "cargoquery": null })] {
