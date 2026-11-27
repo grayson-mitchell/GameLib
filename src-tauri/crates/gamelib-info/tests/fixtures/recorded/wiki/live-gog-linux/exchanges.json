@@ -324,5 +324,77 @@
       "bodyFile": "body-10.json"
     },
     "rustOnly": true
+  },
+  {
+    "id": "ex-11",
+    "request": {
+      "method": "GET",
+      "url": "https://www.pcgamingwiki.com/w/api.php?action=query&list=search&srsearch=Cyberpunk%202077&format=json",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/0.11.0 (+https://github.com/grayson-mitchell/GameLib)"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "date": "Sun, 22 Nov 2026 10:08:47 GMT",
+        "content-type": "application/json; charset=utf-8",
+        "connection": "keep-alive",
+        "report-to": "{\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://a.nel.cloudflare.com/report/v4?s=%2Bn4fgm6rDQnz9J40xR4pMbkCjj7c%2Fapr3TvKrm0TFvFgfJdYZkbDlxRup45vmrlcpgJZFXSIDKo%2FhoP8yXUxdnWBVjpDUp%2FtIC4EHukWoaQVDXLOc7aqUBbZcBw%2B9d9bPQqav5cz\"}]}",
+        "cache-control": "private, must-revalidate, max-age=0",
+        "content-disposition": "inline; filename=api-result.json",
+        "server": "cloudflare",
+        "vary": "Accept-Encoding,Treat-as-Untrusted,Cookie",
+        "via": "1.1 Caddy, 1.1 varnish (Varnish/7.0)",
+        "x-content-type-options": "nosniff",
+        "x-frame-options": "DENY",
+        "x-request-id": "1f773290a2a93efadac031db",
+        "x-varnish": "196089155",
+        "nel": "{\"report_to\":\"cf-nel\",\"success_fraction\":0.0,\"max_age\":604800}",
+        "age": "39795",
+        "last-modified": "Sun, 22 Nov 2026 10:07:45 GMT",
+        "cf-cache-status": "HIT",
+        "strict-transport-security": "max-age=15552000; includeSubDomains; preload",
+        "cf-ray": "a5e72286cb1f57a4-WLG"
+      },
+      "bodyFile": "body-11.json"
+    }
+  },
+  {
+    "id": "ex-12",
+    "request": {
+      "method": "GET",
+      "url": "https://www.pcgamingwiki.com/w/api.php?action=parse&format=json&pageid=97605&redirects=true&prop=wikitext",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "GameLib/0.11.0 (+https://github.com/grayson-mitchell/GameLib)"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "date": "Sun, 22 Nov 2026 10:08:47 GMT",
+        "content-type": "application/json; charset=utf-8",
+        "connection": "keep-alive",
+        "cache-control": "private, must-revalidate, max-age=0",
+        "content-disposition": "inline; filename=api-result.json",
+        "server": "cloudflare",
+        "vary": "Accept-Encoding,Treat-as-Untrusted,Cookie",
+        "via": "1.1 Caddy, 1.1 varnish (Varnish/7.0)",
+        "x-content-type-options": "nosniff",
+        "x-frame-options": "DENY",
+        "x-request-id": "c490f2d6f3626a18bc5dedc8",
+        "x-varnish": "199821912",
+        "nel": "{\"report_to\":\"cf-nel\",\"success_fraction\":0.0,\"max_age\":604800}",
+        "age": "4210",
+        "last-modified": "Sun, 22 Nov 2026 10:07:45 GMT",
+        "cf-cache-status": "HIT",
+        "strict-transport-security": "max-age=15552000; includeSubDomains; preload",
+        "report-to": "{\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://a.nel.cloudflare.com/report/v4?s=dEOAao%2BjKScv99F0Qt%2BXnoYI2fWMe7PaOAVQGOj1IvoKxqwaXn1Ui0Nr74C6oKcWmGCRC9f0hQSRW3hYH%2B0Hj5pt4B3Tn4qUwOF5aHIYFsqSXkrAXg3GYKj%2Blyj0MhDhM8vKJm1j\"}]}",
+        "cf-ray": "a5e72286db2757a4-WLG"
+      },
+      "bodyFile": "body-12.json"
+    }
   }
 ]

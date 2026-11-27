@@ -1,8 +1,10 @@
 //! The wiki sources' paths the recorded goldens do not reach (86-20): what each source does with an
 //! answer of the wrong shape, how the TS built each URL for awkward titles, which `User-Agent` each one
 //! sends, and what a diagnostic line may hold. Each expectation is what the TS code does for the same
-//! input (a property read of `undefined` throws and lands in the source's failure value), except the
-//! PCGamingWiki search term, which is now fully encoded (todo `2026-11-23-pcgw-search-term-not-url-encoded`).
+//! input (a property read of `undefined` throws and lands in the source's failure value), except two
+//! PCGamingWiki departures: the search term, which is now fully encoded (todo
+//! `2026-11-23-pcgw-search-term-not-url-encoded`), and a 2xx cargoquery answer without `cargoquery`,
+//! which is no GOG id (todo `2026-11-22-pcgw-cargoquery-permissiondenied-gog-lookup`).
 
 mod wiki_golden;
 
@@ -307,19 +309,6 @@ async fn pcgamingwiki_uses_the_gog_id_first_and_falls_back_to_the_title_search()
     );
     assert_eq!(urls(&empty).len(), 3);
 
-    // The live API's answer today: HTTP 200 with an error object and no `cargoquery`. Reading it throws.
-    let denied = run(vec![(
-        "action=cargoquery",
-        ok(json!({ "error": { "code": "permissiondenied" } })),
-    )]);
-    assert_eq!(
-        pcgw::get_info(&denied.ctx, "Cyberpunk 2077", Some("1"))
-            .await
-            .outcome,
-        Outcome::Error
-    );
-    assert_eq!(urls(&denied).len(), 1);
-
     // An empty GOG id is as absent as in JS: the cargoquery is skipped.
     let none = run(vec![(
         "list=search",
@@ -330,6 +319,85 @@ async fn pcgamingwiki_uses_the_gog_id_first_and_falls_back_to_the_title_search()
         Outcome::NotFound
     );
     assert_eq!(urls(&none).len(), 1);
+}
+
+#[tokio::test]
+async fn pcgamingwiki_reads_a_cargoquery_answer_without_cargoquery_as_no_gog_id() {
+    let page = ok(json!({ "parse": { "wikitext": { "*": "|steam appid  = 7\n" } } }));
+    let search_hit = || ok(json!({ "query": { "search": [ { "pageid": 12 } ] } }));
+
+    // The live API's answer today (HTTP 200, an error object, no `cargoquery`), then a title search
+    // that hits: the page is read, three requests in order, and the note holds no title or URL.
+    let denied = run(vec![
+        (
+            "action=cargoquery",
+            ok(json!({ "error": {
+                "code": "permissiondenied",
+                "info": "You don't have permission to run arbitrary Cargo queries."
+            } })),
+        ),
+        ("list=search", search_hit()),
+        ("pageid=12", page.clone()),
+    ]);
+    let got = pcgw::get_info(&denied.ctx, "Cyberpunk 2077", Some("1423049311")).await;
+    assert_eq!(got.outcome, Outcome::Ok);
+    let seen = urls(&denied);
+    assert_eq!(seen.len(), 3);
+    assert!(seen[0].contains("action=cargoquery"), "{seen:?}");
+    assert!(seen[1].contains("list=search"), "{seen:?}");
+    assert!(seen[2].contains("pageid=12"), "{seen:?}");
+    let lines = denied.lines.0.lock().unwrap();
+    assert!(
+        lines
+            .iter()
+            .any(|l| l.contains("pcgamingwiki gog id answer has no cargoquery, searching by title")),
+        "{lines:?}"
+    );
+    for line in lines.iter() {
+        assert!(
+            !line.contains("Cyberpunk") && !line.contains("://"),
+            "{line}"
+        );
+    }
+    drop(lines);
+
+    // An empty object and a null `cargoquery` are the same answer.
+    for body in [json!({}), json!({ "cargoquery": null })] {
+        let run = run(vec![
+            ("action=cargoquery", ok(body.clone())),
+            ("list=search", search_hit()),
+            ("pageid=12", page.clone()),
+        ]);
+        let got = pcgw::get_info(&run.ctx, "Cyberpunk 2077", Some("1423049311")).await;
+        assert_eq!(got.outcome, Outcome::Ok, "{body}");
+        assert_eq!(urls(&run).len(), 3, "{body}");
+    }
+
+    // A zero-hit search after it is notfound, not error.
+    let none = run(vec![
+        (
+            "action=cargoquery",
+            ok(json!({ "error": { "code": "permissiondenied" } })),
+        ),
+        ("list=search", ok(json!({ "query": { "search": [] } }))),
+    ]);
+    assert_eq!(
+        pcgw::get_info(&none.ctx, "Cyberpunk 2077", Some("1423049311"))
+            .await
+            .outcome,
+        Outcome::NotFound
+    );
+    assert_eq!(urls(&none).len(), 2);
+
+    // A failed request is not an answer that says there is no id: a 403 stays error, no search.
+    let forbidden = run(vec![("action=cargoquery", Ok((403, String::from("{}"))))]);
+    assert_eq!(
+        pcgw::get_info(&forbidden.ctx, "Cyberpunk 2077", Some("1423049311"))
+            .await
+            .outcome,
+        Outcome::Error
+    );
+    assert_eq!(urls(&forbidden).len(), 1);
 }
 
 #[tokio::test]

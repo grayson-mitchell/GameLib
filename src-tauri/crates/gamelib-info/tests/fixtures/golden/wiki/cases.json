@@ -83,7 +83,7 @@
   },
   {
     "id": "live-gog-mac",
-    "note": "GOG title on mac, through the real getExtraInfo: the GOG requests Rust will not make are tsOnly and Rust's own v2/games read is rustOnly (D-23). Live.",
+    "note": "GOG title on mac, through the real getExtraInfo: the GOG requests Rust will not make are tsOnly and Rust's own v2/games read is rustOnly (D-23). Live. The GOG-id cargoquery answers permissiondenied (live); since quick 261127-vna that is read as no GOG id and the PCGamingWiki title search and page read follow, their two exchanges (ex-10, ex-11) copied byte for byte from live-epic-mac ex-1 and ex-3, the same two requests recorded the same day.",
     "platform": "mac",
     "live": true,
     "crossoverIndex": true,
@@ -100,7 +100,7 @@
   },
   {
     "id": "live-gog-linux",
-    "note": "GOG title on linux: umu (gog store), the Steam id from GamesDB feeds ProtonDB and Steam Deck, plus the D-23 tsOnly and rustOnly exchanges. Live.",
+    "note": "GOG title on linux: umu (gog store), the Steam id from GamesDB feeds ProtonDB and Steam Deck, plus the D-23 tsOnly and rustOnly exchanges. Live. The GOG-id cargoquery answers permissiondenied (live); since quick 261127-vna that is read as no GOG id and the PCGamingWiki title search and page read follow, their two exchanges (ex-11, ex-12) copied byte for byte from live-epic-linux ex-1 and ex-3, the same two requests recorded the same day.",
     "platform": "linux",
     "live": true,
     "ops": [

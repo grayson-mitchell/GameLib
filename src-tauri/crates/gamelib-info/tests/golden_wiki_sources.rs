@@ -206,7 +206,7 @@ async fn pcgamingwiki_matches_every_ts_golden_that_asked_it() {
         }
     }
     // The goldens include every outcome: a found page, a page that is not there, and the failures
-    // (the 403 and the live GOG-id `permissiondenied` answer).
+    // (the two recorded 403s, `pcgw-403-is-error-not-notfound` and `stale-pcgw-error-status-refetches`).
     assert!(
         ok > 0 && not_found > 0 && error > 0,
         "{ok} {not_found} {error}"

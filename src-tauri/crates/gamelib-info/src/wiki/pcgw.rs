@@ -2,20 +2,23 @@
 //! the page id (a cargoquery by GOG id first, then a title search), the page's wikitext, and the scores,
 //! ids and lists read out of it.
 //!
-//! The requests are the ones the TS made and the 86-06 goldens pin (D-10), with one departure: the
-//! search term (the title with its first ` -` replaced by `:`) is encoded as `encodeURIComponent`
-//! would encode it (`crate::js::encode_uri_component`, as AppleGamingWiki's search does), where the TS
-//! encoded only its spaces. A `#`, `&`, `=` or `;` in a title therefore stays inside the term instead
-//! of cutting or splitting the URL (todo `2026-11-23-pcgw-search-term-not-url-encoded`; the TS was
-//! deleted in 86-24, so there is no parity left to keep). The page id goes into the URL as the JS
-//! template literal prints it, and each request carries the `GameLib/<version>` User-Agent.
+//! The requests are the ones the TS made and the 86-06 goldens pin (D-10), with two departures. The
+//! first: the search term (the title with its first ` -` replaced by `:`) is encoded as
+//! `encodeURIComponent` would encode it (`crate::js::encode_uri_component`, as AppleGamingWiki's search
+//! does), where the TS encoded only its spaces. A `#`, `&`, `=` or `;` in a title therefore stays inside
+//! the term instead of cutting or splitting the URL (todo `2026-11-23-pcgw-search-term-not-url-encoded`;
+//! the TS was deleted in 86-24, so there is no parity left to keep). The second: a 2xx answer to the
+//! GOG-id cargoquery that has no `cargoquery` property is read as no GOG id and falls through to the
+//! title search. The live API's `permissiondenied` error object (HTTP 200) is that answer today; the TS
+//! threw on it, so every GOG title was `error` and re-fetched on every visit (todo
+//! `2026-11-22-pcgw-cargoquery-permissiondenied-gog-lookup`). A non-2xx status or a transport failure of
+//! the cargo query is still `error`. The page id goes into the URL as the JS template literal prints
+//! it, and each request carries the `GameLib/<version>` User-Agent.
 //!
 //! Parity points copied, not fixed (D-03):
 //! - every failure (a status outside 2xx, a transport failure, an answer without the property the code
-//!   reads) is outcome `error`, which the wiki cache re-fetches; a page that is not there is `notfound`;
-//! - the GOG-id cargoquery's `permissiondenied` answer (HTTP 200 with an `error` object, which is what
-//!   the live API sends today) has no `cargoquery`, so reading it throws and every GOG title is `error`
-//!   (todo `2026-11-22-pcgw-cargoquery-permissiondenied-gog-lookup`);
+//!   reads, except the cargoquery answer above) is outcome `error`, which the wiki cache re-fetches; a
+//!   page that is not there is `notfound`;
 //! - an empty `direct3d versions` or `genres` is the list `[""]`, not `[]`.
 
 use gamelib_store::json::{Json, Obj};
@@ -187,11 +190,16 @@ async fn page_id(
             encode_uri_component(id)
         );
         let data = get_data(ctx, url, &agent).await?;
-        // `data.cargoquery[0]?.title?.pageID`
-        let first = index(prop(Some(&data), "cargoquery")?, 0)?;
-        let number = opt_prop(opt_prop(first, "title")?, "pageID")?;
-        if let Some(number) = number.filter(|n| truthy(n)) {
-            return Ok(Some(number.clone()));
+        // `data?.cargoquery?.[0]?.title?.pageID`: a 2xx answer without `cargoquery` (the live
+        // `permissiondenied` error object, `{}`, or a null `cargoquery`) is no GOG id, not a throw.
+        if let Some(cargoquery) = opt_prop(Some(&data), "cargoquery")?.filter(|v| !v.is_null()) {
+            let first = index(Some(cargoquery), 0)?;
+            let number = opt_prop(opt_prop(first, "title")?, "pageID")?;
+            if let Some(number) = number.filter(|n| truthy(n)) {
+                return Ok(Some(number.clone()));
+            }
+        } else {
+            ctx.note("pcgamingwiki gog id answer has no cargoquery, searching by title");
         }
     }
 
