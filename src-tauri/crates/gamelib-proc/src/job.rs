@@ -187,12 +187,17 @@ mod win {
         /// `None` when no such Job exists (the game and its descendants are gone, or it never had
         /// one).
         pub fn open(pid: u32, stamp: u64) -> Option<GameJob> {
+            GameJob::open_with_access(pid, stamp, JOB_OBJECT_TERMINATE | JOB_OBJECT_QUERY)
+        }
+
+        /// `open` with the access mask spelled out, so the harness can open a Job whose terminate
+        /// is refused (`kill_tree::harness_kill_game_tree_query_only_job`). The shell only ever
+        /// reaches it through `open`.
+        pub(crate) fn open_with_access(pid: u32, stamp: u64, access: u32) -> Option<GameJob> {
             let name = game_job_name(pid, stamp);
             // SAFETY: `name` is a NUL-terminated UTF-16 string that outlives the call; the call
             // returns null on failure.
-            let job = unsafe {
-                OpenJobObjectW(JOB_OBJECT_TERMINATE | JOB_OBJECT_QUERY, 0, name.as_ptr())
-            };
+            let job = unsafe { OpenJobObjectW(access, 0, name.as_ptr()) };
             if job.is_null() {
                 return None;
             }

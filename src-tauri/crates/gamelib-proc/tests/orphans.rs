@@ -584,6 +584,23 @@ fn read_game_stamp(paths: &Paths) -> (u32, u64) {
     (pid, stamp)
 }
 
+/// An unrelated process the kill must not touch: the stand-in in `idle` mode, spawned by the test
+/// with the fake profile applied. Its pid is registered with `strays` so CI never keeps it, and
+/// the returned `Child` is held by the caller until the end of the test.
+fn spawn_bystander(home: &FakeHome, strays: &mut Strays) -> (Child, u32) {
+    let mut cmd = Command::new(env!("CARGO_BIN_EXE_gamelib-proc-standin"));
+    cmd.arg("idle")
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    home.apply(&mut cmd);
+    let child = cmd.spawn().expect("spawn the bystander");
+    let pid = child.id();
+    strays.0.push(pid);
+    assert!(is_alive(pid), "the bystander is alive before the kill");
+    (child, pid)
+}
+
 /// SC2, the concurrency edge: a hard kill of the parent leaves the game and its grandchild alive (a
 /// Game is never in the reaper's set or a kill-on-close Job), and a stamp-checked kill from a
 /// different process (this test) then removes both. Liveness is probed from outside with
@@ -595,7 +612,8 @@ fn parent_killed_game_spared_then_stamped_kill_removes_its_tree() {
     let stamp_path = paths.game_stamp.to_string_lossy().into_owned();
     let mut run = Run::start_with(&home, &paths, &["--game-stamp", &stamp_path]);
     let games = run.pids("games");
-    let _strays = Strays(games.clone());
+    let mut strays = Strays(games.clone());
+    let (_bystander, bystander) = spawn_bystander(&home, &mut strays);
     let (pid, stamp) = read_game_stamp(&paths);
     assert_eq!(games.len(), 2, "the game and its game-child");
     assert_eq!(games[0], pid, "the stamp record names the game leader");
@@ -619,6 +637,10 @@ fn parent_killed_game_spared_then_stamped_kill_removes_its_tree() {
     wait_until("the game and its grandchild to die", || {
         games.iter().all(|g| !is_alive(*g))
     });
+    assert!(
+        is_alive(bystander),
+        "an unrelated process must survive the stamped kill"
+    );
 }
 
 #[cfg(unix)]
@@ -639,8 +661,9 @@ fn terminate_parent_spares_game_then_stamped_kill_removes_its_tree() {
 }
 
 /// The kill is stamp-checked (prohibition 5 at the mechanism): a stamp that is not the leader's
-/// start stamp, the shape of a recycled pid, answers `NotOurs` and signals nothing.
-fn wrong_stamp_kill_signals_nothing() {
+/// start stamp, the shape of a recycled pid, answers `NotOurs` and signals nothing. `wrong` maps the
+/// real stamp to the one passed: a newer one (`+ 1`) and an older one (a recycled pid's predecessor).
+fn wrong_stamp_kill_signals_nothing(wrong: impl Fn(u64) -> u64) {
     let home = FakeHome::new("gamelib-proc-orphans");
     let paths = Paths::new(&home);
     let stamp_path = paths.game_stamp.to_string_lossy().into_owned();
@@ -651,7 +674,7 @@ fn wrong_stamp_kill_signals_nothing() {
 
     run.kill_parent();
     run.wait_for_parent_exit();
-    let outcome = kill_game_tree(pid, stamp + 1, Duration::from_millis(1500));
+    let outcome = kill_game_tree(pid, wrong(stamp), Duration::from_millis(1500));
     assert_eq!(outcome, KillOutcome::NotOurs);
     // Alive is not enough (a stopped process is "alive"): the game must still be writing too.
     let before = file_len(&paths.game_log);
@@ -669,13 +692,147 @@ fn wrong_stamp_kill_signals_nothing() {
 #[cfg(unix)]
 #[test]
 fn stamped_kill_with_a_wrong_stamp_signals_nothing() {
-    wrong_stamp_kill_signals_nothing();
+    wrong_stamp_kill_signals_nothing(|stamp| stamp + 1);
+}
+
+#[cfg(unix)]
+#[test]
+fn stamped_kill_with_an_older_stamp_signals_nothing() {
+    wrong_stamp_kill_signals_nothing(|stamp| stamp.saturating_sub(1_000_000));
 }
 
 #[cfg(windows)]
 #[test]
 fn windows_stamped_kill_with_a_wrong_stamp_signals_nothing() {
-    wrong_stamp_kill_signals_nothing();
+    wrong_stamp_kill_signals_nothing(|stamp| stamp + 1);
+}
+
+#[cfg(windows)]
+#[test]
+fn windows_stamped_kill_with_an_older_stamp_signals_nothing() {
+    wrong_stamp_kill_signals_nothing(|stamp| stamp.saturating_sub(1_000_000));
+}
+
+/// A tracked game whose stand-in parent is still alive, so the parent's `GameHandle` keeps the named
+/// Game Job openable. The fields are held for the test's lifetime (the run keeps the parent alive,
+/// `strays` kills what is left).
+#[cfg(windows)]
+struct LiveJobGame {
+    _run: Run,
+    games: Vec<u32>,
+    _strays: Strays,
+    _bystander_child: Child,
+    bystander: u32,
+    pid: u32,
+    stamp: u64,
+}
+
+#[cfg(windows)]
+fn live_job_game(home: &FakeHome, paths: &Paths) -> LiveJobGame {
+    let stamp_path = paths.game_stamp.to_string_lossy().into_owned();
+    let run = Run::start_with(home, paths, &["--game-stamp", &stamp_path]);
+    let games = run.pids("games");
+    let mut strays = Strays(games.clone());
+    let (bystander_child, bystander) = spawn_bystander(home, &mut strays);
+    let (pid, stamp) = read_game_stamp(paths);
+    assert_eq!(games.len(), 2, "the game and its game-child");
+    assert!(
+        gamelib_proc::job::GameJob::open(pid, stamp).is_some(),
+        "the parent holds the Game Job, so its name opens (non-vacuity)"
+    );
+    LiveJobGame {
+        _run: run,
+        games,
+        _strays: strays,
+        _bystander_child: bystander_child,
+        bystander,
+        pid,
+        stamp,
+    }
+}
+
+/// The Job arm with a live name, never run on CI before: the parent is alive, `GameJob::open`
+/// finds the Job, `TerminateJobObject` ends the game and its grandchild, and the held leader reads
+/// as exited, so `Killed` is answered without the walk. A bystander survives.
+#[cfg(windows)]
+#[test]
+fn windows_stamped_kill_over_a_live_game_job_removes_its_tree() {
+    let home = FakeHome::new("gamelib-proc-orphans");
+    let paths = Paths::new(&home);
+    let live = live_job_game(&home, &paths);
+    let (games, bystander, pid, stamp) = (&live.games, live.bystander, live.pid, live.stamp);
+    let outcome = kill_game_tree(pid, stamp, Duration::from_millis(1500));
+    assert_eq!(outcome, KillOutcome::Killed);
+    wait_until("the game and its grandchild to die", || {
+        games.iter().all(|g| !is_alive(*g))
+    });
+    assert!(is_alive(bystander), "the bystander must survive");
+}
+
+/// WR-04: the Job is opened with query rights only, so its terminate fails. The kill must not
+/// answer `Killed` while the game runs: it falls back to the stamped walk, which ends the game and
+/// its grandchild. Red before the fix by construction (the terminate result was dropped).
+#[cfg(windows)]
+#[test]
+fn windows_a_game_job_that_cannot_terminate_falls_back_to_the_walk() {
+    let home = FakeHome::new("gamelib-proc-orphans");
+    let paths = Paths::new(&home);
+    let live = live_job_game(&home, &paths);
+    let (games, bystander, pid, stamp) = (&live.games, live.bystander, live.pid, live.stamp);
+    let outcome = gamelib_proc::kill_tree::harness_kill_game_tree_query_only_job(
+        pid,
+        stamp,
+        Duration::from_millis(1500),
+    );
+    assert_eq!(outcome, KillOutcome::Killed);
+    wait_until("the game and its grandchild to die", || {
+        games.iter().all(|g| !is_alive(*g))
+    });
+    assert!(is_alive(bystander), "the bystander must survive");
+}
+
+/// WR-04, the realistic hole: once the parent is gone the Game Job's name is free, and any process
+/// in the session can create a Job under it. An empty squatter terminates "successfully" and holds
+/// no active processes, so the old kill answered `Killed` while the game ran. Now the held leader
+/// is not signalled, so the kill walks the descendants instead.
+#[cfg(windows)]
+#[test]
+fn windows_a_squatted_game_job_name_falls_back_to_the_walk() {
+    use std::os::windows::io::{FromRawHandle, OwnedHandle};
+    use windows_sys::Win32::System::JobObjects::CreateJobObjectW;
+
+    let home = FakeHome::new("gamelib-proc-orphans");
+    let paths = Paths::new(&home);
+    let stamp_path = paths.game_stamp.to_string_lossy().into_owned();
+    let mut run = Run::start_with(&home, &paths, &["--game-stamp", &stamp_path]);
+    let games = run.pids("games");
+    let mut strays = Strays(games.clone());
+    let (_bystander_child, bystander) = spawn_bystander(&home, &mut strays);
+    let (pid, stamp) = read_game_stamp(&paths);
+
+    run.kill_parent();
+    run.wait_for_parent_exit();
+    // The same name format as `job.rs`'s private `game_job_name`.
+    let name: Vec<u16> = format!("Local\\GameLib-Game-{pid}-{stamp}")
+        .encode_utf16()
+        .chain(std::iter::once(0))
+        .collect();
+    // SAFETY: null attributes are allowed and `name` is NUL-terminated UTF-16 that outlives the call.
+    let raw = unsafe { CreateJobObjectW(std::ptr::null(), name.as_ptr()) };
+    assert!(!raw.is_null(), "create the squatting Job");
+    // SAFETY: `raw` is a valid, uniquely-owned handle, held until the end of the test.
+    let _squat = unsafe { OwnedHandle::from_raw_handle(raw as _) };
+    assert!(
+        gamelib_proc::job::GameJob::open(pid, stamp).is_some(),
+        "the squatting Job is the one the kill will open (non-vacuity)"
+    );
+
+    let outcome = kill_game_tree(pid, stamp, Duration::from_millis(1500));
+    assert_eq!(outcome, KillOutcome::Killed);
+    wait_until("the game and its grandchild to die", || {
+        games.iter().all(|g| !is_alive(*g))
+    });
+    assert!(is_alive(bystander), "the bystander must survive");
 }
 
 /// The own-handle path: the test spawns a `game-tree` game through `spawn_game_tracked`, whose

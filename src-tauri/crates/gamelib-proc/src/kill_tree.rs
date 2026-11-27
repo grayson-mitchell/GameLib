@@ -20,6 +20,8 @@ pub enum KillOutcome {
 pub use unix::{kill_game_tree, kill_process_group, terminate_group};
 #[cfg(unix)]
 pub(crate) use unix::{signal_group, terminate_known_group};
+#[cfg(all(windows, feature = "harness"))]
+pub use win::harness_kill_game_tree_query_only_job;
 #[cfg(windows)]
 pub use win::kill_game_tree;
 
@@ -116,6 +118,7 @@ mod win {
         CreateToolhelp32Snapshot, Process32FirstW, Process32NextW, PROCESSENTRY32W,
         TH32CS_SNAPPROCESS,
     };
+    use windows_sys::Win32::System::SystemServices::{JOB_OBJECT_QUERY, JOB_OBJECT_TERMINATE};
     use windows_sys::Win32::System::Threading::{
         OpenProcess, TerminateProcess, WaitForSingleObject, PROCESS_BASIC_INFORMATION,
         PROCESS_QUERY_LIMITED_INFORMATION, PROCESS_SYNCHRONIZE, PROCESS_TERMINATE,
@@ -248,19 +251,48 @@ mod win {
     /// (`terminate_stamped_tree`) and the line `game job not found; walking the descendants of the
     /// stamped leader` is logged.
     pub fn kill_game_tree(pid: u32, stamp: u64, grace: Duration) -> KillOutcome {
+        kill_with_job_access(pid, stamp, grace, JOB_OBJECT_TERMINATE | JOB_OBJECT_QUERY)
+    }
+
+    /// Test seam, compiled only with the `harness` feature (enabled by this crate's own
+    /// dev-dependency, never by the shell): `kill_game_tree` with the Game Job opened with query
+    /// rights only, so the Job's terminate is refused and the kill must fall back to the walk.
+    #[cfg(feature = "harness")]
+    pub fn harness_kill_game_tree_query_only_job(
+        pid: u32,
+        stamp: u64,
+        grace: Duration,
+    ) -> KillOutcome {
+        kill_with_job_access(pid, stamp, grace, JOB_OBJECT_QUERY)
+    }
+
+    /// The body of `kill_game_tree`, with the access mask the Game Job is opened with.
+    ///
+    /// The Job arm answers `Killed` only when the Job's terminate succeeded and the held leader is
+    /// signalled by the end of the settle wait. A Job whose terminate failed, or a Job of that name
+    /// that does not hold the leader (an empty one squatting the name terminates "successfully"
+    /// and reports no active processes), did not end the leader: the kill logs `game job did not
+    /// end the stamped leader; walking the descendants of the stamped leader` and walks instead.
+    fn kill_with_job_access(pid: u32, stamp: u64, grace: Duration, job_access: u32) -> KillOutcome {
         let leader = match open_verified_leader(pid, stamp) {
             Pin::Pinned(leader) => leader,
             Pin::Gone => return KillOutcome::Gone,
             Pin::NotOurs => return KillOutcome::NotOurs,
         };
         let deadline = Instant::now() + grace.min(TERMINATE_SETTLE);
-        match GameJob::open(pid, stamp) {
+        match GameJob::open_with_access(pid, stamp, job_access) {
             Some(job) => {
-                job.terminate();
-                while Instant::now() < deadline && job.active_processes().is_some_and(|n| n > 0) {
-                    std::thread::sleep(Duration::from_millis(20));
+                if job.terminate() {
+                    while Instant::now() < deadline && job.active_processes().is_some_and(|n| n > 0)
+                    {
+                        std::thread::sleep(Duration::from_millis(20));
+                    }
+                    if leader.wait_until(deadline) {
+                        return KillOutcome::Killed;
+                    }
                 }
-                KillOutcome::Killed
+                diag("game job did not end the stamped leader; walking the descendants of the stamped leader");
+                terminate_stamped_tree(&leader, deadline)
             }
             None => {
                 diag("game job not found; walking the descendants of the stamped leader");
