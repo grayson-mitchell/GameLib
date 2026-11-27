@@ -6,8 +6,11 @@
  *     localized desktop (`~/Schreibtisch`) or a moved one is honoured. The env var
  *     (`XDG_DESKTOP_DIR`) still wins when it is exported.
  *   - Windows: the `User Shell Folders` registry key, which is where OneDrive (and a user's own
- *     "Move" in the folder's Location tab) redirects Desktop and Documents. Read with `reg.exe`
- *     through the process runner (argv, no shell, no new native dependency), awaited by the two
+ *     "Move" in the folder's Location tab) redirects Desktop and Documents. Read first by the Rust
+ *     shell through RegGetValueW (UTF-16, rustInvoke `windows_shell_folder_read`), so a redirect
+ *     outside the console code page survives; `reg.exe` through the process runner (argv, no shell)
+ *     is the fallback when no native answer comes back, and its U+FFFD rejection guards that path.
+ *     Expansion happens here against the real environment (quick 261128-7wv). Awaited by the two
  *     win32 consumers (shortcuts.ts, save_sync.ts); `resolveKnownFolder` itself is sync and never reads it.
  *
  * Every lookup returns `undefined` when it cannot answer. The Linux lookup then falls back to
@@ -20,6 +23,8 @@
 import { readFileSync } from 'fs'
 import { homedir } from 'os'
 import { join, posix, win32 } from 'path'
+import { RUST_WINDOWS_SHELL_FOLDER_READ } from 'common/types/sidecarTransport'
+import type { RustInvokeDeps } from '../host/rustInvokeDeps'
 import type { ProcessRunner } from '../process/types'
 
 const REG_QUERY_TIMEOUT_MS = 5_000
@@ -115,18 +120,49 @@ export function expandWindowsEnv(
 }
 
 /**
+ * The one acceptance pipeline both the native and the `reg.exe` answer go through: expand `%VAR%`
+ * against `env`, require an absolute path with no U+FFFD, normalise. `undefined` when any step fails.
+ */
+function acceptShellFolderValue(
+  raw: string,
+  env: NodeJS.ProcessEnv
+): string | undefined {
+  const expanded = expandWindowsEnv(raw, env)
+  if (expanded && win32.isAbsolute(expanded) && !expanded.includes('\uFFFD')) {
+    return win32.normalize(expanded)
+  }
+  return undefined
+}
+
+/**
  * The redirected location of a Windows shell folder, or `undefined` when it cannot be read.
- * `reg.exe` prints in the console code page, so a path typed with characters outside it can
- * come back mangled; the registry default (`%USERPROFILE%\Desktop`) is ASCII and expanded here
- * from the real, UTF-16-safe environment, which covers the OneDrive case.
  *
- * One registry query per call: both consumers are user-initiated actions, so there is no cache.
+ * The value is read first by the Rust shell through RegGetValueW (UTF-16, rustInvoke
+ * `windows_shell_folder_read`), so a redirect holding characters outside the console code page
+ * survives (quick 261128-7wv). A string answer is final, accepted or not: `reg.exe` would return the
+ * same data, only mangled. `reg.exe` through the runner is the fallback when no native answer comes
+ * back (`null`, a rejection, a non-string answer, or no `requestRustInvoke` in `deps`). Its output
+ * is in the console code page, so a path outside it comes back mangled; the U+FFFD rejection guards
+ * that fallback. Expansion still happens here, against the real, UTF-16-safe environment.
+ *
+ * One registry read per call: both consumers are user-initiated actions, so there is no cache.
  */
 export async function readWindowsShellFolder(
-  deps: { runner: Pick<ProcessRunner, 'run'> },
+  deps: { runner: Pick<ProcessRunner, 'run'> } & Partial<RustInvokeDeps>,
   name: WindowsShellFolder,
   env: NodeJS.ProcessEnv = process.env
 ): Promise<string | undefined> {
+  if (deps.requestRustInvoke) {
+    try {
+      const native: unknown = await deps.requestRustInvoke(
+        RUST_WINDOWS_SHELL_FOLDER_READ,
+        [{ name }]
+      )
+      if (typeof native === 'string') return acceptShellFolderValue(native, env)
+    } catch {
+      // No native answer: the reg.exe path below answers.
+    }
+  }
   try {
     const result = await deps.runner.run(
       'reg.exe',
@@ -135,15 +171,7 @@ export async function readWindowsShellFolder(
     )
     if (result.code !== 0 || result.timedOut) return undefined
     const raw = parseRegQueryValue(result.stdout, name)
-    const expanded = raw === undefined ? undefined : expandWindowsEnv(raw, env)
-    if (
-      expanded &&
-      win32.isAbsolute(expanded) &&
-      !expanded.includes('\uFFFD')
-    ) {
-      return win32.normalize(expanded)
-    }
-    return undefined
+    return raw === undefined ? undefined : acceptShellFolderValue(raw, env)
   } catch {
     return undefined
   }

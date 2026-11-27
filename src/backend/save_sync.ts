@@ -12,14 +12,17 @@ import {
 import type { AppPaths } from 'backend/process/context'
 import type { CommandRunner, Launcher, StoreManagers } from './services/types'
 import type { ProcessRunner } from './process/types'
+import type { RustInvokeDeps } from './host/rustInvokeDeps'
 import { readWindowsShellFolder } from './sidecar/knownFolders'
 import { LegendaryAppName } from './storeManagers/legendary/commands/base'
 import { deriveLegendaryPaths } from './storeManagers/legendary/constants'
 
 /** What the save-path resolvers read: the managers, `getWinePath` and the wine prefix helpers (66.1, R3). */
 export interface SaveSyncDeps {
-  /** reg.exe for the redirected Documents folder on win32. */
+  /** reg.exe for the redirected Documents folder on win32: the fallback when the native read has no answer. */
   runner: Pick<ProcessRunner, 'run'>
+  /** The native, UTF-16 Documents read on win32; when it is absent, reg.exe alone answers. */
+  requestRustInvoke?: RustInvokeDeps['requestRustInvoke']
   managers: Pick<StoreManagers, 'library'>
   commandRunner: Pick<CommandRunner, 'getWinePath'>
   launcher: Pick<Launcher, 'setupWineEnvVars' | 'verifyWinePrefix'>

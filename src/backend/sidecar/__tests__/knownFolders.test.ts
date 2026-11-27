@@ -1,8 +1,10 @@
 /**
  * Pure-parser tests for `knownFolders.ts`: `user-dirs.dirs` (Linux) and `reg query` output plus
- * `%VAR%` expansion (Windows), and `readWindowsShellFolder` over a scripted runner. Nothing here
- * reads the real profile or runs `reg.exe`.
+ * `%VAR%` expansion (Windows), and `readWindowsShellFolder` over a scripted runner and a fake
+ * native `requestRustInvoke` (quick 261128-7wv). Nothing here reads the real profile or runs
+ * `reg.exe`.
  */
+import { RUST_WINDOWS_SHELL_FOLDER_READ } from 'common/types/sidecarTransport'
 import {
   expandWindowsEnv,
   parseRegQueryValue,
@@ -166,5 +168,92 @@ describe('readWindowsShellFolder', () => {
     await expect(
       readWindowsShellFolder({ runner }, 'Desktop', env)
     ).resolves.toBeUndefined()
+  })
+
+  describe('native read first (quick 261128-7wv)', () => {
+    /** A plain async fake that records its calls; no jest.mock (testContainment). */
+    const nativeAnswering = (answer: () => Promise<unknown>) => {
+      const calls: unknown[][] = []
+      const requestRustInvoke = (async (...args: unknown[]) => {
+        calls.push(args)
+        return answer()
+      }) as unknown as NonNullable<
+        Parameters<typeof readWindowsShellFolder>[0]['requestRustInvoke']
+      >
+      return { calls, requestRustInvoke }
+    }
+    const regAnswer = () =>
+      createScriptedRunner([
+        {
+          cmd: 'reg.exe',
+          result: { code: 0, stdout: regOut('Personal', 'REG_SZ', 'D:\\Docs') }
+        }
+      ])
+
+    it('keeps every character of a native answer and spawns no reg.exe', async () => {
+      const runner = createScriptedRunner([])
+      const native = nativeAnswering(() =>
+        Promise.resolve('C:\\Users\\Zoë\\OneDrive\\.\\ドキュメント')
+      )
+      await expect(
+        readWindowsShellFolder(
+          { runner, requestRustInvoke: native.requestRustInvoke },
+          'Personal',
+          env
+        )
+      ).resolves.toBe('C:\\Users\\Zoë\\OneDrive\\ドキュメント')
+      expect(native.calls).toEqual([
+        [RUST_WINDOWS_SHELL_FOLDER_READ, [{ name: 'Personal' }]]
+      ])
+      expect(runner.calls).toHaveLength(0)
+    })
+
+    it('expands a native %VAR% value against the environment', async () => {
+      const runner = createScriptedRunner([])
+      const native = nativeAnswering(() =>
+        Promise.resolve('%USERPROFILE%\\OneDrive\\Documents')
+      )
+      await expect(
+        readWindowsShellFolder(
+          { runner, requestRustInvoke: native.requestRustInvoke },
+          'Personal',
+          env
+        )
+      ).resolves.toBe('C:\\Users\\Jörg\\OneDrive\\Documents')
+      expect(runner.calls).toHaveLength(0)
+    })
+
+    it('falls back to reg.exe on a null, a non-string or a rejected native answer', async () => {
+      for (const answer of [
+        () => Promise.resolve(null),
+        () => Promise.resolve(42),
+        (): Promise<unknown> => Promise.reject(new Error('rust unavailable'))
+      ]) {
+        const runner = regAnswer()
+        const native = nativeAnswering(answer)
+        await expect(
+          readWindowsShellFolder(
+            { runner, requestRustInvoke: native.requestRustInvoke },
+            'Personal',
+            env
+          )
+        ).resolves.toBe('D:\\Docs')
+        expect(runner.calls).toHaveLength(1)
+        expect(runner.calls[0]?.argv).toEqual(['query', KEY, '/v', 'Personal'])
+      }
+    })
+
+    it('does not fall back after a rejected native answer', async () => {
+      const runner = regAnswer()
+      const native = nativeAnswering(() => Promise.resolve('Documents'))
+      await expect(
+        readWindowsShellFolder(
+          { runner, requestRustInvoke: native.requestRustInvoke },
+          'Personal',
+          env
+        )
+      ).resolves.toBeUndefined()
+      expect(runner.calls).toHaveLength(0)
+    })
   })
 })
