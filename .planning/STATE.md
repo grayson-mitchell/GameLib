@@ -6,10 +6,10 @@ current_phase: "88.2"
 current_phase_name: Command runner and game processes
 status: executing
 stopped_at: Completed 88.2-29-PLAN.md
-last_updated: "2026-11-27T10:21:58.742Z"
+last_updated: "2026-11-27T10:27:28.228Z"
 last_activity: 2026-11-27
 last_activity_desc: Phase 88.2 execution started
-state_head: d1746b737047124b8beb257dedc67c6dd284bfeb
+state_head: 1c80bc9c2d4674f3d868d942aef8ff09d33823b7
 progress:
   total_phases: 26
   completed_phases: 23
@@ -1396,6 +1396,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261127-u6h | Keep profile paths and env values out of the wine_command and Running command gamelib.log lines | 2026-11-27 | 685d02372 | — | [261127-u6h-keep-profile-paths-and-env-values-out-of](./quick/261127-u6h-keep-profile-paths-and-env-values-out-of/) |
 | 261127-vbq | Runtime-cache allow-list RUNTIME_CACHE_NAMES owns nothing the store table does not already own (Phase 85 review B-WR-10) | 2026-11-27 | 8327bc074 | — | [261127-vbq-runtime-cache-allow-list-runtime-cache-n](./quick/261127-vbq-runtime-cache-allow-list-runtime-cache-n/) |
 | 261127-vna | Treat a PCGamingWiki cargoquery error body as no GOG id and fall through to title search | 2026-11-27 | 41f920566 | — | [261127-vna-treat-a-pcgamingwiki-cargoquery-error-bo](./quick/261127-vna-treat-a-pcgamingwiki-cargoquery-error-bo/) |
+| 261127-vy3 | Offline dev tool to import umu-protonfixes as candidate local fixes | 2026-11-27 | 1c80bc9c2 | — | [261127-vy3-offline-dev-tool-to-import-umu-protonfix](./quick/261127-vy3-offline-dev-tool-to-import-umu-protonfix/) |
 
 ## Deferred Items
 
