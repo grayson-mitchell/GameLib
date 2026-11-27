@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: "88.3"
 current_phase_name: Launch funnel, re-adoption and the live gate
 status: executing
-stopped_at: Completed 88.3-06-PLAN.md
-last_updated: "2026-11-27T22:02:08.195Z"
+stopped_at: Completed 88.3-07-PLAN.md
+last_updated: "2026-11-27T22:31:46.449Z"
 last_activity: 2026-11-27
 last_activity_desc: Phase 88.3 execution started
-state_head: 95fb4e015e64061cd7e085ee9c43c92fe211f2e7
+state_head: b7e66f9e954c612cd4c5cdbfbd0adb9dfe26c792
 progress:
   total_phases: 26
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-25)
 ## Current Position
 
 Phase: 88.3 (Launch funnel, re-adoption and the live gate) — EXECUTING
-Plan: 8 of 22
+Plan: 9 of 22
 Status: Ready to execute
 Last activity: 2026-11-27 — Phase 88.3 execution started
 Progress: [████████████████░░░░] 204/257 plans ([█████████░] 88%)
@@ -584,6 +584,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 88.3 P04 | not measured | 2 tasks | 19 files |
 | Phase 88.3 P05 | 35min | 3 tasks | 22 files |
 | Phase 88.3 P06 | 50min | 2 tasks | 12 files |
+| Phase 88.3 P07 | 35min | 3 tasks | 17 files |
 
 ## Accumulated Context
 
@@ -1322,6 +1323,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 88.3]: 88.3-04: new ManagerHooks ops launch_facts and launch default to unavailable until 88.3-06 implements them in the shell
 - [Phase 88.3]: 88.3-05: every branch of the TS funnel is in run_launch; a rejection the TS let escape the launch answers a fixed launch:<what>:<word> and leaves undone what the TS left undone (D-20)
 - [Phase 88.3]: 88.3-06: funnel hook payloads fixed (launch_facts, launch, sync_saves, set_presence, clear_presence, persist_bottle_wine_version, update_gog_playtime, wine_settings_write); false = store defines none (presence, bottle) or sync threw
+- [Phase 88.3]: 88.3-07: the quit-kill bookkeeping runs under the killed game's own handle lock so the funnel tail cannot start before it finishes; the record is removed only by SessionGuard::finish, never by drop
 
 ### Pending Todos
 
@@ -1615,8 +1617,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-27T22:02:04.068Z
-Stopped at: Completed 88.3-06-PLAN.md
+Last session: 2026-11-27T22:31:42.517Z
+Stopped at: Completed 88.3-07-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
