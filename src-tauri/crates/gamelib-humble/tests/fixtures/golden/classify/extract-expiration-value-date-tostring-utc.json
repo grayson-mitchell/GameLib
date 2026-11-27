@@ -1,0 +1,11 @@
+{
+  "fn": "extractExpiration",
+  "input": {
+    "tpk": {
+      "expiry_date": "Sat Aug 01 2026 12:34:56 GMT+0200 (Central European Summer Time)"
+    },
+    "now": "2026-07-06T00:00:00.000Z",
+    "tz": "UTC"
+  },
+  "output": "2026-08-01T10:34:56.000Z"
+}

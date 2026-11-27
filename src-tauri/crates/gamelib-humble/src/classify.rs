@@ -1909,6 +1909,190 @@ mod tests {
         }
     }
 
+    /// 261128-2xo: V8 checks a day only against 1..31 and accepts a bare year, a year-month, a
+    /// two-digit year and years 0000-0999, so each of these parses to a date nobody wrote.
+    /// `has_full_calendar_date` is the second gate; a rejected value behaves like an unparseable
+    /// one. The same values are 94-06 oracle vectors recorded from the TS.
+    mod extract_expiration_calendar_date_rule {
+        use super::*;
+
+        const REJECTED: [&str; 25] = [
+            // The user's eight.
+            "2026-02-30",
+            "2026-04-31",
+            "February 30, 2026",
+            "2026",
+            "2026-08",
+            "8/1/26",
+            "8/1",
+            "0050-01-01",
+            // The rest of the vector table.
+            "2026-06-31",
+            "2026-09-31",
+            "2026-11-31",
+            "2026-02-29",
+            "1900-02-29",
+            "2026-02-30T12:00:00Z",
+            "Mon, 30 Feb 2026 12:00:00 GMT",
+            "02/30/2026",
+            "31 April 2026",
+            "2026 Feb 30",
+            "Aug 2026",
+            "Aug 1, 26",
+            "8/1/0026",
+            "0999-12-31",
+            "+002026-08-01",
+            "Feb 28 GMT+2026",
+            "Feb 30 2026 (Mar)",
+        ];
+
+        fn with_expiry(value: &str) -> JsValue {
+            j(json!({ "expiry_date": value }))
+        }
+
+        /// every rejected value is parsed by the parser, fails the rule, and extracts to None
+        #[test]
+        fn every_rejected_value_parses_but_is_none_in_every_zone() {
+            for value in REJECTED {
+                for zone in zones() {
+                    let parsed = parse_js_date(value, zone).expect("the parser accepts it");
+                    assert!(
+                        !has_full_calendar_date(value, parsed),
+                        "{value} should fail the rule"
+                    );
+                    assert_eq!(
+                        extract_expiration(&with_expiry(value), now(), zone),
+                        None,
+                        "{value}"
+                    );
+                }
+            }
+        }
+
+        /// the parser accepts the values the rule exists for (so the rule is what rejects them)
+        #[test]
+        fn the_parser_accepts_what_the_rule_rejects() {
+            for value in REJECTED {
+                assert!(
+                    parse_js_date(value, LocalZone::UTC).is_some(),
+                    "{value} is accepted by the parser"
+                );
+            }
+        }
+
+        /// kept values with an explicit zone give the exact ISO, in every zone
+        #[test]
+        fn zoned_values_are_kept_exactly() {
+            let table = [
+                ("2026-08-01T12:34:56Z", "2026-08-01T12:34:56.000Z"),
+                ("Sat, 01 Aug 2026 12:34:56 GMT", "2026-08-01T12:34:56.000Z"),
+                ("2026-04-30T23:59:59Z", "2026-04-30T23:59:59.000Z"),
+                ("2026-12-31T23:59:59-12:00", "2027-01-01T11:59:59.000Z"),
+                ("2026-01-01T00:00:00+14:00", "2025-12-31T10:00:00.000Z"),
+                (
+                    "Sat Aug 01 2026 12:34:56 GMT+0200 (Central European Summer Time)",
+                    "2026-08-01T10:34:56.000Z",
+                ),
+            ];
+            for (value, iso) in table {
+                for zone in zones() {
+                    assert_eq!(
+                        extract_expiration(&with_expiry(value), now(), zone).as_deref(),
+                        Some(iso),
+                        "{value}"
+                    );
+                }
+            }
+        }
+
+        /// kept date-only and zone-less values, in UTC (the Rust tests run in UTC)
+        #[test]
+        fn date_only_and_zone_less_values_are_kept_in_utc() {
+            let table = [
+                ("2026-08-01", "2026-08-01T00:00:00.000Z"),
+                ("2026-08-01 12:34", "2026-08-01T12:34:00.000Z"),
+                ("March 5, 2020", "2020-03-05T00:00:00.000Z"),
+                ("1000-01-01", "1000-01-01T00:00:00.000Z"),
+                ("9999-12-31", "9999-12-31T00:00:00.000Z"),
+                ("2000-02-29", "2000-02-29T00:00:00.000Z"),
+                (" 2026-08-01 ", "2026-08-01T00:00:00.000Z"),
+            ];
+            for (value, iso) in table {
+                assert_eq!(
+                    extract(&with_expiry(value)).as_deref(),
+                    Some(iso),
+                    "{value}"
+                );
+            }
+        }
+
+        /// a day-first or year-first month name is kept on its own calendar date in every zone
+        #[test]
+        fn month_name_forms_keep_their_calendar_date_in_every_zone() {
+            for value in ["5 March 2020", "2020 Mar 5", "March 5, 2020"] {
+                for zone in zones() {
+                    let out = extract_expiration(&with_expiry(value), now(), zone)
+                        .unwrap_or_else(|| panic!("{value} is kept"));
+                    assert_eq!(local_date(&out, zone), (2020, 3, 5), "{value}");
+                }
+            }
+        }
+
+        /// a rejected value falls through to the next absolute field
+        #[test]
+        fn a_rejected_value_falls_through_to_the_next_field() {
+            let out = extract(&js(
+                r#"{"expiry_date":"2026-02-30","expiration":"2026-09-01T00:00:00Z"}"#,
+            ));
+            assert_eq!(out.as_deref(), Some("2026-09-01T00:00:00.000Z"));
+        }
+
+        /// a rejected value falls back to the relative day count, else None
+        #[test]
+        fn a_rejected_value_falls_back_to_the_relative_count_else_none() {
+            let out = extract(&js(
+                r#"{"expiry_date":"2026-02-30","num_days_until_expired":30}"#,
+            ));
+            assert_eq!(out.as_deref(), Some("2026-08-05T00:00:00.000Z"));
+            assert_eq!(extract(&js(r#"{"expiry_date":"2026-02-30"}"#)), None);
+        }
+
+        /// a calendar-invalid deadline_date on the UNPICKED pseudo-entry degrades to None (WR-07
+        /// routing)
+        #[test]
+        fn a_calendar_invalid_deadline_degrades_to_none() {
+            let mut invalid = fixture("unpickedChoiceMonthOrder");
+            set_in(
+                &mut invalid,
+                &["product", "deadline_date"],
+                JsValue::String("2026-02-30".to_string()),
+            );
+            let entry = classify(&invalid, never_revealed);
+            assert_eq!(entry.keys.len(), 1);
+            assert_eq!(first(&entry).state, HumbleKeyState::Unpicked);
+            assert_eq!(first(&entry).expiration, None);
+        }
+
+        /// a 200,000-character zero-padded year is accepted by the parser and rejected by the rule,
+        /// promptly (no pattern backtracks across a digit run)
+        #[test]
+        fn a_very_long_zero_padded_year_is_rejected() {
+            let value = format!("8/1/{}2026", "0".repeat(200_000));
+            assert!(parse_js_date(&value, LocalZone::UTC).is_some());
+            assert_eq!(extract(&with_expiry(&value)), None);
+        }
+
+        /// the two parser misreads: V8 reads a different date than the written one, and the
+        /// one-day check rejects them
+        #[test]
+        fn a_value_the_parser_reads_differently_from_what_is_written_is_rejected() {
+            for value in ["Feb 28 GMT+2026", "Feb 30 2026 (Mar)"] {
+                let parsed = parse_js_date(value, LocalZone::UTC).expect("the parser accepts it");
+                assert!(!has_full_calendar_date(value, parsed), "{value}");
+            }
+        }
+    }
+
     mod classify_order_real_world_expiration_wiring {
         use super::*;
 

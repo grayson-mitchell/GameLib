@@ -1,0 +1,11 @@
+{
+  "fn": "extractExpiration",
+  "input": {
+    "tpk": {
+      "expiry_date": "8/1/0026"
+    },
+    "now": "2026-07-06T00:00:00.000Z",
+    "tz": "America/Phoenix"
+  },
+  "output": null
+}

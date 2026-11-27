@@ -777,6 +777,136 @@ describe('extractExpiration — real-world field tolerance', () => {
   })
 })
 
+// 261128-2xo: V8 checks a day only against 1..31 and accepts a bare year, a
+// year-month, a two-digit year and years 0000-0999, so each of these parses to a
+// date nobody wrote. `hasFullCalendarDate` is the second gate; a rejected value
+// behaves like an unparseable one. The same values are 94-06 oracle vectors and
+// replay in Rust (`mod extract_expiration_calendar_date_rule`).
+describe('extractExpiration — calendar-invalid and partial dates are rejected (261128-2xo)', () => {
+  const NOW = new Date('2026-07-06T00:00:00Z')
+
+  const REJECTED: string[] = [
+    // The user's eight.
+    '2026-02-30',
+    '2026-04-31',
+    'February 30, 2026',
+    '2026',
+    '2026-08',
+    '8/1/26',
+    '8/1',
+    '0050-01-01',
+    // The rest of the vector table.
+    '2026-06-31',
+    '2026-09-31',
+    '2026-11-31',
+    '2026-02-29',
+    '1900-02-29',
+    '2026-02-30T12:00:00Z',
+    'Mon, 30 Feb 2026 12:00:00 GMT',
+    '02/30/2026',
+    '31 April 2026',
+    '2026 Feb 30',
+    'Aug 2026',
+    'Aug 1, 26',
+    '8/1/0026',
+    '0999-12-31',
+    '+002026-08-01',
+    'Feb 28 GMT+2026',
+    'Feb 30 2026 (Mar)'
+  ]
+
+  test.each(REJECTED)('%s is parsed by V8 yet rejected -> null', (value) => {
+    expect(Number.isNaN(new Date(value).getTime())).toBe(false)
+    expect(extractExpiration({ expiry_date: value }, NOW)).toBe(null)
+  })
+
+  const KEPT_EXACT: [string, string][] = [
+    ['2026-08-01T12:34:56Z', '2026-08-01T12:34:56.000Z'],
+    ['Sat, 01 Aug 2026 12:34:56 GMT', '2026-08-01T12:34:56.000Z'],
+    ['2026-04-30T23:59:59Z', '2026-04-30T23:59:59.000Z'],
+    ['2026-12-31T23:59:59-12:00', '2027-01-01T11:59:59.000Z'],
+    ['2026-01-01T00:00:00+14:00', '2025-12-31T10:00:00.000Z'],
+    [
+      'Sat Aug 01 2026 12:34:56 GMT+0200 (Central European Summer Time)',
+      '2026-08-01T10:34:56.000Z'
+    ]
+  ]
+
+  test.each(KEPT_EXACT)('%s is kept as %s', (value, iso) => {
+    expect(extractExpiration({ expiry_date: value }, NOW)).toBe(iso)
+  })
+
+  // Date-only and zone-less values are anchored to the HOST's local zone, so
+  // read local calendar parts (year, zero-based month, day), as the i31 tests do.
+  const KEPT_LOCAL: [string, number, number, number][] = [
+    ['2026-08-01', 2026, 7, 1],
+    ['2026-08-01 12:34', 2026, 7, 1],
+    ['March 5, 2020', 2020, 2, 5],
+    ['5 March 2020', 2020, 2, 5],
+    ['2020 Mar 5', 2020, 2, 5],
+    ['1000-01-01', 1000, 0, 1],
+    ['9999-12-31', 9999, 11, 31],
+    ['2000-02-29', 2000, 1, 29]
+  ]
+
+  test.each(KEPT_LOCAL)(
+    '%s is kept on its own calendar date',
+    (value, y, m, d) => {
+      const out = extractExpiration({ expiry_date: value }, NOW)
+      expect(out).not.toBe(null)
+      const result = new Date(out as string)
+      expect(result.getFullYear()).toBe(y)
+      expect(result.getMonth()).toBe(m)
+      expect(result.getDate()).toBe(d)
+    }
+  )
+
+  test('a whitespace-padded date is still kept (the rule reads the untrimmed value)', () => {
+    expect(extractExpiration({ expiry_date: ' 2026-08-01 ' }, NOW)).not.toBe(
+      null
+    )
+  })
+
+  test('a rejected value falls through to the next absolute field', () => {
+    expect(
+      extractExpiration(
+        { expiry_date: '2026-02-30', expiration: '2026-09-01T00:00:00Z' },
+        NOW
+      )
+    ).toBe('2026-09-01T00:00:00.000Z')
+  })
+
+  test('a rejected value falls back to the relative day count, else null', () => {
+    expect(
+      extractExpiration(
+        { expiry_date: '2026-02-30', num_days_until_expired: 30 },
+        NOW
+      )
+    ).toBe('2026-08-05T00:00:00.000Z')
+    expect(extractExpiration({ expiry_date: '2026-02-30' }, NOW)).toBe(null)
+  })
+
+  test('a calendar-invalid deadline_date on the UNPICKED pseudo-entry degrades to null (WR-07 routing)', () => {
+    const invalid = {
+      ...unpickedChoiceMonthOrder,
+      product: {
+        ...unpickedChoiceMonthOrder.product,
+        deadline_date: '2026-02-30'
+      }
+    }
+    const entry = classifyOrder(invalid, NEVER_REVEALED)
+    expect(entry.keys).toHaveLength(1)
+    expect(defined(entry.keys[0], 'entry.keys[0]').state).toBe('UNPICKED')
+    expect(defined(entry.keys[0], 'entry.keys[0]').expiration).toBe(null)
+  })
+
+  test('a 200,000-character zero-padded year is rejected promptly (linear, no backtracking)', () => {
+    const value = '8/1/' + '0'.repeat(200_000) + '2026'
+    expect(Number.isNaN(new Date(value).getTime())).toBe(false)
+    expect(extractExpiration({ expiry_date: value }, NOW)).toBe(null)
+  })
+})
+
 describe('classifyOrder — real-world expiration wiring (round 4)', () => {
   const NOW = new Date('2026-07-06T00:00:00Z')
 

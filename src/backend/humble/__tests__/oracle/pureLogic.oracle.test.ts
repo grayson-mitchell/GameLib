@@ -27,6 +27,8 @@
  * daylight saving) and the zone is part of the input. the real `TZ` is switched per case (see `realProcess`) and
  * the switch is checked, so a host that ignored it fails the run instead of recording a lie.
  *
+ * The `extractExpiration` value rows include the 261128-2xo calendar-rule vectors, rejected and kept.
+ *
  * Secrets. A key value is never a golden: every non-empty string under `redeemed_key_val`,
  * `redeemed_key_value` (and the like) is replaced with `REDACTED` BEFORE the TS runs, so the
  * recorded input and output agree. The classifier only reads whether a value is present.
@@ -454,7 +456,45 @@ function classifyCases(): OracleCase[] {
     ['non-string-number', 1785000000, false],
     ['non-string-null', null, false],
     ['non-string-bool', true, false],
-    ['non-string-object', { date: '2026-08-01' }, false]
+    ['non-string-object', { date: '2026-08-01' }, false],
+    // 261128-2xo calendar-rule vectors. Rejected (record null): V8 accepts every one of these.
+    // Every row whose year is before 1970 is UTC-only: the Rust replay uses fixed offsets, V8
+    // uses local mean time there.
+    ['date-only-apr-31', '2026-04-31', false],
+    ['date-only-jun-31', '2026-06-31', false],
+    ['date-only-sep-31', '2026-09-31', false],
+    ['date-only-nov-31', '2026-11-31', false],
+    ['date-only-feb-29-common-year', '2026-02-29', false],
+    ['date-only-feb-29-1900', '1900-02-29', false],
+    ['iso-time-feb-30', '2026-02-30T12:00:00Z', false],
+    ['rfc-2822-feb-30', 'Mon, 30 Feb 2026 12:00:00 GMT', false],
+    ['long-month-feb-30', 'February 30, 2026', true],
+    ['us-slash-feb-30', '02/30/2026', true],
+    ['day-first-month-apr-31', '31 April 2026', true],
+    ['year-first-month-feb-30', '2026 Feb 30', true],
+    ['no-year', '8/1', true],
+    ['month-year-no-day', 'Aug 2026', true],
+    ['month-name-two-digit-year', 'Aug 1, 26', true],
+    ['zero-padded-two-digit-year', '8/1/0026', true],
+    ['year-0050', '0050-01-01', false],
+    ['year-0999', '0999-12-31', false],
+    ['extended-year', '+002026-08-01', false],
+    ['misread-zone-before-year', 'Feb 28 GMT+2026', false],
+    ['misread-parenthesized-month', 'Feb 30 2026 (Mar)', false],
+    // 261128-2xo calendar-rule vectors that stay kept.
+    ['year-1000', '1000-01-01', false],
+    ['year-9999', '9999-12-31', false],
+    ['date-only-leap-day-2000', '2000-02-29', false],
+    ['iso-last-day-of-april', '2026-04-30T23:59:59Z', false],
+    ['iso-far-west-offset', '2026-12-31T23:59:59-12:00', false],
+    ['iso-far-east-offset', '2026-01-01T00:00:00+14:00', false],
+    [
+      'date-tostring',
+      'Sat Aug 01 2026 12:34:56 GMT+0200 (Central European Summer Time)',
+      false
+    ],
+    ['day-first-month', '5 March 2020', true],
+    ['year-first-month', '2020 Mar 5', true]
   ]
   for (const [label, value, zoned] of values) {
     for (const zone of zoned ? ZONES : [ZONES[0]]) {
@@ -525,6 +565,14 @@ function classifyCases(): OracleCase[] {
     [
       'relative-when-absolute-unparseable',
       { num_days_until_expired: 30, expiry_date: 'nope' }
+    ],
+    [
+      'calendar-invalid-falls-through',
+      { expiry_date: '2026-02-30', expiration_date: '2026-09-01T00:00:00Z' }
+    ],
+    [
+      'relative-when-absolute-calendar-invalid',
+      { num_days_until_expired: 30, expiry_date: '2026-02-30' }
     ]
   ]
   for (const [label, tpk] of precedence) {
@@ -550,7 +598,9 @@ function classifyCases(): OracleCase[] {
       'iso-z',
       'rfc-2822',
       'date-only',
+      'date-only-feb-30',
       'long-month',
+      'long-month-feb-30',
       'no-zone-time',
       'not-a-date',
       'slash-date'
