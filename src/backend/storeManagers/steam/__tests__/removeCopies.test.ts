@@ -193,7 +193,6 @@ jest.mock('../depot', () => ({
 }))
 
 // ── backend/launcher mock ─────────────────────────────────────────────────────
-jest.mock('backend/launcher', () => ({ runWineCommand: jest.fn() }))
 
 // ── bridge/* mocks ─────────────────────────────────────────────────────────────
 jest.mock('../bridge/allowlist', () => ({
