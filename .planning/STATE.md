@@ -79,7 +79,7 @@ See: .planning/PROJECT.md (updated 2026-11-25)
 Phase: 88.2 (Command runner and game processes) — EXECUTING
 Plan: 31 of 31
 Status: Ready to execute
-Last activity: 2026-11-27 — Phase 88.2 execution started
+Last activity: 2026-11-27 — Completed quick task 261127-v8b: GOG elevation live check closeout and Windows uninstall keeps in-folder saves
 Progress: [████████████████░░░░] 204/257 plans ([█████████░] 88%)
 
 ## Native-Install Arc Phase Map (21–25)
@@ -1401,6 +1401,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261127-vna | Treat a PCGamingWiki cargoquery error body as no GOG id and fall through to title search | 2026-11-27 | 41f920566 | — | [261127-vna-treat-a-pcgamingwiki-cargoquery-error-bo](./quick/261127-vna-treat-a-pcgamingwiki-cargoquery-error-bo/) |
 | 261127-vy3 | Offline dev tool to import umu-protonfixes as candidate local fixes | 2026-11-27 | 1c80bc9c2 | — | [261127-vy3-offline-dev-tool-to-import-umu-protonfix](./quick/261127-vy3-offline-dev-tool-to-import-umu-protonfix/) |
 | 261127-w77 | Humble expiry digest: the date layout follows the UI language instead of always en-US M/D/YYYY | 2026-11-27 | b784475dc | — | [261127-w77-humble-expiry-digest-date-layout-follows](./quick/261127-w77-humble-expiry-digest-date-layout-follows/) |
+| 261127-v8b | GOG Windows elevation live check closed (2026-11-27, tauri:dev on Windows 11): one UAC prompt for setup (3 steps batched), decline warns with no further prompts, uninstall one prompt and no keep-saves dialog, path with a space works, inner PowerShell hidden; uninstall elevation kept (Inno self-elevates, setup writes HKLM). Fixed: GOG uninstall deleted save folders inside the install folder after unins000.exe /KEEPSAVES; it now deletes around stored gogSaves and cached <?INSTALL?> save folders (new gog/keepSaves.ts, per-entry guarded deletes under the install trust root). Two follow-up todos filed. | 2026-11-27 | fc573a723, 60f03419c, e4e2269d1 | targeted jest 45/45 pass on Windows; codecheck, backend-di-ceilings, boundaries, find-deadcode, planning gates green; live re-check of a kept Balrum save OWED | [261127-v8b-gog-elevation-live-check-closeout-and-wi](./quick/261127-v8b-gog-elevation-live-check-closeout-and-wi/) |
 
 ## Deferred Items
 
