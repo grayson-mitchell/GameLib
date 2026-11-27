@@ -569,6 +569,44 @@ fn graceful_quit_kills_spec_child_and_grandchild() {
     assert_helpers_die_and_game_survives(&run, &paths);
 }
 
+/// WR-01: a helper's group member that ignores SIGTERM must not outlive a graceful quit. The
+/// stand-in's `--stubborn-tree` flag adds two helpers (an owned one from `spawn_helper_with_pipes`
+/// and a tokio-registered one through `SpecProcRunner`), each with a grandchild that ignores
+/// SIGTERM. The helpers themselves end on SIGTERM, so only a group-based wait plus the SIGKILL at
+/// the deadline reaches the grandchildren.
+#[cfg(unix)]
+#[test]
+fn graceful_quit_sigkills_helper_grandchildren_that_ignore_sigterm() {
+    let home = FakeHome::new("gamelib-proc-orphans");
+    let paths = Paths::new(&home);
+    let mut run = Run::start_with(&home, &paths, &["--stubborn-tree"]);
+    let _strays = Strays(
+        run.pids("games")
+            .into_iter()
+            .chain(run.pids("helpers"))
+            .chain(run.pids("grandchildren"))
+            .collect(),
+    );
+    let helpers = run.pids("helpers");
+    let grandchildren = run.pids("grandchildren");
+    assert_eq!(
+        helpers.len(),
+        5,
+        "the two stubborn trees are helpers 4 and 5"
+    );
+    assert_eq!(grandchildren.len(), 3, "and their grandchildren 2 and 3");
+    for p in helpers[3..].iter().chain(grandchildren[1..].iter()) {
+        assert!(is_alive(*p), "pid {p} alive before quit");
+    }
+
+    run.quit();
+    run.wait_for_parent_exit();
+    wait_until("the stubborn grandchildren to die", || {
+        grandchildren[1..].iter().all(|p| !is_alive(*p))
+    });
+    assert_helpers_die_and_game_survives(&run, &paths);
+}
+
 /// The game's `<pid> <stamp>` record the stand-in wrote for `--game-stamp`.
 fn read_game_stamp(paths: &Paths) -> (u32, u64) {
     let text = std::fs::read_to_string(&paths.game_stamp).expect("the stand-in wrote a game stamp");

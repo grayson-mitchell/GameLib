@@ -20,6 +20,12 @@
 //!   plain std `Command` (so it shares the child's group or Job), prints its own pid and the
 //!   grandchild's as two lines on stdout, then idles. `parent --spec-tree` runs it through
 //!   `SpecProcRunner`, as an engine or wine port runs a helper that starts further processes.
+//! - `stubborn`: sets SIGTERM to ignored (unix; elsewhere it just idles), prints `ready` on stdout
+//!   once that is in place, then idles. Only SIGKILL ends it.
+//! - `stubborn-tree`: `spec-tree` with a `stubborn` grandchild. Waits for `go` on stdin, spawns one
+//!   `stubborn` grandchild with a plain std `Command` (so it shares the child's group or Job), waits
+//!   for its `ready`, prints its own pid and the grandchild's as two lines on stdout, then idles.
+//!   The leader itself ends on SIGTERM; its grandchild does not (WR-01).
 //! - `lines`: prints its own pid as one line on stdout, then idles (the streaming-runner test).
 //! - `--gamelib-reaper` (as argv[1]): reaper mode. `main` hands over to the reaper before doing
 //!   anything else, exactly as the shell's `fn main` does (plan 83-08), because the reaper is this
@@ -32,7 +38,10 @@
 //! kill is given. The game is told to wait for that file, so it creates its child only after the
 //! tracked spawn has put it in its Game Job (a grandchild created earlier would escape the Job). `--spec-tree` runs one `spec-tree` child through `SpecProcRunner` (on a background
 //! runtime thread, so the run stays in flight) and adds its pid to `helpers` and its grandchild's to
-//! `grandchildren`. `--no-reaper` skips starting the reaper (the negative control: a SIGKILL of the
+//! `grandchildren`. `--stubborn-tree` (unix) adds two `stubborn-tree` helpers, one through
+//! `spawn_helper_with_pipes` (an owned entry) and one through `SpecProcRunner` (a tokio-registered
+//! entry), each with a SIGTERM-ignoring grandchild, so both are in `helpers` and `grandchildren`.
+//! `--no-reaper` skips starting the reaper (the negative control: a SIGKILL of the
 //! parent must then leave its helpers alive). `--leak-pipe` (unix) adds a fourth helper holding a
 //! duplicate of the reaper pipe's write end as its stdin, so EOF never reaches the reaper.
 //! `--node-sidecar <pids-file>` adds a Node process as a helper, standing in for the TS sidecar: it
@@ -57,6 +66,8 @@ fn main() {
         Some("idle") | Some("game-child") => idle(),
         Some("tree") => tree(),
         Some("spec-tree") => spec_tree(),
+        Some("stubborn") => stubborn(),
+        Some("stubborn-tree") => stubborn_tree(),
         Some("lines") => lines(),
         Some("game") => game(&args[1..]),
         Some("game-tree") => game_tree(&args[1..]),
@@ -185,10 +196,45 @@ fn spec_tree() -> ! {
     idle()
 }
 
-/// Runs one `spec-tree` child through `SpecProcRunner` on a background runtime thread, the way an
-/// engine or wine port runs winetricks, and returns (child pid, grandchild pid) once it has
-/// reported both. The run stays in flight until the child is killed.
-fn run_spec_tree() -> (u32, u32) {
+/// Ignores SIGTERM (unix), announces it with a `ready` line, then idles: only SIGKILL ends it.
+fn stubborn() -> ! {
+    #[cfg(unix)]
+    // SAFETY: `signal` with SIG_IGN installs no handler and dereferences nothing.
+    unsafe {
+        libc::signal(libc::SIGTERM, libc::SIG_IGN);
+    }
+    let mut out = std::io::stdout();
+    writeln!(out, "ready").expect("write ready");
+    out.flush().expect("flush ready");
+    idle()
+}
+
+// The child is deliberately never waited for: it idles until something kills it.
+#[allow(clippy::zombie_processes)]
+fn stubborn_tree() -> ! {
+    // As `spec_tree`: `go` arrives after the child is in its Job.
+    let mut line = String::new();
+    let _ = std::io::stdin().lock().read_line(&mut line);
+    let mut cmd = self_command("stubborn", &[]);
+    cmd.stdout(Stdio::piped());
+    let mut grandchild = cmd.spawn().expect("spawn grandchild");
+    // Held to the end: the grandchild reports `ready` only after SIGTERM is ignored, so a quit can
+    // never reach it before that is true.
+    let mut ready = String::new();
+    BufReader::new(grandchild.stdout.take().expect("grandchild stdout"))
+        .read_line(&mut ready)
+        .expect("read grandchild ready");
+    let mut out = std::io::stdout();
+    writeln!(out, "{}", std::process::id()).expect("write own pid");
+    writeln!(out, "{}", grandchild.id()).expect("write grandchild pid");
+    out.flush().expect("flush pids");
+    idle()
+}
+
+/// Runs one `spec-tree`-shaped child (`mode`) through `SpecProcRunner` on a background runtime
+/// thread, the way an engine or wine port runs winetricks, and returns (child pid, grandchild pid)
+/// once it has reported both. The run stays in flight until the child is killed.
+fn run_spec_tree(mode: &'static str, label: &'static str) -> (u32, u32) {
     let (tx, rx) = std::sync::mpsc::channel::<u32>();
     let exe = std::env::current_exe().expect("current_exe");
     std::thread::spawn(move || {
@@ -196,8 +242,8 @@ fn run_spec_tree() -> (u32, u32) {
             .enable_all()
             .build()
             .expect("build runtime");
-        let mut spec = ProcSpec::new("standin-spec-tree", exe.to_string_lossy());
-        spec.argv = vec!["spec-tree".into()];
+        let mut spec = ProcSpec::new(label, exe.to_string_lossy());
+        spec.argv = vec![mode.into()];
         spec.stdin = Some("go\n".into());
         let on_line = Box::new(move |l: &str| {
             if let Ok(pid) = l.trim().parse::<u32>() {
@@ -205,7 +251,7 @@ fn run_spec_tree() -> (u32, u32) {
             }
         });
         let out = rt.block_on(SpecProcRunner.run(spec, Some(on_line)));
-        eprintln!("[standin] spec-tree run ended: code {:?}", out.code);
+        eprintln!("[standin] {mode} run ended: code {:?}", out.code);
     });
     let wait = Duration::from_secs(15);
     let child = rx.recv_timeout(wait).expect("spec-tree child pid");
@@ -325,8 +371,42 @@ fn parent(args: &[String]) {
     #[cfg_attr(not(unix), allow(unused_mut, clippy::useless_vec))]
     let mut helpers = vec![h1, h2, tree_pid];
     let mut grandchildren = vec![grandchild];
+    let mut _stubborn_pipes: Option<(
+        std::process::ChildStdin,
+        BufReader<std::process::ChildStdout>,
+    )> = None;
     if has_flag(args, "--spec-tree") {
-        let (child, grandchild) = run_spec_tree();
+        let (child, grandchild) = run_spec_tree("spec-tree", "standin-spec-tree");
+        helpers.push(child);
+        grandchildren.push(grandchild);
+    }
+    if has_flag(args, "--stubborn-tree") {
+        // An owned entry: the set holds the child and its pipes, like the `tree` helper.
+        let mut cmd = self_command("stubborn-tree", &[]);
+        cmd.stdin(Stdio::piped()).stdout(Stdio::piped());
+        let (owned_pid, pipes) =
+            spawn_helper_with_pipes(cmd, "standin-stubborn-owned").expect("spawn stubborn tree");
+        let mut owned_in = pipes.stdin.expect("stubborn tree stdin");
+        writeln!(owned_in, "go").expect("tell stubborn tree to go");
+        owned_in.flush().expect("flush go");
+        let mut owned_out = BufReader::new(pipes.stdout.expect("stubborn tree stdout"));
+        let mut pids = [String::new(), String::new()];
+        for slot in pids.iter_mut() {
+            owned_out.read_line(slot).expect("read stubborn tree pid");
+        }
+        assert_eq!(
+            pids[0]
+                .trim()
+                .parse::<u32>()
+                .expect("stubborn tree own pid"),
+            owned_pid
+        );
+        helpers.push(owned_pid);
+        grandchildren.push(pids[1].trim().parse().expect("stubborn grandchild pid"));
+        // Held until exit, like the `tree` helper's pipes.
+        _stubborn_pipes = Some((owned_in, owned_out));
+        // A tokio-registered entry, the SpecProcRunner shape.
+        let (child, grandchild) = run_spec_tree("stubborn-tree", "standin-stubborn-tokio");
         helpers.push(child);
         grandchildren.push(grandchild);
     }
