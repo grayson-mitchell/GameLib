@@ -46,7 +46,7 @@ Filled in by the planner/executor per task. Requirement-level map; the Sub-phase
 
 | Req / SC | Sub-phase | Behavior | Test Type | Automated Command | File Exists | Status |
 |----------|-----------|----------|-----------|-------------------|-------------|--------|
-| SVC-03 / SC1 | 88.1 | builders match TS vectors (env, wrappers, gamescope, known-fix env, prepare ops) | Rust replay of TS vectors | `cargo test -p gamelib-launch --test golden_builders` | ✅ | ✅ green (P `ab7876c01`, 88.1-20; three-OS CI pending the push) |
+| SVC-03 / SC1 | 88.1 | builders match TS vectors (env, wrappers, gamescope, known-fix env, prepare ops) | Rust replay of TS vectors | `cargo test -p gamelib-launch --test golden_builders` | ✅ | ✅ green at P `21a57af08` with 124 cases (88.1-21..24; was P `ab7876c01` at 113, 88.1-20; three-OS CI pending the push) |
 | SVC-03 / SC1 | 88.1 | spawn traces: native, Wine/Proton/CrossOver, gamescope/mangohud, overlay, pre/post (argv, full env, cwd, class, order) | Rust replay of TS traces | `cargo test -p gamelib-launch --test golden_launch` | ✅ | ✅ green (P `ab7876c01`, 88.1-20; three-OS CI pending the push) |
 | SVC-03 / SC1 | 88 | known-fix reader, layering, registry, overlay archive/install, fetch | replay + ported incident tests | `cargo test -p gamelib-knownfix` | ✅ | ✅ green (P `68979200f`, 88-17; three-OS CI green at P' `c5ae345ae`) |
 | SVC-03 / SC1 | 88.2 | runner command argv/env, redacted log line, streamed line sequence | replay | `cargo test -p gamelib-launch --test golden_runner` | ❌ W0 | ⬜ pending |
@@ -399,6 +399,47 @@ A flaky `gamelib-depot` test binary, `steam_api_pin` (three `live_fetch_*` tests
 Not claimed: the Windows leg runs no `golden_launch` replay, so the Windows spawn traces are proven only through the builder and utils-pieces goldens and the
 `launch_prepare` unit tests, not by trace replay. The "Items the sub-phase leaves open" above stand, except that the Linux `stub_gamescope` smoke has now run
 on Linux (1 passed) and the Windows sysinfo code now compiles and passes its tests on `windows-latest` (it is still not run against a real Windows resolver).
+
+## Gap closure proof (88.1-21..24)
+
+Measured by plan 88.1-24 Task 1, 2026-11-27, on the main working tree, macOS arm64 only (Windows and Linux are proven by CI, D-30, in the next
+section once the operator authorises the push). The measured head is P. `git status --porcelain --untracked-files=no -- src-tauri` was empty
+before and after the runs (no uncommitted Rust in the measured tree). Other sessions committed to main while the runs were going (HEAD moved
+from P to `fb0ff83cb`); every one of those commits is `.planning/` only (`git diff --name-only P fb0ff83cb` lists twelve files under
+`.planning/phases/87-engine-wine-and-tools/`), so the Rust and frontend sources measured at P are the sources at the later head.
+
+P: 21a57af08eedbf75b3dbba458ead65eca33558c4
+
+Ancestry: the SUMMARYs 88.1-21, 88.1-22 and 88.1-23 exist and every commit they list is an ancestor of P (`git merge-base --is-ancestor`, 0
+exceptions): 88.1-21 `24864a245`, `f9768d7c8`, `5e08206b0`; 88.1-22 `c03fe9af0`, `0b0b7258c`, `216206ebc`; 88.1-23 `978f256be`, `02269203f`.
+
+| Step | Command (from `src-tauri` unless noted) | Exit | Outcome at P |
+|------|------------------------------------------|------|--------------|
+| 1 | `cargo test -p gamelib-launch -p gamelib-launch-cli -p gamelib-info -p gamelib-info-cli -p gamelib-knownfix -p gamelib-engine -p gamelib-wine -- --nocapture` | 0 | pass, 1522 passed, 0 failed, 0 ignored (summed over 90 test binaries) |
+| 2 | `cargo test --bin gamelib-shell` | 0 | pass, 1040 passed, 0 failed, 2 ignored |
+| 3 | `cargo +1.99.1 clippy --workspace --all-targets --message-format=json` into a scratch file, then `node ../meta/clippyRatchet.cjs {file} --list` | 0 | pass, `PASS (darwin, toolchain 1.99.1)`; no ceiling moved, in particular none on a crate neither 88.1-21 nor 88.1-22 touched |
+| 4 | `pnpm check:ipc-contract` (repo root) | 0 | pass (ipc_contract.rs and ipcSchemaSnapshot.json up to date) |
+| 5 | `pnpm planning-gates` (repo root) | 0 | pass, 12/12 |
+
+The new cases were observed running in steps 1 and 2: `test every_builders_golden_replays ... ok` (golden_builders), `test
+the_env_op_reads_no_wine_from_the_cli ... ok` (gamelib-launch-cli) and `test launch_dispatch::tests::the_game_env_arm_answers_settings_with_no_wine
+... ok` (gamelib-shell). Not run here: `pnpm test:ci`, `pnpm lint`, `pnpm codecheck` and the pre-push hook's other steps (88.1-21..24 changed no
+TypeScript; the hook runs them at the push).
+
+Golden replays at P (the cargo output of step 1; the compared count and the floor are the two numbers each test printed, copied here).
+`prepare_launch` printed `compared 582 (linux 379) of 582 floor 582` and `prepare_wine` printed `compared 391 (linux 207, mac 184) of 391
+floor 391; both halves replayed in 361 (floor 361)`; the machine-checked lines carry the totals. The builders replay is 124 against 113 at
+88.1-20 (88.1-21 added `env-vars-windows-empty-settings`, 88.1-22 added ten more) and every other replay is at its 88.1-20 floor:
+
+golden builders: compared 124 floor 124
+golden gamescope: compared 65 floor 65
+golden prepare_launch: compared 582 floor 582
+golden prepare_wine: compared 391 floor 391
+golden epic_status: compared 70 floor 70
+golden check_wine: compared 49 floor 49
+golden sysinfo: compared 94 floor 94
+
+The three-OS CI proof of these cases (Windows above all) is the next section, written after the push.
 
 ---
 
