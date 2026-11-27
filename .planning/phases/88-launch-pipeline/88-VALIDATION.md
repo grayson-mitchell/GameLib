@@ -49,11 +49,11 @@ Filled in by the planner/executor per task. Requirement-level map; the Sub-phase
 | SVC-03 / SC1 | 88.1 | builders match TS vectors (env, wrappers, gamescope, known-fix env, prepare ops) | Rust replay of TS vectors | `cargo test -p gamelib-launch --test golden_builders` | ✅ | ✅ green at P `21a57af08` with 124 cases (88.1-21..24; was P `ab7876c01` at 113, 88.1-20; three-OS CI pending the push) |
 | SVC-03 / SC1 | 88.1 | spawn traces: native, Wine/Proton/CrossOver, gamescope/mangohud, overlay, pre/post (argv, full env, cwd, class, order) | Rust replay of TS traces | `cargo test -p gamelib-launch --test golden_launch` | ✅ | ✅ green (P `ab7876c01`, 88.1-20; three-OS CI pending the push) |
 | SVC-03 / SC1 | 88 | known-fix reader, layering, registry, overlay archive/install, fetch | replay + ported incident tests | `cargo test -p gamelib-knownfix` | ✅ | ✅ green (P `68979200f`, 88-17; three-OS CI green at P' `c5ae345ae`) |
-| SVC-03 / SC1 | 88.2 | runner command argv/env, redacted log line, streamed line sequence | replay | `cargo test -p gamelib-launch --test golden_runner` | ✅ | ✅ green at P `6a2265258` (golden_runner 93 of 93, redaction 88, wine_launch 41 plus 16 wine_command, wine_path 16, script 18, spawn_async 33, error_handler 108; three-OS CI pending the push) |
+| SVC-03 / SC1 | 88.2 | runner command argv/env, redacted log line, streamed line sequence | replay | `cargo test -p gamelib-launch --test golden_runner` | ✅ | ✅ green at P `6a2265258` (golden_runner 93 of 93, redaction 88, wine_launch 41 plus 16 wine_command, wine_path 16, script 18, spawn_async 33, error_handler 108; three-OS CI green at P' `25bc3b526`: rust-test.yml run 45959503130, all three legs, see `## CI proof (88.2)`) |
 | SVC-03 / SC2 | 88.3 | funnel order, status events, single-flight join, release on failure | funnel oracle replay | `cargo test -p gamelib-launch --test funnel` | ❌ W0 | ⬜ pending |
-| SVC-03 / SC2 | 88.2 | stub game: start, quit-kill, survives parent SIGKILL (three OS) | CI smoke + orphan harness | `cargo test -p gamelib-proc` ; `cargo test -p gamelib-launch --test stub_game` | ✅ | ✅ green at P `6a2265258` on macOS (gamelib-proc 60 passed; stub_game 5 passed; three-OS CI pending the push) |
+| SVC-03 / SC2 | 88.2 | stub game: start, quit-kill, survives parent SIGKILL (three OS) | CI smoke + orphan harness | `cargo test -p gamelib-proc` ; `cargo test -p gamelib-launch --test stub_game` | ✅ | ✅ green at P `6a2265258` on macOS (gamelib-proc 60 passed; stub_game 5 passed) and on three-OS CI at P' `25bc3b526` (rust-test.yml run 45959503130: stub_game 5 passed on each leg; gamelib-proc orphans 9 on windows-latest including the A5 arm, 13 on macos-latest and ubuntu-latest) |
 | SVC-03 / SC2 | 88.3 | stub game: single-flight join through the funnel (three OS, D-04, D-16) | CI smoke | `cargo test -p gamelib-launch --test stub_game` | ❌ W0 | ⬜ pending |
-| SVC-03 / SC2 | 88.2 | Windows quoting against a real exe | Windows-leg cross-check | `cargo test -p gamelib-launch --test windows_quoting` | ✅ | ⬜ pending: the binary builds and runs 0 tests on macOS by design (Windows only), so there is no local evidence; first real run is the windows-latest leg after the push |
+| SVC-03 / SC2 | 88.2 | Windows quoting against a real exe | Windows-leg cross-check | `cargo test -p gamelib-launch --test windows_quoting` | ✅ | ✅ green on windows-latest at P' `25bc3b526` (2 passed, rust-test.yml run 45959503130); the binary runs 0 tests on macOS and Linux by design, so Windows CI is the only evidence |
 | SVC-03 / SC2 | 88.3 | live: launches, single flight + quit (D-27 game-running prompt), Force Quit survival + re-adopt, known fix + scripts | operator, signed build | `88-HUMAN-UAT.md` | ✅ authored by 88-01 (not yet run) | ⬜ pending |
 | SVC-03 / SC3 | 88.1 | anti-cheat at launch; utils pieces (`errorHandler`, `askForceUninstall`, `isEpicServiceOffline`, `isMacSonomaOrHigher` both ways, `removeQuoteIfNecessary`, D-28 `check_wine_before_launch`/`download_default_wine`; `errorHandler` and `askForceUninstall` land with 88.2's runner, per the 82 amendment) | replay + unit | `cargo test -p gamelib-launch --test utils_pieces` | ✅ | ✅ green (P `ab7876c01`, 88.1-20; three-OS CI pending the push) |
 | SVC-03 / SC4 | 88.3 | TS and registrations deleted, only scheduled shims remain | Jest gate | `pnpm jest src/backend/__tests__/launchPortComplete.test.ts src/backend/__tests__/engineWineShimSchedule.test.ts` | ❌ (gate new) | ⬜ pending |
@@ -531,7 +531,7 @@ golden error_handler: compared 108 floor 108
 The `golden_runner` row is set to green at P. The `stub_game` row's Behavior now reads exactly `stub game: start, quit-kill, survives parent
 SIGKILL (three OS)` and is green at P on macOS; the single-flight join moved to its own 88.3 row (D-04 is 88.3's by D-30). The
 `windows_quoting` row stays `pending`: its binary runs 0 tests on macOS, so there is no local evidence to record, and it is not claimed green
-until the windows-latest leg runs it. The three-OS CI proof is the next section, written after the push.
+until the windows-latest leg runs it. The three-OS CI proof is the next section, written after the push. Task 3 then set the `windows_quoting` row to green (2 passed on windows-latest) and added the three-OS run id to the `golden_runner` and `stub_game` rows.
 
 ### Decisions proven by this plan's evidence, and what is deferred
 
@@ -546,6 +546,99 @@ budget is noted for 88.3, because 88.2 kills before the exit stage starts.
 
 Flagged assumption (spec-less edge probe): SVC-03's edge-coverage row is `unclassified` and unresolved; the D-14 matrix stands in for edge
 coverage and is not claimed as a verified edge.
+
+## CI proof (88.2)
+
+Measured by plan 88.2-25 Task 3, 2026-11-27, after the operator chose `push` in Task 2 (push main now; fix commits for failures that only show up
+on CI land without asking again). The open-time check ran immediately before the first push: `git fetch origin main` (origin/main `3b721a03c`, main 4
+commits ahead and 0 behind) and `git diff --name-only 6a2265258 HEAD` listing nothing outside `.planning/`. Every push was a plain
+`git push origin main` through `.husky/pre-push` (no `--no-verify`, no force) and a fast-forward each time; the hook passed each time.
+
+Three heads were pushed, because the first two each had a CI-only failure on the Windows leg of rust-test.yml (the fix table below). The candidate head
+this proof ends on is P', and every row in the table below ran at that one head. P' differs from the Phase proof's P (`6a2265258`) by the two fix
+commits and by `.planning/` files only; the clean-worktree measurement of the Phase proof was not repeated at P' (see "What changed since the Phase
+proof" below).
+
+P': 25bc3b52660bda5a9177169fddbc281c2cbb5707
+
+| Workflow | Leg | Run id | Conclusion |
+|----------|-----|--------|------------|
+| rust-test.yml | windows-latest | 45959503130 | success |
+| rust-test.yml | macos-latest | 45959503130 | success |
+| rust-test.yml | ubuntu-latest | 45959503130 | success |
+| codecheck.yml | ubuntu-latest | 45959503185 | success |
+| test.yml | ubuntu-latest | 45959503135 | success |
+
+stub_game windows-latest: 5 passed
+stub_game macos-latest: 5 passed
+stub_game ubuntu-latest: 5 passed
+windows_quoting windows-latest: 2 passed
+
+The three rust-test.yml legs are the three jobs of the one run 45959503130 at P'. The windows-latest and ubuntu-latest jobs passed on the first
+attempt (job ids 140373692257 and 140373692183). The macos-latest job failed on the first attempt (job 140373692025) in the multi-crate `cargo test`
+step on one test that is not an 88.2 test: `gamelib-steamcm` `webauth::tests::cancel_stops_polling` (`left: 5, right: 4`, the count of mock poll requests
+read twice around a 300 ms sleep, a timing race in that test), the only failure on that leg. It passed on the same leg at the previous head
+(`c7ec52d1e`, run 45956464586) and nothing in 88.2 touches that crate. The failed job was re-run once with `gh run rerun 45959503130 --failed` (no code
+change) and passed on the second attempt (job 140380116302). `gh run view 45959503130` now reports `success`, attempt 2. Two other workflows ran at P'
+and are not part of this plan's table: `lint.yml` 45959503220 (success) and `audit.yml` (Supply-chain audit) 45959503208 (success), both on their first
+attempt. `test.yml` ran `pnpm test:ci` green on CI at P' (and at the two earlier heads), so the four suites that were red in the Phase proof's macOS
+clean-worktree run (`genI18nGateScope`, `valveClient`, `iconGeometry.oracle`, `humbleFixtureRedaction`) did not fail on CI; their local reds are not
+failures of the pushed tree.
+
+88.2 binaries observed running in each rust-test.yml leg's log (`Running tests/<name>.rs` followed by `test result: ok`, 0 failed). Counts differ
+because the Windows leg skips the unix-only orphan arms and one unix-only test of `golden_wine_launch` (a stand-in `wine` shell script), and runs
+three Windows-only orphan arms in their place:
+
+| Binary | windows-latest | macos-latest | ubuntu-latest |
+|--------|----------------|--------------|---------------|
+| gamelib-proc `orphans` | ok, 9 passed | ok, 13 passed | ok, 13 passed |
+| golden_runner | ok, 5 passed | ok, 5 passed | ok, 5 passed |
+| golden_redaction | ok, 3 passed | ok, 3 passed | ok, 3 passed |
+| golden_wine_launch | ok, 8 passed | ok, 9 passed | ok, 9 passed |
+| golden_wine_path | ok, 3 passed | ok, 3 passed | ok, 3 passed |
+| golden_script | ok, 4 passed | ok, 4 passed | ok, 4 passed |
+| golden_spawn_async | ok, 4 passed | ok, 4 passed | ok, 4 passed |
+| golden_error_handler | ok, 1 passed | ok, 1 passed | ok, 1 passed |
+| stub_game | ok, 5 passed | ok, 5 passed | ok, 5 passed |
+| windows_quoting | ok, 2 passed | not applicable (Windows only) | not applicable (Windows only) |
+
+On windows-latest the three Windows orphan arms ran and passed: `terminate_parent_spares_game_then_stamped_kill_removes_its_tree` (the A5 arm),
+`windows_terminate_one_kills_a_helper_and_its_grandchild` and `windows_stamped_kill_with_a_wrong_stamp_signals_nothing`. On macos-latest and
+ubuntu-latest the unix arms `sigkill_spares_game_then_stamped_kill_removes_its_tree` and `stamped_kill_with_a_wrong_stamp_signals_nothing` ran and
+passed. `stub_game`'s five tests are the arms listed under the Phase proof.
+
+### What the CI legs found, and the two fix commits
+
+Flagged assumption A5 (88.2-06) was wrong as first stated. A named Game Job without kill-on-close cannot be reopened by name once the process that
+created it has died: run 45954057247 at `16801b619` failed on windows-latest in the gamelib-proc `orphans` binary (8 passed, 1 failed). The failing arm
+was `terminate_parent_spares_game_then_stamped_kill_removes_its_tree`: the stand-in parent was terminated, the game and its grandchild survived it, then
+`kill_game_tree` logged `[proc] game job not found; leader only` and the arm timed out waiting for the game and its grandchild to die (the leader-only
+kill left the grandchild). The cause is consistent with how Windows removes the name of a named kernel object when its last handle closes even though
+members of the Job still run; the CI log shows the symptom, not that mechanism directly. Per the plan, the fix is a tree fallback inside gamelib-proc
+and no hand-rolled kill. The macOS and Ubuntu legs, `codecheck.yml` and `test.yml` were green at that head.
+
+| Commit | What CI found | Fix |
+|--------|---------------|-----|
+| c7ec52d1e | Windows A5 arm (run 45954057247, above). | `kill_game_tree` on Windows, when the Game Job cannot be opened, now walks the stamped leader's descendants from a process snapshot (`CreateToolhelp32Snapshot`; windows-sys feature `Win32_System_Diagnostics_ToolHelp`, no new crate, `Cargo.lock` unchanged). It keeps only processes newer than their named parent (the leader counting as created at the stamp), holds each handle from the check to the terminate so a pid cannot be recycled between them, terminates the leader and then the descendants, and repeats the walk up to three times for stragglers. `GameJob::open` is still tried first, so a live GameLib's handle still finds the Job. Comments in `job.rs`, `kill_tree.rs` and `orphans.rs` that stated A5 as fact were corrected. |
+| 25bc3b526 | At `c7ec52d1e` (run 45956464586) the A5 arm passed and windows-latest went on to its first run of the 88.2 replays: `golden_wine_launch` (2 of 8 failed) and `golden_wine_path` (1 of 3 failed) differed from the POSIX recordings only in the separators of paths the code joins under a profile root (`<HOME>\.steam\steam`, `<TOOLS>\runtimes\umu\umu_run.py`); all 17 mismatched cases were equal to their recordings once those separators were folded. | The two test normalisers (`tests/common/mod.rs`, used by `golden_wine_path`, and `tests/golden_wine_launch.rs`) fold backslashes to `/` after a placeholder on Windows only. Paths that do not start at a placeholder (`C:\Games\Game One\save`) are untouched, and nothing changes off Windows. Test code only. |
+
+`git diff --name-only P P'` outside `.planning/` lists exactly: `src-tauri/crates/gamelib-proc/Cargo.toml`, `src/job.rs`, `src/kill_tree.rs`,
+`tests/orphans.rs`, and `src-tauri/crates/gamelib-launch/tests/common/mod.rs` and `tests/golden_wine_launch.rs`.
+
+### What changed since the Phase proof
+
+The Phase proof above was measured at P (`6a2265258`) in a clean worktree. P' adds the two commits in the table. Their code is `cfg(windows)` (the descendant walk
+and its `windows-sys` feature, in a Windows-target dependency table), comments, and test-only normalisation that is a no-op off Windows, so nothing the
+macOS Phase proof compiled for its own target changed. The full clean-worktree measurement was not repeated. What was re-run at P' on macOS: `cargo
+clippy -p gamelib-proc -p gamelib-launch --all-targets --features harness -- -D warnings` (host and `--target x86_64-pc-windows-gnu`, 0 warnings),
+`cargo fmt --check`, `cargo test -p gamelib-proc --test orphans` (13 passed) and the `golden_wine_launch`, `golden_wine_path`, `golden_runner` and
+`golden_script` binaries (9, 3, 5 and 4 passed); and the CI legs above ran the whole of gamelib-proc and gamelib-launch on macOS and Ubuntu at P'.
+
+Not shown by CI: that the Windows descendant walk was the branch that ended the game in the passing A5 arm. A passing test captures its stdout, so
+the `game job not found; walking the descendants of the stamped leader` line is not in the log; the failing run at `16801b619` is what shows the
+name does not survive, and the pass at `c7ec52d1e` and `25bc3b526` is what shows the tree ends. `GameLib`'s own use of a stamped kill after a restart
+therefore rests on the walk, not on the Job name; a descendant the game parented to a process that has since exited is not found by it (a Job
+would have held it), which is the cost of the fallback and is recorded here, not as a defect.
 
 ---
 
