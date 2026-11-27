@@ -18,7 +18,7 @@ import {
   runnerKill
 } from 'backend/launchrust/runner'
 import LogWriter from 'backend/logger/targetWriter'
-import type { CommandRunner, RunnerProps } from 'backend/commandRunner'
+import type { CommandRunner } from 'backend/services/types'
 import type { GameInfo, GameSettings } from 'common/types'
 import type { LogFrameTarget } from 'common/types/sidecarTransport'
 
@@ -27,7 +27,7 @@ import {
   settleExecResult,
   settleWineCommandResult
 } from '../runnerAdapter'
-import type { RunnerAdapterCallOptions } from '../runnerAdapter'
+import type { RunnerAdapterCallOptions, RunnerProps } from '../runnerAdapter'
 
 const RUNNER_TARGET: LogFrameTarget = { kind: 'runner', runner: 'legendary' }
 const GAME_TARGET: LogFrameTarget = {
@@ -454,15 +454,9 @@ describe('createRunnerAdapter.runWineCommand', () => {
     expect(down.streams.size()).toBe(0)
   })
 
-  it('is assignable to commandRunner`s own type', () => {
+  it('is assignable to the CommandRunner type every manager takes', () => {
     const r = rig()
-    // `callRunner` is left out of the pick: since 88.2-22 the adapter takes a sanitizer NAME and the TS twin a function, so
-    // their option types differ on that one field by design (the twin goes in 88.2-24).
-    const asRunner: Pick<
-      CommandRunner,
-      'runWineCommand' | 'getWinePath' | 'runScriptForGame'
-    > &
-      Pick<typeof r.adapter, 'callRunner'> = r.adapter
+    const asRunner: CommandRunner = r.adapter
     expect(Object.keys(asRunner).sort()).toEqual([
       'callRunner',
       'getWinePath',

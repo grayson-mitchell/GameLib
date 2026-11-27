@@ -8,11 +8,8 @@ import { readFileSync } from 'fs'
 import { join } from 'path'
 
 import { initHeadless } from 'backend/logger'
-import { createCommandRunner } from 'backend/commandRunner'
-import type { CommandRunnerDeps } from 'backend/commandRunner'
 import type { DownloadQueue } from 'backend/downloadmanager/downloadqueue'
 import type { ManagerDeps, Stores } from 'backend/services/types'
-import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import {
   createTestManagerDeps,
@@ -329,58 +326,4 @@ describe('createStoreManagers: spawn and stop share one runner registry (checker
       ['launch_tracked_kill', [{ runner: 'wine', key: 'app-s' }]]
     ])
   })
-
-  it('the filter is the meta commandRunner tracks a spawn under (scripted run carries it)', async () => {
-    const runner = createScriptedRunner([
-      { cmd: 'legendary', result: { code: 0 } }
-    ])
-    const cr = createCommandRunner(commandRunnerDeps(runner))
-    await cr.callRunner(
-      ['launch', 'app-l'],
-      { name: 'legendary', logPrefix: 'Legendary' as never, bin: 'legendary' },
-      { abortId: 'app-l' }
-    )
-    const spawn = runner.calls.find((c) => c.method === 'run')
-    expect((spawn?.opts as { track?: unknown }).track).toEqual({
-      runner: 'legendary',
-      key: 'app-l'
-    })
-  })
 })
-
-function commandRunnerDeps(
-  runner: CommandRunnerDeps['runner']
-): CommandRunnerDeps {
-  return {
-    runner,
-    platform: process.platform,
-    logger: {
-      logInfo: () => undefined,
-      logWarning: () => undefined,
-      logError: () => undefined,
-      logDebug: () => undefined,
-      backendPrefix: 'Backend' as never
-    },
-    getRunnerLogWriter: () =>
-      ({
-        writeString: () => undefined,
-        logInfo: async () => undefined
-      }) as never,
-    abort: {
-      create: () => new AbortController(),
-      remove: () => undefined
-    },
-    errorHandler: () => undefined,
-    searchForExecutableOnPath: async () => null,
-    commandToArgsArray: () => [],
-    wine: {
-      getDefaultSettings: () => ({}) as never,
-      verifyWinePrefix: async () => ({ res: { stdout: '', stderr: '' } }),
-      validWine: async () => true,
-      setupEnvVars: async () => ({}),
-      setupWineEnvVars: async () => ({}),
-      isUmuSupported: async () => false,
-      getUmuPath: async () => '/umu'
-    }
-  }
-}

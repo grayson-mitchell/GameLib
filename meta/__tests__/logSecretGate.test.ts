@@ -429,10 +429,13 @@ describe('logSecretGate', () => {
     // deleted with the TS tools tree (Rust spawns that probe now). A deletion, not a loosened gate.
     // Down to 13 by Phase 87 Plan 56c (D-06): the 15th above, `cxbottle --create` stderr in engine/perGameBottle.ts, was
     // deleted with the engine directory (Rust creates the bottle now). A deletion, not a loosened gate.
-    it('carries exactly 13 exemptions — adding a 14th must be a conscious act', () => {
+    // Down to 12 by Phase 88.2 Plan 24 (D-02): the stderr of `cmd /c winepath` (path translation) in
+    // commandRunner.ts was deleted with the runner (Rust writes the one redacted command line now). A deletion, not a
+    // loosened gate.
+    it('carries exactly 12 exemptions — adding a 13th must be a conscious act', () => {
       const report = auditReport()
 
-      expect(report.exemptions).toHaveLength(13)
+      expect(report.exemptions).toHaveLength(12)
     })
 
     it('pins WHICH files hold them, so a silent swap at the same count still fails', () => {
@@ -440,7 +443,6 @@ describe('logSecretGate', () => {
       const files = [...new Set(report.exemptions.map((e) => e.file))].sort()
 
       expect(files).toEqual([
-        'src/backend/commandRunner.ts',
         'src/backend/storeManagers/gog/games.ts',
         'src/backend/storeManagers/legendary/library.ts',
         'src/backend/storeManagers/steam/bridge/bottleDllOverrides.ts',

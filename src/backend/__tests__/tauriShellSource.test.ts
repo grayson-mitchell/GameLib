@@ -964,8 +964,8 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       // `golden_wine_core.rs` replays the 87-08 TS vectors and goldens (19 valid_wine, 61 wine_env, 16
       // wine_command) against the crate's ops, and `wine_dispatch::tests` drives the arms' validation, the
       // legacy-key and no-wine answers and the not-ready answer. The caller of `wine_valid` is the
-      // `validWine` shim (enginewine/wineCore.ts); `wine_run_command` has none until Phase 88 (the
-      // sync-callback runWineCommand stays a scheduled twin).
+      // renderer's `wine.isValidVersion` (the `validWine` shim and the TS runner's `runWineCommand` twin were
+      // deleted in 88.2-24); `wine_run_command` has no TS caller.
       'wine_valid',
       'wine_run_command',
 

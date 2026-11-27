@@ -38,7 +38,6 @@ import type {
 import type { ProcessRunner } from './process/types'
 import type { OnlineMonitor } from './online_monitor'
 import type { DialogBoxDeps } from './dialog/dialog'
-import { validWine } from './enginewine/wineCore'
 import { recordPlaySession } from './runsForMe'
 import { addRecentGame } from './info/recentGames'
 import {
@@ -575,9 +574,6 @@ export interface Launcher {
     appName: string,
     runner: Runner
   ): Promise<Record<string, string>>
-  validWine(
-    ...a: DropFirst<Parameters<typeof validWine>>
-  ): ReturnType<typeof validWine>
   verifyWinePrefix(gameSettings: GameSettings): Promise<{ res: ExecResult }>
   /**
    * The boot's sidecar -> Rust request leg, which the launcher already holds (LauncherDeps extends
@@ -636,7 +632,6 @@ export function createLauncher(deps: LauncherDeps): Launcher {
       settleKnownFixEnv(
         await getKnownFixesEnvVariablesShim(deps, appName, runner)
       ),
-    validWine: (...a) => validWine(deps, ...a),
     verifyWinePrefix: async (gameSettings) =>
       settleVerifyPrefixReply(
         await verifyWinePrefixShim(deps, gameSettings),

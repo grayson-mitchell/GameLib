@@ -99,19 +99,6 @@ async function clearGogCookiesForLogout(deps: GOGLoginSeamDeps): Promise<void> {
   }
 }
 
-export function authLogSanitizer(line: string) {
-  try {
-    const output = JSON.parse(line)
-    output.access_token = '<redacted>'
-    output.session_id = '<redacted>'
-    output.refresh_token = '<redacted>'
-    output.user_id = '<redacted>'
-    return JSON.stringify(output) + '\n'
-  } catch {
-    return line
-  }
-}
-
 // Session-lifetime TTL cache for getCredentials() -- debug/gog-spawn-reduction.md fix 1.
 // getCredentials() has 15 call sites (login/boot/library-refresh/presence/playtime/etc.)
 // with no caching, each spawning its own `gogdl auth` subprocess. Every spawn carries a
@@ -198,7 +185,7 @@ export class GOGUser {
       }
     } catch (err) {
       // The stdout of `gogdl auth --code` IS the GOG token exchange response, which is why
-      // `authLogSanitizer` (above) is passed to the `runRunnerCommand` call that produced it --
+      // the `gogAuth` sanitizer (Rust's `LogSanitizer`, 88.2-22) is named on the `runRunnerCommand` call that produced it --
       // it rewrites access_token/refresh_token/session_id/user_id to <redacted> on the way into
       // the *runner* log. Interpolating `stdout` here bypassed that sanitizer completely and
       // wrote the unredacted payload into the *general* log (`logError` -> `heroicLogWriter` ->
@@ -206,7 +193,7 @@ export class GOGUser {
       // 2-day expiry. Length + parse error only, matching the presence/length discipline
       // `humble/adapter.ts`'s describeSchemaFailure already uses (`bodyLength=`, never a body).
       //
-      // Applying `authLogSanitizer` here instead would NOT have worked: its body is
+      // Applying the sanitizer here instead would NOT have worked: it is
       // `try { JSON.parse(line) ... } catch { return line }`, so it returns the line verbatim
       // whenever the line is not JSON -- which is exactly this branch's precondition.
       logError(
@@ -368,8 +355,8 @@ export class GOGUser {
     deps: GOGUserDeps
   ): Promise<CredentialsWithVerdict> {
     // Captured output, never `ExecResult.stderr` (RESEARCH Pitfall 1), and never
-    // logged: gogdl's stdout is a token-exchange object. `authLogSanitizer`
-    // stays on the spawn for the runner log. `skipErrorHandler` changes nothing
+    // logged: gogdl's stdout is a token-exchange object. the `gogAuth` sanitizer
+    // stays named on the spawn for the runner log. `skipErrorHandler` changes nothing
     // observable for `gogdl auth` today (errorHandler's branches match legendary
     // tracebacks and "No saved credentials", neither of which gogdl prints) and
     // guarantees the boot probe can never raise a modal (P2).

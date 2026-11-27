@@ -1,6 +1,5 @@
 {
   "jestMock": {
-    "src/backend/__tests__/askForceUninstall.test.ts": 3,
     "src/backend/__tests__/cache.test.ts": 1,
     "src/backend/__tests__/checkRosettaInstall.test.ts": 4,
     "src/backend/__tests__/connectivityNow.test.ts": 1,

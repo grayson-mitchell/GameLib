@@ -44,7 +44,6 @@ jest.mock('backend/logger', () => ({
 }))
 
 jest.mock('../../../utils', () => ({
-  errorHandler: jest.fn(),
   getFileSize: jest.fn(() => 0),
   spawnAsync: jest.fn(),
   moveOnUnix: jest.fn(),

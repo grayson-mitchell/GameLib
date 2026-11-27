@@ -1,5 +1,4 @@
 import {
-  Runner,
   WineInstallation,
   Release,
   GameInfo,
@@ -14,7 +13,6 @@ import https from 'node:https'
 import pkg_json from 'backend/../../package.json'
 import { existsSync, mkdirSync, readFileSync } from 'graceful-fs'
 import i18next, { t } from 'i18next'
-import { tOrFallback } from './i18nFallback'
 
 import {
   logError,
@@ -29,7 +27,6 @@ import {
   assertContainedPath,
   assertPlausibleAbsolutePath
 } from './sidecar/rendererPathGuard'
-import { resolveTitleForGame } from './utils/gameTitle'
 import * as fileSize from 'filesize'
 import { showDialogBoxModalAuto, type DialogBoxDeps } from './dialog/dialog'
 import type { SendFrontendMessage } from './host/frontendMessage'
@@ -50,7 +47,6 @@ import { isUmuSupported, type UmuDeps } from './utils/compatibility_layers'
 import { isWindows } from './constants/environment'
 import { fixAsarPath } from './process/appPaths'
 
-import type { Game } from 'common/types/game_manager'
 import type { ProcessRunner } from 'backend/process/types'
 import { isStore } from 'common/storeCapabilities'
 import type { SpawnAsync } from './spawnAsync'
@@ -167,104 +163,6 @@ async function getWineFromProton(
   )
 
   return { wineVersion, winePrefix }
-}
-
-export async function askForceUninstall(
-  deps: { dialogs: Pick<Dialogs, 'showMessageBox'> },
-  game: Game,
-  appName: string
-) {
-  // Quick task 260905-mv5 (site 1, D-03): getGameInfo() can return
-  // `{} as GameInfo` on a double cache miss (D-01) -- resolveTitleForGame
-  // falls back to appName so this destructive-confirmation dialog is never
-  // nameless.
-  const title = resolveTitleForGame(game, appName)
-  const { response } = await deps.dialogs.showMessageBox({
-    type: 'question',
-    title,
-    message: i18next.t(
-      'box.error.folder-not-found.title',
-      'Game folder appears to be deleted, do you want to remove the game from the installed list?'
-    ),
-    buttons: [tOrFallback('box.no', 'No'), tOrFallback('box.yes', 'Yes')],
-    // D-07 fail-safe (Phase 33 Plan 03): buttons[1] ("yes") is the destructive branch
-    // (forceUninstall) -- an explicit cancelId declares buttons[0] ("no") as the safe
-    // decline so a degraded/timed-out dialog never auto-confirms the deletion.
-    cancelId: 0
-  })
-
-  if (response === 1) {
-    await game.forceUninstall()
-  }
-  return response
-}
-
-/** errorHandler reads the manager table only in its deleted-folder branch. */
-export type ErrorHandlerDeps = Pick<
-  ManagerDeps,
-  'libraryManagers' | 'dialogs' | 'appState' | 'sendFrontendMessage'
->
-
-async function errorHandler(
-  deps: ErrorHandlerDeps,
-  error: string,
-  appName: string,
-  runner: Runner
-): Promise<void> {
-  const plat = isStore(runner, 'legendary') ? 'Legendary (Epic Games)' : runner
-  const deletedFolderMsg = 'appears to be deleted'
-  const expiredCredentials = 'No saved credentials'
-  const legendaryRegex = /legendary.*\.py/
-  const ignoreMessages = [
-    // this message appears on macOS when no Crossover was found in the system, but it's a false alarm
-    'IndexError: list index out of range',
-    // Happens with the Zipapp build of Legendary on Linux, if the user updates
-    // dependencies requests relies on
-    'RequestsDependencyWarning'
-  ]
-
-  if (!error) return
-
-  if (ignoreMessages.some((msg) => error.includes(msg))) return
-
-  if (error.includes(deletedFolderMsg) && appName) {
-    await askForceUninstall(
-      deps,
-      deps.libraryManagers[runner].getGame(appName),
-      appName
-    )
-    return
-  }
-
-  if (legendaryRegex.test(error)) {
-    const MemoryError = 'MemoryError: '
-    if (error.includes(MemoryError)) {
-      return
-    }
-
-    showDialogBoxModalAuto(deps, {
-      title: plat,
-      message: i18next.t(
-        'box.error.legendary.generic',
-        'An error has occurred! Try to Logout and Login on your Epic account. {{newline}}  {{error}}',
-        { error, newline: '\n' }
-      ),
-      type: 'ERROR'
-    })
-    return
-  }
-
-  if (error.includes(expiredCredentials)) {
-    showDialogBoxModalAuto(deps, {
-      title: plat,
-      message: i18next.t(
-        'box.error.credentials.message',
-        'Your Crendentials have expired, Logout and Login Again!'
-      ),
-      type: 'ERROR'
-    })
-    return
-  }
 }
 
 // If you ever modify this range of characters, please also add them to nile
@@ -643,19 +541,6 @@ const cleanTitle = (title: string) =>
 const formatEpicStoreUrl = (title: string) => {
   const storeUrl = `https://www.epicgames.com/store/product/`
   return `${storeUrl}${cleanTitle(title)}`
-}
-
-function quoteIfNecessary(stringToQuote: string) {
-  const shouldQuote =
-    typeof stringToQuote === 'string' &&
-    !(stringToQuote.startsWith('"') && stringToQuote.endsWith('"')) &&
-    stringToQuote.includes(' ')
-
-  if (shouldQuote) {
-    return `"${stringToQuote}"`
-  }
-
-  return String(stringToQuote)
 }
 
 // Quick task 260922-v2e (D3/D4): the probe is referenced work -- its process
@@ -1616,7 +1501,6 @@ export const writeConfig = (
 }
 
 export {
-  errorHandler,
   getCurrentChangelog,
   showItemInFolder,
   removeSpecialcharacters,
@@ -1630,7 +1514,6 @@ export {
   archSpecificBinary,
   MACOS_ONEDIR_RUNNERS,
   formatEpicStoreUrl,
-  quoteIfNecessary,
   detectVCRedist,
   VC_REDIST_PROBE_TIMEOUT_MS,
   shutdownWine,

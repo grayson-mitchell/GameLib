@@ -308,13 +308,6 @@ const RUNNER_SHIM_IMPORTERS: readonly string[] = [
   'src/backend/storeManagers/sideload/games.ts'
 ]
 
-const COMMAND_RUNNER_IMPORTERS: readonly string[] = [
-  // 88.2-16: the adapter keeps `RunnerProps` (a type import) so its `callRunner` has the twin's signature; it replaces the twin.
-  'src/backend/runnerAdapter.ts',
-  'src/backend/storeManagers/steam/bridge/bottleDllOverrides.ts'
-  // 88.2-23: the launch oracle's runner trace (a type import of the runner's deps) is deleted with the oracle drivers.
-]
-
 /**
  * Rows are added by the plan that creates the survivor, in the same commit. Each row needs its file,
  * name, shape and callers; shims and resolvers a channel; twins and views a vectors test.
@@ -335,17 +328,8 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     // Only caller: the `releasesInfoReady` listener in engineWineResolvers.ts:426, emitted by utils/releases.ts; not a launch path, so it goes with the resolvers in 98 (88-02, RESEARCH open question 8).
     deletedBy: 98
   },
-  // 87-24 (D-15, D-22): the wine core. `validWine` is the one async TS reach (the launcher's wine check,
-  // checkWineBeforeLaunch and the command runner's binding); Phase 88 moves launch into Rust and deletes it.
-  {
-    name: 'validWine',
-    file: 'src/backend/enginewine/wineCore.ts',
-    shape: 'shim',
-    channel: 'RUST_WINE_VALID',
-    callers: ['src/backend/launcher.ts'],
-    // Last reach: the command runner's `validWine` binding (commandRunner.ts:302), ported in 88.2 (D-30); bootstrap.ts no longer builds the TS runner (88.2-21).
-    deletedBy: 88.2
-  },
+  // 87-24 (D-15, D-22): the wine core. `validWine` was its one async TS reach; its last caller was the TS command runner's
+  // binding, so 88.2-24 deleted the shim (`enginewine/wineCore.ts`) with the runner. The renderer's `wine.isValidVersion` is native.
   // 87-26 (D-15, D-22): wine discovery. `discoverAlternativeWine` is the one async TS reach into the Rust discovery
   // (config.ts's `getAlternativeWine`, which utils.ts and the Steam install form call), deleted with the config in
   // Phase 98. The intra-phase `discoverCrossover` shim (`enginewine/intraPhase.ts`, for the still-TS engine's CrossOver
@@ -797,7 +781,7 @@ export const SCHEDULE: readonly ScheduleRow[] = [
   // 87-36 (D-23): the renderer's `runWineCommand` (`command` is the payload with the global settings spread under its
   // `gameSettings`) and the Wine tool buttons' `callTool` (`facts` as above; the GOG offline-installer check, the
   // library push and the `done` status run in the registration after it, in the TS order). Phase 98 deletes both with
-  // the config and the library they read; the sync-callback `runWineCommand` of `commandRunner.ts` stays a twin.
+  // the config and the library they read; the TS command runner's `runWineCommand` twin went in 88.2-24.
   {
     name: 'runWineCommand',
     file: 'src/backend/sidecar/engineWineResolvers.ts',
@@ -828,23 +812,9 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     callers: COMPATIBILITY_LAYERS_IMPORTERS,
     deletedBy: 98
   },
-  // 87-24 (D-22 deviation, for the checker and the operator): the command runner's `runWineCommand` (its `onSpawn` hands
-  // callers a live ChildHandle) cannot become a same-signature async shim without rewriting Phase 88-92 launch code, so
-  // this TS twin stays, pinned to the Rust `wine_command` goldens that one oracle test records and both languages replay.
-  // 88.1-17: the sync env builders it awaited (`setupEnvVars`, `setupWineEnvVars`) were deleted from `launcher.ts`; the
-  // oracle drives the runner through a test-only copy (`wine/__tests__/oracle/envBuildersFixture.ts`) pinned to the
-  // `wine_env.json` vectors, and both go with this twin in 88.2.
-  // 87-57: the oracle harness (`testUtils/engineWineOracle/`) is trimmed to what that one oracle test imports and is deleted with
-  // this twin's vector test.
-  {
-    name: 'createCommandRunner',
-    file: 'src/backend/commandRunner.ts',
-    shape: 'twin',
-    vectors: 'src/backend/wine/__tests__/oracle/wineCore.oracle.test.ts',
-    callers: COMMAND_RUNNER_IMPORTERS,
-    // Twin of the command runner, ported to Rust in 88.2 (D-30).
-    deletedBy: 88.2
-  },
+  // 87-24 (D-22 deviation): the command runner's `runWineCommand` was a scheduled twin (`createCommandRunner`) pinned to the
+  // `wine_command` goldens. 88.2-24 deleted it with its vectors test (`wineCore.oracle.test.ts`) and the test-only env copy; the
+  // goldens stay and `gamelib-wine`'s `golden_wine_core` replays them.
   // 87-28 (D-24 extended, for the checker and the operator): the non-bridge sync pure helpers of the engine
   // configuration. They are called synchronously from the launch paths (`engineKeyFor`: launcher.ts and the five
   // games.ts, Phase 92) and from the settings and install flows' engine-override validation (Phase 98), so they
@@ -2077,7 +2047,8 @@ describe('engineWineShimSchedule detector (planted fixtures)', () => {
       // 88.1-15 retired every row the TS prepare steps called, 88.1-16 the Epic status and wine self-heal rows, and 88.1-17
       // the two env builder twins and the two wine manager shims `downloadDefaultWine` called: nothing is due in 88.1 now.
       expect(rowsDueIn(SCHEDULE, 88.1)).toEqual([])
-      expect(rowsDueIn(SCHEDULE, 88.2).length).toBeGreaterThanOrEqual(2)
+      // 88.2-24 deleted `createCommandRunner` and the `validWine` shim, the last two rows 88.2 owned: nothing is due in 88.2 now.
+      expect(rowsDueIn(SCHEDULE, 88.2)).toEqual([])
     })
 
     it('noIntraPhaseRowsLeft fails while a row has deletedBy 87 and passes once none does', () => {

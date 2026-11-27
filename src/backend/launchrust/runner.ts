@@ -31,8 +31,7 @@ import { resolveTitleForGame } from 'backend/utils/gameTitle'
  * A call that watches its output (`observe: true`) names a stream (`streamId`, opened in the table of
  * `backend/runnerStream.ts`) and the shell sends the output as `runnerOutput` frames and the spawn as a `runnerSpawned`
  * frame on the sidecar's stdin, ahead of the call's reply; {@link registerRunnerOutputListener} validates each and hands
- * it to the table. Nothing here is switched over yet: `commandRunner.ts` still serves every caller until the adapter over
- * these shims is wired (88.2-16, 88.2-21).
+ * it to the table. The adapter over these shims is wired at boot (88.2-16, 88.2-21) and the TS command runner is deleted (88.2-24).
  *
  * The answer is `unknown`, because the transport is untyped. There is no TypeScript fallback (D-19): a rejected call (an
  * argument the crate refused, the shell not ready, a lost reply) fails the caller that asked.

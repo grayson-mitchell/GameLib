@@ -376,20 +376,20 @@ const BUILDERS: SliceSpec = {
   flag: 'GAMELIB_LAUNCH'
 }
 
+/** True when `code` declares `name` as a function or a function-valued binding (a member or property name is not one). */
+const definesFunction = (code: string, name: string): boolean =>
+  new RegExp(
+    `(?:\\bfunction\\s*\\*?\\s+${name}\\b|\\b(?:const|let|var)\\s+${name}\\b)`
+  ).test(code)
+
+const codeOf = (path: string): string => {
+  const f = tsWalk.files.find((x) => x.path === path)
+  if (f === undefined) throw new Error(`${path} was not read by the walk`)
+  return f.code
+}
+
 describe('buildersPortComplete', () => {
   runSlice(BUILDERS)
-
-  /** True when `code` declares `name` as a function or a function-valued binding (a member or property name is not one). */
-  const definesFunction = (code: string, name: string): boolean =>
-    new RegExp(
-      `(?:\\bfunction\\s*\\*?\\s+${name}\\b|\\b(?:const|let|var)\\s+${name}\\b)`
-    ).test(code)
-
-  const codeOf = (path: string): string => {
-    const f = tsWalk.files.find((x) => x.path === path)
-    if (f === undefined) throw new Error(`${path} was not read by the walk`)
-    return f.code
-  }
 
   it('launcher.ts defines none of the builder or prepare functions (the Launcher members are bound to shims and adapters)', () => {
     const code = codeOf('src/backend/launcher.ts')
@@ -730,6 +730,54 @@ const RUNNER_ORACLE: SliceSpec = {
 
 describe('runnerOraclePortComplete', () => {
   runSlice(RUNNER_ORACLE)
+})
+
+/**
+ * 88.2-24, D-02, D-18, D-25 and ROADMAP 88.2 SC4: the TypeScript command runner is deleted. `commandRunner.ts` (the
+ * `createCommandRunner` twin), its test, the twin's vectors test (`wine/__tests__/oracle/wineCore.oracle.test.ts`) and
+ * the test-only env copy only that vectors test used (`wine/__tests__/oracle/envBuildersFixture.ts`) are gone. The runner's
+ * behaviour lives in Rust (`gamelib-launch`, `gamelib-wine`), and every golden slice stays: the Rust replays read them.
+ * The 82 amendment closes here too: `utils.ts` no longer defines `errorHandler` or `askForceUninstall` (the names live on
+ * as Rust ops and a shim), and gog's and nile's `authLogSanitizer` are gone (Rust's `LogSanitizer` replaced them).
+ *
+ * `forbiddenIdentifiers` is the runner-internal names with no surviving use, each checked with `git grep -w` on
+ * 2026-11-27 after the deletion: `RunnerProps` and `WineCommandResult` moved to `runnerAdapter.ts` and `CommandRunner` is
+ * `services/types.ts`'s, so none of the three is listed. The two `defines no` tests hold the utils names, which live on
+ * as op and shim names elsewhere.
+ */
+const COMMAND_RUNNER: SliceSpec = {
+  deleted: [
+    'src/backend/commandRunner.ts',
+    'src/backend/__tests__/commandRunner.test.ts',
+    'src/backend/wine/__tests__/oracle/wineCore.oracle.test.ts',
+    'src/backend/wine/__tests__/oracle/envBuildersFixture.ts'
+  ],
+  kept: RUNNER_ORACLE.kept,
+  forbiddenIdentifiers: [
+    'createCommandRunner',
+    'CommandRunnerDeps',
+    'getRunnerCallWithoutCredentials',
+    'appNameFromCommandParts',
+    'appNameIndexFinders',
+    'WINESERVER_WAIT_TIMEOUT_MS',
+    'ErrorHandlerDeps',
+    'authLogSanitizer'
+  ],
+  identifierRoot: 'src/backend',
+  flag: 'GAMELIB_LAUNCH'
+}
+
+describe('commandRunnerPortComplete', () => {
+  runSlice(COMMAND_RUNNER)
+
+  it('utils.ts defines neither errorHandler nor askForceUninstall (the names live on as Rust ops and a shim)', () => {
+    const code = codeOf('src/backend/utils.ts')
+    expect(
+      ['errorHandler', 'askForceUninstall'].filter((name) =>
+        definesFunction(code, name)
+      )
+    ).toEqual([])
+  })
 })
 
 describe('noRollbackFlag', () => {

@@ -11,7 +11,7 @@ import type {
 } from 'backend/launchrust/runner'
 import type { RunnerStreams } from 'backend/runnerStream'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
-import type { RunnerProps, WineCommandResult } from 'backend/commandRunner'
+import type { LogPrefix } from 'backend/logger/constants'
 import type {
   CallRunnerOptions,
   ExecResult,
@@ -23,10 +23,9 @@ import type {
 import type LogWriter from 'backend/logger/targetWriter'
 
 /**
- * The commandRunner-shaped adapter over the runner transport (Phase 88.2, 88.2-16, D-02, D-19, D-30). `callRunner` keeps the
- * signature and the `ExecResult` of `createCommandRunner(...).callRunner`, and runs the command in Rust (`launch_runner_call`)
- * instead of in `ProcessRunner`. Nothing is switched over here: `commandRunner.ts` still serves every caller until the boot
- * wires this in (88.2-21).
+ * The commandRunner-shaped adapter over the runner transport (Phase 88.2, 88.2-16, D-02, D-19, D-30). `callRunner` has the
+ * signature and the `ExecResult` the TS `createCommandRunner(...).callRunner` had, and runs the command in Rust
+ * (`launch_runner_call`) instead of in `ProcessRunner`. The boot wires it in (88.2-21) and the TS runner is deleted (88.2-24).
  *
  * What the adapter does around the one invoke:
  * - appends the runner's own writer to the caller's writers, as the TypeScript did, and hands each writer to Rust through
@@ -67,6 +66,21 @@ export type RunnerAdapterCallOptions = CallRunnerOptions & {
  */
 export type RunnerAdapterWineOptions = CallRunnerOptions & {
   spawnClass?: 'helper' | 'game'
+}
+
+/** The runner a `callRunner` call names (88.2-24: moved here from the deleted `commandRunner.ts`). */
+export interface RunnerProps {
+  name: Runner
+  logPrefix: LogPrefix
+  bin: string
+  dir?: string
+}
+
+/** What a wine command settles with (88.2-24: moved here from the deleted `commandRunner.ts`). */
+export interface WineCommandResult {
+  stderr: string
+  stdout: string
+  code?: number | null
 }
 
 /** `WineCommandArgs` with the adapter's wine options. A `WineCommandArgs` is assignable to it. */

@@ -1071,9 +1071,9 @@ export const RUST_WINE_RELEASES_INFO_READY = 'wine_releases_info_ready' as const
  * Darwin 14). Existence checks only, nothing is spawned. Args: one `WineInstallation` (or `null`, which is
  * `false`). The shell reads the Darwin release itself and keeps only the six declared installation keys, so
  * a persisted wine carrying a legacy key, or the Windows factory `{}`, answers as the TS `validWine` did
- * (`false`, never a rejection). Resolves a boolean. The sidecar's `validWine` shim in
- * `enginewine/wineCore.ts` is its one caller; the renderer's `wine.isValidVersion` is a native channel
- * over the same op.
+ * (`false`, never a rejection). Resolves a boolean. The sidecar's `validWine` shim (`enginewine/wineCore.ts`) was
+ * its one caller and went with the TS command runner in 88.2-24; the renderer's `wine.isValidVersion` is a native
+ * channel over the same op.
  */
 export const RUST_WINE_VALID = 'wine_valid' as const
 
@@ -1082,9 +1082,8 @@ export const RUST_WINE_VALID = 'wine_valid' as const
  * environment and the spawn of one wine command (argv only, never a shell; output capped; a shutdown
  * registrant held while it runs). Args: one `WineCommandArgs` object; the shell adds the host facts the
  * crate may not read (its own process environment and the Darwin release). Resolves
- * `{ stdout, stderr, code }`. No TS caller yet: the sync-callback `runWineCommand` of `commandRunner.ts`
- * stays a scheduled twin until Phase 88 owns launching a game (its `onSpawn` hands callers a live
- * ChildHandle). Long-running: listed in the sidecar's `UNBOUNDED_RUST_CHANNELS` (a game's winetricks or
+ * `{ stdout, stderr, code }`. The TS command runner's sync-callback `runWineCommand` twin was deleted in 88.2-24; the
+ * runner adapter runs wine commands through `launch_wine_command`. Long-running: listed in the sidecar's `UNBOUNDED_RUST_CHANNELS` (a game's winetricks or
  * installer runs for minutes, ended by its own exit or the app shutdown).
  */
 export const RUST_WINE_RUN_COMMAND = 'wine_run_command' as const

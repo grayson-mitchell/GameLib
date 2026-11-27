@@ -34,9 +34,9 @@
  * `<USERDATA>` and `<APPFOLDER>` are deliberately different directories (they coincide on a real
  * Mac), so a port that reads the wrong root fails a golden rather than passing by coincidence.
  *
- * 87-57 trimmed this file to what `wine/__tests__/oracle/wineCore.oracle.test.ts` imports, the one oracle left: it is the
- * vector test of the D-22 twins (`setupEnvVars`, `setupWineEnvVars`, `createCommandRunner`, `getDefaultWineBinary`) and is
- * deleted with them in Phase 88, and this harness with it. `pinClock`, `loadDeltas` and `assertLiveRecorded` served the oracles
+ * 87-57 trimmed this file to what the wine core oracle imported, the one oracle left: the vector test of the D-22 twins
+ * (`setupEnvVars`, `setupWineEnvVars`, `createCommandRunner`, `getDefaultWineBinary`). 88.2-24 deleted that oracle with the
+ * runner twin; the launch oracle harnesses and the known-fix vector tests still import this file until 88.3 deletes them. `pinClock`, `loadDeltas` and `assertLiveRecorded` served the oracles
  * 87-37 and 87-56c deleted. The Rust replay reads `deltas.json` and the recordings itself.
  *
  * Two-profile rule: every case runs on a fresh `createFakeHomeProfile()` and never reads the real

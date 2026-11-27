@@ -117,19 +117,6 @@ async function clearAmazonCookiesForLogout(
   }
 }
 
-export function authLogSanitizer(line: string) {
-  try {
-    const output = JSON.parse(line)
-    output.url = '<redacted>'
-    output.code_verifier = '<redacted>'
-    output.serial = '<redacted>'
-    output.client_id = '<redacted>'
-    return JSON.stringify(output) + '\n'
-  } catch {
-    return line
-  }
-}
-
 // Quick task 260806-teb Task 2: in-flight-promise memoization around getLoginData()'s
 // `runRunnerCommand` spawn, mirroring `src/backend/utils/systeminfo/index.ts:69-99`'s
 // `inFlightSystemInfoFetch` exactly in structure. Under Tauri, two concurrent

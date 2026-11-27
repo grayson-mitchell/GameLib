@@ -4,7 +4,6 @@ import { join } from 'path'
 import { rm } from 'fs/promises'
 
 import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
-import { createTestHostServices } from 'backend/testUtils/testHostServices'
 import { createTestAppPaths } from 'backend/testUtils/testAppPaths'
 import { stubRustSteamFiles } from 'backend/storeManagers/steam/localFiles/__tests__/fixtures/stubRustSteamFiles'
 import type { LibraryFoldersResult } from 'backend/storeManagers/steam/localFiles/steamFilesTypes'
@@ -51,19 +50,6 @@ describe('backend/utils.ts', () => {
     it('refuses a folder name that escapes the root', async () => {
       await utils.removeFolder(cfgDeps, '/abs/root', '../escape')
       expect(rm).not.toHaveBeenCalled()
-    })
-  })
-
-  test('quoteIfNeccessary', () => {
-    const testCases = new Map<string, string>([
-      ['path/without/spaces', 'path/without/spaces'],
-      ['path/with /spaces', '"path/with /spaces"'],
-      ['"path/quoted/without/spaces"', '"path/quoted/without/spaces"'],
-      ['"path/quoted/with /spaces"', '"path/quoted/with /spaces"']
-    ])
-
-    testCases.forEach((expectString, inputString) => {
-      expect(utils.quoteIfNecessary(inputString)).toStrictEqual(expectString)
     })
   })
 
@@ -417,66 +403,6 @@ describe('backend/utils.ts', () => {
       expect(bin).toBe('gogdl')
       expect((existsSync as jest.Mock).mock.calls.length).toBe(0)
     })
-  })
-})
-
-describe('errorHandler takes its manager table by deps (66.1-23)', () => {
-  const host = createTestHostServices()
-  const throwingTable = {
-    sendFrontendMessage: jest.fn(),
-    dialogs: host.dialogs,
-    appState: host.appState,
-    get libraryManagers(): never {
-      throw new Error(
-        'errorHandler read libraryManagers on a branch that never needs it'
-      )
-    }
-  }
-
-  it('resolves without reading the manager table when no deleted-folder branch is hit', async () => {
-    await expect(
-      utils.errorHandler(
-        throwingTable,
-        'RequestsDependencyWarning',
-        'g1',
-        'gog'
-      )
-    ).resolves.toBeUndefined()
-    await expect(
-      utils.errorHandler(
-        throwingTable,
-        'Process terminated with signal SIGTERM',
-        'g1',
-        'gog'
-      )
-    ).resolves.toBeUndefined()
-  })
-
-  it('the deleted-folder branch looks the game up once, by runner and appName', async () => {
-    const getGame = jest.fn(() => ({
-      getGameInfo: () => ({ title: 'Gone' }),
-      forceUninstall: jest.fn()
-    }))
-    let reads = 0
-    const deps = {
-      sendFrontendMessage: jest.fn(),
-      dialogs: host.dialogs,
-      appState: host.appState,
-      get libraryManagers() {
-        reads++
-        return { gog: { getGame } } as never
-      }
-    }
-
-    // askForceUninstall's dialog is the platform mock here (not scripted), so it may reject
-    // after the lookup; the lookup itself is the contract under test.
-    await utils
-      .errorHandler(deps, 'x appears to be deleted', 'g1', 'gog')
-      .catch(() => undefined)
-
-    expect(reads).toBe(1)
-    expect(getGame).toHaveBeenCalledTimes(1)
-    expect(getGame).toHaveBeenCalledWith('g1')
   })
 })
 

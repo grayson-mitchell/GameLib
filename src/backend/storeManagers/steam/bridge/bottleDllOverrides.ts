@@ -20,7 +20,7 @@
  */
 
 import type { GameSettings } from 'common/types'
-import type { CommandRunner } from 'backend/commandRunner'
+import type { CommandRunner } from 'backend/services/types'
 import { logWarning, LogPrefix } from 'backend/logger'
 import { NUMERIC_APP_ID } from '../gameConstants'
 

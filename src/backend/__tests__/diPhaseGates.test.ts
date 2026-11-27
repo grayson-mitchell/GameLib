@@ -275,7 +275,6 @@ describe('66.1 end state: no direct child_process', () => {
   it('launcher, runner front doors and every registration import no child_process', () => {
     const files = [
       join(BACKEND, 'launcher.ts'),
-      join(BACKEND, 'commandRunner.ts'),
       join(BACKEND, 'spawnAsync.ts'),
       join(BACKEND, 'quitHandler.ts'),
       ...registrations

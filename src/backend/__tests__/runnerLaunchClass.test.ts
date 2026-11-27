@@ -23,11 +23,11 @@ import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import { createRunnerStreams } from 'backend/runnerStream'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import LogWriter from 'backend/logger/targetWriter'
-import type { RunnerProps } from 'backend/commandRunner'
 import type { GameSettings } from 'common/types'
 import type { LogFrameTarget } from 'common/types/sidecarTransport'
 
 import { createRunnerAdapter } from '../runnerAdapter'
+import type { RunnerProps } from '../runnerAdapter'
 
 const RESULT = { stdout: '', stderr: '', fullCommand: 'x' }
 
