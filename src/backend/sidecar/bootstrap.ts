@@ -252,6 +252,8 @@ import {
   setupWineEnvVars as setupWineEnvVarsShim,
   verifyWinePrefix as verifyWinePrefixShim
 } from '../launchrust/builders'
+// The quit handler reads the Rust running-game registry and ends its trees on Yes (D-07, D-27).
+import { gamesRunning, trackedKillAll } from '../launchrust/runner'
 import { settleEnvMap } from '../launchBuilderReply'
 import { validWine } from '../enginewine/wineCore'
 import { setEngineOnline } from '../enginewine/engineOnline'
@@ -1933,6 +1935,16 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
             // Read lazily: this handler is built before 'download-queue' and only fires after boot.
             isRunning: () => requireServices(state).downloadQueue.isRunning(),
             isBridgeHosting: () => requireBridgeHelpers(state).hasLive(),
+            // Read the host lazily like the other deps. Only a boolean true is a running game; a rejected read
+            // is the handler's to treat as running.
+            isGameRunning: () =>
+              gamesRunning({
+                requestRustInvoke: requireHost(state).requestRustInvoke
+              }).then((v) => v === true),
+            killTrackedRust: () =>
+              trackedKillAll({
+                requestRustInvoke: requireHost(state).requestRustInvoke
+              }).then(Number),
             showMessageBox: (opts) =>
               requireHost(state).dialogs.showMessageBox(opts),
             t: tOrFallback,

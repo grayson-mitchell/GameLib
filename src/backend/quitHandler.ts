@@ -3,6 +3,11 @@
  * collaborator passed in. Tracked and long-lived children are torn down through the process
  * runner's tracked and long-lived registries.
  *
+ * Games launched by Rust are Game-class: they outlive a sidecar that merely exits, so a graceful quit ends them
+ * explicitly on Yes through the Rust registry (`killTrackedRust`), and the dialog also opens while the registry
+ * reports a running game (`isGameRunning`). Both are D-27, a recorded behaviour change that amends D-06 and is not
+ * parity (88-VALIDATION.md, `Behaviour changes (88.2)`).
+ *
  * Value imports: none; every collaborator arrives as a dep.
  */
 import type { ProcessRunner } from './process/types'
@@ -23,6 +28,10 @@ export interface QuitHandlerDeps {
   isLocked(): boolean
   isRunning(): boolean
   isBridgeHosting(): boolean
+  /** Whether the Rust running-game registry holds a game (D-07). A rejection is read as a running game. */
+  isGameRunning(): Promise<boolean>
+  /** Ends every game tree and Rust-tracked helper through gamelib-proc; answers how many were ended. */
+  killTrackedRust(): Promise<number>
   showMessageBox(opts: QuitMessageBoxOptions): Promise<{ response: number }>
   t(key: string, fallback: string): string
   abortAll(): void
@@ -36,8 +45,10 @@ export function createQuitHandler(deps: QuitHandlerDeps): QuitHandler {
     const isLocked = deps.isLocked()
     const isBridgeHosting = deps.isBridgeHosting()
     const isRunning = deps.isRunning()
+    // A failed registry read asks: never end or orphan a game without the prompt (88.2 prohibition 4).
+    const isGameRunning = await deps.isGameRunning().catch(() => true)
 
-    if (isLocked || isRunning || isBridgeHosting) {
+    if (isLocked || isRunning || isBridgeHosting || isGameRunning) {
       const { response } = await deps.showMessageBox({
         buttons: [deps.t('box.no', 'No'), deps.t('box.yes', 'Yes')],
         // CR-04: `cancelId` is LOAD-BEARING, not cosmetic. This dialog's sense is
@@ -57,7 +68,7 @@ export function createQuitHandler(deps: QuitHandlerDeps): QuitHandler {
         // buttons[1], so Esc here meant "Yes, kill everything and quit".
         cancelId: 0,
         message:
-          isBridgeHosting && !isLocked && !isRunning
+          isBridgeHosting && !isLocked && !isRunning && !isGameRunning
             ? deps.t(
                 'box.quit.bridgeHosting',
                 'A game is running through the Steam bridge. Quitting GameLib ends any multiplayer session it is hosting. Quit anyway?'
@@ -81,6 +92,10 @@ export function createQuitHandler(deps: QuitHandlerDeps): QuitHandler {
       // Phase 72 D-13: kill only the children this sidecar spawned (tracked PIDs),
       // never by name pattern. Includes tracked Wine children (games).
       deps.runner.killAllTracked()
+
+      // D-27: games and helpers Rust spawned end through gamelib-proc after its pid-and-stamp proof, bounded by the
+      // child grace (inside the one 5 s exit budget). A kill that fails must not strand the quit: abortAll still runs.
+      await deps.killTrackedRust().catch(() => 0)
 
       // Kill all child processes
       deps.abortAll()

@@ -292,9 +292,11 @@ const DEADLINE_SHIM_IMPORTERS: readonly string[] = [
   'src/backend/storeManagers/steam/gameBridgeWineLaunch.ts'
 ]
 // 88.2-16: the importers of `launchrust/runner.ts`, every one counted per file. The adapter calls `runnerCall`; it is the
-// only one until the boot wiring (88.2-21) registers the listener and builds the kill-aware stream table.
+// only one until the boot wiring (88.2-21) registers the listener and builds the kill-aware stream table. 88.2-19: the
+// sidecar bootstrap imports `gamesRunning` and `trackedKillAll` for the quit handler (D-27).
 const RUNNER_SHIM_IMPORTERS: readonly string[] = [
-  'src/backend/runnerAdapter.ts'
+  'src/backend/runnerAdapter.ts',
+  'src/backend/sidecar/bootstrap.ts'
 ]
 
 const COMMAND_RUNNER_IMPORTERS: readonly string[] = [

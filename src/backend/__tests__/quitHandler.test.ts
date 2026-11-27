@@ -15,6 +15,8 @@ function setup(
       killAllTracked: () => (calls.push('runner.kill'), 0),
       teardownAll: () => void calls.push('runner.teardown')
     },
+    isGameRunning: async () => false,
+    killTrackedRust: async () => (calls.push('rust.kill'), 0),
     isLocked: () => false,
     isRunning: () => false,
     isBridgeHosting: () => false,
@@ -61,6 +63,7 @@ describe('createQuitHandler', () => {
       // teardownAll, so the final call is a no-op in the real runner.
       'runner.teardown',
       'runner.kill',
+      'rust.kill',
       'abort',
       'releaseSteam',
       'presence',
@@ -82,5 +85,32 @@ describe('createQuitHandler', () => {
     )
     await createQuitHandler(deps).handleExit()
     expect(String(dialogs[0]!.message)).toMatch(/pending operations/)
+  })
+
+  test('a running game alone opens the pending-operations dialog and Yes ends it through the Rust registry', async () => {
+    const { calls, dialogs, deps } = setup(
+      { isGameRunning: async () => true },
+      1
+    )
+    await createQuitHandler(deps).handleExit()
+    expect(dialogs).toHaveLength(1)
+    expect(dialogs[0]).toMatchObject({
+      buttons: ['No', 'Yes'],
+      cancelId: 0,
+      title: 'Exit',
+      message: 'There are pending operations, are you sure?'
+    })
+    expect(calls.filter((c) => c === 'rust.kill')).toHaveLength(1)
+    expect(calls).toEqual([
+      'dialog',
+      'runner.teardown',
+      'runner.kill',
+      'rust.kill',
+      'abort',
+      'releaseSteam',
+      'presence',
+      'runner.teardown',
+      'exit'
+    ])
   })
 })

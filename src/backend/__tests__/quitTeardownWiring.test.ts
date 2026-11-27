@@ -243,6 +243,23 @@ describe('Layer A -- comet registration on the process runner teardown registry 
   })
 })
 
+describe('Quit handler reads and ends the Rust running-game registry (88.2-19, D-27)', () => {
+  test('bootstrap binds isGameRunning to gamesRunning and killTrackedRust to trackedKillAll in the quit handler deps', () => {
+    const raw = readFileSync(
+      join(__dirname, '..', 'sidecar', 'bootstrap.ts'),
+      'utf-8'
+    )
+    const code = stripSourceComments(raw)
+      .split('\n')
+      .filter((line) => !line.trim().startsWith('//'))
+      .map(stripTrailingLineCommentTs)
+      .join('\n')
+    const deps = extractBracedBlock(code, 'createQuitHandler(')
+    expect(deps).toMatch(/isGameRunning:\s*\(\)\s*=>\s*gamesRunning\(/)
+    expect(deps).toMatch(/killTrackedRust:\s*\(\)\s*=>\s*trackedKillAll\(/)
+  })
+})
+
 describe('No stale main.ts before-quit claim survives in src/backend (quick 260907-juv)', () => {
   test('C8: raw source -- the exact phrase does not appear outside a line documenting its own supersession', () => {
     // Raw (UNSTRIPPED) on purpose: the subject under assertion here IS a comment, so
