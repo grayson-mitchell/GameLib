@@ -1119,5 +1119,46 @@
         }
       }
     ]
+  },
+  {
+    "id": "gog-pcgw-cargo-permissiondenied-falls-back-to-title-search-synthetic",
+    "note": "The GOG-id PCGamingWiki lookup answers HTTP 200 with the live permissiondenied error object and no cargoquery (the real body of live-gog-linux ex-1). It is read as no GOG id and falls through to the title search, then the page text is parsed (the recorded Cyberpunk search and page bodies). Pins the fallthrough whatever the live API answers. Added by quick 261127-vna; expected output identical to the cargo-empty case. D-23 exchanges as above.",
+    "platform": "windows",
+    "ops": [
+      {
+        "op": "wiki",
+        "game": {
+          "runner": "gog",
+          "app_name": "1423049311",
+          "title": "Cyberpunk 2077"
+        }
+      }
+    ],
+    "synthetic": [
+      {
+        "method": "GET",
+        "path": "/w/api.php",
+        "fromRecorded": {
+          "case": "live-gog-linux",
+          "file": "body-1.json"
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/w/api.php",
+        "fromRecorded": {
+          "case": "live-epic-linux",
+          "file": "body-1.json"
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/w/api.php",
+        "fromRecorded": {
+          "case": "live-epic-linux",
+          "file": "body-3.json"
+        }
+      }
+    ]
   }
 ]
