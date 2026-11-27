@@ -11,6 +11,8 @@
 import { readFileSync } from 'fs'
 import { join } from 'path'
 
+import * as logger from 'backend/logger'
+import { LogPrefix } from 'backend/logger'
 import { createLauncher } from 'backend/launcher'
 import { createTestToolsSlices } from 'backend/testUtils/testServices'
 import GOGGame from 'backend/storeManagers/gog/games'
@@ -34,11 +36,14 @@ const WINE_SETTINGS = {
 type Invoke = { channel: string; args: unknown[] }
 
 /** Manager deps whose Rust transport records every request; every other collaborator is the builders' unscripted one. */
-function rig() {
+function rig(options: { rejectKills?: boolean } = {}) {
   const invokes: Invoke[] = []
   const deps = createTestManagerDeps({
     requestRustInvoke: ((channel: string, args: unknown[]) => {
       invokes.push({ channel, args })
+      // 88.2-30 (WR-05): the Rust round trip can time out, refuse or lose its reply.
+      if (options.rejectKills && channel === 'launch_tracked_kill')
+        return Promise.reject(new Error('launch_tracked_kill:not-ready'))
       // launchSettingsFor asks Rust for the effective settings before it stops wine.
       if (channel === 'engine_launch_settings_get')
         return Promise.resolve(WINE_SETTINGS)
@@ -119,6 +124,91 @@ describe("the managers' stop() ends a Rust-launched game through trackedKill (D-
     const steam = source('storeManagers/steam/games.ts')
     expect(steam).toMatch(/this\.deps\.runner\.killTracked\(/)
     expect(steam).not.toMatch(/trackedKill/)
+  })
+})
+
+describe("a rejected tracked kill does not stop the managers' stop() from shutting wine down (88.2-30, WR-05)", () => {
+  afterEach(() => {
+    jest.restoreAllMocks()
+  })
+
+  const stubSpawn = (deps: ManagerDeps) => {
+    const spawnAsync = jest.fn(() =>
+      Promise.resolve({ code: 0, stdout: '', stderr: '' })
+    )
+    Object.assign(deps, { spawnAsync })
+    return spawnAsync
+  }
+
+  const wineserverKills = (spawnAsync: jest.Mock) =>
+    spawnAsync.mock.calls.filter(
+      (call) => (call as unknown[])[0] === '/nonexistent/wineserver'
+    )
+
+  it('legendary stop(true) logs the rejection and still runs the wineserver kill', async () => {
+    const { deps, invokes } = rig({ rejectKills: true })
+    const warn = jest.spyOn(logger, 'logWarning').mockImplementation(() => {})
+    const spawnAsync = stubSpawn(deps)
+    const game = new LegendaryGame('app-l' as LegendaryAppName, deps)
+    jest.spyOn(game, 'getGameInfo').mockReturnValue({
+      runner: 'legendary',
+      app_name: 'app-l'
+    } as never)
+    jest.spyOn(game, 'isNative').mockReturnValue(false)
+    jest.spyOn(game, 'getSettings').mockResolvedValue(WINE_SETTINGS as never)
+
+    await expect(game.stop(true)).resolves.toBeUndefined()
+
+    expect(kills(invokes)).toHaveLength(1)
+    expect(wineserverKills(spawnAsync)).toHaveLength(1)
+    expect(wineserverKills(spawnAsync)[0]?.[1]).toEqual(['-k'])
+    expect(warn).toHaveBeenCalledTimes(1)
+    expect(warn.mock.calls[0]?.[1]).toBe(LogPrefix.Legendary)
+  })
+
+  it('nile stop(true) logs the rejection and still runs the wineserver kill', async () => {
+    const { deps, invokes } = rig({ rejectKills: true })
+    const warn = jest.spyOn(logger, 'logWarning').mockImplementation(() => {})
+    const spawnAsync = stubSpawn(deps)
+    const game = new NileGame('app-n', deps)
+    jest.spyOn(game, 'getGameInfo').mockReturnValue({
+      runner: 'nile',
+      app_name: 'app-n'
+    } as never)
+    jest.spyOn(game, 'isNative').mockReturnValue(false)
+    jest.spyOn(game, 'getSettings').mockResolvedValue(WINE_SETTINGS as never)
+
+    await expect(game.stop(true)).resolves.toBeUndefined()
+
+    expect(kills(invokes)).toHaveLength(1)
+    expect(wineserverKills(spawnAsync)).toHaveLength(1)
+    expect(wineserverKills(spawnAsync)[0]?.[1]).toEqual(['-k'])
+    expect(warn).toHaveBeenCalledTimes(1)
+    expect(warn.mock.calls[0]?.[1]).toBe(LogPrefix.Nile)
+  })
+
+  it('sideload stop() still sends both kills, then shuts wine down, with two warnings', async () => {
+    const { deps, invokes } = rig({ rejectKills: true })
+    const warn = jest.spyOn(logger, 'logWarning').mockImplementation(() => {})
+    const spawnAsync = stubSpawn(deps)
+    const game = new SideloadGame('app-s', deps)
+    jest.spyOn(game, 'getGameInfo').mockReturnValue({
+      runner: 'sideload',
+      app_name: 'app-s',
+      install: { executable: '/games/s.exe' }
+    } as never)
+    jest.spyOn(game, 'isNative').mockReturnValue(false)
+    jest.spyOn(game, 'getSettings').mockResolvedValue(WINE_SETTINGS as never)
+
+    await expect(game.stop()).resolves.toBeUndefined()
+
+    expect(kills(invokes)).toEqual([
+      [{ runner: 'sideload', key: 'app-s' }],
+      [{ runner: 'wine', key: 'app-s' }]
+    ])
+    expect(wineserverKills(spawnAsync)).toHaveLength(1)
+    expect(warn).toHaveBeenCalledTimes(2)
+    for (const call of warn.mock.calls) expect(call[1]).toBe(LogPrefix.Sideload)
   })
 })
 

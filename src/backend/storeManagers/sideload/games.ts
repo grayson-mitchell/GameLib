@@ -39,6 +39,7 @@ import type LogWriter from 'backend/logger/targetWriter'
 import { engineKeyFor } from 'backend/enginewine/twin'
 import { launchSettingsFor } from 'backend/launchEngineStep'
 import { trackedKill } from 'backend/launchrust/runner'
+import { bestEffortTrackedKill } from 'backend/storeManagers/storeManagerCommon/bestEffortKill'
 
 export default class SideloadGame implements Game {
   private readonly id: string
@@ -125,10 +126,16 @@ export default class SideloadGame implements Game {
     if (executable) {
       // Phase 72 D-13: keys match the trackKey passed at the launch spawn sites.
       const rustDeps = { requestRustInvoke: this.deps.requestRustInvoke }
-      await trackedKill(rustDeps, { runner: 'sideload', key: this.id })
+      await bestEffortTrackedKill(
+        trackedKill(rustDeps, { runner: 'sideload', key: this.id }),
+        LogPrefix.Sideload
+      )
 
       if (!this.isNative()) {
-        await trackedKill(rustDeps, { runner: 'wine', key: this.id })
+        await bestEffortTrackedKill(
+          trackedKill(rustDeps, { runner: 'wine', key: this.id }),
+          LogPrefix.Sideload
+        )
         const gameSettings = await launchSettingsFor(
           this.deps,
           engineKeyFor(this.getGameInfo().runner, this.id),

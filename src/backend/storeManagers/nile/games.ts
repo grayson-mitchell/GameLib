@@ -45,6 +45,7 @@ import { isWindows } from 'backend/constants/environment'
 
 import { readKnownFixLaunchOverrides } from 'backend/launchrust/knownFixes'
 import { trackedKill } from 'backend/launchrust/runner'
+import { bestEffortTrackedKill } from 'backend/storeManagers/storeManagerCommon/bestEffortKill'
 import { settleKnownFixLaunchOverrides } from 'backend/knownFixLaunchReply'
 import type LogWriter from 'backend/logger/targetWriter'
 import { engineKeyFor } from 'backend/enginewine/twin'
@@ -668,9 +669,12 @@ export default class NileGameManager implements Game {
   }
 
   async stop(stopWine = true) {
-    await trackedKill(
-      { requestRustInvoke: this.deps.requestRustInvoke },
-      { runner: 'nile', key: this.id }
+    await bestEffortTrackedKill(
+      trackedKill(
+        { requestRustInvoke: this.deps.requestRustInvoke },
+        { runner: 'nile', key: this.id }
+      ),
+      LogPrefix.Nile
     )
 
     if (stopWine && !this.isNative()) {

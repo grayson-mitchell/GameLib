@@ -37,6 +37,7 @@ import shlex from 'shlex'
 import { legendaryLaunchArgumentFields } from '../runnerLaunchArgv'
 import { readKnownFixLaunchOverrides } from 'backend/launchrust/knownFixes'
 import { trackedKill } from 'backend/launchrust/runner'
+import { bestEffortTrackedKill } from 'backend/storeManagers/storeManagerCommon/bestEffortKill'
 import { settleKnownFixLaunchOverrides } from 'backend/knownFixLaunchReply'
 import { t } from 'i18next'
 import { showDialogBoxModalAuto } from '../../dialog/dialog'
@@ -1224,9 +1225,12 @@ export default class LegendaryGame implements Game {
   async stop(stopWine = true) {
     // Phase 72 D-13, 88.2-22 (D-07): end the tracked legendary run for this app, not a name pattern, through the Rust registry
     // the launch spawn registered it in.
-    await trackedKill(
-      { requestRustInvoke: this.deps.requestRustInvoke },
-      { runner: 'legendary', key: this.appName }
+    await bestEffortTrackedKill(
+      trackedKill(
+        { requestRustInvoke: this.deps.requestRustInvoke },
+        { runner: 'legendary', key: this.appName }
+      ),
+      LogPrefix.Legendary
     )
 
     if (stopWine && !this.isNative()) {
