@@ -24,3 +24,15 @@ the leak is latent.
 
 Not part of the port. The Rust redaction replays the golden as it is, second value included. After that, decide in one
 deliberate change, recorded in a delta, whether every occurrence is redacted.
+
+## Also (88.2 code review IN-04)
+
+Deferred here in 88.2 UAT test 2. The Rust port has the same two neighbours of this gap, both latent today (no caller
+uses them; the `--code`, `--token`, `--password` and `--client-id` call sites were checked):
+
+- `src-tauri/crates/gamelib-launch/src/runner/redact.rs:100-117`: the `--flag=value` form is one argv element, never
+  equals the flag, and is not redacted.
+- `redact.rs:121-126`: the env list is logged unredacted, so anything credential-like a future caller puts in
+  `options.env` reaches `gamelib.log`.
+
+Decide all three in the same delta.
