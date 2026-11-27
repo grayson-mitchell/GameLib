@@ -31,6 +31,15 @@ pub(crate) fn creation_time(handle: windows_sys::Win32::Foundation::HANDLE) -> O
     imp::creation_time(handle)
 }
 
+/// Windows: whether the process `handle` names has exited, by a zero-timeout wait on it (`Some(true)`
+/// signalled, `Some(false)` still running, `None` when the wait could not be made). 88.2-27's
+/// held-leader walk reuses it; until then only `imp::is_alive` calls it, so this re-export is unused.
+#[cfg(windows)]
+#[allow(dead_code)]
+pub(crate) fn handle_exited(handle: windows_sys::Win32::Foundation::HANDLE) -> Option<bool> {
+    imp::handle_exited(handle)
+}
+
 #[cfg(target_os = "linux")]
 mod imp {
     /// The part of `/proc/<pid>/stat` after the last ')' (the comm field may itself contain
@@ -173,27 +182,69 @@ mod imp {
 
 #[cfg(windows)]
 mod imp {
-    use windows_sys::Win32::Foundation::{CloseHandle, FILETIME, HANDLE};
+    use windows_sys::Win32::Foundation::{
+        CloseHandle, FILETIME, HANDLE, WAIT_OBJECT_0, WAIT_TIMEOUT,
+    };
     use windows_sys::Win32::System::Threading::{
-        GetExitCodeProcess, GetProcessTimes, OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION,
+        GetExitCodeProcess, GetProcessTimes, OpenProcess, WaitForSingleObject,
+        PROCESS_QUERY_LIMITED_INFORMATION, PROCESS_SYNCHRONIZE,
     };
 
-    /// `STILL_ACTIVE` as `GetExitCodeProcess` reports it.
+    /// `STILL_ACTIVE` as `GetExitCodeProcess` reports it. 259 is also a legal exit code, so a process
+    /// that exited with it reads as running here: the zero-timeout wait ([`handle_exited`]) is
+    /// preferred, and this read is only the fallback for a handle the wait could not be made on.
     const STILL_ACTIVE_CODE: u32 = 259;
+
+    /// Whether the process `handle` names has exited, by a zero-timeout wait on it: `Some(true)`
+    /// signalled (exited), `Some(false)` still running, `None` when the wait could not be made (a
+    /// handle opened without `SYNCHRONIZE`, say). Unlike the exit-code read it cannot mistake a
+    /// legal exit code of 259 for a running process.
+    pub fn handle_exited(handle: HANDLE) -> Option<bool> {
+        // SAFETY: `handle` is a valid handle supplied by the caller; a zero timeout never blocks.
+        match unsafe { WaitForSingleObject(handle, 0) } {
+            WAIT_OBJECT_0 => Some(true),
+            WAIT_TIMEOUT => Some(false),
+            _ => None,
+        }
+    }
+
+    /// The old liveness read: the exit code answers `STILL_ACTIVE` while the process runs.
+    fn exit_code_says_alive(handle: HANDLE) -> bool {
+        let mut code: u32 = 0;
+        // SAFETY: `handle` is a valid process handle and `code` outlives the call.
+        let ok = unsafe { GetExitCodeProcess(handle, &mut code) };
+        ok != 0 && code == STILL_ACTIVE_CODE
+    }
 
     pub fn is_alive(pid: u32) -> bool {
         // SAFETY: OpenProcess takes plain values and returns null on failure; the handle is
         // closed below and never escapes this function.
+        let h = unsafe {
+            OpenProcess(
+                PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_SYNCHRONIZE,
+                0,
+                pid,
+            )
+        };
+        if !h.is_null() {
+            let alive = match handle_exited(h) {
+                Some(exited) => !exited,
+                None => exit_code_says_alive(h),
+            };
+            // SAFETY: `h` was opened above and is closed exactly once.
+            unsafe { CloseHandle(h) };
+            return alive;
+        }
+        // A process that grants query but not synchronize rights: the exit-code read.
+        // SAFETY: as above.
         let h = unsafe { OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid) };
         if h.is_null() {
             return false;
         }
-        let mut code: u32 = 0;
-        // SAFETY: `h` is a valid process handle and `code` outlives the call.
-        let ok = unsafe { GetExitCodeProcess(h, &mut code) };
+        let alive = exit_code_says_alive(h);
         // SAFETY: `h` was opened above and is closed exactly once.
         unsafe { CloseHandle(h) };
-        ok != 0 && code == STILL_ACTIVE_CODE
+        alive
     }
 
     pub fn start_time(pid: u32) -> Option<u64> {
