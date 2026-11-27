@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: "88.3"
 current_phase_name: Launch funnel, re-adoption and the live gate
 status: executing
-stopped_at: Completed 88.3-15-PLAN.md
-last_updated: "2026-11-27T20:21:39.696Z"
+stopped_at: Completed 88.3-04-PLAN.md
+last_updated: "2026-11-27T20:59:05.197Z"
 last_activity: 2026-11-27
 last_activity_desc: Phase 88.3 execution started
-state_head: 0443d12815cbf3cd6d8a7bead88bf91a60469e94
+state_head: dee057943e827c52027e803c5579c1568d7baaa2
 progress:
   total_phases: 26
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-25)
 ## Current Position
 
 Phase: 88.3 (Launch funnel, re-adoption and the live gate) — EXECUTING
-Plan: 5 of 22
+Plan: 6 of 22
 Status: Ready to execute
 Last activity: 2026-11-27 — Phase 88.3 execution started
 Progress: [████████████████░░░░] 204/257 plans ([█████████░] 88%)
@@ -581,6 +581,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 88.3 P02 | 1h | 2 tasks | 3 files |
 | Phase 88.3 P03 | ~1h | 2 tasks | 7 files |
 | Phase 88.3 P15 | 10min | 2 tasks | 12 files |
+| Phase 88.3 P04 | not measured | 2 tasks | 19 files |
 
 ## Accumulated Context
 
@@ -1315,6 +1316,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 88.3]: 88.3-02: golden/single_flight, runs_for_me and window_raise recorded from the real TS; the runs-for-me vectors test stays live as the TS-side pin
 - [Phase 88.3]: 88.3-03: identify answers NotOurs for a live leader with another stamp before any member is read; kill_adopted_tree re-proves the member (alive, stamp, pgid) immediately before it signals; Windows Job arm only works while a handle to the Game Job is held
 - [Phase 88.3]: 88.3-15: a launcher stub is proven stale by swapping its factory for one that throws and running the suite; pass means never loaded
+- [Phase 88.3]: 88.3-04: run_launch ports only the tracer path; branches 88.3-05 owns end with launch:unported:<branch> before any side effect
+- [Phase 88.3]: 88.3-04: new ManagerHooks ops launch_facts and launch default to unavailable until 88.3-06 implements them in the shell
 
 ### Pending Todos
 
@@ -1608,8 +1611,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-27T20:21:36.018Z
-Stopped at: Completed 88.3-15-PLAN.md
+Last session: 2026-11-27T20:59:01.579Z
+Stopped at: Completed 88.3-04-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.

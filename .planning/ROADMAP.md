@@ -1121,7 +1121,7 @@ Plans:
   3. A game launched from the UI starts and runs on macOS (live, signed 88.3 build over the signed 87 gap build) and on Windows and Linux (CI plus Phase 99)
   4. `launcher.ts` and every remaining ported TS and registration are deleted, leaving only scheduled shims
 
-**Plans:** 4/22 plans executed in 16 waves; planned 2026-11-27 (goldens are recorded from the TS before each Rust slice, D-25; every plan fits the 100k budget and stays below 15 files; no 88.3 commit outside .planning/ lands before the 88.1-24 and 88.2-25 pushes)
+**Plans:** 5/22 plans executed in 16 waves; planned 2026-11-27 (goldens are recorded from the TS before each Rust slice, D-25; every plan fits the 100k budget and stays below 15 files; no 88.3 commit outside .planning/ lands before the 88.1-24 and 88.2-25 pushes)
 
 Plans:
 **Wave 1**
@@ -1131,7 +1131,7 @@ Plans:
 - [x] 88.3-15-PLAN.md — The stale `backend/launcher` stubs leave nine Steam and GOG tests, ceilings lowered
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 88.3-04-PLAN.md — Rust funnel tracer over ManagerHooks, FunnelShell and FunnelSteps; the one LaunchFlights table; golden/single_flight replayed
+- [x] 88.3-04-PLAN.md — Rust funnel tracer over ManagerHooks, FunnelShell and FunnelSteps; the one LaunchFlights table; golden/single_flight replayed
 
 **Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 88.3-05-PLAN.md — Every funnel branch, the playtime step and runs-for-me; golden/funnel at its floor; two Plays through the funnel spawn one stub game
