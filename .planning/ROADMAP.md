@@ -1121,7 +1121,7 @@ Plans:
   3. A game launched from the UI starts and runs on macOS (live, signed 88.3 build over the signed 87 gap build) and on Windows and Linux (CI plus Phase 99)
   4. `launcher.ts` and every remaining ported TS and registration are deleted, leaving only scheduled shims
 
-**Plans:** 6/22 plans executed in 16 waves; planned 2026-11-27 (goldens are recorded from the TS before each Rust slice, D-25; every plan fits the 100k budget and stays below 15 files; no 88.3 commit outside .planning/ lands before the 88.1-24 and 88.2-25 pushes)
+**Plans:** 7/22 plans executed in 16 waves; planned 2026-11-27 (goldens are recorded from the TS before each Rust slice, D-25; every plan fits the 100k budget and stays below 15 files; no 88.3 commit outside .planning/ lands before the 88.1-24 and 88.2-25 pushes)
 
 Plans:
 **Wave 1**
@@ -1137,7 +1137,7 @@ Plans:
 - [x] 88.3-05-PLAN.md — Every funnel branch, the playtime step and runs-for-me; golden/funnel at its floor; two Plays through the funnel spawn one stub game
 
 **Wave 4** *(blocked on Wave 3 completion)*
-- [ ] 88.3-06-PLAN.md — launch_run end to end, the funnel hooks over launchManagerCall, ShellFunnel
+- [x] 88.3-06-PLAN.md — launch_run end to end, the funnel hooks over launchManagerCall, ShellFunnel
 - [ ] 88.3-07-PLAN.md — The per-launch record and launch sessions; D-31 quit-kill (playtime at the kill, after-script owed); the sidecar-loss exit watch
 - [ ] 88.3-14-PLAN.md — Retire the funnel and single-flight TS drivers behind the RED-first funnelOraclePortComplete gate
 
