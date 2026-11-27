@@ -55,6 +55,31 @@ const canonical = (path: string): string | undefined => {
   }
 }
 
+const INSTALL_TOKEN = '<?INSTALL?>'
+
+/**
+ * GOG's `<?INSTALL?>` save templates resolved against the install path. The templates are the
+ * library entry's cached `gog_save_location` (the library refresh sets it for installed
+ * non-Linux games). `getSaveSyncLocation` is deliberately not used: it is a network fetch of
+ * remote-config.gog.com, slow or failing offline at uninstall time. Every other variable
+ * (Saved Games, AppData, Documents, Application Support) resolves outside the install folder, so
+ * it cannot change what is kept and is dropped here.
+ */
+export function installSaveLocations(
+  installPath: string,
+  templates: readonly GOGCloudSavesLocation[]
+): GOGCloudSavesLocation[] {
+  const out: GOGCloudSavesLocation[] = []
+  for (const { name, location } of templates) {
+    if (!location.startsWith(INSTALL_TOKEN)) continue
+    const rest = location.slice(INSTALL_TOKEN.length)
+    if (/<\?[A-Za-z_]+\?>/.test(rest)) continue
+    const segments = rest.split(/[\\/]/).filter(Boolean)
+    out.push({ name, location: join(installPath, ...segments) })
+  }
+  return out
+}
+
 export function planKeptSaves(
   installPath: string,
   locations: readonly GOGCloudSavesLocation[],

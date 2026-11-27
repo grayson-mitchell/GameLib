@@ -432,6 +432,22 @@ describe('GOGGame.uninstall keeps save folders inside the install folder (261127
     expect(req.targets[req.targets.length - 1]).toEqual(wholeTreePair()[1])
   })
 
+  it('keeps a template-declared <?INSTALL?> save folder when no save location is stored', async () => {
+    makeSave()
+    const { requestRustInvoke } = fakeSafetyRustInvoke({ base: shortcutsReply })
+    const h = build(requestRustInvoke, undefined, {
+      gogSaveLocation: [{ name: 'saves', location: '<?INSTALL?>/files/saves' }]
+    })
+
+    const res = await h.game.uninstall({ shouldRemovePrefix: false })
+
+    expect(res).toEqual({ stdout: '', stderr: '' })
+    expect(existsSync(slot)).toBe(true)
+    expect(existsSync(pak)).toBe(false)
+    expect(existsSync(join(installDir, 'game.exe'))).toBe(false)
+    expect(h.installedSet).toEqual([[]])
+  })
+
   it('a save folder outside the install folder leaves the whole-tree request unchanged', async () => {
     const elsewhere = join(root, 'elsewhere', 'saves')
     mkdirSync(elsewhere, { recursive: true })

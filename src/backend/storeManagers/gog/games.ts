@@ -1,5 +1,5 @@
 import { parseGogdlProgress } from './resumeProgress'
-import { planKeptSaves } from './keepSaves'
+import { installSaveLocations, planKeptSaves } from './keepSaves'
 import type { KeptSavesPlan } from './keepSaves'
 import { join } from 'path'
 import {
@@ -1278,7 +1278,13 @@ export default class GOGGame implements Game {
     }
     // 261127-v8b: unins000.exe /KEEPSAVES keeps saves, and the delete below must not undo that for
     // a save folder inside the install folder.
-    const plan = planKeptSaves(object.install_path, gameSettings.gogSaves ?? [])
+    const plan = planKeptSaves(object.install_path, [
+      ...(gameSettings.gogSaves ?? []),
+      ...installSaveLocations(
+        object.install_path,
+        this.getGameInfo().gog_save_location ?? []
+      )
+    ])
     if (plan.kind === 'unreadable') {
       logWarning(
         [
