@@ -10,11 +10,19 @@ files:
   - src/backend/storeManagers/steam/bridge/shimCoverage.ts
 severity: medium
 platform: any
-ready: code
+ready: blocked
 audit_acknowledged:
   milestone: v0.10
   at: 2026-11-20
 ---
+
+## PARKED 2026-11-27: requires Phase 999.2
+
+Operator decision: this todo is parked on backlog **Phase 999.2** (x86 shim coverage, flat C API
+and current interface versions). It is not worked on its own. The flat tier is all-or-nothing, and
+999.2 holds its full scope. `ready:` moves from `code` to `blocked`.
+
+**Unpark:** when 999.2 is promoted and executed. Close this todo once 999.2 is done.
 
 ## Decision (D-53-09)
 
