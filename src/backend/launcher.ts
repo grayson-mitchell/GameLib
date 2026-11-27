@@ -19,6 +19,8 @@ import { existsSync } from 'graceful-fs'
 
 import { sendGameStatusUpdate } from './utils'
 import { askForceUninstall as askForceUninstallShim } from './launchrust/runner'
+import { launchRun } from './launchrust/funnel'
+import type { LaunchRunRequest } from './launchrust/funnel'
 import type { StoreLaunchHooks } from 'backend/storeManagers'
 import { hasCapability, isStore } from 'common/storeCapabilities'
 import {
@@ -51,6 +53,7 @@ import {
 import {
   settleEnvMap,
   settleKnownFixEnv,
+  settleLaunchStatus,
   settleVerifyPrefixReply,
   settleWordList
 } from './launchBuilderReply'
@@ -587,12 +590,34 @@ type DropFirst<T extends unknown[]> = T extends [unknown, ...infer R]
   ? R
   : never
 
-/** The launcher, built once per boot with its own deps (D-02). */
-export function createLauncher(deps: LauncherDeps): Launcher {
+/**
+ * The TS launch funnel, as `createLauncher`'s `launchEventCallback` member ran it before the Rust funnel took every Play
+ * (88.3-10): the single-flight wrapper over `runLaunchEventCallback`, with its own display-sleep state.
+ *
+ * TEST-FACING ONLY. Nothing in production calls it; it stays on disk for the three TS-funnel test files
+ * (`launcher_launchSingleFlight`, `launcher.engineStep`, `runnerCallSites`) that pin the recorded TS behaviour, and is deleted
+ * with this file in 88.3-17 (the 88.2-21 then 88.2-24 shape).
+ */
+export function createTsLaunchFunnel(
+  deps: LauncherDeps
+): (params: LaunchParams) => StatusPromise {
   // Inherits deps (not a copy), so a getter-backed deps object stays call-time.
   const ctx = Object.assign(Object.create(deps) as LauncherDeps, {
     power: { displayId: null } as PowerState
   }) as LaunchCtx
+  return (params) => launchEventCallback(ctx, params)
+}
+
+/** The Play as the `launch_run` schema takes it: the chosen launch option copied to a plain object, an absent one left out. */
+function toLaunchRunRequest(params: LaunchParams): LaunchRunRequest {
+  const { launchArguments, ...rest } = params
+  return launchArguments
+    ? { ...rest, launchArguments: { ...launchArguments } }
+    : rest
+}
+
+/** The launcher, built once per boot with its own deps (D-02). */
+export function createLauncher(deps: LauncherDeps): Launcher {
   return {
     prepareLaunch: (...a) => prepareLaunchAdapter(deps, ...a),
     prepareWineLaunch: (...a) => prepareWineLaunchAdapter(deps, ...a),
@@ -627,7 +652,9 @@ export function createLauncher(deps: LauncherDeps): Launcher {
         ),
         'setupWrappers'
       ),
-    launchEventCallback: (params) => launchEventCallback(ctx, params),
+    // D-01, D-04, D-25: every non-Steam Play runs in the Rust funnel; nothing of the TS sequence runs here.
+    launchEventCallback: async (params) =>
+      settleLaunchStatus(await launchRun(deps, toLaunchRunRequest(params))),
     getKnownFixesEnvVariables: async (appName, runner) =>
       settleKnownFixEnv(
         await getKnownFixesEnvVariablesShim(deps, appName, runner)
