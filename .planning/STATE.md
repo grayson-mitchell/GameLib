@@ -6,10 +6,10 @@ current_phase: "88.3"
 current_phase_name: Launch funnel, re-adoption and the live gate
 status: executing
 stopped_at: Completed 88.2-25-PLAN.md
-last_updated: "2026-11-27T09:16:30.011Z"
+last_updated: "2026-11-27T09:29:48.173Z"
 last_activity: 2026-11-27
 last_activity_desc: Phase 88.3 execution started
-state_head: 386d7bb2583fc659d97f6f5c9a01e94b0d066116
+state_head: 685d0237217fbdc528b89c246d9386c4666d9f85
 progress:
   total_phases: 26
   completed_phases: 23
@@ -1385,6 +1385,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261125-r0j | The game page loads the game itself when opened without router state (store, then getGameInfo; loading and not-found states) | 2026-11-25 | a94f6f9db | — | [261125-r0j-game-page-loads-the-game-itself-when-ope](./quick/261125-r0j-game-page-loads-the-game-itself-when-ope/) |
 | 261125-uzz | Remove from Steam proves the shortcut is GameLib's before deleting it and its grid art | 2026-11-25 | f0709db9d | — | [261125-uzz-remove-from-steam-proves-the-shortcut-is](./quick/261125-uzz-remove-from-steam-proves-the-shortcut-is/) |
 | 261127-upb | Remove dead imagecache:// branch in the renderer (no backend serves the scheme after D-22) | 2026-11-27 | 386d7bb25 | — | [261127-upb-remove-dead-imagecache-scheme-branch-in-](./quick/261127-upb-remove-dead-imagecache-scheme-branch-in-/) |
+| 261127-u6h | Keep profile paths and env values out of the wine_command and Running command gamelib.log lines | 2026-11-27 | 685d02372 | — | [261127-u6h-keep-profile-paths-and-env-values-out-of](./quick/261127-u6h-keep-profile-paths-and-env-values-out-of/) |
 
 ## Deferred Items
 
