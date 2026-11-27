@@ -26,6 +26,11 @@
 //!   `stubborn` grandchild with a plain std `Command` (so it shares the child's group or Job), waits
 //!   for its `ready`, prints its own pid and the grandchild's as two lines on stdout, then idles.
 //!   The leader itself ends on SIGTERM; its grandchild does not (WR-01).
+//! - `detach`: the installer-bootstrapper shape. Waits for `go` on stdin, spawns one `idle`
+//!   grandchild with a plain std `Command` (so it shares the child's group or Job), prints the
+//!   grandchild's pid as one line on stdout and EXITS 0 while the grandchild idles. `parent
+//!   --spec-detach` runs it through `SpecProcRunner`: a clean exit must leave the grandchild running
+//!   (WR-03).
 //! - `lines`: prints its own pid as one line on stdout, then idles (the streaming-runner test).
 //! - `--gamelib-reaper` (as argv[1]): reaper mode. `main` hands over to the reaper before doing
 //!   anything else, exactly as the shell's `fn main` does (plan 83-08), because the reaper is this
@@ -68,6 +73,7 @@ fn main() {
         Some("spec-tree") => spec_tree(),
         Some("stubborn") => stubborn(),
         Some("stubborn-tree") => stubborn_tree(),
+        Some("detach") => detach(),
         Some("lines") => lines(),
         Some("game") => game(&args[1..]),
         Some("game-tree") => game_tree(&args[1..]),
@@ -194,6 +200,20 @@ fn spec_tree() -> ! {
     writeln!(out, "{}", grandchild.id()).expect("write grandchild pid");
     out.flush().expect("flush pids");
     idle()
+}
+
+/// Starts one `idle` grandchild, reports its pid and exits at once: what it started keeps running.
+// The child is deliberately never waited for: it idles until something kills it.
+#[allow(clippy::zombie_processes)]
+fn detach() -> ! {
+    // As `spec_tree`: `go` arrives after the child is in its Job.
+    let mut line = String::new();
+    let _ = std::io::stdin().lock().read_line(&mut line);
+    let grandchild = self_command("idle", &[]).spawn().expect("spawn grandchild");
+    let mut out = std::io::stdout();
+    writeln!(out, "{}", grandchild.id()).expect("write grandchild pid");
+    out.flush().expect("flush grandchild pid");
+    std::process::exit(0);
 }
 
 /// Ignores SIGTERM (unix), announces it with a `ready` line, then idles: only SIGKILL ends it.

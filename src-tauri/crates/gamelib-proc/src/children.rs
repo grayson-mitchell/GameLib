@@ -18,7 +18,8 @@ struct Entry {
     /// that its own task owns and only registered through a `HelperGuard`.
     owned: Option<Child>,
     /// Windows: the helper's own kill-on-close Job (closed, so the members killed, when the entry
-    /// is dropped). Nothing on other platforms.
+    /// is dropped, unless `ChildSet::release` cleared kill-on-close first because the helper ended
+    /// on its own). Nothing on other platforms.
     #[cfg_attr(not(windows), allow(dead_code))]
     job: JobSlot,
 }
@@ -65,6 +66,29 @@ impl ChildSet {
 
     pub(crate) fn unregister(&self, pid: u32) {
         self.lock().remove(&pid);
+        unregister_with_reaper(pid);
+    }
+
+    /// Unregisters a helper whose leader ended on its own (`HelperGuard::ended_on_its_own`): what it
+    /// left running is left running, as on unix. Windows: the entry's Job has kill-on-close
+    /// cleared before the entry (and so the handle) is dropped; if that fails it is logged with the
+    /// helper's static label and the Job closes with kill-on-close still set, the old behaviour.
+    /// Unix: the same as `unregister`. Nothing here ends a process.
+    pub(crate) fn release(&self, pid: u32) {
+        let entry = self.lock().remove(&pid);
+        #[cfg(windows)]
+        if let Some(entry) = &entry {
+            if let Some(job) = &entry.job {
+                if !job.release() {
+                    diag(&format!(
+                        "helper '{}': could not release its job; its processes end with it",
+                        entry.label
+                    ));
+                }
+            }
+        }
+        // Dropped here, after the release: closing the handle now leaves the members running.
+        drop(entry);
         unregister_with_reaper(pid);
     }
 
@@ -340,17 +364,34 @@ pub fn global() -> &'static ChildSet {
 /// child so it goes away exactly when the child does.
 pub struct HelperGuard {
     pid: u32,
+    /// Set by `ended_on_its_own`; decides release (leave the helper's descendants running) over
+    /// unregister (close=kill) on drop.
+    ended_on_its_own: bool,
 }
 
 impl HelperGuard {
     pub(crate) fn new(pid: u32) -> HelperGuard {
-        HelperGuard { pid }
+        HelperGuard {
+            pid,
+            ended_on_its_own: false,
+        }
+    }
+
+    /// Call only when the helper's leader ended by itself (not a timeout, cancel, shutdown or
+    /// kill): what it left running is then left running, as on unix. On Windows the helper's
+    /// kill-on-close Job is released before it closes. Without this call the drop keeps close=kill.
+    pub fn ended_on_its_own(&mut self) {
+        self.ended_on_its_own = true;
     }
 }
 
 impl Drop for HelperGuard {
     fn drop(&mut self) {
-        global().unregister(self.pid);
+        if self.ended_on_its_own {
+            global().release(self.pid);
+        } else {
+            global().unregister(self.pid);
+        }
     }
 }
 

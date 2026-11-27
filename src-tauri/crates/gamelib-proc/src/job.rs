@@ -99,6 +99,36 @@ mod win {
             })
         }
 
+        /// Clears `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`, so closing the last handle afterwards leaves
+        /// the members running (a Job without that limit does not end its members when it goes;
+        /// measured for the `GameJob`). Used when a helper's leader ended on its own: what it left
+        /// running is the user's, as on unix. Returns whether the call succeeded; on `false` the
+        /// limit is still set and closing the handle still kills (the old behaviour, never
+        /// half-detached).
+        pub fn release(&self) -> bool {
+            // SAFETY: the struct is plain-old-data; all-zero is a valid value, and a zero
+            // `LimitFlags` is a Job with no limits.
+            let info: JOBOBJECT_EXTENDED_LIMIT_INFORMATION = unsafe { std::mem::zeroed() };
+            // SAFETY: the handle is a valid Job handle owned by `self`; the pointer/size describe
+            // `info`, which outlives the call.
+            let ok = unsafe {
+                SetInformationJobObject(
+                    self.handle.as_raw_handle() as _,
+                    JobObjectExtendedLimitInformation,
+                    &info as *const _ as *const core::ffi::c_void,
+                    std::mem::size_of::<JOBOBJECT_EXTENDED_LIMIT_INFORMATION>() as u32,
+                )
+            };
+            if ok == 0 {
+                // SAFETY: GetLastError has no preconditions.
+                let err = unsafe { GetLastError() };
+                diag(&format!(
+                    "job object: SetInformationJobObject (release) failed (error {err})"
+                ));
+            }
+            ok != 0
+        }
+
         /// Kills every process in the Job now. Returns whether the call succeeded.
         pub fn terminate(&self) -> bool {
             // SAFETY: the handle is a valid Job handle owned by `self`.

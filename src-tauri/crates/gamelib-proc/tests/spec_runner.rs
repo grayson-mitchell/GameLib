@@ -6,7 +6,7 @@
 
 #[cfg(unix)]
 use gamelib_core::process::Pipe;
-use gamelib_core::process::{ProcSpec, SpecRunner};
+use gamelib_core::process::{LineSink, ProcSpec, SpecRunner};
 use gamelib_proc::{global, SpecProcRunner};
 use gamelib_testutil::FakeHome;
 use std::sync::{Arc, Mutex};
@@ -340,4 +340,118 @@ async fn a_daemonised_descendant_holding_the_pipe_does_not_stall_the_run() {
         "the run waited {:?} for a descendant's pipe",
         started.elapsed()
     );
+}
+
+/// Kills every recorded pid when dropped, on pass or panic, so a red arm leaves no idle stand-in
+/// behind (the same helper as tests/orphans.rs's `Strays`).
+struct Strays(Vec<u32>);
+
+impl Drop for Strays {
+    fn drop(&mut self) {
+        for pid in &self.0 {
+            kill_pid(*pid);
+        }
+    }
+}
+
+#[cfg(unix)]
+fn kill_pid(pid: u32) {
+    // SAFETY: signals one pid the stand-in reported to this test; no pointers are dereferenced.
+    unsafe {
+        libc::kill(pid as libc::pid_t, libc::SIGKILL);
+    }
+}
+
+#[cfg(windows)]
+fn kill_pid(pid: u32) {
+    use windows_sys::Win32::Foundation::CloseHandle;
+    use windows_sys::Win32::System::Threading::{OpenProcess, TerminateProcess, PROCESS_TERMINATE};
+    // SAFETY: OpenProcess takes plain values and returns null on failure; a valid handle is
+    // terminated and closed exactly once.
+    unsafe {
+        let h = OpenProcess(PROCESS_TERMINATE, 0, pid);
+        if !h.is_null() {
+            TerminateProcess(h, 1);
+            CloseHandle(h);
+        }
+    }
+}
+
+/// A spec that runs the stand-in binary in `mode`, with a fake-profile environment and `go` on
+/// stdin. The pids the child prints (one per line) are collected into the returned list.
+fn standin_spec(
+    home: &FakeHome,
+    label: &'static str,
+    mode: &str,
+) -> (ProcSpec, Arc<Mutex<Vec<u32>>>, LineSink) {
+    let mut spec = ProcSpec::new(label, env!("CARGO_BIN_EXE_gamelib-proc-standin"));
+    spec.argv = vec![mode.into()];
+    spec.env = fake_env(home);
+    spec.stdin = Some("go\n".into());
+    let pids = Arc::new(Mutex::new(Vec::<u32>::new()));
+    let sink = pids.clone();
+    let on_line: LineSink = Box::new(move |l: &str| {
+        if let Ok(pid) = l.trim().parse::<u32>() {
+            sink.lock().expect("sink").push(pid);
+        }
+    });
+    (spec, pids, on_line)
+}
+
+/// WR-03: a child that ends on its own leaves what it started running, on every OS (the old Node
+/// runner and unix always did; Windows closed the kill-on-close Job on the clean exit and killed it).
+/// The grandchild must stay alive through a bounded observation window, polled, never one sleep.
+#[tokio::test]
+async fn a_clean_exit_leaves_what_the_child_started_running() {
+    use gamelib_proc::probe::is_alive;
+    let home = FakeHome::new("gamelib-spec-detach");
+    let label = "spec-test-detach";
+    let (spec, pids, on_line) = standin_spec(&home, label, "detach");
+    let out = SpecProcRunner.run(spec, Some(on_line)).await;
+    let grandchild = *pids
+        .lock()
+        .expect("pids")
+        .first()
+        .expect("the child printed its grandchild's pid");
+    let _strays = Strays(vec![grandchild]);
+    assert_eq!(out.code, Some(0), "{out:?}");
+    assert!(!out.timed_out && !out.cancelled, "{out:?}");
+    assert!(
+        !global().labels().contains(&label),
+        "a finished run must leave nothing registered"
+    );
+    let window = Instant::now() + Duration::from_millis(1500);
+    while Instant::now() < window {
+        assert!(
+            is_alive(grandchild),
+            "grandchild {grandchild} died with the clean exit of its parent"
+        );
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    }
+}
+
+/// Close=kill still holds on a timeout, on Windows too: the stand-in's grandchild dies with the
+/// timed-out child (the Windows twin of `a_timeout_kills_the_grandchild_too`).
+#[tokio::test]
+async fn a_timeout_kills_the_standin_grandchild_too() {
+    use gamelib_proc::probe::is_alive;
+    let home = FakeHome::new("gamelib-spec-tree-timeout");
+    let (mut spec, pids, on_line) = standin_spec(&home, "spec-test-standin-timeout", "spec-tree");
+    spec.timeout = Some(Duration::from_millis(800));
+    let out = SpecProcRunner.run(spec, Some(on_line)).await;
+    assert!(out.timed_out, "{out:?}");
+    let grandchild = *pids
+        .lock()
+        .expect("pids")
+        .get(1)
+        .expect("the child printed its own pid then its grandchild's");
+    let _strays = Strays(vec![grandchild]);
+    let deadline = Instant::now() + Duration::from_secs(10);
+    while is_alive(grandchild) {
+        assert!(
+            Instant::now() < deadline,
+            "grandchild {grandchild} outlived the timed-out run"
+        );
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    }
 }

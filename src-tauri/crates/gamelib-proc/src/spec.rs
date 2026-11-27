@@ -6,8 +6,10 @@
 //!
 //! A run ends when the child exits, when `spec.timeout` passes, when `spec.cancel` fires or when
 //! the app-wide shutdown token fires. In the last three the leader is killed (`kill_on_drop`, and
-//! `kill_process_group` for the descendants on unix) and the output so far is returned with the
-//! flag set.
+//! `kill_process_group` for the descendants on unix; on Windows the Job closes with kill-on-close
+//! and ends the whole tree) and the output so far is returned with the flag set. When the child
+//! exits on its own, what it started keeps running, as on unix: on Windows its Job is released
+//! (kill-on-close cleared) before it closes (WR-03).
 
 use crate::spawn::spawn_helper_tokio;
 use gamelib_core::process::{
@@ -327,7 +329,7 @@ async fn run_spec(spec: ProcSpec, feed: Feed, shutdown: CancellationToken) -> Sp
         cmd.creation_flags(creation_flags(0, true));
     }
     // The guard lives in this future, so the pid is unregistered when the child is gone.
-    let (mut child, _guard) = match spawn_helper_tokio(&mut cmd, spec.label) {
+    let (mut child, mut guard) = match spawn_helper_tokio(&mut cmd, spec.label) {
         Ok(spawned) => spawned,
         Err(e) => {
             return SpecOutput {
@@ -386,7 +388,11 @@ async fn run_spec(spec: ProcSpec, feed: Feed, shutdown: CancellationToken) -> Sp
         }
     };
 
-    if !matches!(end, End::Exited(..)) {
+    if matches!(end, End::Exited(..)) {
+        // The leader ended by itself: what it left running (a backgrounded service, an installer's
+        // handed-off child) stays running, as on unix. Every other end keeps close=kill.
+        guard.ended_on_its_own();
+    } else {
         stop(&mut child).await;
     }
     let (code, signal, timed_out, cancelled) = match end {
@@ -408,7 +414,8 @@ async fn run_spec(spec: ProcSpec, feed: Feed, shutdown: CancellationToken) -> Sp
 /// Ends a child that is still running, and what it started. On unix the whole process group goes
 /// (`kill_process_group`, refusing pgid <= 1), but only while the leader is unreaped, because only
 /// then is its pid (the group id) certain not to have been recycled. On Windows the Job the child
-/// was assigned to is closed when the registration guard drops, which kills every member. Either
+/// was assigned to is closed when the registration guard drops, which kills every member (the
+/// guard is not marked `ended_on_its_own` on this path, so kill-on-close is still set). Either
 /// way the leader is also killed through tokio, the same mechanism as `kill_on_drop`.
 async fn stop(child: &mut tokio::process::Child) {
     #[cfg(unix)]
