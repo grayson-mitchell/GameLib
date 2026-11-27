@@ -267,7 +267,7 @@ describe('createSpawnAsync', () => {
       expect(r.streams.size()).toBe(0)
     })
 
-    test('a kill the transport refuses is swallowed: the call still settles with what Rust answers', async () => {
+    test('a kill the transport refuses is asked again until it lands, and the call still settles with what Rust answers', async () => {
       const controller = new AbortController()
       let release: (value: unknown) => void = () => undefined
       const r = rig(
@@ -275,15 +275,57 @@ describe('createSpawnAsync', () => {
           new Promise((resolve) => {
             release = resolve
           }),
-        () => {
-          throw new Error('lost')
+        (_id, calls) => {
+          if (calls <= 2) throw new Error('lost')
+          return true
         }
       )
       const pending = r.spawnAsync('x', [], { signal: controller.signal })
       controller.abort()
-      await Promise.resolve()
+      const killCalls = () =>
+        r.invokes.filter((i) => i.channel === RUST_LAUNCH_RUNNER_KILL).length
+      const deadline = Date.now() + 2000
+      while (killCalls() < 3 && Date.now() < deadline)
+        await new Promise((resolve) => setTimeout(resolve, 10))
+      expect(killCalls()).toBe(3)
       release({ ...DONE, code: null, aborted: true })
       expect(await pending).toMatchObject({ aborted: true })
+      // Landed on the third: no fourth.
+      await new Promise((resolve) => setTimeout(resolve, 150))
+      expect(killCalls()).toBe(3)
+    })
+
+    test('a kill that never lands is asked until the call settles, at a capped 500 ms backoff (WR-09)', async () => {
+      jest.useFakeTimers()
+      try {
+        const controller = new AbortController()
+        let release: (value: unknown) => void = () => undefined
+        const r = rig(
+          () =>
+            new Promise((resolve) => {
+              release = resolve
+            }),
+          () => false
+        )
+        const killCalls = () =>
+          r.invokes.filter((i) => i.channel === RUST_LAUNCH_RUNNER_KILL).length
+        const pending = r.spawnAsync('x', [], { signal: controller.signal })
+        controller.abort()
+        await jest.advanceTimersByTimeAsync(30_000)
+        const afterThirtySeconds = killCalls()
+        // The retired fixed count stopped at 40 calls, about a second in.
+        expect(afterThirtySeconds).toBeGreaterThan(40)
+        // At the cap, one more call arrives per 500 ms.
+        await jest.advanceTimersByTimeAsync(500)
+        expect(killCalls()).toBe(afterThirtySeconds + 1)
+        release({ ...DONE, code: null, aborted: true })
+        await pending
+        const settledAt = killCalls()
+        await jest.advanceTimersByTimeAsync(5_000)
+        expect(killCalls()).toBe(settledAt)
+      } finally {
+        jest.useRealTimers()
+      }
     })
   })
 })

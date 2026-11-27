@@ -59,12 +59,14 @@ const ALLOWED_KEYS: readonly string[] = [
 ]
 
 /**
- * How long an abort that reached Rust before the run was registered keeps asking: the call is processed on a worker thread
- * within milliseconds, so a kill that answers "no such run" is retried briefly. Bounded (`KILL_RETRIES` times), its timer is
- * unref'd, and it stops as soon as the call settles, so it leaves no in-flight work behind (the sidecar exit contract).
+ * An abort that reaches Rust before the run is registered gets "no such run" back, so it is asked again until the call
+ * settles: the transport has no order guarantee between the call and the kill (the shell serves each call on its own
+ * worker, sidecar.rs), and an installer can run for hours, so no fixed number of retries is safe. The delay starts at
+ * `KILL_RETRY_MS` and doubles up to `KILL_RETRY_MAX_MS`. It is bounded by the call's own life: the retry timer is unref'd
+ * and cleared when the call settles, so it leaves nothing in flight (the sidecar exit contract).
  */
 const KILL_RETRY_MS = 25
-const KILL_RETRIES = 40
+const KILL_RETRY_MAX_MS = 500
 
 /** What the adapter takes: the boot's transport and the stream table the shell's output frames are fed into. */
 export interface SpawnAsyncDeps extends RustInvokeDeps {
@@ -146,19 +148,22 @@ export function createSpawnAsync(deps: SpawnAsyncDeps): SpawnAsync {
 
     let settled = false
     let retryTimer: ReturnType<typeof setTimeout> | undefined
-    const kill = (attempt: number): void => {
+    const kill = (delayMs: number): void => {
       if (settled || streamId === undefined) return
-      void runnerKill(deps, streamId).then(
-        (ended) => {
-          // False: the run is not registered yet (or has ended); ask again briefly unless the call has settled.
-          if (ended === true || settled || attempt + 1 >= KILL_RETRIES) return
-          retryTimer = setTimeout(() => kill(attempt + 1), KILL_RETRY_MS)
-          retryTimer.unref()
-        },
-        () => undefined
-      )
+      // Anything but a `true` answer, and a rejected kill alike, asks again after the delay unless the call has settled.
+      const again = () => {
+        if (settled) return
+        retryTimer = setTimeout(
+          () => kill(Math.min(delayMs * 2, KILL_RETRY_MAX_MS)),
+          delayMs
+        )
+        retryTimer.unref()
+      }
+      void runnerKill(deps, streamId).then((ended) => {
+        if (ended !== true) again()
+      }, again)
     }
-    const onAbort = () => kill(0)
+    const onAbort = () => kill(KILL_RETRY_MS)
     signal?.addEventListener('abort', onAbort, { once: true })
 
     try {
