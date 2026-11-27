@@ -11,10 +11,11 @@
 
 jest.mock('backend/logger', () => ({
   logError: jest.fn(),
+  logInfo: jest.fn(),
   LogPrefix: { Backend: 'Backend' }
 }))
 
-import { logError } from 'backend/logger'
+import { logError, logInfo } from 'backend/logger'
 import { createAbortRegistry, type AbortRegistry } from '../aborthandler'
 
 describe('aborthandler (debug/steam-cancel-abort-thread-a)', () => {
@@ -258,6 +259,104 @@ describe('aborthandler (debug/steam-cancel-abort-thread-a)', () => {
       createAbortRegistry().call('nope')
       expect(logError).toHaveBeenCalledTimes(1)
       expect(logError).toHaveBeenCalledWith(...notFound('nope'))
+    })
+  })
+
+  // quick 261128-935: the Stop path (`dispatch.kill`) aborts best-effort, so a miss there is an INFO breadcrumb. Every other
+  // caller keeps the ERROR (the default).
+  describe('ifMissing (quick 261128-935)', () => {
+    const infoLine = (id: string) => [
+      ['No abort controller for', id, '- nothing to abort'],
+      'Backend'
+    ]
+    const flush = async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+    }
+
+    it("a synchronous miss with { ifMissing: 'info' } writes one INFO line and no ERROR", () => {
+      createAbortRegistry().call('206060', { ifMissing: 'info' })
+
+      expect(logError).not.toHaveBeenCalled()
+      expect(logInfo).toHaveBeenCalledTimes(1)
+      expect(logInfo).toHaveBeenCalledWith(...infoLine('206060'))
+    })
+
+    it('a miss after Rust answered false writes the INFO line only once Rust has answered, and no ERROR', async () => {
+      let answer: (found: boolean) => void = () => undefined
+      const forwardAbort = jest.fn(
+        () =>
+          new Promise<boolean>((resolve) => {
+            answer = resolve
+          })
+      )
+      const forwarding = createAbortRegistry({ forwardAbort })
+
+      forwarding.call('206060', { ifMissing: 'info' })
+      expect(logInfo).not.toHaveBeenCalled()
+      expect(logError).not.toHaveBeenCalled()
+      answer(false)
+      await flush()
+
+      expect(forwardAbort).toHaveBeenCalledWith('206060')
+      expect(logInfo).toHaveBeenCalledTimes(1)
+      expect(logInfo).toHaveBeenCalledWith(...infoLine('206060'))
+      expect(logError).not.toHaveBeenCalled()
+    })
+
+    it("an id Rust found logs nothing at either level with { ifMissing: 'info' }", async () => {
+      const forwarding = createAbortRegistry({
+        forwardAbort: jest.fn().mockResolvedValue(true)
+      })
+
+      forwarding.call('rust-only', { ifMissing: 'info' })
+      await flush()
+
+      expect(logInfo).not.toHaveBeenCalled()
+      expect(logError).not.toHaveBeenCalled()
+    })
+
+    it('a local controller is aborted and nothing is logged at either level, with or without deps', async () => {
+      const bare = createAbortRegistry()
+      const bareController = bare.create('id-1')
+      bare.call('id-1', { ifMissing: 'info' })
+
+      const forwarding = createAbortRegistry({
+        forwardAbort: jest.fn().mockResolvedValue(false)
+      })
+      const forwardingController = forwarding.create('id-2')
+      forwarding.call('id-2', { ifMissing: 'info' })
+      await flush()
+
+      expect(bareController.signal.aborted).toBe(true)
+      expect(forwardingController.signal.aborted).toBe(true)
+      expect(logInfo).not.toHaveBeenCalled()
+      expect(logError).not.toHaveBeenCalled()
+    })
+
+    it("{ ifMissing: 'error' } behaves exactly like no options: the byte-identical ERROR and no INFO", async () => {
+      createAbortRegistry().call('sync-miss', { ifMissing: 'error' })
+      createAbortRegistry({
+        forwardAbort: jest.fn().mockResolvedValue(false)
+      }).call('rust-miss', { ifMissing: 'error' })
+      await flush()
+
+      expect(logError).toHaveBeenCalledTimes(2)
+      expect(logError).toHaveBeenCalledWith(
+        [
+          'Aborting not possible. Could not find a matching abort controller for',
+          'sync-miss'
+        ],
+        'Backend'
+      )
+      expect(logError).toHaveBeenCalledWith(
+        [
+          'Aborting not possible. Could not find a matching abort controller for',
+          'rust-miss'
+        ],
+        'Backend'
+      )
+      expect(logInfo).not.toHaveBeenCalled()
     })
   })
 })

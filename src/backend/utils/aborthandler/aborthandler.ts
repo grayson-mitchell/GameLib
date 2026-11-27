@@ -1,4 +1,4 @@
-import { LogPrefix, logError } from 'backend/logger'
+import { LogPrefix, logError, logInfo } from 'backend/logger'
 
 /**
  * What a registry can be given (Phase 88.2, 88.2-16, D-02): Rust owns the abort table of the runner calls it runs, so an id the
@@ -8,6 +8,15 @@ import { LogPrefix, logError } from 'backend/logger'
  */
 export interface AbortRegistryDeps {
   forwardAbort?: (id: string) => Promise<boolean>
+}
+
+/**
+ * What `call` writes when neither the local map nor Rust knew the id (quick 261128-935). `'error'`, the default, is for a caller
+ * that expects a registration, where a miss is a defect. `'info'` is for a caller whose abort is best-effort because something
+ * else ends the work: the Stop path, `dispatch.kill`, where each store's `stop()` ends a running game.
+ */
+export interface AbortCallOptions {
+  ifMissing?: 'error' | 'info'
 }
 
 /**
@@ -25,7 +34,14 @@ export function createAbortRegistry(deps?: AbortRegistryDeps) {
     return abortController
   }
 
-  function logNotFound(id: string) {
+  function logNotFound(id: string, level: 'error' | 'info') {
+    if (level === 'info') {
+      logInfo(
+        ['No abort controller for', id, '- nothing to abort'],
+        LogPrefix.Backend
+      )
+      return
+    }
     logError(
       [
         'Aborting not possible. Could not find a matching abort controller for',
@@ -72,10 +88,11 @@ export function createAbortRegistry(deps?: AbortRegistryDeps) {
     }
   }
 
-  function call(id: string) {
+  function call(id: string, opts?: AbortCallOptions) {
+    const ifMissing = opts?.ifMissing ?? 'error'
     const foundLocally = abortLocal(id)
     if (!deps?.forwardAbort) {
-      if (!foundLocally) logNotFound(id)
+      if (!foundLocally) logNotFound(id, ifMissing)
       return
     }
     // D-02: Rust owns the abort table of its runner calls, so the id goes there too, whether or not the map held it. The
@@ -83,7 +100,7 @@ export function createAbortRegistry(deps?: AbortRegistryDeps) {
     const forwarded = forward(id)
     if (foundLocally) return
     void forwarded.then((foundInRust) => {
-      if (!foundInRust) logNotFound(id)
+      if (!foundInRust) logNotFound(id, ifMissing)
     })
   }
 
@@ -124,6 +141,8 @@ export function createAbortRegistry(deps?: AbortRegistryDeps) {
   // for every caller that DOES expect a registration to exist (stopCurrentDownload,
   // SteamGame.stop, abortAll) — this export exists so ONE
   // caller can ask before it tells, not to soften the log for everyone.
+  // The Stop path (`dispatch.kill`) does not ask `has` first. It calls with
+  // `ifMissing: 'info'`, so the forward to Rust still runs (quick 261128-935).
   function has(id: string): boolean {
     return abortControllers.has(id)
   }
