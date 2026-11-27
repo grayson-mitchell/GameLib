@@ -1,11 +1,11 @@
 ---
-status: partial
+status: complete
 phase: 87-engine-wine-and-tools
 source: [87-CONTEXT.md D-06 D-11 D-12 D-13 D-19 D-21, 87-HUMAN-UAT.md F1 F2 F3 F4 F5]
 authored_by: 87-60
 run_by: 87-69
 started: 2026-11-24T18:43:11Z
-updated: 2026-11-25T04:10:00Z
+updated: 2026-11-27T04:16:51.046Z
 ---
 
 This is re-run 1 of the D-11 live macOS gate for the Phase 87 gap closure. The 87-59 run scored item 1 issue, item 3 blocked
