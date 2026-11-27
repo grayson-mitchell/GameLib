@@ -1354,9 +1354,10 @@ export const RUST_SHORTCUTS_STEAM_IS_ADDED = 'shortcuts_steam_is_added' as const
 
 /**
  * Quick 261128-7wv: the raw, unexpanded `User Shell Folders` value, read by the shell through RegGetValueW (UTF-16).
- * One object arg `{ name: 'Desktop' | 'Personal' }`. Resolves a string, or `null` off Windows or when the value cannot
- * be read. The one caller is `readWindowsShellFolder` in `backend/sidecar/knownFolders.ts`, which expands and validates
- * the value and falls back to `reg.exe`.
+ * One object arg `{ name: 'Desktop' | 'Personal' }`. Resolves `{ type: 'REG_SZ' | 'REG_EXPAND_SZ', data }`, the raw
+ * unexpanded value with its registry type (quick 261128-810), or `null` off Windows or when the value cannot be read.
+ * The one caller is `readWindowsShellFolder` in `backend/sidecar/knownFolders.ts`, which expands `%VAR%` only for a
+ * REG_EXPAND_SZ value, validates the result and falls back to `reg.exe`.
  */
 export const RUST_WINDOWS_SHELL_FOLDER_READ =
   'windows_shell_folder_read' as const
