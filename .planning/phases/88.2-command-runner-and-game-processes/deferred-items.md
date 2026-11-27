@@ -26,3 +26,5 @@
   `loadKillTreeRsCode()` cuts `kill_tree.rs` at its first `    #[cfg(test)]`; 88.2-27 (`4ad3be901`) put one at line 429,
   before `pub fn terminate_group(` (line 509), so `extractBracedBlock` finds no marker. The pin should cut at the last
   `    #[cfg(test)]`. Not fixed here (scope boundary).
+- Resolved by the orchestrator before the 88.2-31 push: `loadKillTreeRsCode()` now drops every `#[cfg(test)]` module by
+  brace matching instead of cutting at the first one, so C4b sees `terminate_group` again (11 of 11 pass).

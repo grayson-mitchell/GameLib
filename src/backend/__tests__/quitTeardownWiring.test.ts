@@ -78,10 +78,27 @@ function loadMainRsCode(): string {
  * convention as `loadMainRsCode`.
  */
 function loadKillTreeRsCode(): string {
-  const raw = readFileSync(KILL_TREE_RS_PATH, 'utf-8').replace(/\r\n/g, '\n')
-  const cut = raw.indexOf('    #[cfg(test)]')
-  expect(cut).toBeGreaterThan(-1)
-  return stripSourceComments(raw.slice(0, cut))
+  let raw = readFileSync(KILL_TREE_RS_PATH, 'utf-8').replace(/\r\n/g, '\n')
+  // Drop every `#[cfg(test)]` module, wherever it sits: kill_tree.rs has nested
+  // test modules ahead of `terminate_group` (88.2-27), so cutting at the first one
+  // would lose production code.
+  let removed = 0
+  for (;;) {
+    const attr = raw.indexOf('#[cfg(test)]')
+    if (attr === -1) break
+    const open = raw.indexOf('{', attr)
+    expect(open).toBeGreaterThan(-1)
+    let depth = 0
+    let end = open
+    for (; end < raw.length; end++) {
+      if (raw[end] === '{') depth++
+      else if (raw[end] === '}' && --depth === 0) break
+    }
+    raw = raw.slice(0, attr) + raw.slice(end + 1)
+    removed++
+  }
+  expect(removed).toBeGreaterThan(0)
+  return stripSourceComments(raw)
     .split('\n')
     .filter((line) => !line.trim().startsWith('//'))
     .map(stripTrailingLineComment)
