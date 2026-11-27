@@ -188,7 +188,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 84: Logger** — 18/18 plans (11 + 7 gap closure); completed 2026-11-22
 - [x] **Phase 85: Store host, config and versioned migrations** — 25/25 plans in 20 waves (the D-03 deletion split into four plans for context budget); completed 2026-11-22
 - [x] **Phase 86: Pure leaf services** — 27/27 plans in 21 waves (26 + 1 gap closure); completed 2026-11-23
-- [ ] **Phase 87: Engine, Wine and tools** — 59 plans in 38 waves; planned 2026-11-23 (executes after Phase 86 closes)
+- [x] **Phase 87: Engine, Wine and tools** — 59 plans in 38 waves; planned 2026-11-23 (executes after Phase 86 closes)
 - [x] **Phase 88: Launch scaffolding and known fixes** — 17/17 plans in 14 waves; completed 2026-11-25 (SVC-03 part 1 of 4; split 2026-11-25, 88-CONTEXT D-30)
 - [ ] **Phase 88.1: Launch builders and prepare steps** — 24 plans (20 in 15 waves + 4 gap closure for CR-01, planned 2026-11-26); planned 2026-11-25 (SVC-03 part 2 of 4; D-30)
 - [ ] **Phase 88.2: Command runner and game processes** — 25 plans in 18 waves; planned 2026-11-26, re-sliced the same day to fit the smart-zone budget and file cap (SVC-03 part 3 of 4; D-30)
