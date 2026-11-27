@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: "88.3"
 current_phase_name: Launch funnel, re-adoption and the live gate
 status: executing
-stopped_at: Completed 88.3-01-PLAN.md
-last_updated: "2026-11-27T19:44:58.465Z"
+stopped_at: Completed 88.3-02-PLAN.md
+last_updated: "2026-11-27T19:57:58.980Z"
 last_activity: 2026-11-27
 last_activity_desc: Phase 88.3 execution started
-state_head: e9b76f111c2c2db4e51aceb6e478851909c80575
+state_head: 202cee1b994ec6f8b67ba91d79cc1d150dd53c9a
 progress:
   total_phases: 26
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-25)
 ## Current Position
 
 Phase: 88.3 (Launch funnel, re-adoption and the live gate) — EXECUTING
-Plan: 2 of 22
+Plan: 3 of 22
 Status: Ready to execute
 Last activity: 2026-11-27 — Phase 88.3 execution started
 Progress: [████████████████░░░░] 204/257 plans ([█████████░] 88%)
@@ -578,6 +578,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 88.2 P29 | 25min | 2 tasks | 8 files |
 | Phase 88.2 P30 | 10 min | 3 tasks | 11 files |
 | Phase 88.3 P01 | 1h | 2 tasks | 4 files |
+| Phase 88.3 P02 | 1h | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -1309,6 +1310,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 88.2]: 88.2-30: bestEffortTrackedKill lives in storeManagerCommon, not launchrust, because the shim schedule requires every launchrust export to be a one-call shim
 - [Phase 88.2]: 88.2-30: the spawnAsync abort retries with a 25 ms to 500 ms doubling backoff until the call settles; the unref'd timer is cleared in finally
 - [Phase 88.3]: 88.3-01: golden/funnel is recorded from the real TS funnel only (59 cases); the launch hook's writer state is derived from earlier frames, never handOff(); six D-20 candidates listed in the SUMMARY for 88.3-05 to file
+- [Phase 88.3]: 88.3-02: golden/single_flight, runs_for_me and window_raise recorded from the real TS; the runs-for-me vectors test stays live as the TS-side pin
 
 ### Pending Todos
 
@@ -1602,8 +1604,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-27T19:44:54.635Z
-Stopped at: Completed 88.3-01-PLAN.md
+Last session: 2026-11-27T19:57:54.910Z
+Stopped at: Completed 88.3-02-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
