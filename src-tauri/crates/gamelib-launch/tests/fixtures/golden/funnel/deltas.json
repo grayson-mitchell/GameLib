@@ -1,0 +1,3 @@
+{
+  "events-bus-emit": "The TS funnel emits every gameStatusUpdate twice: as a frontend message and on the backend event bus (sendGameStatusUpdate). Nothing outside tests listens: a grep of src and meta for on('gameStatusUpdate'/once(/addListener( at HEAD (88.3-01) finds one match, the engineWineResolvers test, and the only bus listeners in non-test code are 'releasesInfoReady', 'settingChanged' and the per-app 'progressUpdate-<app>' of installStallWatchdog. So the Rust funnel emits only the frontend message; the bus entries of the golden are recorded for completeness and the replay skips them."
+}

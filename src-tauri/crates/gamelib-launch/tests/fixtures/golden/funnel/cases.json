@@ -1,0 +1,73 @@
+[
+  {
+    "id": "funnel--native-legendary-plain",
+    "note": "the end-to-end tracer: native legendary, no scripts, saves off, verbose logs on, engine step skips, launch resolves true",
+    "scenario": {
+      "runner": "legendary",
+      "appName": "alpha",
+      "title": "Alpha",
+      "native": true,
+      "platform": "linux",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": true,
+      "tsStore": {
+        "hasApp": false,
+        "totalPlayed": 0
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": false,
+        "noTrayIcon": false,
+        "disableLogs": false,
+        "disablePlaytimeSync": false
+      },
+      "gameSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": false,
+        "savesPath": "",
+        "gogSaves": [],
+        "wineVersion": {
+          "name": "Wine-Test",
+          "bin": "/pins/wines/Wine-Test/bin/wine",
+          "type": "wine"
+        }
+      },
+      "gameConfigSettings": {
+        "verboseLogs": true
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "resolves": {
+            "kind": "skip"
+          }
+        },
+        "info_recent_add": {
+          "resolves": null
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": true
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": false,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000
+    }
+  }
+]
