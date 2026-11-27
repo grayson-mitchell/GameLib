@@ -16,7 +16,8 @@
 //!   (`escapeValue: true`: the backend init sets no `interpolation` option), `{{- name}}` is the
 //!   unescaped form, and an unknown name leaves the `{{name}}` token as written;
 //! - [`Catalog::t_unescaped`] is the call that passes `interpolation: { escapeValue: false }`
-//!   (a dialog message the TS renders verbatim): the same lookup, every `{{name}}` verbatim.
+//!   (a dialog message or the Humble expiry digest the TS renders verbatim): the same lookup, every
+//!   `{{name}}` verbatim.
 //!
 //! Not ported: `{{name, format}}` formatters, `$t()` nesting and plural suffixes; none of the
 //! poll notifications use them.
@@ -142,8 +143,9 @@ impl Catalog {
     }
 
     /// [`Catalog::t`] for a call the TS makes with `interpolation: { escapeValue: false }`: params
-    /// are placed verbatim. Use it only where the TS call does (a dialog message shown as text);
-    /// the golden (`tests/fixtures/rendered.json`) flags each such row with `escapeValue: false`.
+    /// are placed verbatim. Use it only where the TS call does (a dialog message or an OS notification
+    /// shown as text); the golden (`tests/fixtures/rendered.json`) flags each such row with
+    /// `escapeValue: false`.
     pub fn t_unescaped(&self, key: &str, default: &str, params: &Map<String, Value>) -> String {
         self.render(key, default, params, false)
     }

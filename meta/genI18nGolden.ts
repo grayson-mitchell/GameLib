@@ -37,7 +37,7 @@ interface Case {
   key: string
   default: string
   params: Record<string, string | number>
-  /** `false` where the TS passes `interpolation: { escapeValue: false }` (a dialog message). */
+  /** `false` where the TS passes `interpolation: { escapeValue: false }` (a dialog message or the Humble expiry digest). */
   escapeValue?: boolean
 }
 
@@ -133,7 +133,9 @@ const HOSTILE = `Tom & Jerry's <b>"Cheese"</b> / Co`
  * (94-09, Pitfall 8 and 11). The defaults and params are the ones the TS call sites pass
  * (`humble/expirationAlerts.ts`, `sidecar/shortcutsFlowRegistration.ts`,
  * `shortcuts/nonesteamgame/nonesteamgame.ts`). `showErrorInFrontend`'s dialog message is the one
- * the TS renders unescaped, so its row carries `escapeValue: false` and Rust replays it through
+ * the TS renders unescaped, and so is the Humble expiry digest (every call passes
+ * `interpolation: { escapeValue: false }`, since the OS notification is plain text, quick
+ * 261128-3qh). Those rows carry `escapeValue: false` and Rust replays them through
  * `Catalog::t_unescaped`; every other row goes through `Catalog::t`.
  *
  * `count` rows: the sidecar's `en` catalog holds `expiringBodyPlural`, `_one` and `_other` with the
@@ -145,37 +147,44 @@ const HUMBLE_SHORTCUT_CASES: Case[] = [
   {
     key: 'humble.notification.expiringTitleSingle',
     default: 'Humble key expiring',
-    params: {}
+    params: {},
+    escapeValue: false
   },
   {
     key: 'humble.notification.expiringTitlePlural',
     default: 'Humble keys expiring',
-    params: {}
+    params: {},
+    escapeValue: false
   },
   {
     key: 'humble.notification.expiringBodySingle',
     default: "{{title}}'s Humble key now expires on {{date}}",
-    params: { title: 'Fake Game One', date: '1/2/2027' }
+    params: { title: 'Fake Game One', date: '1/2/2027' },
+    escapeValue: false
   },
   {
     key: 'humble.notification.expiringBodySingle',
     default: "{{title}}'s Humble key now expires on {{date}}",
-    params: { title: HOSTILE, date: '12/31/2027' }
+    params: { title: HOSTILE, date: '12/31/2027' },
+    escapeValue: false
   },
   {
     key: 'humble.notification.expiringBodyPlural',
     default: '{{count}} Humble keys gained expiration dates',
-    params: { count: 1 }
+    params: { count: 1 },
+    escapeValue: false
   },
   {
     key: 'humble.notification.expiringBodyPlural',
     default: '{{count}} Humble keys gained expiration dates',
-    params: { count: 2 }
+    params: { count: 2 },
+    escapeValue: false
   },
   {
     key: 'humble.notification.expiringBodyPlural',
     default: '{{count}} Humble keys gained expiration dates',
-    params: { count: 5 }
+    params: { count: 5 },
+    escapeValue: false
   },
   // The shortcut toasts (`box.shortcuts.*`, `shortcutsFlowRegistration.ts`).
   { key: 'box.shortcuts.title', default: 'Shortcuts', params: {} },

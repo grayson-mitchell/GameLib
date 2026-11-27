@@ -136,6 +136,7 @@
     "params": {
       "count": 1
     },
+    "escapeValue": false,
     "rendered": "1 Humble keys gained expiration dates"
   },
   {
@@ -145,6 +146,7 @@
     "params": {
       "count": 2
     },
+    "escapeValue": false,
     "rendered": "2 Humble keys gained expiration dates"
   },
   {
@@ -154,6 +156,7 @@
     "params": {
       "count": 5
     },
+    "escapeValue": false,
     "rendered": "5 Humble keys gained expiration dates"
   },
   {
@@ -164,7 +167,8 @@
       "title": "Fake Game One",
       "date": "1/2/2027"
     },
-    "rendered": "Fake Game One's Humble key now expires on 1&#x2F;2&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Fake Game One's Humble key now expires on 1/2/2027"
   },
   {
     "language": "",
@@ -174,13 +178,15 @@
       "title": "Tom & Jerry's <b>\"Cheese\"</b> / Co",
       "date": "12/31/2027"
     },
-    "rendered": "Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt; &#x2F; Co's Humble key now expires on 12&#x2F;31&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Tom & Jerry's <b>\"Cheese\"</b> / Co's Humble key now expires on 12/31/2027"
   },
   {
     "language": "",
     "key": "humble.notification.expiringTitlePlural",
     "default": "Humble keys expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble keys expiring"
   },
   {
@@ -188,6 +194,7 @@
     "key": "humble.notification.expiringTitleSingle",
     "default": "Humble key expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble key expiring"
   },
   {
@@ -454,6 +461,7 @@
     "params": {
       "count": 1
     },
+    "escapeValue": false,
     "rendered": "1 Humble keys gained expiration dates"
   },
   {
@@ -463,6 +471,7 @@
     "params": {
       "count": 2
     },
+    "escapeValue": false,
     "rendered": "2 Humble keys gained expiration dates"
   },
   {
@@ -472,6 +481,7 @@
     "params": {
       "count": 5
     },
+    "escapeValue": false,
     "rendered": "5 Humble keys gained expiration dates"
   },
   {
@@ -482,7 +492,8 @@
       "title": "Fake Game One",
       "date": "1/2/2027"
     },
-    "rendered": "Fake Game One's Humble key now expires on 1&#x2F;2&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Fake Game One's Humble key now expires on 1/2/2027"
   },
   {
     "language": "ar",
@@ -492,13 +503,15 @@
       "title": "Tom & Jerry's <b>\"Cheese\"</b> / Co",
       "date": "12/31/2027"
     },
-    "rendered": "Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt; &#x2F; Co's Humble key now expires on 12&#x2F;31&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Tom & Jerry's <b>\"Cheese\"</b> / Co's Humble key now expires on 12/31/2027"
   },
   {
     "language": "ar",
     "key": "humble.notification.expiringTitlePlural",
     "default": "Humble keys expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble keys expiring"
   },
   {
@@ -506,6 +519,7 @@
     "key": "humble.notification.expiringTitleSingle",
     "default": "Humble key expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble key expiring"
   },
   {
@@ -772,6 +786,7 @@
     "params": {
       "count": 1
     },
+    "escapeValue": false,
     "rendered": "1 Humble keys gained expiration dates"
   },
   {
@@ -781,6 +796,7 @@
     "params": {
       "count": 2
     },
+    "escapeValue": false,
     "rendered": "2 Humble keys gained expiration dates"
   },
   {
@@ -790,6 +806,7 @@
     "params": {
       "count": 5
     },
+    "escapeValue": false,
     "rendered": "5 Humble keys gained expiration dates"
   },
   {
@@ -800,7 +817,8 @@
       "title": "Fake Game One",
       "date": "1/2/2027"
     },
-    "rendered": "Fake Game One's Humble key now expires on 1&#x2F;2&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Fake Game One's Humble key now expires on 1/2/2027"
   },
   {
     "language": "az",
@@ -810,13 +828,15 @@
       "title": "Tom & Jerry's <b>\"Cheese\"</b> / Co",
       "date": "12/31/2027"
     },
-    "rendered": "Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt; &#x2F; Co's Humble key now expires on 12&#x2F;31&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Tom & Jerry's <b>\"Cheese\"</b> / Co's Humble key now expires on 12/31/2027"
   },
   {
     "language": "az",
     "key": "humble.notification.expiringTitlePlural",
     "default": "Humble keys expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble keys expiring"
   },
   {
@@ -824,6 +844,7 @@
     "key": "humble.notification.expiringTitleSingle",
     "default": "Humble key expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble key expiring"
   },
   {
@@ -1090,6 +1111,7 @@
     "params": {
       "count": 1
     },
+    "escapeValue": false,
     "rendered": "1 Humble keys gained expiration dates"
   },
   {
@@ -1099,6 +1121,7 @@
     "params": {
       "count": 2
     },
+    "escapeValue": false,
     "rendered": "2 Humble keys gained expiration dates"
   },
   {
@@ -1108,6 +1131,7 @@
     "params": {
       "count": 5
     },
+    "escapeValue": false,
     "rendered": "5 Humble keys gained expiration dates"
   },
   {
@@ -1118,7 +1142,8 @@
       "title": "Fake Game One",
       "date": "1/2/2027"
     },
-    "rendered": "Fake Game One's Humble key now expires on 1&#x2F;2&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Fake Game One's Humble key now expires on 1/2/2027"
   },
   {
     "language": "be",
@@ -1128,13 +1153,15 @@
       "title": "Tom & Jerry's <b>\"Cheese\"</b> / Co",
       "date": "12/31/2027"
     },
-    "rendered": "Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt; &#x2F; Co's Humble key now expires on 12&#x2F;31&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Tom & Jerry's <b>\"Cheese\"</b> / Co's Humble key now expires on 12/31/2027"
   },
   {
     "language": "be",
     "key": "humble.notification.expiringTitlePlural",
     "default": "Humble keys expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble keys expiring"
   },
   {
@@ -1142,6 +1169,7 @@
     "key": "humble.notification.expiringTitleSingle",
     "default": "Humble key expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble key expiring"
   },
   {
@@ -1408,6 +1436,7 @@
     "params": {
       "count": 1
     },
+    "escapeValue": false,
     "rendered": "1 Humble keys gained expiration dates"
   },
   {
@@ -1417,6 +1446,7 @@
     "params": {
       "count": 2
     },
+    "escapeValue": false,
     "rendered": "2 Humble keys gained expiration dates"
   },
   {
@@ -1426,6 +1456,7 @@
     "params": {
       "count": 5
     },
+    "escapeValue": false,
     "rendered": "5 Humble keys gained expiration dates"
   },
   {
@@ -1436,7 +1467,8 @@
       "title": "Fake Game One",
       "date": "1/2/2027"
     },
-    "rendered": "Fake Game One's Humble key now expires on 1&#x2F;2&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Fake Game One's Humble key now expires on 1/2/2027"
   },
   {
     "language": "bg",
@@ -1446,13 +1478,15 @@
       "title": "Tom & Jerry's <b>\"Cheese\"</b> / Co",
       "date": "12/31/2027"
     },
-    "rendered": "Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt; &#x2F; Co's Humble key now expires on 12&#x2F;31&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Tom & Jerry's <b>\"Cheese\"</b> / Co's Humble key now expires on 12/31/2027"
   },
   {
     "language": "bg",
     "key": "humble.notification.expiringTitlePlural",
     "default": "Humble keys expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble keys expiring"
   },
   {
@@ -1460,6 +1494,7 @@
     "key": "humble.notification.expiringTitleSingle",
     "default": "Humble key expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble key expiring"
   },
   {
@@ -1726,6 +1761,7 @@
     "params": {
       "count": 1
     },
+    "escapeValue": false,
     "rendered": "1 Humble keys gained expiration dates"
   },
   {
@@ -1735,6 +1771,7 @@
     "params": {
       "count": 2
     },
+    "escapeValue": false,
     "rendered": "2 Humble keys gained expiration dates"
   },
   {
@@ -1744,6 +1781,7 @@
     "params": {
       "count": 5
     },
+    "escapeValue": false,
     "rendered": "5 Humble keys gained expiration dates"
   },
   {
@@ -1754,7 +1792,8 @@
       "title": "Fake Game One",
       "date": "1/2/2027"
     },
-    "rendered": "Fake Game One's Humble key now expires on 1&#x2F;2&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Fake Game One's Humble key now expires on 1/2/2027"
   },
   {
     "language": "bs",
@@ -1764,13 +1803,15 @@
       "title": "Tom & Jerry's <b>\"Cheese\"</b> / Co",
       "date": "12/31/2027"
     },
-    "rendered": "Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt; &#x2F; Co's Humble key now expires on 12&#x2F;31&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Tom & Jerry's <b>\"Cheese\"</b> / Co's Humble key now expires on 12/31/2027"
   },
   {
     "language": "bs",
     "key": "humble.notification.expiringTitlePlural",
     "default": "Humble keys expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble keys expiring"
   },
   {
@@ -1778,6 +1819,7 @@
     "key": "humble.notification.expiringTitleSingle",
     "default": "Humble key expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble key expiring"
   },
   {
@@ -2044,6 +2086,7 @@
     "params": {
       "count": 1
     },
+    "escapeValue": false,
     "rendered": "1 Humble keys gained expiration dates"
   },
   {
@@ -2053,6 +2096,7 @@
     "params": {
       "count": 2
     },
+    "escapeValue": false,
     "rendered": "2 Humble keys gained expiration dates"
   },
   {
@@ -2062,6 +2106,7 @@
     "params": {
       "count": 5
     },
+    "escapeValue": false,
     "rendered": "5 Humble keys gained expiration dates"
   },
   {
@@ -2072,7 +2117,8 @@
       "title": "Fake Game One",
       "date": "1/2/2027"
     },
-    "rendered": "Fake Game One's Humble key now expires on 1&#x2F;2&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Fake Game One's Humble key now expires on 1/2/2027"
   },
   {
     "language": "ca",
@@ -2082,13 +2128,15 @@
       "title": "Tom & Jerry's <b>\"Cheese\"</b> / Co",
       "date": "12/31/2027"
     },
-    "rendered": "Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt; &#x2F; Co's Humble key now expires on 12&#x2F;31&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Tom & Jerry's <b>\"Cheese\"</b> / Co's Humble key now expires on 12/31/2027"
   },
   {
     "language": "ca",
     "key": "humble.notification.expiringTitlePlural",
     "default": "Humble keys expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble keys expiring"
   },
   {
@@ -2096,6 +2144,7 @@
     "key": "humble.notification.expiringTitleSingle",
     "default": "Humble key expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble key expiring"
   },
   {
@@ -2362,6 +2411,7 @@
     "params": {
       "count": 1
     },
+    "escapeValue": false,
     "rendered": "1 Humble keys gained expiration dates"
   },
   {
@@ -2371,6 +2421,7 @@
     "params": {
       "count": 2
     },
+    "escapeValue": false,
     "rendered": "2 Humble keys gained expiration dates"
   },
   {
@@ -2380,6 +2431,7 @@
     "params": {
       "count": 5
     },
+    "escapeValue": false,
     "rendered": "5 Humble keys gained expiration dates"
   },
   {
@@ -2390,7 +2442,8 @@
       "title": "Fake Game One",
       "date": "1/2/2027"
     },
-    "rendered": "Fake Game One's Humble key now expires on 1&#x2F;2&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Fake Game One's Humble key now expires on 1/2/2027"
   },
   {
     "language": "cs",
@@ -2400,13 +2453,15 @@
       "title": "Tom & Jerry's <b>\"Cheese\"</b> / Co",
       "date": "12/31/2027"
     },
-    "rendered": "Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt; &#x2F; Co's Humble key now expires on 12&#x2F;31&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Tom & Jerry's <b>\"Cheese\"</b> / Co's Humble key now expires on 12/31/2027"
   },
   {
     "language": "cs",
     "key": "humble.notification.expiringTitlePlural",
     "default": "Humble keys expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble keys expiring"
   },
   {
@@ -2414,6 +2469,7 @@
     "key": "humble.notification.expiringTitleSingle",
     "default": "Humble key expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble key expiring"
   },
   {
@@ -2680,6 +2736,7 @@
     "params": {
       "count": 1
     },
+    "escapeValue": false,
     "rendered": "1 Humble keys gained expiration dates"
   },
   {
@@ -2689,6 +2746,7 @@
     "params": {
       "count": 2
     },
+    "escapeValue": false,
     "rendered": "2 Humble keys gained expiration dates"
   },
   {
@@ -2698,6 +2756,7 @@
     "params": {
       "count": 5
     },
+    "escapeValue": false,
     "rendered": "5 Humble keys gained expiration dates"
   },
   {
@@ -2708,7 +2767,8 @@
       "title": "Fake Game One",
       "date": "1/2/2027"
     },
-    "rendered": "Fake Game One's Humble key now expires on 1&#x2F;2&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Fake Game One's Humble key now expires on 1/2/2027"
   },
   {
     "language": "de",
@@ -2718,13 +2778,15 @@
       "title": "Tom & Jerry's <b>\"Cheese\"</b> / Co",
       "date": "12/31/2027"
     },
-    "rendered": "Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt; &#x2F; Co's Humble key now expires on 12&#x2F;31&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Tom & Jerry's <b>\"Cheese\"</b> / Co's Humble key now expires on 12/31/2027"
   },
   {
     "language": "de",
     "key": "humble.notification.expiringTitlePlural",
     "default": "Humble keys expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble keys expiring"
   },
   {
@@ -2732,6 +2794,7 @@
     "key": "humble.notification.expiringTitleSingle",
     "default": "Humble key expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble key expiring"
   },
   {
@@ -2998,6 +3061,7 @@
     "params": {
       "count": 1
     },
+    "escapeValue": false,
     "rendered": "1 Humble keys gained expiration dates"
   },
   {
@@ -3007,6 +3071,7 @@
     "params": {
       "count": 2
     },
+    "escapeValue": false,
     "rendered": "2 Humble keys gained expiration dates"
   },
   {
@@ -3016,6 +3081,7 @@
     "params": {
       "count": 5
     },
+    "escapeValue": false,
     "rendered": "5 Humble keys gained expiration dates"
   },
   {
@@ -3026,7 +3092,8 @@
       "title": "Fake Game One",
       "date": "1/2/2027"
     },
-    "rendered": "Fake Game One's Humble key now expires on 1&#x2F;2&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Fake Game One's Humble key now expires on 1/2/2027"
   },
   {
     "language": "el",
@@ -3036,13 +3103,15 @@
       "title": "Tom & Jerry's <b>\"Cheese\"</b> / Co",
       "date": "12/31/2027"
     },
-    "rendered": "Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt; &#x2F; Co's Humble key now expires on 12&#x2F;31&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Tom & Jerry's <b>\"Cheese\"</b> / Co's Humble key now expires on 12/31/2027"
   },
   {
     "language": "el",
     "key": "humble.notification.expiringTitlePlural",
     "default": "Humble keys expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble keys expiring"
   },
   {
@@ -3050,6 +3119,7 @@
     "key": "humble.notification.expiringTitleSingle",
     "default": "Humble key expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble key expiring"
   },
   {
@@ -3316,6 +3386,7 @@
     "params": {
       "count": 1
     },
+    "escapeValue": false,
     "rendered": "1 Humble keys gained expiration dates"
   },
   {
@@ -3325,6 +3396,7 @@
     "params": {
       "count": 2
     },
+    "escapeValue": false,
     "rendered": "2 Humble keys gained expiration dates"
   },
   {
@@ -3334,6 +3406,7 @@
     "params": {
       "count": 5
     },
+    "escapeValue": false,
     "rendered": "5 Humble keys gained expiration dates"
   },
   {
@@ -3344,7 +3417,8 @@
       "title": "Fake Game One",
       "date": "1/2/2027"
     },
-    "rendered": "Fake Game One's Humble key now expires on 1&#x2F;2&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Fake Game One's Humble key now expires on 1/2/2027"
   },
   {
     "language": "en",
@@ -3354,13 +3428,15 @@
       "title": "Tom & Jerry's <b>\"Cheese\"</b> / Co",
       "date": "12/31/2027"
     },
-    "rendered": "Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt; &#x2F; Co's Humble key now expires on 12&#x2F;31&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Tom & Jerry's <b>\"Cheese\"</b> / Co's Humble key now expires on 12/31/2027"
   },
   {
     "language": "en",
     "key": "humble.notification.expiringTitlePlural",
     "default": "Humble keys expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble keys expiring"
   },
   {
@@ -3368,6 +3444,7 @@
     "key": "humble.notification.expiringTitleSingle",
     "default": "Humble key expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble key expiring"
   },
   {
@@ -3634,6 +3711,7 @@
     "params": {
       "count": 1
     },
+    "escapeValue": false,
     "rendered": "1 Humble keys gained expiration dates"
   },
   {
@@ -3643,6 +3721,7 @@
     "params": {
       "count": 2
     },
+    "escapeValue": false,
     "rendered": "2 Humble keys gained expiration dates"
   },
   {
@@ -3652,6 +3731,7 @@
     "params": {
       "count": 5
     },
+    "escapeValue": false,
     "rendered": "5 Humble keys gained expiration dates"
   },
   {
@@ -3662,7 +3742,8 @@
       "title": "Fake Game One",
       "date": "1/2/2027"
     },
-    "rendered": "Fake Game One's Humble key now expires on 1&#x2F;2&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Fake Game One's Humble key now expires on 1/2/2027"
   },
   {
     "language": "es",
@@ -3672,13 +3753,15 @@
       "title": "Tom & Jerry's <b>\"Cheese\"</b> / Co",
       "date": "12/31/2027"
     },
-    "rendered": "Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt; &#x2F; Co's Humble key now expires on 12&#x2F;31&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Tom & Jerry's <b>\"Cheese\"</b> / Co's Humble key now expires on 12/31/2027"
   },
   {
     "language": "es",
     "key": "humble.notification.expiringTitlePlural",
     "default": "Humble keys expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble keys expiring"
   },
   {
@@ -3686,6 +3769,7 @@
     "key": "humble.notification.expiringTitleSingle",
     "default": "Humble key expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble key expiring"
   },
   {
@@ -3952,6 +4036,7 @@
     "params": {
       "count": 1
     },
+    "escapeValue": false,
     "rendered": "1 Humble keys gained expiration dates"
   },
   {
@@ -3961,6 +4046,7 @@
     "params": {
       "count": 2
     },
+    "escapeValue": false,
     "rendered": "2 Humble keys gained expiration dates"
   },
   {
@@ -3970,6 +4056,7 @@
     "params": {
       "count": 5
     },
+    "escapeValue": false,
     "rendered": "5 Humble keys gained expiration dates"
   },
   {
@@ -3980,7 +4067,8 @@
       "title": "Fake Game One",
       "date": "1/2/2027"
     },
-    "rendered": "Fake Game One's Humble key now expires on 1&#x2F;2&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Fake Game One's Humble key now expires on 1/2/2027"
   },
   {
     "language": "et",
@@ -3990,13 +4078,15 @@
       "title": "Tom & Jerry's <b>\"Cheese\"</b> / Co",
       "date": "12/31/2027"
     },
-    "rendered": "Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt; &#x2F; Co's Humble key now expires on 12&#x2F;31&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Tom & Jerry's <b>\"Cheese\"</b> / Co's Humble key now expires on 12/31/2027"
   },
   {
     "language": "et",
     "key": "humble.notification.expiringTitlePlural",
     "default": "Humble keys expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble keys expiring"
   },
   {
@@ -4004,6 +4094,7 @@
     "key": "humble.notification.expiringTitleSingle",
     "default": "Humble key expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble key expiring"
   },
   {
@@ -4270,6 +4361,7 @@
     "params": {
       "count": 1
     },
+    "escapeValue": false,
     "rendered": "1 Humble keys gained expiration dates"
   },
   {
@@ -4279,6 +4371,7 @@
     "params": {
       "count": 2
     },
+    "escapeValue": false,
     "rendered": "2 Humble keys gained expiration dates"
   },
   {
@@ -4288,6 +4381,7 @@
     "params": {
       "count": 5
     },
+    "escapeValue": false,
     "rendered": "5 Humble keys gained expiration dates"
   },
   {
@@ -4298,7 +4392,8 @@
       "title": "Fake Game One",
       "date": "1/2/2027"
     },
-    "rendered": "Fake Game One's Humble key now expires on 1&#x2F;2&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Fake Game One's Humble key now expires on 1/2/2027"
   },
   {
     "language": "eu",
@@ -4308,13 +4403,15 @@
       "title": "Tom & Jerry's <b>\"Cheese\"</b> / Co",
       "date": "12/31/2027"
     },
-    "rendered": "Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt; &#x2F; Co's Humble key now expires on 12&#x2F;31&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Tom & Jerry's <b>\"Cheese\"</b> / Co's Humble key now expires on 12/31/2027"
   },
   {
     "language": "eu",
     "key": "humble.notification.expiringTitlePlural",
     "default": "Humble keys expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble keys expiring"
   },
   {
@@ -4322,6 +4419,7 @@
     "key": "humble.notification.expiringTitleSingle",
     "default": "Humble key expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble key expiring"
   },
   {
@@ -4588,6 +4686,7 @@
     "params": {
       "count": 1
     },
+    "escapeValue": false,
     "rendered": "1 Humble keys gained expiration dates"
   },
   {
@@ -4597,6 +4696,7 @@
     "params": {
       "count": 2
     },
+    "escapeValue": false,
     "rendered": "2 Humble keys gained expiration dates"
   },
   {
@@ -4606,6 +4706,7 @@
     "params": {
       "count": 5
     },
+    "escapeValue": false,
     "rendered": "5 Humble keys gained expiration dates"
   },
   {
@@ -4616,7 +4717,8 @@
       "title": "Fake Game One",
       "date": "1/2/2027"
     },
-    "rendered": "Fake Game One's Humble key now expires on 1&#x2F;2&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Fake Game One's Humble key now expires on 1/2/2027"
   },
   {
     "language": "fa",
@@ -4626,13 +4728,15 @@
       "title": "Tom & Jerry's <b>\"Cheese\"</b> / Co",
       "date": "12/31/2027"
     },
-    "rendered": "Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt; &#x2F; Co's Humble key now expires on 12&#x2F;31&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Tom & Jerry's <b>\"Cheese\"</b> / Co's Humble key now expires on 12/31/2027"
   },
   {
     "language": "fa",
     "key": "humble.notification.expiringTitlePlural",
     "default": "Humble keys expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble keys expiring"
   },
   {
@@ -4640,6 +4744,7 @@
     "key": "humble.notification.expiringTitleSingle",
     "default": "Humble key expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble key expiring"
   },
   {
@@ -4906,6 +5011,7 @@
     "params": {
       "count": 1
     },
+    "escapeValue": false,
     "rendered": "1 Humble keys gained expiration dates"
   },
   {
@@ -4915,6 +5021,7 @@
     "params": {
       "count": 2
     },
+    "escapeValue": false,
     "rendered": "2 Humble keys gained expiration dates"
   },
   {
@@ -4924,6 +5031,7 @@
     "params": {
       "count": 5
     },
+    "escapeValue": false,
     "rendered": "5 Humble keys gained expiration dates"
   },
   {
@@ -4934,7 +5042,8 @@
       "title": "Fake Game One",
       "date": "1/2/2027"
     },
-    "rendered": "Fake Game One's Humble key now expires on 1&#x2F;2&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Fake Game One's Humble key now expires on 1/2/2027"
   },
   {
     "language": "fi",
@@ -4944,13 +5053,15 @@
       "title": "Tom & Jerry's <b>\"Cheese\"</b> / Co",
       "date": "12/31/2027"
     },
-    "rendered": "Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt; &#x2F; Co's Humble key now expires on 12&#x2F;31&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Tom & Jerry's <b>\"Cheese\"</b> / Co's Humble key now expires on 12/31/2027"
   },
   {
     "language": "fi",
     "key": "humble.notification.expiringTitlePlural",
     "default": "Humble keys expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble keys expiring"
   },
   {
@@ -4958,6 +5069,7 @@
     "key": "humble.notification.expiringTitleSingle",
     "default": "Humble key expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble key expiring"
   },
   {
@@ -5224,6 +5336,7 @@
     "params": {
       "count": 1
     },
+    "escapeValue": false,
     "rendered": "1 Humble keys gained expiration dates"
   },
   {
@@ -5233,6 +5346,7 @@
     "params": {
       "count": 2
     },
+    "escapeValue": false,
     "rendered": "2 Humble keys gained expiration dates"
   },
   {
@@ -5242,6 +5356,7 @@
     "params": {
       "count": 5
     },
+    "escapeValue": false,
     "rendered": "5 Humble keys gained expiration dates"
   },
   {
@@ -5252,7 +5367,8 @@
       "title": "Fake Game One",
       "date": "1/2/2027"
     },
-    "rendered": "Fake Game One's Humble key now expires on 1&#x2F;2&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Fake Game One's Humble key now expires on 1/2/2027"
   },
   {
     "language": "fr",
@@ -5262,13 +5378,15 @@
       "title": "Tom & Jerry's <b>\"Cheese\"</b> / Co",
       "date": "12/31/2027"
     },
-    "rendered": "Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt; &#x2F; Co's Humble key now expires on 12&#x2F;31&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Tom & Jerry's <b>\"Cheese\"</b> / Co's Humble key now expires on 12/31/2027"
   },
   {
     "language": "fr",
     "key": "humble.notification.expiringTitlePlural",
     "default": "Humble keys expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble keys expiring"
   },
   {
@@ -5276,6 +5394,7 @@
     "key": "humble.notification.expiringTitleSingle",
     "default": "Humble key expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble key expiring"
   },
   {
@@ -5542,6 +5661,7 @@
     "params": {
       "count": 1
     },
+    "escapeValue": false,
     "rendered": "1 Humble keys gained expiration dates"
   },
   {
@@ -5551,6 +5671,7 @@
     "params": {
       "count": 2
     },
+    "escapeValue": false,
     "rendered": "2 Humble keys gained expiration dates"
   },
   {
@@ -5560,6 +5681,7 @@
     "params": {
       "count": 5
     },
+    "escapeValue": false,
     "rendered": "5 Humble keys gained expiration dates"
   },
   {
@@ -5570,7 +5692,8 @@
       "title": "Fake Game One",
       "date": "1/2/2027"
     },
-    "rendered": "Fake Game One's Humble key now expires on 1&#x2F;2&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Fake Game One's Humble key now expires on 1/2/2027"
   },
   {
     "language": "ga",
@@ -5580,13 +5703,15 @@
       "title": "Tom & Jerry's <b>\"Cheese\"</b> / Co",
       "date": "12/31/2027"
     },
-    "rendered": "Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt; &#x2F; Co's Humble key now expires on 12&#x2F;31&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Tom & Jerry's <b>\"Cheese\"</b> / Co's Humble key now expires on 12/31/2027"
   },
   {
     "language": "ga",
     "key": "humble.notification.expiringTitlePlural",
     "default": "Humble keys expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble keys expiring"
   },
   {
@@ -5594,6 +5719,7 @@
     "key": "humble.notification.expiringTitleSingle",
     "default": "Humble key expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble key expiring"
   },
   {
@@ -5860,6 +5986,7 @@
     "params": {
       "count": 1
     },
+    "escapeValue": false,
     "rendered": "1 Humble keys gained expiration dates"
   },
   {
@@ -5869,6 +5996,7 @@
     "params": {
       "count": 2
     },
+    "escapeValue": false,
     "rendered": "2 Humble keys gained expiration dates"
   },
   {
@@ -5878,6 +6006,7 @@
     "params": {
       "count": 5
     },
+    "escapeValue": false,
     "rendered": "5 Humble keys gained expiration dates"
   },
   {
@@ -5888,7 +6017,8 @@
       "title": "Fake Game One",
       "date": "1/2/2027"
     },
-    "rendered": "Fake Game One's Humble key now expires on 1&#x2F;2&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Fake Game One's Humble key now expires on 1/2/2027"
   },
   {
     "language": "gl",
@@ -5898,13 +6028,15 @@
       "title": "Tom & Jerry's <b>\"Cheese\"</b> / Co",
       "date": "12/31/2027"
     },
-    "rendered": "Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt; &#x2F; Co's Humble key now expires on 12&#x2F;31&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Tom & Jerry's <b>\"Cheese\"</b> / Co's Humble key now expires on 12/31/2027"
   },
   {
     "language": "gl",
     "key": "humble.notification.expiringTitlePlural",
     "default": "Humble keys expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble keys expiring"
   },
   {
@@ -5912,6 +6044,7 @@
     "key": "humble.notification.expiringTitleSingle",
     "default": "Humble key expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble key expiring"
   },
   {
@@ -6178,6 +6311,7 @@
     "params": {
       "count": 1
     },
+    "escapeValue": false,
     "rendered": "1 Humble keys gained expiration dates"
   },
   {
@@ -6187,6 +6321,7 @@
     "params": {
       "count": 2
     },
+    "escapeValue": false,
     "rendered": "2 Humble keys gained expiration dates"
   },
   {
@@ -6196,6 +6331,7 @@
     "params": {
       "count": 5
     },
+    "escapeValue": false,
     "rendered": "5 Humble keys gained expiration dates"
   },
   {
@@ -6206,7 +6342,8 @@
       "title": "Fake Game One",
       "date": "1/2/2027"
     },
-    "rendered": "Fake Game One's Humble key now expires on 1&#x2F;2&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Fake Game One's Humble key now expires on 1/2/2027"
   },
   {
     "language": "he",
@@ -6216,13 +6353,15 @@
       "title": "Tom & Jerry's <b>\"Cheese\"</b> / Co",
       "date": "12/31/2027"
     },
-    "rendered": "Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt; &#x2F; Co's Humble key now expires on 12&#x2F;31&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Tom & Jerry's <b>\"Cheese\"</b> / Co's Humble key now expires on 12/31/2027"
   },
   {
     "language": "he",
     "key": "humble.notification.expiringTitlePlural",
     "default": "Humble keys expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble keys expiring"
   },
   {
@@ -6230,6 +6369,7 @@
     "key": "humble.notification.expiringTitleSingle",
     "default": "Humble key expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble key expiring"
   },
   {
@@ -6496,6 +6636,7 @@
     "params": {
       "count": 1
     },
+    "escapeValue": false,
     "rendered": "1 Humble keys gained expiration dates"
   },
   {
@@ -6505,6 +6646,7 @@
     "params": {
       "count": 2
     },
+    "escapeValue": false,
     "rendered": "2 Humble keys gained expiration dates"
   },
   {
@@ -6514,6 +6656,7 @@
     "params": {
       "count": 5
     },
+    "escapeValue": false,
     "rendered": "5 Humble keys gained expiration dates"
   },
   {
@@ -6524,7 +6667,8 @@
       "title": "Fake Game One",
       "date": "1/2/2027"
     },
-    "rendered": "Fake Game One's Humble key now expires on 1&#x2F;2&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Fake Game One's Humble key now expires on 1/2/2027"
   },
   {
     "language": "hr",
@@ -6534,13 +6678,15 @@
       "title": "Tom & Jerry's <b>\"Cheese\"</b> / Co",
       "date": "12/31/2027"
     },
-    "rendered": "Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt; &#x2F; Co's Humble key now expires on 12&#x2F;31&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Tom & Jerry's <b>\"Cheese\"</b> / Co's Humble key now expires on 12/31/2027"
   },
   {
     "language": "hr",
     "key": "humble.notification.expiringTitlePlural",
     "default": "Humble keys expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble keys expiring"
   },
   {
@@ -6548,6 +6694,7 @@
     "key": "humble.notification.expiringTitleSingle",
     "default": "Humble key expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble key expiring"
   },
   {
@@ -6814,6 +6961,7 @@
     "params": {
       "count": 1
     },
+    "escapeValue": false,
     "rendered": "1 Humble keys gained expiration dates"
   },
   {
@@ -6823,6 +6971,7 @@
     "params": {
       "count": 2
     },
+    "escapeValue": false,
     "rendered": "2 Humble keys gained expiration dates"
   },
   {
@@ -6832,6 +6981,7 @@
     "params": {
       "count": 5
     },
+    "escapeValue": false,
     "rendered": "5 Humble keys gained expiration dates"
   },
   {
@@ -6842,7 +6992,8 @@
       "title": "Fake Game One",
       "date": "1/2/2027"
     },
-    "rendered": "Fake Game One's Humble key now expires on 1&#x2F;2&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Fake Game One's Humble key now expires on 1/2/2027"
   },
   {
     "language": "hu",
@@ -6852,13 +7003,15 @@
       "title": "Tom & Jerry's <b>\"Cheese\"</b> / Co",
       "date": "12/31/2027"
     },
-    "rendered": "Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt; &#x2F; Co's Humble key now expires on 12&#x2F;31&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Tom & Jerry's <b>\"Cheese\"</b> / Co's Humble key now expires on 12/31/2027"
   },
   {
     "language": "hu",
     "key": "humble.notification.expiringTitlePlural",
     "default": "Humble keys expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble keys expiring"
   },
   {
@@ -6866,6 +7019,7 @@
     "key": "humble.notification.expiringTitleSingle",
     "default": "Humble key expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble key expiring"
   },
   {
@@ -7132,6 +7286,7 @@
     "params": {
       "count": 1
     },
+    "escapeValue": false,
     "rendered": "1 Humble keys gained expiration dates"
   },
   {
@@ -7141,6 +7296,7 @@
     "params": {
       "count": 2
     },
+    "escapeValue": false,
     "rendered": "2 Humble keys gained expiration dates"
   },
   {
@@ -7150,6 +7306,7 @@
     "params": {
       "count": 5
     },
+    "escapeValue": false,
     "rendered": "5 Humble keys gained expiration dates"
   },
   {
@@ -7160,7 +7317,8 @@
       "title": "Fake Game One",
       "date": "1/2/2027"
     },
-    "rendered": "Fake Game One's Humble key now expires on 1&#x2F;2&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Fake Game One's Humble key now expires on 1/2/2027"
   },
   {
     "language": "id",
@@ -7170,13 +7328,15 @@
       "title": "Tom & Jerry's <b>\"Cheese\"</b> / Co",
       "date": "12/31/2027"
     },
-    "rendered": "Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt; &#x2F; Co's Humble key now expires on 12&#x2F;31&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Tom & Jerry's <b>\"Cheese\"</b> / Co's Humble key now expires on 12/31/2027"
   },
   {
     "language": "id",
     "key": "humble.notification.expiringTitlePlural",
     "default": "Humble keys expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble keys expiring"
   },
   {
@@ -7184,6 +7344,7 @@
     "key": "humble.notification.expiringTitleSingle",
     "default": "Humble key expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble key expiring"
   },
   {
@@ -7450,6 +7611,7 @@
     "params": {
       "count": 1
     },
+    "escapeValue": false,
     "rendered": "1 Humble keys gained expiration dates"
   },
   {
@@ -7459,6 +7621,7 @@
     "params": {
       "count": 2
     },
+    "escapeValue": false,
     "rendered": "2 Humble keys gained expiration dates"
   },
   {
@@ -7468,6 +7631,7 @@
     "params": {
       "count": 5
     },
+    "escapeValue": false,
     "rendered": "5 Humble keys gained expiration dates"
   },
   {
@@ -7478,7 +7642,8 @@
       "title": "Fake Game One",
       "date": "1/2/2027"
     },
-    "rendered": "Fake Game One's Humble key now expires on 1&#x2F;2&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Fake Game One's Humble key now expires on 1/2/2027"
   },
   {
     "language": "it",
@@ -7488,13 +7653,15 @@
       "title": "Tom & Jerry's <b>\"Cheese\"</b> / Co",
       "date": "12/31/2027"
     },
-    "rendered": "Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt; &#x2F; Co's Humble key now expires on 12&#x2F;31&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Tom & Jerry's <b>\"Cheese\"</b> / Co's Humble key now expires on 12/31/2027"
   },
   {
     "language": "it",
     "key": "humble.notification.expiringTitlePlural",
     "default": "Humble keys expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble keys expiring"
   },
   {
@@ -7502,6 +7669,7 @@
     "key": "humble.notification.expiringTitleSingle",
     "default": "Humble key expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble key expiring"
   },
   {
@@ -7768,6 +7936,7 @@
     "params": {
       "count": 1
     },
+    "escapeValue": false,
     "rendered": "1 Humble keys gained expiration dates"
   },
   {
@@ -7777,6 +7946,7 @@
     "params": {
       "count": 2
     },
+    "escapeValue": false,
     "rendered": "2 Humble keys gained expiration dates"
   },
   {
@@ -7786,6 +7956,7 @@
     "params": {
       "count": 5
     },
+    "escapeValue": false,
     "rendered": "5 Humble keys gained expiration dates"
   },
   {
@@ -7796,7 +7967,8 @@
       "title": "Fake Game One",
       "date": "1/2/2027"
     },
-    "rendered": "Fake Game One's Humble key now expires on 1&#x2F;2&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Fake Game One's Humble key now expires on 1/2/2027"
   },
   {
     "language": "ja",
@@ -7806,13 +7978,15 @@
       "title": "Tom & Jerry's <b>\"Cheese\"</b> / Co",
       "date": "12/31/2027"
     },
-    "rendered": "Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt; &#x2F; Co's Humble key now expires on 12&#x2F;31&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Tom & Jerry's <b>\"Cheese\"</b> / Co's Humble key now expires on 12/31/2027"
   },
   {
     "language": "ja",
     "key": "humble.notification.expiringTitlePlural",
     "default": "Humble keys expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble keys expiring"
   },
   {
@@ -7820,6 +7994,7 @@
     "key": "humble.notification.expiringTitleSingle",
     "default": "Humble key expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble key expiring"
   },
   {
@@ -8086,6 +8261,7 @@
     "params": {
       "count": 1
     },
+    "escapeValue": false,
     "rendered": "1 Humble keys gained expiration dates"
   },
   {
@@ -8095,6 +8271,7 @@
     "params": {
       "count": 2
     },
+    "escapeValue": false,
     "rendered": "2 Humble keys gained expiration dates"
   },
   {
@@ -8104,6 +8281,7 @@
     "params": {
       "count": 5
     },
+    "escapeValue": false,
     "rendered": "5 Humble keys gained expiration dates"
   },
   {
@@ -8114,7 +8292,8 @@
       "title": "Fake Game One",
       "date": "1/2/2027"
     },
-    "rendered": "Fake Game One's Humble key now expires on 1&#x2F;2&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Fake Game One's Humble key now expires on 1/2/2027"
   },
   {
     "language": "ko",
@@ -8124,13 +8303,15 @@
       "title": "Tom & Jerry's <b>\"Cheese\"</b> / Co",
       "date": "12/31/2027"
     },
-    "rendered": "Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt; &#x2F; Co's Humble key now expires on 12&#x2F;31&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Tom & Jerry's <b>\"Cheese\"</b> / Co's Humble key now expires on 12/31/2027"
   },
   {
     "language": "ko",
     "key": "humble.notification.expiringTitlePlural",
     "default": "Humble keys expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble keys expiring"
   },
   {
@@ -8138,6 +8319,7 @@
     "key": "humble.notification.expiringTitleSingle",
     "default": "Humble key expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble key expiring"
   },
   {
@@ -8404,6 +8586,7 @@
     "params": {
       "count": 1
     },
+    "escapeValue": false,
     "rendered": "1 Humble keys gained expiration dates"
   },
   {
@@ -8413,6 +8596,7 @@
     "params": {
       "count": 2
     },
+    "escapeValue": false,
     "rendered": "2 Humble keys gained expiration dates"
   },
   {
@@ -8422,6 +8606,7 @@
     "params": {
       "count": 5
     },
+    "escapeValue": false,
     "rendered": "5 Humble keys gained expiration dates"
   },
   {
@@ -8432,7 +8617,8 @@
       "title": "Fake Game One",
       "date": "1/2/2027"
     },
-    "rendered": "Fake Game One's Humble key now expires on 1&#x2F;2&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Fake Game One's Humble key now expires on 1/2/2027"
   },
   {
     "language": "lt",
@@ -8442,13 +8628,15 @@
       "title": "Tom & Jerry's <b>\"Cheese\"</b> / Co",
       "date": "12/31/2027"
     },
-    "rendered": "Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt; &#x2F; Co's Humble key now expires on 12&#x2F;31&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Tom & Jerry's <b>\"Cheese\"</b> / Co's Humble key now expires on 12/31/2027"
   },
   {
     "language": "lt",
     "key": "humble.notification.expiringTitlePlural",
     "default": "Humble keys expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble keys expiring"
   },
   {
@@ -8456,6 +8644,7 @@
     "key": "humble.notification.expiringTitleSingle",
     "default": "Humble key expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble key expiring"
   },
   {
@@ -8722,6 +8911,7 @@
     "params": {
       "count": 1
     },
+    "escapeValue": false,
     "rendered": "1 Humble keys gained expiration dates"
   },
   {
@@ -8731,6 +8921,7 @@
     "params": {
       "count": 2
     },
+    "escapeValue": false,
     "rendered": "2 Humble keys gained expiration dates"
   },
   {
@@ -8740,6 +8931,7 @@
     "params": {
       "count": 5
     },
+    "escapeValue": false,
     "rendered": "5 Humble keys gained expiration dates"
   },
   {
@@ -8750,7 +8942,8 @@
       "title": "Fake Game One",
       "date": "1/2/2027"
     },
-    "rendered": "Fake Game One's Humble key now expires on 1&#x2F;2&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Fake Game One's Humble key now expires on 1/2/2027"
   },
   {
     "language": "ml",
@@ -8760,13 +8953,15 @@
       "title": "Tom & Jerry's <b>\"Cheese\"</b> / Co",
       "date": "12/31/2027"
     },
-    "rendered": "Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt; &#x2F; Co's Humble key now expires on 12&#x2F;31&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Tom & Jerry's <b>\"Cheese\"</b> / Co's Humble key now expires on 12/31/2027"
   },
   {
     "language": "ml",
     "key": "humble.notification.expiringTitlePlural",
     "default": "Humble keys expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble keys expiring"
   },
   {
@@ -8774,6 +8969,7 @@
     "key": "humble.notification.expiringTitleSingle",
     "default": "Humble key expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble key expiring"
   },
   {
@@ -9040,6 +9236,7 @@
     "params": {
       "count": 1
     },
+    "escapeValue": false,
     "rendered": "1 Humble keys gained expiration dates"
   },
   {
@@ -9049,6 +9246,7 @@
     "params": {
       "count": 2
     },
+    "escapeValue": false,
     "rendered": "2 Humble keys gained expiration dates"
   },
   {
@@ -9058,6 +9256,7 @@
     "params": {
       "count": 5
     },
+    "escapeValue": false,
     "rendered": "5 Humble keys gained expiration dates"
   },
   {
@@ -9068,7 +9267,8 @@
       "title": "Fake Game One",
       "date": "1/2/2027"
     },
-    "rendered": "Fake Game One's Humble key now expires on 1&#x2F;2&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Fake Game One's Humble key now expires on 1/2/2027"
   },
   {
     "language": "nb_NO",
@@ -9078,13 +9278,15 @@
       "title": "Tom & Jerry's <b>\"Cheese\"</b> / Co",
       "date": "12/31/2027"
     },
-    "rendered": "Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt; &#x2F; Co's Humble key now expires on 12&#x2F;31&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Tom & Jerry's <b>\"Cheese\"</b> / Co's Humble key now expires on 12/31/2027"
   },
   {
     "language": "nb_NO",
     "key": "humble.notification.expiringTitlePlural",
     "default": "Humble keys expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble keys expiring"
   },
   {
@@ -9092,6 +9294,7 @@
     "key": "humble.notification.expiringTitleSingle",
     "default": "Humble key expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble key expiring"
   },
   {
@@ -9358,6 +9561,7 @@
     "params": {
       "count": 1
     },
+    "escapeValue": false,
     "rendered": "1 Humble keys gained expiration dates"
   },
   {
@@ -9367,6 +9571,7 @@
     "params": {
       "count": 2
     },
+    "escapeValue": false,
     "rendered": "2 Humble keys gained expiration dates"
   },
   {
@@ -9376,6 +9581,7 @@
     "params": {
       "count": 5
     },
+    "escapeValue": false,
     "rendered": "5 Humble keys gained expiration dates"
   },
   {
@@ -9386,7 +9592,8 @@
       "title": "Fake Game One",
       "date": "1/2/2027"
     },
-    "rendered": "Fake Game One's Humble key now expires on 1&#x2F;2&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Fake Game One's Humble key now expires on 1/2/2027"
   },
   {
     "language": "nb-NO",
@@ -9396,13 +9603,15 @@
       "title": "Tom & Jerry's <b>\"Cheese\"</b> / Co",
       "date": "12/31/2027"
     },
-    "rendered": "Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt; &#x2F; Co's Humble key now expires on 12&#x2F;31&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Tom & Jerry's <b>\"Cheese\"</b> / Co's Humble key now expires on 12/31/2027"
   },
   {
     "language": "nb-NO",
     "key": "humble.notification.expiringTitlePlural",
     "default": "Humble keys expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble keys expiring"
   },
   {
@@ -9410,6 +9619,7 @@
     "key": "humble.notification.expiringTitleSingle",
     "default": "Humble key expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble key expiring"
   },
   {
@@ -9676,6 +9886,7 @@
     "params": {
       "count": 1
     },
+    "escapeValue": false,
     "rendered": "1 Humble keys gained expiration dates"
   },
   {
@@ -9685,6 +9896,7 @@
     "params": {
       "count": 2
     },
+    "escapeValue": false,
     "rendered": "2 Humble keys gained expiration dates"
   },
   {
@@ -9694,6 +9906,7 @@
     "params": {
       "count": 5
     },
+    "escapeValue": false,
     "rendered": "5 Humble keys gained expiration dates"
   },
   {
@@ -9704,7 +9917,8 @@
       "title": "Fake Game One",
       "date": "1/2/2027"
     },
-    "rendered": "Fake Game One's Humble key now expires on 1&#x2F;2&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Fake Game One's Humble key now expires on 1/2/2027"
   },
   {
     "language": "nl",
@@ -9714,13 +9928,15 @@
       "title": "Tom & Jerry's <b>\"Cheese\"</b> / Co",
       "date": "12/31/2027"
     },
-    "rendered": "Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt; &#x2F; Co's Humble key now expires on 12&#x2F;31&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Tom & Jerry's <b>\"Cheese\"</b> / Co's Humble key now expires on 12/31/2027"
   },
   {
     "language": "nl",
     "key": "humble.notification.expiringTitlePlural",
     "default": "Humble keys expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble keys expiring"
   },
   {
@@ -9728,6 +9944,7 @@
     "key": "humble.notification.expiringTitleSingle",
     "default": "Humble key expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble key expiring"
   },
   {
@@ -9994,6 +10211,7 @@
     "params": {
       "count": 1
     },
+    "escapeValue": false,
     "rendered": "1 Humble keys gained expiration dates"
   },
   {
@@ -10003,6 +10221,7 @@
     "params": {
       "count": 2
     },
+    "escapeValue": false,
     "rendered": "2 Humble keys gained expiration dates"
   },
   {
@@ -10012,6 +10231,7 @@
     "params": {
       "count": 5
     },
+    "escapeValue": false,
     "rendered": "5 Humble keys gained expiration dates"
   },
   {
@@ -10022,7 +10242,8 @@
       "title": "Fake Game One",
       "date": "1/2/2027"
     },
-    "rendered": "Fake Game One's Humble key now expires on 1&#x2F;2&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Fake Game One's Humble key now expires on 1/2/2027"
   },
   {
     "language": "pl",
@@ -10032,13 +10253,15 @@
       "title": "Tom & Jerry's <b>\"Cheese\"</b> / Co",
       "date": "12/31/2027"
     },
-    "rendered": "Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt; &#x2F; Co's Humble key now expires on 12&#x2F;31&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Tom & Jerry's <b>\"Cheese\"</b> / Co's Humble key now expires on 12/31/2027"
   },
   {
     "language": "pl",
     "key": "humble.notification.expiringTitlePlural",
     "default": "Humble keys expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble keys expiring"
   },
   {
@@ -10046,6 +10269,7 @@
     "key": "humble.notification.expiringTitleSingle",
     "default": "Humble key expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble key expiring"
   },
   {
@@ -10312,6 +10536,7 @@
     "params": {
       "count": 1
     },
+    "escapeValue": false,
     "rendered": "1 Humble keys gained expiration dates"
   },
   {
@@ -10321,6 +10546,7 @@
     "params": {
       "count": 2
     },
+    "escapeValue": false,
     "rendered": "2 Humble keys gained expiration dates"
   },
   {
@@ -10330,6 +10556,7 @@
     "params": {
       "count": 5
     },
+    "escapeValue": false,
     "rendered": "5 Humble keys gained expiration dates"
   },
   {
@@ -10340,7 +10567,8 @@
       "title": "Fake Game One",
       "date": "1/2/2027"
     },
-    "rendered": "Fake Game One's Humble key now expires on 1&#x2F;2&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Fake Game One's Humble key now expires on 1/2/2027"
   },
   {
     "language": "pt",
@@ -10350,13 +10578,15 @@
       "title": "Tom & Jerry's <b>\"Cheese\"</b> / Co",
       "date": "12/31/2027"
     },
-    "rendered": "Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt; &#x2F; Co's Humble key now expires on 12&#x2F;31&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Tom & Jerry's <b>\"Cheese\"</b> / Co's Humble key now expires on 12/31/2027"
   },
   {
     "language": "pt",
     "key": "humble.notification.expiringTitlePlural",
     "default": "Humble keys expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble keys expiring"
   },
   {
@@ -10364,6 +10594,7 @@
     "key": "humble.notification.expiringTitleSingle",
     "default": "Humble key expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble key expiring"
   },
   {
@@ -10630,6 +10861,7 @@
     "params": {
       "count": 1
     },
+    "escapeValue": false,
     "rendered": "1 Humble keys gained expiration dates"
   },
   {
@@ -10639,6 +10871,7 @@
     "params": {
       "count": 2
     },
+    "escapeValue": false,
     "rendered": "2 Humble keys gained expiration dates"
   },
   {
@@ -10648,6 +10881,7 @@
     "params": {
       "count": 5
     },
+    "escapeValue": false,
     "rendered": "5 Humble keys gained expiration dates"
   },
   {
@@ -10658,7 +10892,8 @@
       "title": "Fake Game One",
       "date": "1/2/2027"
     },
-    "rendered": "Fake Game One's Humble key now expires on 1&#x2F;2&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Fake Game One's Humble key now expires on 1/2/2027"
   },
   {
     "language": "pt_BR",
@@ -10668,13 +10903,15 @@
       "title": "Tom & Jerry's <b>\"Cheese\"</b> / Co",
       "date": "12/31/2027"
     },
-    "rendered": "Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt; &#x2F; Co's Humble key now expires on 12&#x2F;31&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Tom & Jerry's <b>\"Cheese\"</b> / Co's Humble key now expires on 12/31/2027"
   },
   {
     "language": "pt_BR",
     "key": "humble.notification.expiringTitlePlural",
     "default": "Humble keys expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble keys expiring"
   },
   {
@@ -10682,6 +10919,7 @@
     "key": "humble.notification.expiringTitleSingle",
     "default": "Humble key expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble key expiring"
   },
   {
@@ -10948,6 +11186,7 @@
     "params": {
       "count": 1
     },
+    "escapeValue": false,
     "rendered": "1 Humble keys gained expiration dates"
   },
   {
@@ -10957,6 +11196,7 @@
     "params": {
       "count": 2
     },
+    "escapeValue": false,
     "rendered": "2 Humble keys gained expiration dates"
   },
   {
@@ -10966,6 +11206,7 @@
     "params": {
       "count": 5
     },
+    "escapeValue": false,
     "rendered": "5 Humble keys gained expiration dates"
   },
   {
@@ -10976,7 +11217,8 @@
       "title": "Fake Game One",
       "date": "1/2/2027"
     },
-    "rendered": "Fake Game One's Humble key now expires on 1&#x2F;2&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Fake Game One's Humble key now expires on 1/2/2027"
   },
   {
     "language": "pt-BR",
@@ -10986,13 +11228,15 @@
       "title": "Tom & Jerry's <b>\"Cheese\"</b> / Co",
       "date": "12/31/2027"
     },
-    "rendered": "Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt; &#x2F; Co's Humble key now expires on 12&#x2F;31&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Tom & Jerry's <b>\"Cheese\"</b> / Co's Humble key now expires on 12/31/2027"
   },
   {
     "language": "pt-BR",
     "key": "humble.notification.expiringTitlePlural",
     "default": "Humble keys expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble keys expiring"
   },
   {
@@ -11000,6 +11244,7 @@
     "key": "humble.notification.expiringTitleSingle",
     "default": "Humble key expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble key expiring"
   },
   {
@@ -11266,6 +11511,7 @@
     "params": {
       "count": 1
     },
+    "escapeValue": false,
     "rendered": "1 Humble keys gained expiration dates"
   },
   {
@@ -11275,6 +11521,7 @@
     "params": {
       "count": 2
     },
+    "escapeValue": false,
     "rendered": "2 Humble keys gained expiration dates"
   },
   {
@@ -11284,6 +11531,7 @@
     "params": {
       "count": 5
     },
+    "escapeValue": false,
     "rendered": "5 Humble keys gained expiration dates"
   },
   {
@@ -11294,7 +11542,8 @@
       "title": "Fake Game One",
       "date": "1/2/2027"
     },
-    "rendered": "Fake Game One's Humble key now expires on 1&#x2F;2&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Fake Game One's Humble key now expires on 1/2/2027"
   },
   {
     "language": "ro",
@@ -11304,13 +11553,15 @@
       "title": "Tom & Jerry's <b>\"Cheese\"</b> / Co",
       "date": "12/31/2027"
     },
-    "rendered": "Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt; &#x2F; Co's Humble key now expires on 12&#x2F;31&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Tom & Jerry's <b>\"Cheese\"</b> / Co's Humble key now expires on 12/31/2027"
   },
   {
     "language": "ro",
     "key": "humble.notification.expiringTitlePlural",
     "default": "Humble keys expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble keys expiring"
   },
   {
@@ -11318,6 +11569,7 @@
     "key": "humble.notification.expiringTitleSingle",
     "default": "Humble key expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble key expiring"
   },
   {
@@ -11584,6 +11836,7 @@
     "params": {
       "count": 1
     },
+    "escapeValue": false,
     "rendered": "1 Humble keys gained expiration dates"
   },
   {
@@ -11593,6 +11846,7 @@
     "params": {
       "count": 2
     },
+    "escapeValue": false,
     "rendered": "2 Humble keys gained expiration dates"
   },
   {
@@ -11602,6 +11856,7 @@
     "params": {
       "count": 5
     },
+    "escapeValue": false,
     "rendered": "5 Humble keys gained expiration dates"
   },
   {
@@ -11612,7 +11867,8 @@
       "title": "Fake Game One",
       "date": "1/2/2027"
     },
-    "rendered": "Fake Game One's Humble key now expires on 1&#x2F;2&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Fake Game One's Humble key now expires on 1/2/2027"
   },
   {
     "language": "ru",
@@ -11622,13 +11878,15 @@
       "title": "Tom & Jerry's <b>\"Cheese\"</b> / Co",
       "date": "12/31/2027"
     },
-    "rendered": "Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt; &#x2F; Co's Humble key now expires on 12&#x2F;31&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Tom & Jerry's <b>\"Cheese\"</b> / Co's Humble key now expires on 12/31/2027"
   },
   {
     "language": "ru",
     "key": "humble.notification.expiringTitlePlural",
     "default": "Humble keys expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble keys expiring"
   },
   {
@@ -11636,6 +11894,7 @@
     "key": "humble.notification.expiringTitleSingle",
     "default": "Humble key expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble key expiring"
   },
   {
@@ -11902,6 +12161,7 @@
     "params": {
       "count": 1
     },
+    "escapeValue": false,
     "rendered": "1 Humble keys gained expiration dates"
   },
   {
@@ -11911,6 +12171,7 @@
     "params": {
       "count": 2
     },
+    "escapeValue": false,
     "rendered": "2 Humble keys gained expiration dates"
   },
   {
@@ -11920,6 +12181,7 @@
     "params": {
       "count": 5
     },
+    "escapeValue": false,
     "rendered": "5 Humble keys gained expiration dates"
   },
   {
@@ -11930,7 +12192,8 @@
       "title": "Fake Game One",
       "date": "1/2/2027"
     },
-    "rendered": "Fake Game One's Humble key now expires on 1&#x2F;2&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Fake Game One's Humble key now expires on 1/2/2027"
   },
   {
     "language": "sk",
@@ -11940,13 +12203,15 @@
       "title": "Tom & Jerry's <b>\"Cheese\"</b> / Co",
       "date": "12/31/2027"
     },
-    "rendered": "Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt; &#x2F; Co's Humble key now expires on 12&#x2F;31&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Tom & Jerry's <b>\"Cheese\"</b> / Co's Humble key now expires on 12/31/2027"
   },
   {
     "language": "sk",
     "key": "humble.notification.expiringTitlePlural",
     "default": "Humble keys expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble keys expiring"
   },
   {
@@ -11954,6 +12219,7 @@
     "key": "humble.notification.expiringTitleSingle",
     "default": "Humble key expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble key expiring"
   },
   {
@@ -12220,6 +12486,7 @@
     "params": {
       "count": 1
     },
+    "escapeValue": false,
     "rendered": "1 Humble keys gained expiration dates"
   },
   {
@@ -12229,6 +12496,7 @@
     "params": {
       "count": 2
     },
+    "escapeValue": false,
     "rendered": "2 Humble keys gained expiration dates"
   },
   {
@@ -12238,6 +12506,7 @@
     "params": {
       "count": 5
     },
+    "escapeValue": false,
     "rendered": "5 Humble keys gained expiration dates"
   },
   {
@@ -12248,7 +12517,8 @@
       "title": "Fake Game One",
       "date": "1/2/2027"
     },
-    "rendered": "Fake Game One's Humble key now expires on 1&#x2F;2&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Fake Game One's Humble key now expires on 1/2/2027"
   },
   {
     "language": "sr",
@@ -12258,13 +12528,15 @@
       "title": "Tom & Jerry's <b>\"Cheese\"</b> / Co",
       "date": "12/31/2027"
     },
-    "rendered": "Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt; &#x2F; Co's Humble key now expires on 12&#x2F;31&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Tom & Jerry's <b>\"Cheese\"</b> / Co's Humble key now expires on 12/31/2027"
   },
   {
     "language": "sr",
     "key": "humble.notification.expiringTitlePlural",
     "default": "Humble keys expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble keys expiring"
   },
   {
@@ -12272,6 +12544,7 @@
     "key": "humble.notification.expiringTitleSingle",
     "default": "Humble key expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble key expiring"
   },
   {
@@ -12538,6 +12811,7 @@
     "params": {
       "count": 1
     },
+    "escapeValue": false,
     "rendered": "1 Humble keys gained expiration dates"
   },
   {
@@ -12547,6 +12821,7 @@
     "params": {
       "count": 2
     },
+    "escapeValue": false,
     "rendered": "2 Humble keys gained expiration dates"
   },
   {
@@ -12556,6 +12831,7 @@
     "params": {
       "count": 5
     },
+    "escapeValue": false,
     "rendered": "5 Humble keys gained expiration dates"
   },
   {
@@ -12566,7 +12842,8 @@
       "title": "Fake Game One",
       "date": "1/2/2027"
     },
-    "rendered": "Fake Game One's Humble key now expires on 1&#x2F;2&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Fake Game One's Humble key now expires on 1/2/2027"
   },
   {
     "language": "sv",
@@ -12576,13 +12853,15 @@
       "title": "Tom & Jerry's <b>\"Cheese\"</b> / Co",
       "date": "12/31/2027"
     },
-    "rendered": "Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt; &#x2F; Co's Humble key now expires on 12&#x2F;31&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Tom & Jerry's <b>\"Cheese\"</b> / Co's Humble key now expires on 12/31/2027"
   },
   {
     "language": "sv",
     "key": "humble.notification.expiringTitlePlural",
     "default": "Humble keys expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble keys expiring"
   },
   {
@@ -12590,6 +12869,7 @@
     "key": "humble.notification.expiringTitleSingle",
     "default": "Humble key expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble key expiring"
   },
   {
@@ -12856,6 +13136,7 @@
     "params": {
       "count": 1
     },
+    "escapeValue": false,
     "rendered": "1 Humble keys gained expiration dates"
   },
   {
@@ -12865,6 +13146,7 @@
     "params": {
       "count": 2
     },
+    "escapeValue": false,
     "rendered": "2 Humble keys gained expiration dates"
   },
   {
@@ -12874,6 +13156,7 @@
     "params": {
       "count": 5
     },
+    "escapeValue": false,
     "rendered": "5 Humble keys gained expiration dates"
   },
   {
@@ -12884,7 +13167,8 @@
       "title": "Fake Game One",
       "date": "1/2/2027"
     },
-    "rendered": "Fake Game One's Humble key now expires on 1&#x2F;2&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Fake Game One's Humble key now expires on 1/2/2027"
   },
   {
     "language": "ta",
@@ -12894,13 +13178,15 @@
       "title": "Tom & Jerry's <b>\"Cheese\"</b> / Co",
       "date": "12/31/2027"
     },
-    "rendered": "Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt; &#x2F; Co's Humble key now expires on 12&#x2F;31&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Tom & Jerry's <b>\"Cheese\"</b> / Co's Humble key now expires on 12/31/2027"
   },
   {
     "language": "ta",
     "key": "humble.notification.expiringTitlePlural",
     "default": "Humble keys expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble keys expiring"
   },
   {
@@ -12908,6 +13194,7 @@
     "key": "humble.notification.expiringTitleSingle",
     "default": "Humble key expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble key expiring"
   },
   {
@@ -13174,6 +13461,7 @@
     "params": {
       "count": 1
     },
+    "escapeValue": false,
     "rendered": "1 Humble keys gained expiration dates"
   },
   {
@@ -13183,6 +13471,7 @@
     "params": {
       "count": 2
     },
+    "escapeValue": false,
     "rendered": "2 Humble keys gained expiration dates"
   },
   {
@@ -13192,6 +13481,7 @@
     "params": {
       "count": 5
     },
+    "escapeValue": false,
     "rendered": "5 Humble keys gained expiration dates"
   },
   {
@@ -13202,7 +13492,8 @@
       "title": "Fake Game One",
       "date": "1/2/2027"
     },
-    "rendered": "Fake Game One's Humble key now expires on 1&#x2F;2&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Fake Game One's Humble key now expires on 1/2/2027"
   },
   {
     "language": "tr",
@@ -13212,13 +13503,15 @@
       "title": "Tom & Jerry's <b>\"Cheese\"</b> / Co",
       "date": "12/31/2027"
     },
-    "rendered": "Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt; &#x2F; Co's Humble key now expires on 12&#x2F;31&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Tom & Jerry's <b>\"Cheese\"</b> / Co's Humble key now expires on 12/31/2027"
   },
   {
     "language": "tr",
     "key": "humble.notification.expiringTitlePlural",
     "default": "Humble keys expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble keys expiring"
   },
   {
@@ -13226,6 +13519,7 @@
     "key": "humble.notification.expiringTitleSingle",
     "default": "Humble key expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble key expiring"
   },
   {
@@ -13492,6 +13786,7 @@
     "params": {
       "count": 1
     },
+    "escapeValue": false,
     "rendered": "1 Humble keys gained expiration dates"
   },
   {
@@ -13501,6 +13796,7 @@
     "params": {
       "count": 2
     },
+    "escapeValue": false,
     "rendered": "2 Humble keys gained expiration dates"
   },
   {
@@ -13510,6 +13806,7 @@
     "params": {
       "count": 5
     },
+    "escapeValue": false,
     "rendered": "5 Humble keys gained expiration dates"
   },
   {
@@ -13520,7 +13817,8 @@
       "title": "Fake Game One",
       "date": "1/2/2027"
     },
-    "rendered": "Fake Game One's Humble key now expires on 1&#x2F;2&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Fake Game One's Humble key now expires on 1/2/2027"
   },
   {
     "language": "uk",
@@ -13530,13 +13828,15 @@
       "title": "Tom & Jerry's <b>\"Cheese\"</b> / Co",
       "date": "12/31/2027"
     },
-    "rendered": "Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt; &#x2F; Co's Humble key now expires on 12&#x2F;31&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Tom & Jerry's <b>\"Cheese\"</b> / Co's Humble key now expires on 12/31/2027"
   },
   {
     "language": "uk",
     "key": "humble.notification.expiringTitlePlural",
     "default": "Humble keys expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble keys expiring"
   },
   {
@@ -13544,6 +13844,7 @@
     "key": "humble.notification.expiringTitleSingle",
     "default": "Humble key expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble key expiring"
   },
   {
@@ -13810,6 +14111,7 @@
     "params": {
       "count": 1
     },
+    "escapeValue": false,
     "rendered": "1 Humble keys gained expiration dates"
   },
   {
@@ -13819,6 +14121,7 @@
     "params": {
       "count": 2
     },
+    "escapeValue": false,
     "rendered": "2 Humble keys gained expiration dates"
   },
   {
@@ -13828,6 +14131,7 @@
     "params": {
       "count": 5
     },
+    "escapeValue": false,
     "rendered": "5 Humble keys gained expiration dates"
   },
   {
@@ -13838,7 +14142,8 @@
       "title": "Fake Game One",
       "date": "1/2/2027"
     },
-    "rendered": "Fake Game One's Humble key now expires on 1&#x2F;2&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Fake Game One's Humble key now expires on 1/2/2027"
   },
   {
     "language": "vi",
@@ -13848,13 +14153,15 @@
       "title": "Tom & Jerry's <b>\"Cheese\"</b> / Co",
       "date": "12/31/2027"
     },
-    "rendered": "Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt; &#x2F; Co's Humble key now expires on 12&#x2F;31&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Tom & Jerry's <b>\"Cheese\"</b> / Co's Humble key now expires on 12/31/2027"
   },
   {
     "language": "vi",
     "key": "humble.notification.expiringTitlePlural",
     "default": "Humble keys expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble keys expiring"
   },
   {
@@ -13862,6 +14169,7 @@
     "key": "humble.notification.expiringTitleSingle",
     "default": "Humble key expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble key expiring"
   },
   {
@@ -14128,6 +14436,7 @@
     "params": {
       "count": 1
     },
+    "escapeValue": false,
     "rendered": "1 Humble keys gained expiration dates"
   },
   {
@@ -14137,6 +14446,7 @@
     "params": {
       "count": 2
     },
+    "escapeValue": false,
     "rendered": "2 Humble keys gained expiration dates"
   },
   {
@@ -14146,6 +14456,7 @@
     "params": {
       "count": 5
     },
+    "escapeValue": false,
     "rendered": "5 Humble keys gained expiration dates"
   },
   {
@@ -14156,7 +14467,8 @@
       "title": "Fake Game One",
       "date": "1/2/2027"
     },
-    "rendered": "Fake Game One's Humble key now expires on 1&#x2F;2&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Fake Game One's Humble key now expires on 1/2/2027"
   },
   {
     "language": "xx",
@@ -14166,13 +14478,15 @@
       "title": "Tom & Jerry's <b>\"Cheese\"</b> / Co",
       "date": "12/31/2027"
     },
-    "rendered": "Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt; &#x2F; Co's Humble key now expires on 12&#x2F;31&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Tom & Jerry's <b>\"Cheese\"</b> / Co's Humble key now expires on 12/31/2027"
   },
   {
     "language": "xx",
     "key": "humble.notification.expiringTitlePlural",
     "default": "Humble keys expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble keys expiring"
   },
   {
@@ -14180,6 +14494,7 @@
     "key": "humble.notification.expiringTitleSingle",
     "default": "Humble key expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble key expiring"
   },
   {
@@ -14446,6 +14761,7 @@
     "params": {
       "count": 1
     },
+    "escapeValue": false,
     "rendered": "1 Humble keys gained expiration dates"
   },
   {
@@ -14455,6 +14771,7 @@
     "params": {
       "count": 2
     },
+    "escapeValue": false,
     "rendered": "2 Humble keys gained expiration dates"
   },
   {
@@ -14464,6 +14781,7 @@
     "params": {
       "count": 5
     },
+    "escapeValue": false,
     "rendered": "5 Humble keys gained expiration dates"
   },
   {
@@ -14474,7 +14792,8 @@
       "title": "Fake Game One",
       "date": "1/2/2027"
     },
-    "rendered": "Fake Game One's Humble key now expires on 1&#x2F;2&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Fake Game One's Humble key now expires on 1/2/2027"
   },
   {
     "language": "zh_Hans",
@@ -14484,13 +14803,15 @@
       "title": "Tom & Jerry's <b>\"Cheese\"</b> / Co",
       "date": "12/31/2027"
     },
-    "rendered": "Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt; &#x2F; Co's Humble key now expires on 12&#x2F;31&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Tom & Jerry's <b>\"Cheese\"</b> / Co's Humble key now expires on 12/31/2027"
   },
   {
     "language": "zh_Hans",
     "key": "humble.notification.expiringTitlePlural",
     "default": "Humble keys expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble keys expiring"
   },
   {
@@ -14498,6 +14819,7 @@
     "key": "humble.notification.expiringTitleSingle",
     "default": "Humble key expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble key expiring"
   },
   {
@@ -14764,6 +15086,7 @@
     "params": {
       "count": 1
     },
+    "escapeValue": false,
     "rendered": "1 Humble keys gained expiration dates"
   },
   {
@@ -14773,6 +15096,7 @@
     "params": {
       "count": 2
     },
+    "escapeValue": false,
     "rendered": "2 Humble keys gained expiration dates"
   },
   {
@@ -14782,6 +15106,7 @@
     "params": {
       "count": 5
     },
+    "escapeValue": false,
     "rendered": "5 Humble keys gained expiration dates"
   },
   {
@@ -14792,7 +15117,8 @@
       "title": "Fake Game One",
       "date": "1/2/2027"
     },
-    "rendered": "Fake Game One's Humble key now expires on 1&#x2F;2&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Fake Game One's Humble key now expires on 1/2/2027"
   },
   {
     "language": "zh_Hant",
@@ -14802,13 +15128,15 @@
       "title": "Tom & Jerry's <b>\"Cheese\"</b> / Co",
       "date": "12/31/2027"
     },
-    "rendered": "Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt; &#x2F; Co's Humble key now expires on 12&#x2F;31&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Tom & Jerry's <b>\"Cheese\"</b> / Co's Humble key now expires on 12/31/2027"
   },
   {
     "language": "zh_Hant",
     "key": "humble.notification.expiringTitlePlural",
     "default": "Humble keys expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble keys expiring"
   },
   {
@@ -14816,6 +15144,7 @@
     "key": "humble.notification.expiringTitleSingle",
     "default": "Humble key expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble key expiring"
   },
   {
@@ -15082,6 +15411,7 @@
     "params": {
       "count": 1
     },
+    "escapeValue": false,
     "rendered": "1 Humble keys gained expiration dates"
   },
   {
@@ -15091,6 +15421,7 @@
     "params": {
       "count": 2
     },
+    "escapeValue": false,
     "rendered": "2 Humble keys gained expiration dates"
   },
   {
@@ -15100,6 +15431,7 @@
     "params": {
       "count": 5
     },
+    "escapeValue": false,
     "rendered": "5 Humble keys gained expiration dates"
   },
   {
@@ -15110,7 +15442,8 @@
       "title": "Fake Game One",
       "date": "1/2/2027"
     },
-    "rendered": "Fake Game One's Humble key now expires on 1&#x2F;2&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Fake Game One's Humble key now expires on 1/2/2027"
   },
   {
     "language": "zh-Hans",
@@ -15120,13 +15453,15 @@
       "title": "Tom & Jerry's <b>\"Cheese\"</b> / Co",
       "date": "12/31/2027"
     },
-    "rendered": "Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt; &#x2F; Co's Humble key now expires on 12&#x2F;31&#x2F;2027"
+    "escapeValue": false,
+    "rendered": "Tom & Jerry's <b>\"Cheese\"</b> / Co's Humble key now expires on 12/31/2027"
   },
   {
     "language": "zh-Hans",
     "key": "humble.notification.expiringTitlePlural",
     "default": "Humble keys expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble keys expiring"
   },
   {
@@ -15134,6 +15469,7 @@
     "key": "humble.notification.expiringTitleSingle",
     "default": "Humble key expiring",
     "params": {},
+    "escapeValue": false,
     "rendered": "Humble key expiring"
   },
   {
