@@ -2,7 +2,7 @@
   "jestMock": {
     "src/frontend/components/UI/AboutDialog/__tests__/AboutDialog.test.tsx": 5,
     "src/frontend/components/UI/AboutDialog/__tests__/AboutDialogHost.test.tsx": 2,
-    "src/frontend/components/UI/CachedImage/__tests__/index.test.tsx": 2,
+    "src/frontend/components/UI/CachedImage/__tests__/index.test.tsx": 1,
     "src/frontend/components/UI/DialogHandler/__tests__/buttonActions.test.tsx": 5,
     "src/frontend/components/UI/Dropdown/__tests__/dropdownDisclosure.test.tsx": 2,
     "src/frontend/components/UI/FieldLabel/__tests__/index.test.tsx": 6,

@@ -16,21 +16,6 @@ import { readFileSync } from 'fs'
 import { join } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 
-// Controls preload/tauriTransport's imageCacheSchemeAvailable() for the
-// scheme-served vs. not-served cases (34.4.1 gap cycle 2, plan 27, Task 2).
-// jest.config.js sets `resetMocks: true`, which wipes any mockReturnValue
-// set via the jest.fn() factory argument before EVERY test -- so the
-// default is (re)established in this file's own beforeEach below, which
-// runs after Jest's automatic reset.
-const mockImageCacheSchemeAvailable = jest.fn<boolean, []>()
-jest.mock('../../../../../preload/tauriTransport', () => ({
-  imageCacheSchemeAvailable: () => mockImageCacheSchemeAvailable()
-}))
-
-beforeEach(() => {
-  mockImageCacheSchemeAvailable.mockReturnValue(true)
-})
-
 // Dependency-aware useEffect is required here: CachedImage's src-keyed effect
 // resets the fallback chain, so a naive "run every render" effect mock would
 // wipe the chain progression we are trying to assert. This mock only re-runs an
@@ -166,30 +151,6 @@ describe('CachedImage fallback chain', () => {
     expect(rerender(props).props.src).toBe('missing.svg')
   })
 
-  it('applies the imagecache retry step to each http source before advancing', () => {
-    const props: RenderProps = {
-      src: 'http://cdn/portrait.jpg',
-      fallback: ['http://cdn/header.jpg', 'missing.svg']
-    }
-    const first = mount(props)
-    // http primary -> wrapped in imagecache first
-    expect(first.props.src).toBe(
-      `imagecache://${encodeURIComponent('http://cdn/portrait.jpg')}`
-    )
-
-    // First error: retry the raw (un-cached) primary before any fallback
-    fireError(first)
-    const raw = rerender(props)
-    expect(raw.props.src).toBe('http://cdn/portrait.jpg')
-
-    // Second error: advance to fallback[0]; it is http so it is imagecache-wrapped
-    fireError(raw)
-    const fb0 = rerender(props)
-    expect(fb0.props.src).toBe(
-      `imagecache://${encodeURIComponent('http://cdn/header.jpg')}`
-    )
-  })
-
   it('resets the chain back to the primary src when props.src changes', () => {
     const propsA: RenderProps = { src: 'a.jpg', fallback: ['b.svg'] }
     const first = mount(propsA)
@@ -217,65 +178,31 @@ describe('CachedImage fallback chain', () => {
   })
 })
 
-describe('CachedImage — imagecache:// gated on imageCacheSchemeAvailable() (34.4.1 gap cycle 2, plan 27)', () => {
-  it('mirrors "applies the imagecache retry step…" for the not-served condition: never emits imagecache://, for the primary source AND after advancing to a fallback', () => {
-    mockImageCacheSchemeAvailable.mockReturnValue(false)
-
+describe('CachedImage http sources', () => {
+  it('renders an http primary as given and advances straight to fallback[0] on the first error', () => {
     const props: RenderProps = {
       src: 'http://cdn/portrait.jpg',
       fallback: ['http://cdn/header.jpg', 'missing.svg']
     }
     const first = mount(props)
-    // Scheme not served -> the raw http URL is used directly, never wrapped.
     expect(first.props.src).toBe('http://cdn/portrait.jpg')
-    expect(first.props.src).not.toContain('imagecache://')
 
-    // First error advances straight to the first fallback (no always-failing
-    // imagecache attempt to retry past first, unlike the scheme-served case).
     fireError(first)
     const fb0 = rerender(props)
     expect(fb0.props.src).toBe('http://cdn/header.jpg')
-    expect(fb0.props.src).not.toContain('imagecache://')
   })
 
-  it('the existing scheme-available wrapping test above is unaffected by the new default (beforeEach sets imageCacheSchemeAvailable() -> true)', () => {
-    expect(mockImageCacheSchemeAvailable()).toBe(true)
-  })
-
-  it('bounded fallback chain still terminates at the last entry when the scheme IS served', () => {
-    mockImageCacheSchemeAvailable.mockReturnValue(true)
+  it('advances to fallback[1] and stays on the last entry under repeated errors', () => {
     const props: RenderProps = {
       src: 'http://cdn/portrait.jpg',
       fallback: ['http://cdn/header.jpg', 'missing.svg']
     }
     const first = mount(props)
-    fireError(first) // -> raw primary retry
-    const raw = rerender(props)
-    fireError(raw) // -> fallback[0], imagecache-wrapped
-    const fb0 = rerender(props)
-    fireError(fb0) // -> raw fallback[0] retry
-    const rawFb0 = rerender(props)
-    fireError(rawFb0) // -> fallback[1] (missing.svg, non-http, never wrapped)
-    const fb1 = rerender(props)
-    expect(fb1.props.src).toBe('missing.svg')
-
-    // Bounded: cannot advance past the last entry.
-    fireError(fb1)
-    expect(rerender(props).props.src).toBe('missing.svg')
-  })
-
-  it('bounded fallback chain still terminates at the last entry when the scheme is NOT served', () => {
-    mockImageCacheSchemeAvailable.mockReturnValue(false)
-    const props: RenderProps = {
-      src: 'http://cdn/portrait.jpg',
-      fallback: ['http://cdn/header.jpg', 'missing.svg']
-    }
-    const first = mount(props)
-    fireError(first) // -> fallback[0] directly (no imagecache retry to consume)
+    fireError(first)
     const fb0 = rerender(props)
     expect(fb0.props.src).toBe('http://cdn/header.jpg')
 
-    fireError(fb0) // -> fallback[1]
+    fireError(fb0)
     const fb1 = rerender(props)
     expect(fb1.props.src).toBe('missing.svg')
 
@@ -284,34 +211,19 @@ describe('CachedImage — imagecache:// gated on imageCacheSchemeAvailable() (34
     expect(rerender(props).props.src).toBe('missing.svg')
   })
 
-  it('a non-http source is never wrapped, under either condition', () => {
-    for (const available of [true, false]) {
-      mockImageCacheSchemeAvailable.mockReturnValue(available)
-      const el = mount({ src: 'bundled-asset.svg' })
-      expect(el.props.src).toBe('bundled-asset.svg')
-    }
+  it('renders a non-http source as written', () => {
+    const el = mount({ src: 'bundled-asset.svg' })
+    expect(el.props.src).toBe('bundled-asset.svg')
   })
 })
 
-describe('CachedImage source guard — no direct Tauri-context sniff (mirrors GlobalStateSteamLogout.test.ts house pattern)', () => {
-  it('the tauriTransport import brings in ONLY imageCacheSchemeAvailable — the decision must stay there, never duplicated as a second shell-detection import here', () => {
+describe('CachedImage source guard — makes no shell-capability decision', () => {
+  it('imports nothing from the preload transport', () => {
     const rawSource = readFileSync(join(__dirname, '..', 'index.tsx'), 'utf-8')
     const stripped = stripSourceComments(rawSource)
 
-    // Phase 35 plan 17: generalized from a literal-named-predicate search (the same
-    // predicate this repo-wide-deletes) to an import-shape check. CachedImage
-    // legitimately imports `imageCacheSchemeAvailable` from tauriTransport, so a bare
-    // "no tauriTransport reference" gate would be wrong here — instead this asserts the
-    // import brings in EXACTLY that one name, so ANY second shell-detection import
-    // reintroduced alongside it (whatever it is named) still fails this gate.
-    const importMatch = stripped.match(
-      /import\s*\{([^}]*)\}\s*from\s*['"][^'"]*preload\/tauriTransport['"]/
-    )
-    expect(importMatch).not.toBeNull()
-    const specifiers = (importMatch?.[1] ?? '')
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean)
-    expect(specifiers).toEqual(['imageCacheSchemeAvailable'])
+    expect(stripped).not.toMatch(/tauriTransport/)
+    // Positive control: an empty or mis-read source cannot pass the check above.
+    expect(stripped).toMatch(/fallbackIndex/)
   })
 })
