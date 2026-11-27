@@ -6,8 +6,12 @@
 //! to 15 s; nothing sleeps a fixed time. A drop guard kills the surviving game pids so CI never
 //! accumulates strays.
 
+use gamelib_proc::adopt::{identify, snapshot_members, AdoptProof, Identity, Member};
 use gamelib_proc::probe::is_alive;
-use gamelib_proc::{kill_tree::kill_game_tree, KillOutcome};
+use gamelib_proc::{
+    kill_tree::{kill_adopted_tree, kill_game_tree},
+    KillOutcome,
+};
 use gamelib_testutil::FakeHome;
 use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf;
@@ -1035,4 +1039,355 @@ fn terminate_one_kills_a_helper_and_its_grandchild() {
 #[test]
 fn windows_terminate_one_kills_a_helper_and_its_grandchild() {
     terminate_one_ends_a_helper_and_its_grandchild_only();
+}
+
+/// A tracked game the stand-in spawned, for the adopted-game arms: the run (its parent still alive
+/// until a test kills it), the leader's recorded `<pid> <stamp>`, the member (the game's child) and
+/// an unrelated bystander the kills must never touch. `_strays` kills what a failing test leaves.
+struct AdoptedGame {
+    run: Run,
+    paths: Paths,
+    _home: FakeHome,
+    _strays: Strays,
+    _bystander_child: Child,
+    pid: u32,
+    stamp: u64,
+    member: u32,
+    bystander: u32,
+}
+
+/// Starts the stand-in with `--game-stamp` and, for `leader_exit_ms`, a game leader that exits that
+/// long after it has recorded its child (the Wine loader shape, Pitfall 10).
+fn adopted_game(leader_exit_ms: Option<&str>) -> AdoptedGame {
+    let home = FakeHome::new("gamelib-proc-orphans");
+    let paths = Paths::new(&home);
+    let stamp_path = paths.game_stamp.to_string_lossy().into_owned();
+    let mut extra = vec!["--game-stamp", stamp_path.as_str()];
+    if let Some(ms) = leader_exit_ms {
+        extra.extend(["--game-leader-exit-ms", ms]);
+    }
+    let run = Run::start_with(&home, &paths, &extra);
+    let games = run.pids("games");
+    assert_eq!(games.len(), 2, "the game leader and its child");
+    let mut strays = Strays(games.clone());
+    let (bystander_child, bystander) = spawn_bystander(&home, &mut strays);
+    let (pid, stamp) = read_game_stamp(&paths);
+    assert_eq!(games[0], pid, "the stamp record names the game leader");
+    AdoptedGame {
+        run,
+        paths,
+        _home: home,
+        _strays: strays,
+        _bystander_child: bystander_child,
+        pid,
+        stamp,
+        member: games[1],
+        bystander,
+    }
+}
+
+impl AdoptedGame {
+    /// The leader's proof: the recorded leader plus the members GameLib would have seen.
+    fn proof(&self, members: Vec<Member>) -> AdoptProof {
+        AdoptProof {
+            leader_pid: self.pid,
+            leader_stamp: self.stamp,
+            members,
+        }
+    }
+
+    /// Waits for the game leader to exit on its own (its child keeps running).
+    fn wait_for_leader_exit(&self) {
+        wait_until("the game leader to exit", || !is_alive(self.pid));
+        assert!(
+            is_alive(self.member),
+            "the game's child outlives its leader"
+        );
+    }
+
+    fn assert_nothing_else_died(&self) {
+        assert!(
+            is_alive(self.bystander),
+            "an unrelated process must survive"
+        );
+    }
+}
+
+/// D-31 at the mechanism, leader half: the parent is hard-killed, the leader still runs, the proof
+/// answers `Leader`, and `kill_adopted_tree` ends the leader and its child. Shared by both OSes.
+fn adopted_leader_matches_after_parent_kill() {
+    let mut game = adopted_game(None);
+    // Taken while GameLib runs, as the shell will: the proof a later launch keeps.
+    let members = snapshot_members(game.pid, game.pid);
+    #[cfg(unix)]
+    assert_eq!(
+        members,
+        vec![Member {
+            pid: game.member,
+            stamp: gamelib_proc::probe::start_time(game.member).expect("member stamp"),
+        }],
+        "the snapshot lists the game's child and not its leader"
+    );
+    game.run.kill_parent();
+    game.run.wait_for_parent_exit();
+    assert!(is_alive(game.pid) && is_alive(game.member));
+
+    let proof = game.proof(members);
+    assert_eq!(identify(&proof), Identity::Leader);
+    assert_eq!(
+        kill_adopted_tree(&proof, Duration::from_millis(1500)),
+        KillOutcome::Killed
+    );
+    wait_until("the game and its child to die", || {
+        !is_alive(game.pid) && !is_alive(game.member)
+    });
+    game.assert_nothing_else_died();
+}
+
+#[cfg(unix)]
+#[test]
+fn adopted_leader_matches_after_parent_sigkill() {
+    adopted_leader_matches_after_parent_kill();
+}
+
+#[cfg(windows)]
+#[test]
+fn windows_adopted_leader_matches_after_parent_terminate() {
+    adopted_leader_matches_after_parent_kill();
+}
+
+/// Pitfall 10: the leader has exited and the parent is gone, so a bare pid-and-stamp kill answers
+/// `Gone` while the game runs. The member proof still matches and ends the group.
+#[cfg(unix)]
+#[test]
+fn adopted_member_matches_after_the_leader_exits_and_the_parent_is_sigkilled() {
+    use gamelib_proc::probe::{group_alive, start_time};
+    let mut game = adopted_game(Some("300"));
+    game.wait_for_leader_exit();
+    let members = snapshot_members(game.pid, game.pid);
+    assert_eq!(
+        members,
+        vec![Member {
+            pid: game.member,
+            stamp: start_time(game.member).expect("member stamp"),
+        }],
+        "the snapshot lists the surviving member"
+    );
+    game.run.kill_parent();
+    game.run.wait_for_parent_exit();
+
+    let proof = game.proof(members);
+    // Non-vacuity: the leader-only kill cannot find this game, and the group is still alive.
+    assert_eq!(
+        kill_game_tree(game.pid, game.stamp, Duration::from_millis(100)),
+        KillOutcome::Gone,
+        "the leader is gone, so a pid-and-stamp kill sees nothing"
+    );
+    assert!(group_alive(game.pid), "the member keeps the group alive");
+    assert!(is_alive(game.member));
+
+    assert_eq!(identify(&proof), Identity::Member(game.member));
+    assert_eq!(
+        kill_adopted_tree(&proof, Duration::from_millis(1500)),
+        KillOutcome::Killed
+    );
+    wait_until("the member to die and the group to empty", || {
+        !is_alive(game.member) && !group_alive(game.pid)
+    });
+    game.assert_nothing_else_died();
+}
+
+/// Windows has no groups; a tree is the Game Job, and its name opens only while a handle to it is
+/// held (88.2-25), so the parent stays alive here: the leader exits, the Job still holds the
+/// child, and `kill_adopted_tree` ends it. A crashed parent drops the name, which is the
+/// leader-alive arm above.
+#[cfg(windows)]
+#[test]
+fn windows_adopted_job_matches_after_the_leader_exits_while_the_parent_holds_it() {
+    let game = adopted_game(Some("300"));
+    game.wait_for_leader_exit();
+    let proof = game.proof(Vec::new());
+    assert_eq!(identify(&proof), Identity::Job);
+    assert_eq!(
+        kill_adopted_tree(&proof, Duration::from_millis(1500)),
+        KillOutcome::Killed
+    );
+    wait_until("the game's child to die", || !is_alive(game.member));
+    game.assert_nothing_else_died();
+}
+
+/// Prohibition 5, leader half: a recorded stamp that is not the live leader's (a recycled pid)
+/// answers `NotOurs` before any member is consulted, signals nothing, and the leader keeps running.
+/// The proof carries a member that would match on its own.
+fn adopted_proof_with_a_wrong_stamp_is_not_ours_body(wrong: impl Fn(u64) -> u64) {
+    let mut game = adopted_game(None);
+    let members = vec![Member {
+        pid: game.member,
+        stamp: gamelib_proc::probe::start_time(game.member).expect("member stamp"),
+    }];
+    game.run.kill_parent();
+    game.run.wait_for_parent_exit();
+    let proof = AdoptProof {
+        leader_pid: game.pid,
+        leader_stamp: wrong(game.stamp),
+        members,
+    };
+    assert_eq!(identify(&proof), Identity::NotOurs);
+    assert_eq!(
+        kill_adopted_tree(&proof, Duration::from_millis(1500)),
+        KillOutcome::NotOurs
+    );
+    // Alive is not enough (a stopped process is "alive"): the game must still be writing too.
+    let before = file_len(&game.paths.game_log);
+    wait_until("the game to keep writing after the refused kill", || {
+        file_len(&game.paths.game_log) > before
+    });
+    assert!(is_alive(game.pid), "the leader must survive");
+    assert!(is_alive(game.member), "the member must survive");
+    game.assert_nothing_else_died();
+}
+
+#[cfg(unix)]
+#[test]
+fn adopted_proof_with_a_wrong_stamp_is_not_ours() {
+    adopted_proof_with_a_wrong_stamp_is_not_ours_body(|stamp| stamp + 1);
+}
+
+#[cfg(unix)]
+#[test]
+fn adopted_proof_with_an_older_stamp_is_not_ours() {
+    adopted_proof_with_a_wrong_stamp_is_not_ours_body(|stamp| stamp.saturating_sub(1_000_000));
+}
+
+#[cfg(windows)]
+#[test]
+fn windows_adopted_proof_with_a_wrong_stamp_is_not_ours() {
+    adopted_proof_with_a_wrong_stamp_is_not_ours_body(|stamp| stamp + 1);
+}
+
+/// Prohibition 5, member half: the leader has exited and the proof's stamps are off by one. Unix: the
+/// member's recorded stamp differs, so it proves nothing. Windows: the Game Job is named for the
+/// leader's stamp, so no Job of that name opens. Either way `Gone`, nothing is signalled and the
+/// game's child keeps running.
+fn adopted_proof_with_wrong_stamps_after_the_leader_exits_is_gone() {
+    let mut game = adopted_game(Some("300"));
+    game.wait_for_leader_exit();
+    let member_stamp = gamelib_proc::probe::start_time(game.member).expect("member stamp");
+    if cfg!(unix) {
+        game.run.kill_parent();
+        game.run.wait_for_parent_exit();
+    }
+    let proof = AdoptProof {
+        leader_pid: game.pid,
+        leader_stamp: game.stamp + 1,
+        members: vec![Member {
+            pid: game.member,
+            stamp: member_stamp + 1,
+        }],
+    };
+    assert_eq!(identify(&proof), Identity::Gone);
+    assert_eq!(
+        kill_adopted_tree(&proof, Duration::from_millis(1500)),
+        KillOutcome::Gone
+    );
+    // Hold the check open a little: a kill that signalled late would still be caught.
+    let until = Instant::now() + Duration::from_millis(1000);
+    while Instant::now() < until {
+        assert!(
+            is_alive(game.member),
+            "the member must survive a refused kill"
+        );
+        std::thread::sleep(POLL);
+    }
+    game.assert_nothing_else_died();
+}
+
+#[cfg(unix)]
+#[test]
+fn adopted_member_with_a_wrong_stamp_is_gone() {
+    adopted_proof_with_wrong_stamps_after_the_leader_exits_is_gone();
+}
+
+#[cfg(windows)]
+#[test]
+fn windows_adopted_job_with_a_wrong_stamp_is_gone() {
+    adopted_proof_with_wrong_stamps_after_the_leader_exits_is_gone();
+}
+
+/// A reaped pid with no recorded member alive: nothing to prove, nothing signalled.
+fn kill_adopted_tree_on_an_empty_group_is_gone_body() {
+    #[cfg(unix)]
+    let mut cmd = Command::new("/bin/sh");
+    #[cfg(unix)]
+    cmd.args(["-c", "exit 0"]);
+    #[cfg(windows)]
+    let mut cmd = Command::new("cmd");
+    #[cfg(windows)]
+    cmd.args(["/C", "exit 0"]);
+    let mut child = cmd
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+        .expect("spawn a process that exits at once");
+    let pid = child.id();
+    child.wait().expect("reap it");
+    let proof = AdoptProof {
+        leader_pid: pid,
+        leader_stamp: 1,
+        members: Vec::new(),
+    };
+    assert_eq!(identify(&proof), Identity::Gone);
+    assert_eq!(
+        kill_adopted_tree(&proof, Duration::from_millis(200)),
+        KillOutcome::Gone
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn kill_adopted_tree_on_an_empty_group_is_gone() {
+    kill_adopted_tree_on_an_empty_group_is_gone_body();
+}
+
+#[cfg(windows)]
+#[test]
+fn windows_kill_adopted_tree_on_an_empty_job_is_gone() {
+    kill_adopted_tree_on_an_empty_group_is_gone_body();
+}
+
+/// The member check includes the group: a live process with its recorded stamp that is NOT in group
+/// `leader_pid` proves nothing (a recycled leader pid with the member since moved, or a forged
+/// proof naming a bystander), so it is `Gone` and the bystander is not signalled.
+#[cfg(unix)]
+#[test]
+fn adopted_member_outside_the_recorded_group_is_gone() {
+    let home = FakeHome::new("gamelib-proc-orphans");
+    let mut strays = Strays(Vec::new());
+    let (_bystander_child, bystander) = spawn_bystander(&home, &mut strays);
+    let stamp = gamelib_proc::probe::start_time(bystander).expect("bystander stamp");
+    // A reaped pid as the leader: not alive, so only the member is consulted.
+    let mut gone = Command::new("/bin/sh")
+        .args(["-c", "exit 0"])
+        .spawn()
+        .expect("spawn");
+    let leader_pid = gone.id();
+    gone.wait().expect("reap");
+    let proof = AdoptProof {
+        leader_pid,
+        leader_stamp: 1,
+        members: vec![Member {
+            pid: bystander,
+            stamp,
+        }],
+    };
+    assert_eq!(identify(&proof), Identity::Gone);
+    assert_eq!(
+        kill_adopted_tree(&proof, Duration::from_millis(500)),
+        KillOutcome::Gone
+    );
+    assert!(
+        is_alive(bystander),
+        "a process outside the group is never signalled"
+    );
 }

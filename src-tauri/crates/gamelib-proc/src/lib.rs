@@ -4,6 +4,7 @@
 //! unix, own kill-on-close Job on Windows, registered in the `ChildSet` the exit path drains);
 //! `SpawnClass::Game` children are the user's and outlive GameLib.
 
+pub mod adopt;
 pub mod children;
 pub mod diag;
 pub mod job;
@@ -15,9 +16,10 @@ pub mod runner;
 pub mod spawn;
 pub mod spec;
 
+pub use adopt::{identify, snapshot_members, AdoptProof, Identity, Member};
 pub use children::{global, ChildSet, HelperGuard};
 pub use diag::set_diag_sink;
-pub use kill_tree::KillOutcome;
+pub use kill_tree::{kill_adopted_tree, KillOutcome};
 pub use runner::ProcRunner;
 pub use spawn::{
     spawn_game, spawn_game_tracked, spawn_helper, spawn_helper_tokio, spawn_helper_with_pipes,
