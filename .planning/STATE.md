@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: "88.3"
 current_phase_name: Launch funnel, re-adoption and the live gate
 status: executing
-stopped_at: Completed 88.3-08-PLAN.md
-last_updated: "2026-11-27T23:00:50.000Z"
+stopped_at: Completed 88.3-09-PLAN.md
+last_updated: "2026-11-27T23:32:42.704Z"
 last_activity: 2026-11-27
 last_activity_desc: Phase 88.3 execution started
-state_head: 9b366b8b933e20b81080cdeae07fc189ff301cfd
+state_head: a307d0cb14ce972c9dbe19fffb19003936b7fa86
 progress:
   total_phases: 26
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-25)
 ## Current Position
 
 Phase: 88.3 (Launch funnel, re-adoption and the live gate) — EXECUTING
-Plan: 11 of 22
+Plan: 12 of 22
 Status: Ready to execute
 Last activity: 2026-11-27 — Phase 88.3 execution started
 Progress: [████████████████░░░░] 204/257 plans ([█████████░] 88%)
@@ -587,6 +587,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 88.3 P07 | 35min | 3 tasks | 17 files |
 | Phase 88.3 P14 | 12min | 2 tasks | 9 files |
 | Phase 88.3 P08 | 50 min | 2 tasks | 10 files |
+| Phase 88.3 P09 | 100min | 3 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -1328,6 +1329,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 88.3]: 88.3-07: the quit-kill bookkeeping runs under the killed game's own handle lock so the funnel tail cannot start before it finishes; the record is removed only by SessionGuard::finish, never by drop
 - [Phase 88.3]: 88.3-14: a launchOracle harness file is deleted only when git grep at HEAD shows no importer beyond the retired drivers; baseEnv, probes, pairwise and census stay
 - [Phase 88.3]: 88.3-08: launchManagerCall boundary schema is a tuple [op, unknown] refined by a per-op union (the channel table takes tuples); the launch hand-off must name the call's own game and the launch log type
+- [Phase 88.3]: 88.3-09: a re-adopted game is a registry entry holding an AdoptProof, ended only through kill_adopted_tree; its play time is recorded through the same function as a quit-kill's (launch-start totalPlayed); 88.3-12 should call readopt::start_with_host with the shell's RunnerHost so owed after-scripts inherit an environment
 
 ### Pending Todos
 
@@ -1621,8 +1623,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-27T23:00:44.673Z
-Stopped at: Completed 88.3-08-PLAN.md
+Last session: 2026-11-27T23:32:37.553Z
+Stopped at: Completed 88.3-09-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
