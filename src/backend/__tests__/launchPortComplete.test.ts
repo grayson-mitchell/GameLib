@@ -695,8 +695,8 @@ describe('systemInfoPortComplete', () => {
  * `spawnAsync.oracle.test.ts` went with the spawnAsync adapter in 88.2-21 (`git rm`); it is named here to hold it deleted.
  * Every golden slice those drivers recorded stays, because the Rust replays read them.
  *
- * `launcher.crossoverEnv.test.ts` is added to `deleted` in the same plan, after its three RF1 invariants port to
- * `gamelib-wine/tests/crossover_env.rs` (D-15). `commandRunner.ts`, its test, the twin's vectors test and
+ * `launcher.crossoverEnv.test.ts` is deleted in the same plan, after its RF1 invariants ported to
+ * `gamelib-wine/tests/crossover_env.rs` (D-15, task 2). `commandRunner.ts`, its test, the twin's vectors test and
  * `envBuildersFixture.ts` stay for 88.2-24, whose own gate deletes them.
  *
  * `forbiddenIdentifiers` is `createRunnerTrace` and `recordStream`, the only exports of `runnerTrace.ts` that something
@@ -710,7 +710,8 @@ const RUNNER_ORACLE: SliceSpec = {
     'src/backend/__tests__/oracle/errorHandler.oracle.test.ts',
     'src/backend/__tests__/oracle/spawnAsync.oracle.test.ts',
     'src/backend/testUtils/launchOracle/runnerTrace.ts',
-    'src/backend/testUtils/launchOracle/__tests__/runnerTrace.test.ts'
+    'src/backend/testUtils/launchOracle/__tests__/runnerTrace.test.ts',
+    'src/backend/__tests__/launcher.crossoverEnv.test.ts'
   ],
   kept: [
     'src-tauri/crates/gamelib-launch/tests/fixtures/golden/runner',

@@ -1,7 +1,8 @@
 /**
  * TEST-ONLY copy of the two TypeScript env builders, `setupEnvVars` and `setupWineEnvVars`, moved here verbatim from
  * `launcher.ts` when 88.1-17 deleted them (D-25, D-30). The Rust launch builders (`gamelib-launch`) own the env now;
- * only the wine core oracle and `launcher.crossoverEnv.test.ts` import this file.
+ * only the wine core oracle imports this file (`launcher.crossoverEnv.test.ts` went in 88.2-23; its RF1 invariants live in
+ * `gamelib-wine/tests/crossover_env.rs`).
  *
  * Why it exists: the `createCommandRunner` twin (`commandRunner.ts`, deletedBy 88.2) still awaits these two builders
  * through its `wine` binding, and `wineCore.oracle.test.ts` drives its 16 `wine_command` cases through that twin.

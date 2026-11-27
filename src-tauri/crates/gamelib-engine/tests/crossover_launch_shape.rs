@@ -254,8 +254,8 @@ impl StepDeps for ScriptedSwitch {
     }
 }
 
-/// What both branches hand the launch, with the fake profile's root as `/test/home`. `launcher.crossoverEnv.test.ts`
-/// copies this literal as its fixture, so a change here that the TS test does not follow turns this file red.
+/// What both branches hand the launch, with the fake profile's root as `/test/home`. `gamelib-wine/tests/crossover_env.rs`
+/// copies this literal (with its own fake root) as its fixture, so a change here that file does not follow is a drift to fix there.
 const RECORDED_SPAWN_SHAPE: &str = r#"{
   "wineVersion": {
     "type": "crossover",
@@ -405,7 +405,7 @@ async fn the_restore_switch_is_handed_the_settings_the_launch_runs_with() {
 #[tokio::test]
 async fn both_branches_keep_the_stored_shared_prefix_and_never_write_it_to_the_game_config() {
     // Recorded, not demanded: the overlay leaves `winePrefix` the shared default prefix on both branches. The
-    // TS CrossOver env reads `wineCrossoverBottle` and never `winePrefix` (see launcher.crossoverEnv.test.ts);
+    // CrossOver env reads `wineCrossoverBottle` and never `winePrefix` (see gamelib-wine/tests/crossover_env.rs);
     // the nile launch passes `--wine-prefix <winePrefix>` all the same (H2, the debug record).
     let (plain_rig, plain) = plain_branch().await;
     let (restore_rig, restore, _) = restore_branch().await;
