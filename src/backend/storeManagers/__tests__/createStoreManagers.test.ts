@@ -12,7 +12,6 @@ import { createCommandRunner } from 'backend/commandRunner'
 import type { CommandRunnerDeps } from 'backend/commandRunner'
 import type { DownloadQueue } from 'backend/downloadmanager/downloadqueue'
 import type { ManagerDeps, Stores } from 'backend/services/types'
-import { createRealRunner } from 'backend/testUtils/realRunner'
 import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import {
@@ -268,29 +267,43 @@ describe('createStoreManagers: autoUpdate reaches a queue created later (blocker
   })
 })
 
-describe('createStoreManagers: spawn and stop share one runner registry (checker warning 2)', () => {
-  it('legendary and nile stop paths call killTracked on the injected runner with the spawn filter', async () => {
-    const runner = createScriptedRunner([])
-    const built = build({ runner })
+describe('createStoreManagers: spawn and stop share one runner registry (checker warning 2, 88.2-22)', () => {
+  it('legendary and nile stop paths end the Rust run with the spawn filter (88.2-22)', async () => {
+    const sent: Array<[string, unknown[]]> = []
+    const built = build({
+      requestRustInvoke: ((channel: string, args: unknown[]) => {
+        sent.push([channel, args])
+        return Promise.resolve(1)
+      }) as unknown as ManagerDeps['requestRustInvoke']
+    })
 
     await built.library.legendary.getGame('app-l').stop(false)
     await built.library.nile.getGame('app-n').stop(false)
 
-    const kills = runner.calls
-      .filter((c) => c.method === 'killTracked')
-      .map((c) => c.opts)
-    expect(kills).toEqual([
-      { runner: 'legendary', key: 'app-l' },
-      { runner: 'nile', key: 'app-n' }
+    expect(sent).toEqual([
+      ['launch_tracked_kill', [{ runner: 'legendary', key: 'app-l' }]],
+      ['launch_tracked_kill', [{ runner: 'nile', key: 'app-n' }]]
     ])
   })
 
   it('the sideload stop path kills the sideload and wine children for its id', async () => {
-    const runner = createScriptedRunner([])
+    const sent: Array<[string, unknown[]]> = []
     const spawnAsync = jest.fn(() =>
       Promise.resolve({ code: 0, stdout: '', stderr: '' })
     )
-    const built = build({ runner, spawnAsync })
+    const built = build({
+      spawnAsync,
+      requestRustInvoke: ((channel: string, args: unknown[]) => {
+        // launchSettingsFor asks Rust for the effective settings before it stops wine.
+        if (channel === 'engine_launch_settings_get')
+          return Promise.resolve({
+            wineVersion: { wineserver: '/nonexistent/wineserver' },
+            winePrefix: '/nonexistent/prefix'
+          })
+        sent.push([channel, args])
+        return Promise.resolve(1)
+      }) as unknown as ManagerDeps['requestRustInvoke']
+    })
     const game = built.library.sideload.getGame('app-s')
     jest.spyOn(game, 'getGameInfo').mockReturnValue({
       runner: 'sideload',
@@ -311,12 +324,9 @@ describe('createStoreManagers: spawn and stop share one runner registry (checker
       ['-k'],
       expect.objectContaining({ timeout: 15_000 })
     )
-    const kills = runner.calls
-      .filter((c) => c.method === 'killTracked')
-      .map((c) => c.opts)
-    expect(kills).toEqual([
-      { runner: 'sideload', key: 'app-s' },
-      { runner: 'wine', key: 'app-s' }
+    expect(sent).toEqual([
+      ['launch_tracked_kill', [{ runner: 'sideload', key: 'app-s' }]],
+      ['launch_tracked_kill', [{ runner: 'wine', key: 'app-s' }]]
     ])
   })
 
@@ -335,34 +345,6 @@ describe('createStoreManagers: spawn and stop share one runner registry (checker
       runner: 'legendary',
       key: 'app-l'
     })
-  })
-
-  it('stop game: a real child killed through the managers reads as a cancellation, not an error', async () => {
-    const real = createRealRunner()
-    try {
-      const cr = createCommandRunner(commandRunnerDeps(real.runner))
-      const built = build({ runner: real.runner, commandRunner: cr })
-
-      const pending = cr.callRunner(
-        // appName is '' for nile (no launch verb), so trackKey carries the game id.
-        ['-e', 'setTimeout(()=>{},10000)'],
-        {
-          name: 'nile',
-          logPrefix: 'Nile' as never,
-          bin: process.execPath
-        },
-        { abortId: 'unrelated-abort-id', trackKey: 'game-n' }
-      )
-      await new Promise((resolve) => setTimeout(resolve, 300))
-
-      await built.library.nile.getGame('game-n').stop(false)
-      const res = await pending
-
-      expect(res.abort).toBe(true)
-      expect(res.error).toBeUndefined()
-    } finally {
-      real.dispose()
-    }
   })
 })
 

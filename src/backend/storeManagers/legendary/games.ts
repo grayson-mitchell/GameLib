@@ -36,6 +36,7 @@ import { join } from 'path'
 import shlex from 'shlex'
 import { legendaryLaunchArgumentFields } from '../runnerLaunchArgv'
 import { readKnownFixLaunchOverrides } from 'backend/launchrust/knownFixes'
+import { trackedKill } from 'backend/launchrust/runner'
 import { settleKnownFixLaunchOverrides } from 'backend/knownFixLaunchReply'
 import { t } from 'i18next'
 import { showDialogBoxModalAuto } from '../../dialog/dialog'
@@ -1221,8 +1222,12 @@ export default class LegendaryGame implements Game {
   // Could be removed if legendary handles SIGKILL and SIGTERM for us
   // which is send via AbortController
   async stop(stopWine = true) {
-    // Phase 72 D-13: kill the tracked legendary child for this app, not a name pattern.
-    this.deps.runner.killTracked({ runner: 'legendary', key: this.appName })
+    // Phase 72 D-13, 88.2-22 (D-07): end the tracked legendary run for this app, not a name pattern, through the Rust registry
+    // the launch spawn registered it in.
+    await trackedKill(
+      { requestRustInvoke: this.deps.requestRustInvoke },
+      { runner: 'legendary', key: this.appName }
+    )
 
     if (stopWine && !this.isNative()) {
       const gameSettings = await launchSettingsFor(

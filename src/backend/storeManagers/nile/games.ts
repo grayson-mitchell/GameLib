@@ -44,6 +44,7 @@ import { resolveLaunchUmuId } from 'backend/storeManagers/storeManagerCommon/umu
 import { isWindows } from 'backend/constants/environment'
 
 import { readKnownFixLaunchOverrides } from 'backend/launchrust/knownFixes'
+import { trackedKill } from 'backend/launchrust/runner'
 import { settleKnownFixLaunchOverrides } from 'backend/knownFixLaunchReply'
 import type LogWriter from 'backend/logger/targetWriter'
 import { engineKeyFor } from 'backend/enginewine/twin'
@@ -667,7 +668,10 @@ export default class NileGameManager implements Game {
   }
 
   async stop(stopWine = true) {
-    this.deps.runner.killTracked({ runner: 'nile', key: this.id })
+    await trackedKill(
+      { requestRustInvoke: this.deps.requestRustInvoke },
+      { runner: 'nile', key: this.id }
+    )
 
     if (stopWine && !this.isNative()) {
       const gameSettings = await launchSettingsFor(
