@@ -46,12 +46,12 @@ Filled in by the planner/executor per task. Requirement-level map; the Sub-phase
 
 | Req / SC | Sub-phase | Behavior | Test Type | Automated Command | File Exists | Status |
 |----------|-----------|----------|-----------|-------------------|-------------|--------|
-| SVC-03 / SC1 | 88.1 | builders match TS vectors (env, wrappers, gamescope, known-fix env, prepare ops) | Rust replay of TS vectors | `cargo test -p gamelib-launch --test golden_builders` | ✅ | ✅ green at P `0e8778606` with 124 cases (88.1-21..24; re-recorded from `21a57af08`; was P `ab7876c01` at 113, 88.1-20; three-OS CI pending the push) |
+| SVC-03 / SC1 | 88.1 | builders match TS vectors (env, wrappers, gamescope, known-fix env, prepare ops) | Rust replay of TS vectors | `cargo test -p gamelib-launch --test golden_builders` | ✅ | ✅ green at P `0e8778606` with 124 cases (88.1-21..24; re-recorded from `21a57af08`; was P `ab7876c01` at 113, 88.1-20); three-OS CI green at P' `5a3f55564`: rust-test.yml run 46052246559, all three legs (macos-latest on its second attempt after an unrelated `gamelib-steamcm` flake), the new envVars cases `ok` on windows-latest, see `## CI proof (88.1 gap closure)` |
 | SVC-03 / SC1 | 88.1 | spawn traces: native, Wine/Proton/CrossOver, gamescope/mangohud, overlay, pre/post (argv, full env, cwd, class, order) | Rust replay of TS traces | `cargo test -p gamelib-launch --test golden_launch` | ✅ | ✅ green (P `ab7876c01`, 88.1-20; three-OS CI pending the push) |
 | SVC-03 / SC1 | 88 | known-fix reader, layering, registry, overlay archive/install, fetch | replay + ported incident tests | `cargo test -p gamelib-knownfix` | ✅ | ✅ green (P `68979200f`, 88-17; three-OS CI green at P' `c5ae345ae`) |
 | SVC-03 / SC1 | 88.2 | runner command argv/env, redacted log line, streamed line sequence | replay | `cargo test -p gamelib-launch --test golden_runner` | ✅ | ✅ green at P `6a2265258` (golden_runner 93 of 93, redaction 88, wine_launch 41 plus 16 wine_command, wine_path 16, script 18, spawn_async 33, error_handler 108; three-OS CI green at P' `25bc3b526`: rust-test.yml run 45959503130, all three legs, see `## CI proof (88.2)`) |
 | SVC-03 / SC2 | 88.3 | funnel order, status events, single-flight join, release on failure | funnel oracle replay | `cargo test -p gamelib-launch --test funnel` | ❌ W0 | ⬜ pending |
-| SVC-03 / SC2 | 88.2 | stub game: start, quit-kill, survives parent SIGKILL (three OS) | CI smoke + orphan harness | `cargo test -p gamelib-proc` ; `cargo test -p gamelib-launch --test stub_game` | ✅ | ✅ green at P `6a2265258` on macOS (gamelib-proc 60 passed; stub_game 5 passed) and on three-OS CI at P' `25bc3b526` (rust-test.yml run 45959503130: stub_game 5 passed on each leg; gamelib-proc orphans 9 on windows-latest including the A5 arm, 13 on macos-latest and ubuntu-latest); green at P `0e8778606` after the 88.2 gap closure (macOS clean-worktree proof, re-recorded from `9001fbbe8` after the macOS clippy ratchet went green again; three-OS CI of the gap closure pending the push) |
+| SVC-03 / SC2 | 88.2 | stub game: start, quit-kill, survives parent SIGKILL (three OS) | CI smoke + orphan harness | `cargo test -p gamelib-proc` ; `cargo test -p gamelib-launch --test stub_game` | ✅ | ✅ green at P `6a2265258` on macOS (gamelib-proc 60 passed; stub_game 5 passed) and on three-OS CI at P' `25bc3b526` (rust-test.yml run 45959503130: stub_game 5 passed on each leg; gamelib-proc orphans 9 on windows-latest including the A5 arm, 13 on macos-latest and ubuntu-latest); green at P `0e8778606` after the 88.2 gap closure (macOS clean-worktree proof, re-recorded from `9001fbbe8` after the macOS clippy ratchet went green again; three-OS CI green at P' `5a3f55564` after the 88.2 gap closure: rust-test.yml run 46052246559, all three legs, the thirteen windows-latest arms and five unix arms `ok`; the first push at `0f3d39f16` raced two tests, fixed in `0e8778606`, see `## CI proof (88.2 gap closure)`) |
 | SVC-03 / SC2 | 88.3 | stub game: single-flight join through the funnel (three OS, D-04, D-16) | CI smoke | `cargo test -p gamelib-launch --test stub_game` | ❌ W0 | ⬜ pending |
 | SVC-03 / SC2 | 88.2 | Windows quoting against a real exe | Windows-leg cross-check | `cargo test -p gamelib-launch --test windows_quoting` | ✅ | ✅ green on windows-latest at P' `25bc3b526` (2 passed, rust-test.yml run 45959503130); the binary runs 0 tests on macOS and Linux by design, so Windows CI is the only evidence |
 | SVC-03 / SC2 | 88.3 | live: launches, single flight + quit (D-27 game-running prompt), Force Quit survival + re-adopt, known fix + scripts | operator, signed build | `88-HUMAN-UAT.md` | ✅ authored by 88-01 (not yet run) | ⬜ pending |
@@ -451,6 +451,44 @@ list is printed in the next section's "Push authorisation (88.2-31 Task 2)" and 
 
 The three-OS CI proof of these cases (Windows above all) is the next section, written after the push.
 
+## CI proof (88.1 gap closure)
+
+Measured by plan 88.1-24 Task 3, 2026-11-28, after the operator chose `push` in Task 2 (push now; follow-up fix commits for CI-only failures in files 88.1-21..24 wrote allowed without asking
+again; plus, while the operator slept, a CI failure in another session's file may be fixed if that session is idle and otherwise is recorded as not claimed green). The one push serves 88.2-31 as well. The
+open-time check ran immediately before each push: `git fetch origin`, origin/main an ancestor of HEAD, and `git diff --name-only P HEAD` listing nothing outside `.planning/`. Both pushes were a plain
+`git push origin main` through `.husky/pre-push` (no `--no-verify`, no force), each a fast-forward: `25bc3b526..0f3d39f16` and `0f3d39f16..5a3f55564`.
+
+88.1-21..24's code was already on origin/main (published by 88.2-25's push at `25bc3b526`; all eight commits of 88.1-21..23 and `3b721a03c` were ancestors of origin/main before this plan's push), so this plan's push published
+none of it; what it adds is the CI run of the gap-closure cases at a head that carries them and the 88.2 and other sessions' work. No file of 88.1-21..24 changed between P and the head CI ran on.
+
+The first push (head `0f3d39f16`, run 46047359466) was red on two legs, each on one 88.2 test that raced and not an 88.1 test (details in the `## CI proof (88.2 gap closure)` section): windows-latest
+in `gamelib-launch`'s `stub_game` (`quit_kill_ends_the_game_tree_and_reads_as_abort`) and ubuntu-latest in `spawn_async_real` (`a_runner_kill_mid_run_answers_aborted_as_a_resolved_result`). macos-latest was green. The
+first two windows-latest lines below were already `ok` in that first run's log (job 140669846150); its shell-crate step was skipped because the multi-crate step failed first, so the third was first seen in the final run. All three are `ok` in the final run's. The proof ends on P' (the second push), which differs from P (`0e8778606`) by `.planning/` files only.
+
+P': 5a3f555645021bb378c0a00f2720e92ce9d2863a
+
+| Workflow | Leg | Run id | Conclusion |
+|----------|-----|--------|------------|
+| rust-test.yml | windows-latest | 46052246559 | success |
+| rust-test.yml | macos-latest | 46052246559 | success |
+| rust-test.yml | ubuntu-latest | 46052246559 | success |
+| codecheck.yml | ubuntu-latest | 46052246553 | success |
+| test.yml | ubuntu-latest | 46052246606 | success |
+
+The three rust-test.yml legs are the three jobs of the one run 46052246559 at P'. windows-latest (job 140686176009) and ubuntu-latest (job 140686176128) passed on the first attempt. The macos-latest job failed
+on the first attempt (job 140686176123) in the multi-crate `cargo test` step on `gamelib-steamcm` `webauth::tests::cancel_stops_polling` (`left: 5, right: 4`), the same timing race 88.2-25 recorded at `25bc3b526`
+(not an 88.1 test; nothing in 88.1 touches that crate). The failed job was re-run once with `gh run rerun 46052246559 --failed` (no code change) and passed on the second attempt (job 140693668486); `gh run view` reports
+`success`, attempt 2. `lint.yml` 46052246558 and `audit.yml` 46052246579 also ran at P' and were green; they are not part of this plan's table. The windows-latest `cargo clippy ratchet` step was `success` at P'.
+
+windows-latest golden_builders: every_builders_golden_replays ok
+windows-latest gamelib-launch-cli: the_env_op_reads_no_wine_from_the_cli ok
+windows-latest gamelib-shell: the_game_env_arm_answers_settings_with_no_wine ok
+
+The first line is `Running tests\golden_builders.rs` followed by `test every_builders_golden_replays ... ok` in the windows-latest job log (job 140686176009); the second is `test the_env_op_reads_no_wine_from_the_cli ... ok` in
+gamelib-launch-cli's run; the third is `test launch_dispatch::tests::the_game_env_arm_answers_settings_with_no_wine ... ok` in the `cargo test (Tauri shell crate)` step. `every_builders_golden_replays` was also `ok` in the macos-latest
+(job 140693668486) and ubuntu-latest (job 140686176128) logs. The floor of 124 and the HANDLED_KINDS equality make that `ok` mean the envVars cases ran on every leg, Windows included: the leg whose absence hid CR-01 now
+runs them.
+
 ## Phase proof (88.2)
 
 Measured by plan 88.2-25 Task 1, 2026-11-27, from a clean `git worktree add --detach` checkout (under the session scratchpad, removed
@@ -728,6 +766,90 @@ quick-261127-u6h x4, quick-261127-vbq x3, quick-261127-vna x1, todo x3, info x2,
 The push that was held at `9001fbbe8` (step 7 red on another session's file) was released once step 7 went green (`d22791b32`). The first push went out as `25bc3b526..0f3d39f16`; the second, after the CI fix, is described in the CI proof section.
 
 The three-OS CI proof of these cases is the next section, written after the push.
+
+## CI proof (88.2 gap closure)
+
+Measured by plan 88.2-31 Task 3, 2026-11-28, after the operator chose `push` in Task 2 (see "Push authorisation (88.2-31 Task 2)" above, including the sleeping-operator rule for another session's files). The open-time check
+ran immediately before each push: `git fetch origin`, origin/main an ancestor of HEAD, and `git diff --name-only P HEAD` listing nothing outside `.planning/`. Both pushes were a plain `git push origin main` through `.husky/pre-push`
+(no `--no-verify`, no force; the hook passed both times), each a fast-forward: `25bc3b526..0f3d39f16` (the first, 64 commits) and `0f3d39f16..5a3f55564` (the second, 6 commits: the fix below, this record, and four of another session's
+`quick-261128-9fj` commits that landed in between).
+
+**The first push (head `0f3d39f16`, run 46047359466) found two test races, one per OS, and the second push fixes them.** All thirteen windows-latest arms and all five unix arms passed in that first run; two other tests in 88.2
+files did not:
+
+| Leg | Job | Test | What failed |
+|-----|-----|------|-------------|
+| windows-latest | 140669846150 | `gamelib-launch` `stub_game`: `quit_kill_ends_the_game_tree_and_reads_as_abort` | `the game or its child survived the quit-kill` (`stub_game.rs:497`), read once right after `launch_tracked_kill_all` answered |
+| ubuntu-latest | 140669846265 | `gamelib-launch` `spawn_async_real`: `a_runner_kill_mid_run_answers_aborted_as_a_resolved_result` | `left: "", right: "started"` (`spawn_async_real.rs:190`): the abort answered before the line printed just ahead of the kill had been read off the pipe |
+| macos-latest | 140669845936 | none | green; `codecheck.yml` 46047359504 and `test.yml` 46047359487 were green too |
+
+The windows-latest failure's mechanism is not shown by the log (a single read of `probe::is_alive` straight after the kill; the Job's active-process count reaches zero, but a terminated process is signalled only after its
+threads end, and `is_alive` now reads that signal, WR-07, `probe.rs`). The same test passed at `25bc3b526` (run 45959503130), passed on all three legs' sibling arms in the same run (the other two tests of the file that probe the same way were `ok`), and passes locally, so this reads as a race in
+the test's single read, not a surviving process: the fix makes the probe poll to the test's own limit, so a member that really escaped the kill still fails it. The ubuntu failure's mechanism is the same shape (an abort answers the
+output read so far; the test did not give the reader time). The stronger Windows reading, a grandchild created before the Job assignment, would also have survived the new poll and failed it. Whether the Windows one was that race or
+something rarer is not proven by CI; the fix passed on windows-latest at P' and the arm is on record as having failed once.
+
+| Commit | Fix |
+|--------|-----|
+| 0e8778606 | `tests/stub_game.rs`: the three post-kill probes (`quit_kill_ends_the_game_tree_and_reads_as_abort`, `a_filtered_tracked_kill_ends_only_the_game_it_names`, `the_abort_id_ends_a_game_run_through_its_handle`) wait with `wait_async` instead of reading once; `tests/spawn_async_real.rs`: the script pauses `sleep 0.5` after `printf started`. Test code only; `git diff --name-only P P'` outside `.planning/` is empty. |
+
+After the fix the clean-worktree proof above was re-run in full at `0e8778606` (every step identical, see its section), and the second push followed.
+
+P': 5a3f555645021bb378c0a00f2720e92ce9d2863a
+
+| Workflow | Leg | Run id | Conclusion |
+|----------|-----|--------|------------|
+| rust-test.yml | windows-latest | 46052246559 | success |
+| rust-test.yml | macos-latest | 46052246559 | success |
+| rust-test.yml | ubuntu-latest | 46052246559 | success |
+| codecheck.yml | ubuntu-latest | 46052246553 | success |
+| test.yml | ubuntu-latest | 46052246606 | success |
+
+The three rust-test.yml legs are the three jobs of the one run 46052246559 at P'. windows-latest (job 140686176009) and ubuntu-latest (job 140686176128) passed on the first attempt. The macos-latest job failed on the first
+attempt (job 140686176123) in the multi-crate `cargo test` step on `gamelib-steamcm` `webauth::tests::cancel_stops_polling` (`left: 5, right: 4`, the mock poll count read twice around a sleep), the same timing race 88.2-25 recorded at
+`25bc3b526`, not an 88.2 test and in a crate nothing in 88.2 touches. Per 88.2-25's precedent the failed job was re-run once with `gh run rerun 46052246559 --failed` (no code change) and passed on the second attempt (job
+140693668486); `gh run view` reports `success`, attempt 2. `lint.yml` 46052246558 and `audit.yml` 46052246579 also ran at P' and were green; they are not part of this plan's table. `test.yml` ran `pnpm test:ci` green on CI at P',
+so the four local reds of the Phase proof (`genI18nGateScope`, `valveClient`, `iconGeometry.oracle`, `humbleFixtureRedaction`) did not fail on CI.
+
+Each arm below was seen as `test <name> ... ok` in that leg's job log (windows-latest job 140686176009, ubuntu-latest job 140686176128, macos-latest job 140693668486). The thirteen windows-latest arms of G-88.2-1 and G-88.2-2:
+
+windows-latest probe::tests::an_exit_code_of_259_is_not_alive ok
+windows-latest kill_tree::win::tests::kill_game_tree_on_a_reaped_pid_is_gone_and_signals_nothing ok
+windows-latest terminate_parent_spares_game_then_stamped_kill_removes_its_tree ok
+windows-latest windows_stamped_kill_over_a_live_game_job_removes_its_tree ok
+windows-latest windows_a_game_job_that_cannot_terminate_falls_back_to_the_walk ok
+windows-latest windows_a_squatted_game_job_name_falls_back_to_the_walk ok
+windows-latest windows_stamped_kill_with_an_older_stamp_signals_nothing ok
+windows-latest a_clean_exit_leaves_what_the_child_started_running ok
+windows-latest a_timeout_kills_the_standin_grandchild_too ok
+windows-latest a_spec_childs_background_process_survives_its_clean_exit_and_the_quit ok
+windows-latest an_exit_code_of_259_ends_the_run ok
+windows-latest a_cancel_is_answered_while_a_kill_holds_the_handle ok
+windows-latest kill_tree::selection_tests::a_child_whose_real_parent_differs_is_never_taken ok
+
+The five unix-visible arms on each unix leg:
+
+macos-latest graceful_quit_sigkills_helper_grandchildren_that_ignore_sigterm ok
+macos-latest children::tests::terminate_all_sigkills_a_tokio_helpers_member_that_ignores_sigterm ok
+macos-latest a_cancel_is_answered_while_a_kill_holds_the_handle ok
+macos-latest kill_tree::selection_tests::a_child_whose_real_parent_differs_is_never_taken ok
+macos-latest a_spec_childs_background_process_survives_its_clean_exit_and_the_quit ok
+ubuntu-latest graceful_quit_sigkills_helper_grandchildren_that_ignore_sigterm ok
+ubuntu-latest children::tests::terminate_all_sigkills_a_tokio_helpers_member_that_ignores_sigterm ok
+ubuntu-latest a_cancel_is_answered_while_a_kill_holds_the_handle ok
+ubuntu-latest kill_tree::selection_tests::a_child_whose_real_parent_differs_is_never_taken ok
+ubuntu-latest a_spec_childs_background_process_survives_its_clean_exit_and_the_quit ok
+
+The two tests that raced in the first run, now `ok` on the legs that failed:
+
+windows-latest quit_kill_ends_the_game_tree_and_reads_as_abort ok
+ubuntu-latest a_runner_kill_mid_run_answers_aborted_as_a_resolved_result ok
+
+windows-latest clippy ratchet: the `cargo clippy ratchet (shrink-only, per-platform baseline)` step concluded `success` at P' (job 140686176009; the first run's windows leg skipped it because the test step failed first). The macos-latest
+ratchet step concluded `success` on the second attempt (and on the first run at `0f3d39f16`, job 140669845936).
+
+Not shown by CI, as in 88.2-25's proof: a passing test captures its stdout, so which Windows branch (the Job or the descendant walk) ended the game in an arm is not in the log; the arms' assertions on the resulting tree are what
+the pass shows.
 
 ---
 
