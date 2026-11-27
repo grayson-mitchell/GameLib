@@ -58,6 +58,20 @@ pub enum Ended {
 /// `ended` under the handle's lock, so a kill through the registry never signals a group whose leader this
 /// run has reaped.
 pub async fn wait_end(entry: &GameEntry, end: GameEnd, shutdown: &CancellationToken) -> Ended {
+    wait_end_observed(entry, end, shutdown, &mut || {}).await
+}
+
+/// [`wait_end`] with an observer (88.3-07, Pitfall 10): `on_group_alive` is called each time the leader is gone
+/// and the group still lives (once right after the leader's exit, then every [`GROUP_POLL`]), so the caller can
+/// keep a proof of the members of a tree whose leader has already left (the Wine loader). It runs on this
+/// task, so it must be short and bounded; the launch record's rewrite is (it writes only when the member set
+/// changed).
+pub async fn wait_end_observed(
+    entry: &GameEntry,
+    end: GameEnd,
+    shutdown: &CancellationToken,
+    on_group_alive: &mut (dyn FnMut() + Send),
+) -> Ended {
     let game = &entry.handle;
     let pid = entry.pid;
     while probe::is_alive(pid) {
@@ -69,6 +83,7 @@ pub async fn wait_end(entry: &GameEntry, end: GameEnd, shutdown: &CancellationTo
         GameEnd::Close => {
             // A busy handle is a kill in progress: the tree is still being ended, so it reads as alive.
             while try_lock_game(game).map_or(true, |handle| handle.group_alive()) {
+                on_group_alive();
                 if cancelled_during(shutdown, GROUP_POLL).await {
                     return Ended::Shutdown;
                 }

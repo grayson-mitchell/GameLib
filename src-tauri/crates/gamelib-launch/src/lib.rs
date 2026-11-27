@@ -13,9 +13,11 @@
 
 pub mod builders;
 pub mod ctx;
+pub mod funnel;
 pub mod game;
 pub mod hooks;
 pub mod prepare;
+pub mod raise;
 pub mod runner;
 
 /// The cancel token a long op takes, re-exported so the shell, which owns the renderer's cancel, needs
@@ -24,6 +26,7 @@ pub use tokio_util::sync::CancellationToken;
 
 use builders::{env, known_fix_env, wrappers};
 use ctx::LaunchCtx;
+use funnel::flights::{self, Begin, FlightId};
 use gamelib_knownfix::types::Runner;
 use gamelib_wine::tools::ToolsHost;
 use gamelib_wine::wine_cmd::env::{GameSettingsView, SetupEnvView};
@@ -54,11 +57,16 @@ pub const OPS: &[&str] = &[
     "launch_ask_force_uninstall",
     "launch_check_wine_before_launch",
     "launch_epic_service_offline",
+    "launch_flight_begin",
+    "launch_flight_end",
+    "launch_flight_wait",
     "launch_games_running",
     "launch_known_fix_env",
     "launch_prepare",
     "launch_prepare_wine_begin",
     "launch_prepare_wine_finish",
+    "launch_readopted_announce",
+    "launch_run",
     "launch_runner_abort",
     "launch_runner_call",
     "launch_runner_kill",
@@ -71,6 +79,7 @@ pub const OPS: &[&str] = &[
     "launch_tracked_kill",
     "launch_tracked_kill_all",
     "launch_verify_wine_prefix",
+    "launch_window_raise",
     "launch_wine_command",
     "launch_wine_path",
 ];
@@ -125,6 +134,51 @@ async fn route(op: &str, args: &[Value], ctx: &LaunchCtx) -> Result<Value, Strin
             Ok(epic::offline_reply(
                 epic::epic_service_offline(ctx, service).await,
             ))
+        }
+        // A leader outside the funnel (the TS Steam dispatch until 90.2) leads or joins the one single-flight table
+        // (88.3-11, D-04). Arguments `[{ runner, appName }]`. Answers `{ lead: <flightId> }` when the caller now
+        // leads the key and must end it, or `{ join: true }` when a launch of the key is already in flight. One
+        // lock decides, so two calls never both lead.
+        "launch_flight_begin" => {
+            let [call @ Value::Object(_)] = args else {
+                return Err(bad());
+            };
+            let call = flight_key_arg(call).ok_or_else(bad)?;
+            Ok(
+                match ctx.flights.begin_owned(&call.runner, &call.app_name) {
+                    Begin::Lead(id) => serde_json::json!({ "lead": id.as_str() }),
+                    Begin::Join => serde_json::json!({ "join": true }),
+                },
+            )
+        }
+        // Settles the flight the id leads and releases its key. Arguments `[{ flightId, result }]`. Answers whether
+        // the id was one this table holds (a forged, stale or already-ended id releases nothing and answers false).
+        "launch_flight_end" => {
+            let [call @ Value::Object(_)] = args else {
+                return Err(bad());
+            };
+            let call: FlightEndArgs = serde_json::from_value(call.clone()).map_err(|_| bad())?;
+            let id = FlightId::parse(&call.flight_id).ok_or_else(bad)?;
+            Ok(Value::Bool(ctx.flights.end(&id, call.result)))
+        }
+        // The joiner half. Arguments `[{ runner, appName }]`. Waits for the whole of the leader's dispatch (so its
+        // shim lists the channel as unbounded) and answers the leader's settled value, or the word `abandoned` when
+        // the leader ended without one, was released at sidecar EOF or is no longer in flight. The app shutdown
+        // answers `launch_flight_wait:shutdown`.
+        "launch_flight_wait" => {
+            let [call @ Value::Object(_)] = args else {
+                return Err(bad());
+            };
+            let call = flight_key_arg(call).ok_or_else(bad)?;
+            match ctx
+                .flights
+                .wait(&call.runner, &call.app_name, &ctx.engine.shutdown)
+                .await
+            {
+                Ok(value) => Ok(value),
+                Err(flights::SHUTDOWN) => Err(format!("{op}:shutdown")),
+                Err(word) => Ok(Value::String(word.to_string())),
+            }
         }
         // `prepareLaunch`. Arguments `[args, host]`: the game and the TS-only facts (`PrepareLaunchArgs`) and
         // the process facts the shell read (`PrepareHost`). Answers the TS reply plus its per-game `log`
@@ -296,6 +350,26 @@ async fn route(op: &str, args: &[Value], ctx: &LaunchCtx) -> Result<Value, Strin
             let result = spawn_async(ctx, call, sink).await?;
             result_of(serde_json::to_value(result))
         }
+        // The Rust launch funnel (88.3-06, D-19): one Play, `launchEventCallback`. Arguments `[params, host]`: the
+        // Play's message (`LaunchParams`: `appName`, `runner`, and optionally `launchArguments`, `skipVersionCheck`
+        // and `args`) and the process facts the shell read (`FunnelHost`: `{ runner, wine }`). Answers
+        // `{ status: "done" | "error" | "abort" }`. A launch spans a whole play session, so its shim lists the
+        // channel as unbounded (the funnel holds its own registrant and the app shutdown ends it). A failure is the
+        // funnel's fixed `launch:<reason>` text, never an error message of a manager.
+        "launch_run" => {
+            let [params @ Value::Object(_), host @ Value::Object(_)] = args else {
+                return Err(bad());
+            };
+            let params: funnel::LaunchParams =
+                serde_json::from_value(params.clone()).map_err(|_| bad())?;
+            if !bounded_name(&params.app_name) {
+                return Err(bad());
+            }
+            let host: funnel::FunnelHost =
+                serde_json::from_value(host.clone()).map_err(|_| bad())?;
+            let status = funnel::run::run_launch(ctx, params, &host).await?;
+            Ok(status.to_value())
+        }
         // `getWinePath` (88.2-13). Arguments `[args, host]`: the path, the game's settings and the variant
         // (`WinePathArgs`) and the wine host facts the shell read (the process environment `winepath` inherits).
         // Answers the translated path as text, `""` when `winepath` printed nothing (one fixed error line is
@@ -309,12 +383,34 @@ async fn route(op: &str, args: &[Value], ctx: &LaunchCtx) -> Result<Value, Strin
             let host = host_arg(host).ok_or_else(bad)?;
             Ok(Value::String(wine_path(ctx, call, &host).await))
         }
+        // The Wine window raiser (88.3-13, D-21). Arguments `[{ context, pids?, processNames? }]`. Answers `null` once the
+        // raise is over: a hit and its settle re-raise, twelve misses, a no-op (off macOS, no valid pid or name) or the
+        // app shutdown. At most about 21 s (twelve attempts 1.5 s apart and one 2.5 s settle), inside the sidecar's 60 s
+        // bound. A failed `osascript` is a warning line, never an error.
+        "launch_window_raise" => {
+            let [call @ Value::Object(_)] = args else {
+                return Err(bad());
+            };
+            let call: raise::RaiseArgs = serde_json::from_value(call.clone()).map_err(|_| bad())?;
+            raise::raise_wine_window(ctx, call).await;
+            Ok(Value::Null)
+        }
         // Whether a game run is registered (D-07): the answer the quit check reads. Arguments `[]`.
         "launch_games_running" => {
             let [] = args else {
                 return Err(bad());
             };
             Ok(Value::Bool(ctx.registry.games_running()))
+        }
+        // Re-adoption's announcement (88.3-12, Pitfall 9): `gameStatusUpdate { status: 'playing' }` for every game the
+        // boot scan adopted, and the mark that tells a later adoption to announce itself. Arguments `[]`. Answers how
+        // many games it announced. The sidecar calls it on every `frontendReady`; it takes no argument, so it can only
+        // re-send the status of entries the registry already proved.
+        "launch_readopted_announce" => {
+            let [] = args else {
+                return Err(bad());
+            };
+            Ok(Value::from(game::readopt::announce(ctx)))
         }
         // `killAllTracked`: ends every registered run, games through their own handles and helpers through their
         // tokens. Arguments `[]`. Answers how many it ended. Bounded by the exit budget's child grace.
@@ -483,6 +579,29 @@ fn run_id(id: &str) -> bool {
     bounded_name(id) && !id.chars().any(|c| c == '/' || c == '\\' || c.is_control())
 }
 
+/// The object argument of `launch_flight_begin` and `launch_flight_wait`.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct FlightKeyArgs {
+    runner: String,
+    app_name: String,
+}
+
+/// The key of a flight call: a runner and an app name that pass the id check the kill ops hold ids to. A key is
+/// text the table joins with a colon, never a path.
+fn flight_key_arg(call: &Value) -> Option<FlightKeyArgs> {
+    let call: FlightKeyArgs = serde_json::from_value(call.clone()).ok()?;
+    (run_id(&call.runner) && run_id(&call.app_name)).then_some(call)
+}
+
+/// The object argument of `launch_flight_end`.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct FlightEndArgs {
+    flight_id: String,
+    result: Value,
+}
+
 /// The object argument of `launch_tracked_kill`.
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -612,6 +731,14 @@ fn runtime() -> Result<&'static Runtime, String> {
         })
         .as_ref()
         .map_err(Clone::clone)
+}
+
+/// Where a task that outlives its caller runs (88.3-09's exit watches): the caller's runtime when it is inside
+/// one, otherwise the crate's own. `None` when neither is available.
+pub(crate) fn task_handle() -> Option<Handle> {
+    Handle::try_current()
+        .ok()
+        .or_else(|| runtime().ok().map(|runtime| runtime.handle().clone()))
 }
 
 /// [`dispatch`] for a plain thread: blocks on the crate's own runtime. Called from inside a tokio
@@ -774,8 +901,41 @@ mod tests {
 
     #[test]
     fn the_twenty_one_launch_ops_are_in_the_table() {
-        assert_eq!(OPS.len(), 22);
+        assert_eq!(OPS.len(), 28);
         assert!(OPS.iter().all(|op| op.starts_with("launch_")));
+        assert!(
+            OPS.windows(2).all(|pair| pair[0] < pair[1]),
+            "OPS is sorted"
+        );
+    }
+
+    #[tokio::test]
+    async fn the_launch_run_op_refuses_a_bad_call_with_a_fixed_word_and_needs_the_hooks() {
+        let home = FakeHome::new("launch-lib-");
+        let ctx = ctx(&home);
+        let secret = "SECRET-APP-NAME";
+        let params = json!({ "appName": secret, "runner": "gog" });
+        for args in [
+            vec![],
+            vec![params.clone()],
+            vec![json!("params"), json!({})],
+            vec![json!({ "appName": secret }), json!({})],
+            vec![
+                json!({ "appName": secret, "runner": "gog", "extra": 1 }),
+                json!({}),
+            ],
+            vec![json!({ "appName": "", "runner": "gog" }), json!({})],
+            vec![params.clone(), json!({ "unknown": 1 })],
+            vec![params.clone(), json!({}), json!({})],
+        ] {
+            let err = dispatch("launch_run", &args, &ctx).await.unwrap_err();
+            assert_eq!(err, "launch_run:bad-args", "{args:?}");
+        }
+        // A well-formed call on a context with no hooks fails closed with a fixed word, never an error text.
+        let err = dispatch("launch_run", &[params, json!({})], &ctx)
+            .await
+            .unwrap_err();
+        assert_eq!(err, "launch:no-hooks");
     }
 
     #[tokio::test]
@@ -844,7 +1004,11 @@ mod tests {
             .all(|c| !matches!(c, crate::hooks::testing::HookCall::ForceUninstall { .. })));
     }
 
-    const ZERO_ARG_OPS: &[&str] = &["launch_games_running", "launch_tracked_kill_all"];
+    const ZERO_ARG_OPS: &[&str] = &[
+        "launch_games_running",
+        "launch_readopted_announce",
+        "launch_tracked_kill_all",
+    ];
 
     #[tokio::test]
     async fn every_op_answers_a_fixed_bad_args_and_never_echoes_what_it_was_sent() {
@@ -859,7 +1023,7 @@ mod tests {
                 vec![json!({"appName": secret, "bogus": secret})],
                 vec![json!(1), json!(2), json!(3)],
             ] {
-                // The two ops with no argument answer to `[]`; anything else is refused like the rest.
+                // The ops with no argument answer to `[]`; anything else is refused like the rest.
                 if args.is_empty() && ZERO_ARG_OPS.contains(op) {
                     continue;
                 }
@@ -1071,6 +1235,23 @@ mod tests {
                 "{args:?}"
             );
         }
+    }
+
+    #[tokio::test]
+    async fn the_window_raise_op_answers_null_and_is_a_no_op_off_macos() {
+        let home = FakeHome::new("launch-lib-");
+        // `ctx` is a Linux context: nothing is spawned (the engine has no spawn seam of its own to answer),
+        // a valid call answers `null`, and a pid that is not digits is not an error.
+        let ctx = ctx(&home);
+        let call = json!({ "context": "c", "pids": ["12", "x"], "processNames": ["a.exe"] });
+        assert_eq!(
+            dispatch("launch_window_raise", &[call], &ctx).await,
+            Ok(Value::Null)
+        );
+        assert_eq!(
+            dispatch("launch_window_raise", &[json!({ "pids": ["1"] })], &ctx).await,
+            Err("launch_window_raise:bad-args".to_string())
+        );
     }
 
     fn prepare_args(extra: Value) -> Value {

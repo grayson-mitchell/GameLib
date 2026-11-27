@@ -2,19 +2,21 @@
  * The boot-owned app runtime (66.4-17, D-05).
  *
  * The launch / known-fixes long tail's former module-level state (the backend
- * event bus, the frontend-ready flag, the launch single-flight table) lives in per-file `createX()` closures.
+ * event bus, the frontend-ready flag) lives in per-file `createX()` closures. The launch single-flight table is Rust's since 88.3-18
+ * (D-04): `launchFlights` is the glue over its three channels.
  * The known-fix overlay install single-flight left this bundle in 88-14: Rust's `KnownFixCtx` owns it. The CrossOver
  * index fetch layer and lookups were Rust's from 86-19 and left this bundle with the TS module (86-24).
  * This bundle builds one of each, once per boot, in the 'app-runtime' boot step, and consumers reach it through `Pick<AppRuntime, ...>` slices (D-01).
  *
- * Construction only allocates empty maps and an emitter: it does no I/O, arms no timer and adds no
+ * Construction only allocates an emitter and a flag: it does no I/O, arms no timer and adds no
  * listener (sidecar exit contract).
  */
 import type { FrontendMessageDeps } from 'backend/host/frontendMessage'
 import { createBackendEvents } from './backend_events'
 import type { BackendEventBus } from './backend_events'
-import { createLaunchFlights } from './launchSingleFlight'
-import type { LaunchFlights } from './launchSingleFlight'
+import { createRustLaunchFlights } from './launchrust/flights'
+import type { LaunchFlights } from './launchrust/flights'
+import type { RustInvokeDeps } from './host/rustInvokeDeps'
 import { createProtocolState } from './protocol'
 import type { ProtocolState } from './protocol'
 
@@ -27,11 +29,19 @@ export interface AppRuntime {
   launchFlights: LaunchFlights
 }
 
-export function createAppRuntime(): AppRuntime {
+/**
+ * `transport` is read at call time (the host exists only after boot); the launch single-flight table is Rust's (88.3-18, D-04),
+ * and `launchFlights` is the glue over its three channels.
+ */
+export function createAppRuntime(deps: {
+  transport: () => RustInvokeDeps
+  /** The boot's warning line for a lost `launch_flight_end`. */
+  warn?: (message: unknown[]) => void
+}): AppRuntime {
   return {
     events: createBackendEvents(),
     protocol: createProtocolState(),
-    launchFlights: createLaunchFlights()
+    launchFlights: createRustLaunchFlights(deps)
   }
 }
 

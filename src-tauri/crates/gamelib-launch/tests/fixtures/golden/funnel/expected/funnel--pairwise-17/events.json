@@ -1,0 +1,319 @@
+[
+  {
+    "kind": "play",
+    "n": 1
+  },
+  {
+    "kind": "hook",
+    "hook": "getSettings",
+    "runner": "nile",
+    "args": []
+  },
+  {
+    "kind": "config",
+    "member": "getSettings",
+    "args": []
+  },
+  {
+    "kind": "tsStore",
+    "op": "set",
+    "key": "nile-app.firstPlayed",
+    "value": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "kind": "log",
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Launching Title of nile (nile-app)"
+  },
+  {
+    "kind": "frontend",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "nile-app",
+        "runner": "nile",
+        "status": "launching"
+      }
+    ]
+  },
+  {
+    "kind": "bus",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "nile-app",
+        "runner": "nile",
+        "status": "launching"
+      }
+    ]
+  },
+  {
+    "kind": "log",
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Preventing display from sleep"
+  },
+  {
+    "kind": "appState",
+    "member": "wakeLock.start",
+    "args": [
+      "prevent-display-sleep"
+    ]
+  },
+  {
+    "kind": "config",
+    "member": "getSettings",
+    "args": []
+  },
+  {
+    "kind": "gameConfig",
+    "member": "getSettings",
+    "appName": "nile-app",
+    "args": []
+  },
+  {
+    "kind": "rust",
+    "channel": "engine_launch_select",
+    "args": [
+      {
+        "runner": "nile",
+        "appName": "nile-app",
+        "title": "Title of nile",
+        "platform": "Windows",
+        "isNative": false,
+        "settings": {
+          "verboseLogs": true,
+          "autoSyncSaves": false,
+          "savesPath": "/pins/saves",
+          "gogSaves": [],
+          "wineVersion": {
+            "name": "Wine-Test",
+            "bin": "/pins/wines/Wine-Test/bin/wine",
+            "type": "wine"
+          },
+          "beforeLaunchScriptPath": "/pins/scripts/before.sh",
+          "afterLaunchScriptPath": "/pins/scripts/after.sh"
+        },
+        "offline": false
+      }
+    ],
+    "reply": {
+      "kind": "use",
+      "key": "nile:nile-app",
+      "selection": {},
+      "prefix": {},
+      "logLines": [
+        "engine=use"
+      ],
+      "launchSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": false,
+        "savesPath": "/pins/saves",
+        "gogSaves": [],
+        "wineVersion": {
+          "name": "Overlay",
+          "bin": "/pins/engines/crossover/bin/wine",
+          "type": "crossover"
+        },
+        "beforeLaunchScriptPath": "/pins/scripts/before.sh",
+        "afterLaunchScriptPath": "/pins/scripts/after.sh"
+      }
+    }
+  },
+  {
+    "kind": "log",
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Engine: nile:nile-app engine=use"
+  },
+  {
+    "kind": "gameLog",
+    "target": {
+      "kind": "game",
+      "appName": "nile-app",
+      "runner": "nile",
+      "type": "launch"
+    },
+    "rotate": true,
+    "level": "INFO",
+    "prefix": "",
+    "text": "engine=use"
+  },
+  {
+    "kind": "gameLog",
+    "target": {
+      "kind": "game",
+      "appName": "nile-app",
+      "runner": "nile",
+      "type": "launch"
+    },
+    "rotate": false,
+    "raw": "Running script before Title of nile (/pins/scripts/before.sh)\n"
+  },
+  {
+    "kind": "script",
+    "when": "before",
+    "appName": "nile-app",
+    "wine": "Overlay",
+    "beforeLaunchScriptPath": "/pins/scripts/before.sh",
+    "afterLaunchScriptPath": "/pins/scripts/after.sh",
+    "target": {
+      "kind": "game",
+      "appName": "nile-app",
+      "runner": "nile",
+      "type": "launch"
+    }
+  },
+  {
+    "kind": "frontend",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "nile-app",
+        "runner": "nile",
+        "status": "launching"
+      }
+    ]
+  },
+  {
+    "kind": "bus",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "nile-app",
+        "runner": "nile",
+        "status": "launching"
+      }
+    ]
+  },
+  {
+    "kind": "hook",
+    "hook": "launch",
+    "runner": "nile",
+    "args": [
+      null,
+      null,
+      null
+    ],
+    "writer": {
+      "target": {
+        "kind": "game",
+        "appName": "nile-app",
+        "runner": "nile",
+        "type": "launch"
+      },
+      "rotationClaimed": true
+    }
+  },
+  {
+    "kind": "gameLog",
+    "target": {
+      "kind": "game",
+      "appName": "nile-app",
+      "runner": "nile",
+      "type": "launch"
+    },
+    "rotate": false,
+    "raw": "Running script after Title of nile (/pins/scripts/after.sh)\n"
+  },
+  {
+    "kind": "script",
+    "when": "after",
+    "appName": "nile-app",
+    "wine": "Overlay",
+    "beforeLaunchScriptPath": "/pins/scripts/before.sh",
+    "afterLaunchScriptPath": "/pins/scripts/after.sh",
+    "target": {
+      "kind": "game",
+      "appName": "nile-app",
+      "runner": "nile",
+      "type": "launch"
+    }
+  },
+  {
+    "kind": "gameLog",
+    "target": {
+      "kind": "game",
+      "appName": "nile-app",
+      "runner": "nile",
+      "type": "launch"
+    },
+    "rotate": false,
+    "raw": "============= End of log ============="
+  },
+  {
+    "kind": "rust",
+    "channel": "engine_launch_end",
+    "args": [
+      {
+        "key": "nile:nile-app"
+      }
+    ],
+    "reply": null
+  },
+  {
+    "kind": "log",
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Stopping Display Power Saver Blocker"
+  },
+  {
+    "kind": "appState",
+    "member": "wakeLock.stop",
+    "args": [
+      7
+    ]
+  },
+  {
+    "kind": "tsStore",
+    "op": "set",
+    "key": "nile-app.lastPlayed",
+    "value": "2026-01-01T00:01:30.000Z"
+  },
+  {
+    "kind": "tsStore",
+    "op": "set",
+    "key": "nile-app.totalPlayed",
+    "value": 1
+  },
+  {
+    "kind": "config",
+    "member": "getSettings",
+    "args": []
+  },
+  {
+    "kind": "rust",
+    "channel": "info_recent_add",
+    "args": [
+      {
+        "appName": "nile-app",
+        "title": "Title of nile",
+        "runner": "nile"
+      }
+    ],
+    "reply": null
+  },
+  {
+    "kind": "frontend",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "nile-app",
+        "runner": "nile",
+        "status": "done"
+      }
+    ]
+  },
+  {
+    "kind": "bus",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "nile-app",
+        "runner": "nile",
+        "status": "done"
+      }
+    ]
+  }
+]

@@ -1603,15 +1603,6 @@ export const RUST_LAUNCH_WINE_COMMAND = 'launch_wine_command' as const
  */
 export const RUST_LAUNCH_WINE_PATH = 'launch_wine_path' as const
 /**
- * Phase 88.2 (SVC-03, 88.2-17, D-02, D-19): `runScriptForGame`, a game's before or after launch script. `launch_script_run` takes
- * `[args]` (`{ scriptPath, stage, appName, executable?, prefix?, runner, title, installPath?, settingsJson, infoJson,
- * verbose?, logTarget? }`: `settingsJson` and `infoJson` are `JSON.stringify(gameSettings)` and `JSON.stringify(gameInfo)`,
- * handed to the script verbatim; the shell appends the process environment) and answers `true` once the script has exited,
- * whatever its code. A script that could not be started is an error carrying the OS's text, which the dispatch error passes
- * through. A script runs as long as the user wrote it to, so the channel is unbounded.
- */
-export const RUST_LAUNCH_SCRIPT_RUN = 'launch_script_run' as const
-/**
  * Phase 88.2 (SVC-03, 88.2-17, D-02, D-19): `spawnAsync`, one program run to its end. `launch_spawn_async` takes `[args]` only
  * (`{ streamId?, command, args?, cwd?, env?, timeoutMs?, windowsHide?, observe? }`: `env` is the whole environment when the
  * caller passes one, `timeoutMs` is `null` for a timeout the TS held as `NaN` or `Infinity`, which JSON cannot carry) and
@@ -1648,6 +1639,55 @@ export const RUST_LAUNCH_GAMES_RUNNING = 'launch_games_running' as const
  */
 export const RUST_LAUNCH_ASK_FORCE_UNINSTALL =
   'launch_ask_force_uninstall' as const
+/**
+ * Phase 88.3 (SVC-03, 88.3-06, D-19): one Play through the Rust launch funnel (`launchEventCallback`). `launch_run` takes `[params]`
+ * (`{ appName, runner, launchArguments?, skipVersionCheck?, args? }`, the renderer's `LaunchParams`; the shell appends the process
+ * environment and the wine host facts itself, T-88.1-14) and answers `{ status: 'done' | 'error' | 'abort' }`. A launch spans a whole
+ * play session (the funnel waits on the TS `launch` hook over `launchManagerCall` until the game's process is over), so the channel is
+ * unbounded (`UNBOUNDED_RUST_CHANNELS`); the app shutdown ends it. A second Play of the same game joins the first. There is no sidecar
+ * fallback (D-19): before the shell is ready it answers `launch_run:not-ready`.
+ */
+export const RUST_LAUNCH_RUN = 'launch_run' as const
+/**
+ * Phase 88.3 (SVC-03, 88.3-11, D-04, D-19): a leader outside the Rust launch funnel (the TS Steam dispatch until 90.2) leads or joins
+ * the one single-flight table. `launch_flight_begin` takes `[{ runner, appName }]` and answers `{ lead: <flightId> }` when the caller
+ * now leads the key and must end it, or `{ join: true }` when a launch of the key is already in flight (decided under the table's one
+ * lock, so two callers never both lead). The flight id is an opaque value Rust minted; it is not a key. A lookup, so the channel stays
+ * inside the 60 s bound.
+ */
+export const RUST_LAUNCH_FLIGHT_BEGIN = 'launch_flight_begin' as const
+/**
+ * Phase 88.3 (SVC-03, 88.3-11, D-04, D-19): the joiner half. `launch_flight_wait` takes `[{ runner, appName }]` and waits for the
+ * leader of that key, whoever it is (a Rust funnel launch or a sidecar leader), answering the leader's settled value, or the word
+ * `abandoned` when the leader ended without one, was released because the sidecar went away, or is no longer in flight (its value is
+ * gone). The app shutdown rejects it with `launch_flight_wait:shutdown`. A joiner waits for the whole dispatch, which can take as
+ * long as a launch does, so the channel is unbounded (`UNBOUNDED_RUST_CHANNELS`).
+ */
+export const RUST_LAUNCH_FLIGHT_WAIT = 'launch_flight_wait' as const
+/**
+ * Phase 88.3 (SVC-03, 88.3-11, D-04, D-19): `launch_flight_end` takes `[{ flightId, result }]`, settles the flight the id leads (every
+ * joiner receives `result`) and releases the key, answering `true`; an id Rust does not hold (forged, already ended, released at
+ * sidecar EOF) releases nothing and answers `false`. A lookup, so the channel stays inside the 60 s bound.
+ */
+export const RUST_LAUNCH_FLIGHT_END = 'launch_flight_end' as const
+/**
+ * Phase 88.3 (SVC-03, 88.3-12, D-19, Pitfall 9): `launch_readopted_announce` takes `[]`, sends `gameStatusUpdate { status: 'playing' }` for
+ * every game the shell's boot scan re-adopted (a game that outlived a GameLib crash) and marks the launch context frontend-ready, so a
+ * game adopted after that is announced as it is adopted. Answers the number of games it announced. The sidecar's `frontendReady` handler
+ * sends it on every delivery. A registry read and a few pushes, so the channel stays inside the 60 s bound; before the install it
+ * answers `launch_readopted_announce:not-ready`.
+ */
+export const RUST_LAUNCH_READOPTED_ANNOUNCE =
+  'launch_readopted_announce' as const
+/**
+ * Phase 88.3 (SVC-03, 88.3-13, D-19, D-21): `launch_window_raise` takes `[{ context, pids?, processNames? }]` and brings a Wine or
+ * CrossOver game's window to the front on macOS (`osascript` as a Helper, the AppleScript constant, the pids and names only argv):
+ * at most 12 attempts 1.5 s apart, stopping at the first raise, then one 2.5 s settle re-raise. It answers `null` once the raise is
+ * over (a no-op off macOS and for empty input, and a failed `osascript` is a warning line, never an error). The raise is bounded at
+ * about 21 s, so the channel stays inside the 60 s bound; the app shutdown ends it. The Steam bottle monitor, the bottled-Steam
+ * launch and the common launch call it through `launchrust/raise.ts` until their bottle lifecycle moves (Phase 96).
+ */
+export const RUST_LAUNCH_WINDOW_RAISE = 'launch_window_raise' as const
 export const RUST_ENGINE_STATE_RECORD_DECISION =
   'engine_state_record_decision' as const
 export const RUST_ENGINE_STATE_PUBLISH_OVERLAY_NOTICE =
@@ -2099,12 +2139,17 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_LAUNCH_RUNNER_ABORT,
   RUST_LAUNCH_WINE_COMMAND,
   RUST_LAUNCH_WINE_PATH,
-  RUST_LAUNCH_SCRIPT_RUN,
   RUST_LAUNCH_SPAWN_ASYNC,
   RUST_LAUNCH_TRACKED_KILL,
   RUST_LAUNCH_TRACKED_KILL_ALL,
   RUST_LAUNCH_GAMES_RUNNING,
   RUST_LAUNCH_ASK_FORCE_UNINSTALL,
+  RUST_LAUNCH_RUN,
+  RUST_LAUNCH_FLIGHT_BEGIN,
+  RUST_LAUNCH_FLIGHT_WAIT,
+  RUST_LAUNCH_FLIGHT_END,
+  RUST_LAUNCH_READOPTED_ANNOUNCE,
+  RUST_LAUNCH_WINDOW_RAISE,
   RUST_SHORTCUTS_EXIST,
   RUST_SHORTCUTS_ADD,
   RUST_SHORTCUTS_REMOVE,

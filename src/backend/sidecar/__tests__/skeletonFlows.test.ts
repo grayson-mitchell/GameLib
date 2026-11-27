@@ -145,6 +145,7 @@ jest.mock('../../storeManagers/steam/user', () => ({
 // ── Imports (after mocks) ────────────────────────────────────────────────────
 import { defined } from 'backend/testUtils/indexed'
 import {
+  answerLaunchFlights,
   answerPollStatus,
   bootFresh,
   writeInvoke
@@ -343,6 +344,11 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
       { appName: '999002', runner: 'steam' }
     ])
     await flush()
+    // The Steam dispatch leads its flight in Rust: answer the begin, let the launch run, answer the end (88.3-18).
+    answerLaunchFlights(input, frames)
+    await flush()
+    answerLaunchFlights(input, frames)
+    await flush()
 
     const openExternal = frames.find((frame) => frame.kind === 'openExternal')
     expect(openExternal).toBeDefined()
@@ -365,6 +371,11 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
     writeInvoke(input, 'launch-2', 'launch', [
       { appName: '../../etc/passwd', runner: 'steam' }
     ])
+    await flush()
+    // The Steam dispatch leads its flight in Rust: answer the begin, let the launch run, answer the end (88.3-18).
+    answerLaunchFlights(input, frames)
+    await flush()
+    answerLaunchFlights(input, frames)
     await flush()
 
     const openExternal = frames.find((frame) => frame.kind === 'openExternal')

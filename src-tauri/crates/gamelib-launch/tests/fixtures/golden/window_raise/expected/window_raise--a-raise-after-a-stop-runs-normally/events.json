@@ -1,0 +1,95 @@
+[
+  {
+    "event": "construct",
+    "pendingTimers": 0
+  },
+  {
+    "event": "action",
+    "op": "raise",
+    "as": "r1",
+    "input": {
+      "context": "one",
+      "pids": [
+        "5"
+      ]
+    }
+  },
+  {
+    "event": "spawn",
+    "at": 0,
+    "program": "osascript",
+    "argv": [
+      "-e",
+      "<script>",
+      "1",
+      "5"
+    ]
+  },
+  {
+    "event": "timer",
+    "at": 0,
+    "ms": 1500
+  },
+  {
+    "event": "action",
+    "op": "stop"
+  },
+  {
+    "event": "clear",
+    "at": 0
+  },
+  {
+    "event": "action",
+    "op": "raise",
+    "as": "r2",
+    "input": {
+      "context": "two",
+      "pids": [
+        "5"
+      ]
+    }
+  },
+  {
+    "event": "spawn",
+    "at": 0,
+    "program": "osascript",
+    "argv": [
+      "-e",
+      "<script>",
+      "1",
+      "5"
+    ]
+  },
+  {
+    "event": "log",
+    "level": "info",
+    "prefix": "Steam",
+    "text": "raiseWineGameWindow [two]: raised (X.exe pid=5)"
+  },
+  {
+    "event": "timer",
+    "at": 0,
+    "ms": 2500
+  },
+  {
+    "event": "action",
+    "op": "advance",
+    "ms": 5000
+  },
+  {
+    "event": "spawn",
+    "at": 2500,
+    "program": "osascript",
+    "argv": [
+      "-e",
+      "<script>",
+      "1",
+      "5"
+    ]
+  },
+  {
+    "event": "settled",
+    "raise": "r2",
+    "at": 2500
+  }
+]

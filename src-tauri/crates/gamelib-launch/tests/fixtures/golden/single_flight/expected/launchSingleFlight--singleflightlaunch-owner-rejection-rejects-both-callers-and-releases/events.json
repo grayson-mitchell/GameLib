@@ -1,0 +1,65 @@
+[
+  {
+    "event": "step",
+    "op": "begin",
+    "caller": "a",
+    "runner": "steam",
+    "app": "1"
+  },
+  {
+    "event": "run",
+    "caller": "a",
+    "key": "steam:1"
+  },
+  {
+    "event": "step",
+    "op": "begin",
+    "caller": "b",
+    "runner": "steam",
+    "app": "1",
+    "onJoin": "notify"
+  },
+  {
+    "event": "joined",
+    "caller": "b",
+    "key": "steam:1",
+    "samePromiseAsOwner": true
+  },
+  {
+    "event": "onJoin",
+    "caller": "b",
+    "key": "steam:1"
+  },
+  {
+    "event": "step",
+    "op": "reject",
+    "caller": "a",
+    "word": "boom"
+  },
+  {
+    "event": "received",
+    "caller": "a",
+    "rejected": "boom"
+  },
+  {
+    "event": "received",
+    "caller": "b",
+    "rejected": "boom"
+  },
+  {
+    "event": "step",
+    "op": "probe",
+    "caller": "again",
+    "runner": "steam",
+    "app": "1"
+  },
+  {
+    "event": "released",
+    "key": "steam:1"
+  },
+  {
+    "event": "received",
+    "caller": "again",
+    "value": "probe"
+  }
+]

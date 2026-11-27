@@ -1,0 +1,39 @@
+[
+  {
+    "kind": "play",
+    "n": 1
+  },
+  {
+    "kind": "rust",
+    "channel": "launch_ask_force_uninstall",
+    "args": [
+      {
+        "runner": "legendary",
+        "appName": "alpha"
+      }
+    ],
+    "reply": 0
+  },
+  {
+    "kind": "frontend",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "alpha",
+        "runner": "legendary",
+        "status": "done"
+      }
+    ]
+  },
+  {
+    "kind": "bus",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "alpha",
+        "runner": "legendary",
+        "status": "done"
+      }
+    ]
+  }
+]

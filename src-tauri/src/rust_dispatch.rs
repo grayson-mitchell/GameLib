@@ -338,12 +338,19 @@ pub(crate) fn dispatch_rust_channel(
         RustInvokeChannel::LaunchCheckWineBeforeLaunch => {
             launch_dispatch::rpc_launch_check_wine_before_launch(args)
         }
+        RustInvokeChannel::LaunchRun => launch_dispatch::rpc_launch_run(args),
+        RustInvokeChannel::LaunchFlightBegin => launch_dispatch::rpc_launch_flight_begin(args),
+        RustInvokeChannel::LaunchFlightWait => launch_dispatch::rpc_launch_flight_wait(args),
+        RustInvokeChannel::LaunchFlightEnd => launch_dispatch::rpc_launch_flight_end(args),
+        RustInvokeChannel::LaunchReadoptedAnnounce => {
+            launch_dispatch::rpc_launch_readopted_announce(args)
+        }
+        RustInvokeChannel::LaunchWindowRaise => launch_dispatch::rpc_launch_window_raise(args),
         RustInvokeChannel::LaunchRunnerCall => launch_dispatch::rpc_launch_runner_call(args),
         RustInvokeChannel::LaunchRunnerKill => launch_dispatch::rpc_launch_runner_kill(args),
         RustInvokeChannel::LaunchRunnerAbort => launch_dispatch::rpc_launch_runner_abort(args),
         RustInvokeChannel::LaunchWineCommand => launch_dispatch::rpc_launch_wine_command(args),
         RustInvokeChannel::LaunchWinePath => launch_dispatch::rpc_launch_wine_path(args),
-        RustInvokeChannel::LaunchScriptRun => launch_dispatch::rpc_launch_script_run(args),
         RustInvokeChannel::LaunchSpawnAsync => launch_dispatch::rpc_launch_spawn_async(args),
         RustInvokeChannel::LaunchTrackedKill => launch_dispatch::rpc_launch_tracked_kill(args),
         RustInvokeChannel::LaunchTrackedKillAll => {

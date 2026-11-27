@@ -27,13 +27,13 @@ module.exports = {
       }
     },
     {
-      // Static, dynamic and type-only imports all count (launcher.ts also has a dynamic
-      // import of steam/bottle).
+      // Static, dynamic and type-only imports all count. 88.3-17: the rule followed the launcher from
+      // src/backend/launcher.ts (deleted) to its boot module, src/backend/launchrust/launcher.ts.
       name: 'launcher-only-via-store-managers-index',
       severity: 'error',
       comment:
-        'launcher.ts reaches store managers only through storeManagers/index.ts.',
-      from: { path: '^src/backend/launcher\\.ts$' },
+        'launchrust/launcher.ts reaches store managers only through storeManagers/index.ts.',
+      from: { path: '^src/backend/launchrust/launcher\\.ts$' },
       to: {
         path: '^src/backend/storeManagers/',
         pathNot: '^src/backend/storeManagers/index\\.ts$'

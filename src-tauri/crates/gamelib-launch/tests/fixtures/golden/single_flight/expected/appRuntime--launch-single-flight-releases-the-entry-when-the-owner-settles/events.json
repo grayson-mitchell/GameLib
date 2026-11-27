@@ -1,0 +1,45 @@
+[
+  {
+    "event": "step",
+    "op": "begin",
+    "caller": "first",
+    "runner": "gog",
+    "app": "g1",
+    "body": {
+      "resolves": "x"
+    },
+    "settle": "none"
+  },
+  {
+    "event": "run",
+    "caller": "first",
+    "key": "gog:g1"
+  },
+  {
+    "event": "received",
+    "caller": "first",
+    "value": "x"
+  },
+  {
+    "event": "step",
+    "op": "await",
+    "caller": "first",
+    "settle": "micro"
+  },
+  {
+    "event": "step",
+    "op": "probe",
+    "caller": "second",
+    "runner": "gog",
+    "app": "g1"
+  },
+  {
+    "event": "released",
+    "key": "gog:g1"
+  },
+  {
+    "event": "received",
+    "caller": "second",
+    "value": "probe"
+  }
+]

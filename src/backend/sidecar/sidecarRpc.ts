@@ -84,9 +84,10 @@ import {
   RUST_LAUNCH_RUNNER_CALL,
   RUST_LAUNCH_WINE_COMMAND,
   RUST_LAUNCH_WINE_PATH,
-  RUST_LAUNCH_SCRIPT_RUN,
   RUST_LAUNCH_SPAWN_ASYNC,
   RUST_LAUNCH_ASK_FORCE_UNINSTALL,
+  RUST_LAUNCH_RUN,
+  RUST_LAUNCH_FLIGHT_WAIT,
   RUST_LAUNCH_VERIFY_WINE_PREFIX,
   RUST_DIALOG_MESSAGE,
   RUST_DIALOG_OPEN,
@@ -259,9 +260,9 @@ const RUST_INVOKE_TIMEOUT_MS = 60_000
  *
  * Twenty-fourth (Phase 88.2, 88.2-17): `launch_wine_command` runs one wine command for as long as the game or installer it hosts
  * takes (the TS `runWineCommand` it replaces had no timeout either), `launch_wine_path` runs `winepath` through that same
- * command core and `launch_script_run` runs a game's before or after launch script for as long as the user wrote it to. Rust
- * bounds each by the tracked kill and the app shutdown (the registrant and the shutdown token), so no entry can outlive the
- * sidecar.
+ * command core (88.3-19 retired `launch_script_run`, which ran a game's before or after launch script: the Rust funnel runs
+ * those in process and nothing in the sidecar called it). Rust bounds each by the tracked kill and the app shutdown (the
+ * registrant and the shutdown token), so no entry can outlive the sidecar.
  *
  * Twenty-fifth (Phase 88.2, 88.2-17): `launch_spawn_async` runs one program to its end (an installer, an archive move) for as
  * long as it takes, as the TS `spawnAsync` it replaces did; the stream-id kill, the caller's timeout when it passes one and the
@@ -272,6 +273,16 @@ const RUST_INVOKE_TIMEOUT_MS = 60_000
  * the installed list, through a native dialog a person answers with no limit, and on Yes waits on the manager hooks over
  * `launchManagerCall` (the TS `askForceUninstall` it replaces waited on the same dialog). The shutdown token ends it, as it ends
  * the dialog channels.
+ *
+ * Twenty-seventh (Phase 88.3, 88.3-06): `launch_run` is one whole Play through the Rust launch funnel. It answers when the game's
+ * process is over (the funnel waits on the TS `launch` hook over `launchManagerCall` for the session), which can be hours, so no
+ * wall-clock value is right for it. The funnel holds its own registrant and the shutdown token ends it, so no entry can outlive
+ * the sidecar; a second Play of the same game joins the first rather than starting another.
+ *
+ * Twenty-eighth (Phase 88.3, 88.3-11): `launch_flight_wait` is the joiner half of the one Rust single-flight table. A joiner waits for
+ * the whole dispatch of the leader it joined (a Steam launch or a game session), which can be hours. It ends when the leader settles,
+ * when the leader's flight is released because the sidecar went away (the shell answers `abandoned` to every joiner at sidecar EOF)
+ * and on the shutdown token. `launch_flight_begin` and `launch_flight_end` are lookups under one lock and stay bounded.
  */
 const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_DIALOG_OPEN,
@@ -323,9 +334,10 @@ const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_LAUNCH_RUNNER_CALL,
   RUST_LAUNCH_WINE_COMMAND,
   RUST_LAUNCH_WINE_PATH,
-  RUST_LAUNCH_SCRIPT_RUN,
   RUST_LAUNCH_SPAWN_ASYNC,
-  RUST_LAUNCH_ASK_FORCE_UNINSTALL
+  RUST_LAUNCH_ASK_FORCE_UNINSTALL,
+  RUST_LAUNCH_RUN,
+  RUST_LAUNCH_FLIGHT_WAIT
 ]
 
 /**

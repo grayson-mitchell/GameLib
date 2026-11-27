@@ -6,7 +6,7 @@
  * environment or joins it into a `--wrapper` flag, so a reply of the wrong shape is an error at the call and never
  * a malformed variable in a game's environment.
  */
-import type { ExecResult } from 'common/types'
+import type { ExecResult, StatusPromise } from 'common/types'
 
 /** A string-to-string map: a plain object whose every value is a string. */
 export function settleEnvMap(
@@ -66,4 +66,21 @@ export function settleVerifyPrefixReply(
     }
   }
   throw new Error(`${builder}: the reply was not a command result`)
+}
+
+/** The three words a launch can end with, as the `StatusPromise` of `common/types` names them. */
+const LAUNCH_STATUSES = ['done', 'error', 'abort'] as const
+
+/**
+ * The reply of one Play through the Rust launch funnel (88.3-10): the `{ status }` a `StatusPromise` resolves to. Anything
+ * else (not an object, no `status`, a word outside the three) throws by name, so a drifted reply fails the Play loudly instead
+ * of passing as a launch that ended.
+ */
+export function settleLaunchStatus(reply: unknown): Awaited<StatusPromise> {
+  if (typeof reply === 'object' && reply !== null && 'status' in reply) {
+    const { status } = reply
+    const word = LAUNCH_STATUSES.find((s) => s === status)
+    if (word) return { status: word }
+  }
+  throw new Error('launchRun: the reply was not a launch status')
 }

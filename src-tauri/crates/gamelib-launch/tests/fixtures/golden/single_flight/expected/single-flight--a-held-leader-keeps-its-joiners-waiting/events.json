@@ -1,0 +1,64 @@
+[
+  {
+    "event": "step",
+    "op": "begin",
+    "caller": "leader",
+    "runner": "steam",
+    "app": "1"
+  },
+  {
+    "event": "run",
+    "caller": "leader",
+    "key": "steam:1"
+  },
+  {
+    "event": "step",
+    "op": "begin",
+    "caller": "joiner-1",
+    "runner": "steam",
+    "app": "1",
+    "onJoin": "notify"
+  },
+  {
+    "event": "joined",
+    "caller": "joiner-1",
+    "key": "steam:1",
+    "samePromiseAsOwner": true
+  },
+  {
+    "event": "onJoin",
+    "caller": "joiner-1",
+    "key": "steam:1"
+  },
+  {
+    "event": "step",
+    "op": "begin",
+    "caller": "joiner-2",
+    "runner": "steam",
+    "app": "1",
+    "onJoin": "notify-steam"
+  },
+  {
+    "event": "joined",
+    "caller": "joiner-2",
+    "key": "steam:1",
+    "samePromiseAsOwner": true
+  },
+  {
+    "event": "onJoin",
+    "caller": "joiner-2",
+    "key": "steam:1",
+    "notice": "already starting"
+  },
+  {
+    "event": "step",
+    "op": "probe",
+    "caller": "late",
+    "runner": "steam",
+    "app": "1"
+  },
+  {
+    "event": "still-held",
+    "key": "steam:1"
+  }
+]

@@ -1,0 +1,363 @@
+[
+  {
+    "kind": "play",
+    "n": 1
+  },
+  {
+    "kind": "hook",
+    "hook": "getSettings",
+    "runner": "nile",
+    "args": []
+  },
+  {
+    "kind": "config",
+    "member": "getSettings",
+    "args": []
+  },
+  {
+    "kind": "tsStore",
+    "op": "set",
+    "key": "nile-app.firstPlayed",
+    "value": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "kind": "log",
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Launching Title of nile (nile-app)"
+  },
+  {
+    "kind": "frontend",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "nile-app",
+        "runner": "nile",
+        "status": "syncing-saves"
+      }
+    ]
+  },
+  {
+    "kind": "bus",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "nile-app",
+        "runner": "nile",
+        "status": "syncing-saves"
+      }
+    ]
+  },
+  {
+    "kind": "log",
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Downloading saves for Title of nile"
+  },
+  {
+    "kind": "hook",
+    "hook": "syncSaves",
+    "runner": "nile",
+    "args": [
+      "--skip-upload",
+      "/pins/saves",
+      []
+    ]
+  },
+  {
+    "kind": "log",
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Saves for Title of nile downloaded"
+  },
+  {
+    "kind": "frontend",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "nile-app",
+        "runner": "nile",
+        "status": "launching"
+      }
+    ]
+  },
+  {
+    "kind": "bus",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "nile-app",
+        "runner": "nile",
+        "status": "launching"
+      }
+    ]
+  },
+  {
+    "kind": "appState",
+    "member": "hideMainWindow",
+    "args": []
+  },
+  {
+    "kind": "log",
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Preventing display from sleep"
+  },
+  {
+    "kind": "appState",
+    "member": "wakeLock.start",
+    "args": [
+      "prevent-display-sleep"
+    ]
+  },
+  {
+    "kind": "config",
+    "member": "getSettings",
+    "args": []
+  },
+  {
+    "kind": "gameConfig",
+    "member": "getSettings",
+    "appName": "nile-app",
+    "args": []
+  },
+  {
+    "kind": "gameLog",
+    "target": {
+      "kind": "game",
+      "appName": "nile-app",
+      "runner": "nile",
+      "type": "launch"
+    },
+    "rotate": true,
+    "level": "WARNING",
+    "prefix": "",
+    "text": "IMPORTANT: Logs are disabled"
+  },
+  {
+    "kind": "gameLog",
+    "target": {
+      "kind": "game",
+      "appName": "nile-app",
+      "runner": "nile",
+      "type": "launch"
+    },
+    "rotate": false,
+    "level": "WARNING",
+    "prefix": "",
+    "text": "Turn on Verbose logs in the game's settings (Advanced tab) before reporting an issue."
+  },
+  {
+    "kind": "rust",
+    "channel": "engine_launch_select",
+    "args": [
+      {
+        "runner": "nile",
+        "appName": "nile-app",
+        "title": "Title of nile",
+        "isNative": true,
+        "settings": {
+          "verboseLogs": false,
+          "autoSyncSaves": true,
+          "savesPath": "/pins/saves",
+          "gogSaves": [],
+          "wineVersion": {
+            "name": "Wine-Test",
+            "bin": "/pins/wines/Wine-Test/bin/wine",
+            "type": "wine"
+          },
+          "afterLaunchScriptPath": "/pins/scripts/after.sh"
+        },
+        "offline": false
+      }
+    ],
+    "reply": {
+      "kind": "skip"
+    }
+  },
+  {
+    "kind": "frontend",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "nile-app",
+        "runner": "nile",
+        "status": "launching"
+      }
+    ]
+  },
+  {
+    "kind": "bus",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "nile-app",
+        "runner": "nile",
+        "status": "launching"
+      }
+    ]
+  },
+  {
+    "kind": "hook",
+    "hook": "launch",
+    "runner": "nile",
+    "args": [
+      null,
+      null,
+      null
+    ],
+    "writer": {
+      "target": {
+        "kind": "game",
+        "appName": "nile-app",
+        "runner": "nile",
+        "type": "launch"
+      },
+      "rotationClaimed": true
+    }
+  },
+  {
+    "kind": "script",
+    "when": "after",
+    "appName": "nile-app",
+    "wine": "Wine-Test",
+    "beforeLaunchScriptPath": null,
+    "afterLaunchScriptPath": "/pins/scripts/after.sh",
+    "target": {
+      "kind": "game",
+      "appName": "nile-app",
+      "runner": "nile",
+      "type": "launch"
+    }
+  },
+  {
+    "kind": "log",
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Stopping Display Power Saver Blocker"
+  },
+  {
+    "kind": "appState",
+    "member": "wakeLock.stop",
+    "args": [
+      7
+    ]
+  },
+  {
+    "kind": "tsStore",
+    "op": "set",
+    "key": "nile-app.lastPlayed",
+    "value": "2026-01-01T00:01:30.000Z"
+  },
+  {
+    "kind": "tsStore",
+    "op": "set",
+    "key": "nile-app.totalPlayed",
+    "value": 1
+  },
+  {
+    "kind": "config",
+    "member": "getSettings",
+    "args": []
+  },
+  {
+    "kind": "rust",
+    "channel": "info_recent_add",
+    "args": [
+      {
+        "appName": "nile-app",
+        "title": "Title of nile",
+        "runner": "nile"
+      }
+    ],
+    "reply": null
+  },
+  {
+    "kind": "frontend",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "nile-app",
+        "runner": "nile",
+        "status": "done"
+      }
+    ]
+  },
+  {
+    "kind": "bus",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "nile-app",
+        "runner": "nile",
+        "status": "done"
+      }
+    ]
+  },
+  {
+    "kind": "frontend",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "nile-app",
+        "runner": "nile",
+        "status": "syncing-saves"
+      }
+    ]
+  },
+  {
+    "kind": "bus",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "nile-app",
+        "runner": "nile",
+        "status": "syncing-saves"
+      }
+    ]
+  },
+  {
+    "kind": "log",
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Uploading saves for Title of nile"
+  },
+  {
+    "kind": "hook",
+    "hook": "syncSaves",
+    "runner": "nile",
+    "args": [
+      "--skip-download",
+      "/pins/saves",
+      []
+    ]
+  },
+  {
+    "kind": "log",
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Saves uploaded for Title of nile"
+  },
+  {
+    "kind": "frontend",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "nile-app",
+        "runner": "nile",
+        "status": "done"
+      }
+    ]
+  },
+  {
+    "kind": "bus",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "nile-app",
+        "runner": "nile",
+        "status": "done"
+      }
+    ]
+  }
+]

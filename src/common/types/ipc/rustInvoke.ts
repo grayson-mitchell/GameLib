@@ -168,12 +168,17 @@ import {
   RUST_LAUNCH_RUNNER_ABORT,
   RUST_LAUNCH_WINE_COMMAND,
   RUST_LAUNCH_WINE_PATH,
-  RUST_LAUNCH_SCRIPT_RUN,
   RUST_LAUNCH_SPAWN_ASYNC,
   RUST_LAUNCH_TRACKED_KILL,
   RUST_LAUNCH_TRACKED_KILL_ALL,
   RUST_LAUNCH_GAMES_RUNNING,
   RUST_LAUNCH_ASK_FORCE_UNINSTALL,
+  RUST_LAUNCH_RUN,
+  RUST_LAUNCH_FLIGHT_BEGIN,
+  RUST_LAUNCH_FLIGHT_END,
+  RUST_LAUNCH_FLIGHT_WAIT,
+  RUST_LAUNCH_READOPTED_ANNOUNCE,
+  RUST_LAUNCH_WINDOW_RAISE,
   RUST_LAUNCH_SETUP_ENV_VARS,
   RUST_LAUNCH_SETUP_WINE_ENV_VARS,
   RUST_LAUNCH_SETUP_WRAPPER_ENV_VARS,
@@ -1427,27 +1432,6 @@ export const rustInvokeArgs = {
       })
       .strict()
   ]),
-  // Phase 88.2 (SVC-03, 88.2-17, D-02, D-19): a game's before or after launch script. One strict object; `settingsJson` and
-  // `infoJson` are the TS's own `JSON.stringify` text, handed to the script verbatim. The shell appends the process
-  // environment, which is laid over the `HEROIC_GAME_*` block. `logTarget` is the game's log writer, read when `verbose` is on.
-  [RUST_LAUNCH_SCRIPT_RUN]: z.tuple([
-    z
-      .object({
-        scriptPath: z.string(),
-        stage: z.enum(['before', 'after']),
-        appName: z.string(),
-        executable: z.string().optional(),
-        prefix: z.string().optional(),
-        runner: z.string(),
-        title: z.string(),
-        installPath: z.string().optional(),
-        settingsJson: z.string(),
-        infoJson: z.string(),
-        verbose: z.boolean().optional(),
-        logTarget: runnerLogHandOff.optional()
-      })
-      .strict()
-  ]),
   // Phase 88.2 (SVC-03, 88.2-17, D-02, D-19): `spawnAsync`. `[args]` only, one strict object. `env` is the whole environment the
   // child gets when the caller passes one (opaque to the generated decode, the crate checks it is a string map); `timeoutMs` is
   // `null` for a timeout the TS held as `NaN` or `Infinity`, which JSON cannot carry (an absent one is no timeout too).
@@ -1485,6 +1469,55 @@ export const rustInvokeArgs = {
       .object({
         runner: z.enum(['gog', 'legendary', 'nile', 'sideload', 'steam']),
         appName: z.string()
+      })
+      .strict()
+  ]),
+  // Phase 88.3 (SVC-03, 88.3-06, D-19): one Play through the Rust launch funnel. `[params]`, one strict object: the renderer's
+  // `LaunchParams`. `launchArguments` is the chosen `LaunchOption`, passed through as an object the crate never reads by key
+  // (`x-rust-value`); the shell appends the process environment and the wine host facts itself (T-88.1-14), and the crate decodes the
+  // object strictly again.
+  [RUST_LAUNCH_RUN]: z.tuple([
+    z
+      .object({
+        appName: z.string(),
+        runner: z.enum(['gog', 'legendary', 'nile', 'sideload', 'steam']),
+        launchArguments: z
+          .record(z.string(), z.unknown())
+          .meta({ title: 'launchArguments', 'x-rust-value': true })
+          .optional(),
+        skipVersionCheck: z.boolean().optional(),
+        args: z.array(z.string().meta({ title: 'arg' })).optional()
+      })
+      .strict()
+  ]),
+  // Phase 88.3 (SVC-03, 88.3-11, D-04, D-19): a leader outside the funnel leads, joins and ends flights in the one Rust single-flight
+  // table. `launch_flight_begin` and `launch_flight_wait` take `[{ runner, appName }]`, one strict object: the key is two plain
+  // strings the crate bounds (it is a runner name or `steam`, never a path); `launch_flight_end` takes `[{ flightId, result }]`, the
+  // opaque id Rust minted and the value every joiner receives (opaque to the generated decode, `x-rust-value`).
+  [RUST_LAUNCH_FLIGHT_BEGIN]: z.tuple([
+    z.object({ runner: z.string(), appName: z.string() }).strict()
+  ]),
+  [RUST_LAUNCH_FLIGHT_WAIT]: z.tuple([
+    z.object({ runner: z.string(), appName: z.string() }).strict()
+  ]),
+  [RUST_LAUNCH_FLIGHT_END]: z.tuple([
+    z
+      .object({
+        flightId: z.string(),
+        result: z.unknown().meta({ title: 'result', 'x-rust-value': true })
+      })
+      .strict()
+  ]),
+  // Phase 88.3 (SVC-03, 88.3-12, D-19): the announcement of the games the boot scan re-adopted. No argument; answers how many it announced.
+  [RUST_LAUNCH_READOPTED_ANNOUNCE]: empty,
+  // Phase 88.3 (SVC-03, 88.3-13, D-19, D-21): the Wine window raiser. The pids are the process table's text (Rust keeps the all-digit ones) and the
+  // names are argv elements of a constant AppleScript; neither is ever part of the script. Answers null when the raise is over.
+  [RUST_LAUNCH_WINDOW_RAISE]: z.tuple([
+    z
+      .object({
+        context: z.string(),
+        pids: z.array(z.string()).optional(),
+        processNames: z.array(z.string()).optional()
       })
       .strict()
   ])

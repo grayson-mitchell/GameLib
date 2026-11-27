@@ -1,0 +1,46 @@
+[
+  {
+    "event": "construct",
+    "pendingTimers": 0
+  },
+  {
+    "event": "action",
+    "op": "raise",
+    "as": "r1",
+    "input": {
+      "context": "c",
+      "pids": [
+        "5"
+      ]
+    }
+  },
+  {
+    "event": "spawn",
+    "at": 0,
+    "program": "osascript",
+    "argv": [
+      "-e",
+      "<script>",
+      "1",
+      "5"
+    ]
+  },
+  {
+    "event": "timer",
+    "at": 0,
+    "ms": 1500
+  },
+  {
+    "event": "action",
+    "op": "stop"
+  },
+  {
+    "event": "clear",
+    "at": 0
+  },
+  {
+    "event": "action",
+    "op": "advance",
+    "ms": 10000
+  }
+]

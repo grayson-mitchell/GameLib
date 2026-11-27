@@ -3,6 +3,12 @@
 //! (`kill_game_tree`) terminates the game's named Game Job, or, once that name is gone, the
 //! stamped leader and its parent-linked descendants, so only that function lives here.
 //! With `job.rs`, this is where `TerminateProcess` is called.
+//!
+//! `kill_adopted_tree` is the re-adoption kill (88.3, D-31): it takes an `adopt::AdoptProof`,
+//! proves the tree again with `adopt::identify`, and only then signals.
+
+use crate::adopt::{self, AdoptProof, Identity};
+use std::time::Duration;
 
 /// How a stamp-checked game tree kill ended.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -24,6 +30,48 @@ pub(crate) use unix::{signal_group, terminate_known_group};
 pub use win::harness_kill_game_tree_query_only_job;
 #[cfg(windows)]
 pub use win::kill_game_tree;
+
+/// Kills the tree of a game GameLib recorded as an [`AdoptProof`], for a game GameLib holds no
+/// `Child` for and whose leader may already have exited (a Wine or CrossOver launcher, Pitfall 10).
+///
+/// Prohibition 5 at the mechanism: `adopt::identify` runs first and nothing is signalled for
+/// `NotOurs` or `Gone`. A live leader with the recorded stamp is ended by `kill_game_tree`, which
+/// proves the stamp again itself. A recorded member that proved the group is checked a second time
+/// (alive, recorded stamp, still in group `leader_pid`) immediately before the group is signalled,
+/// through the existing `terminate_known_group` and its pgid <= 1 refusal. On Windows the Game Job
+/// named for the leader's pid and stamp is checked to hold a process and terminated through
+/// `GameJob::terminate`; a Job whose terminate is refused answers `NotOurs` (nothing signalled).
+pub fn kill_adopted_tree(proof: &AdoptProof, grace: Duration) -> KillOutcome {
+    match adopt::identify(proof) {
+        Identity::Leader => kill_game_tree(proof.leader_pid, proof.leader_stamp, grace),
+        Identity::Member(pid) => kill_adopted_member(proof, pid, grace),
+        Identity::Job => kill_adopted_job(proof, grace),
+        Identity::NotOurs => KillOutcome::NotOurs,
+        Identity::Gone => KillOutcome::Gone,
+    }
+}
+
+#[cfg(unix)]
+fn kill_adopted_member(proof: &AdoptProof, pid: u32, grace: Duration) -> KillOutcome {
+    unix::kill_adopted_member(proof, pid, grace)
+}
+
+#[cfg(not(unix))]
+fn kill_adopted_member(_proof: &AdoptProof, _pid: u32, _grace: Duration) -> KillOutcome {
+    // Windows has no process groups: a member proof is never produced there.
+    KillOutcome::Gone
+}
+
+#[cfg(windows)]
+fn kill_adopted_job(proof: &AdoptProof, grace: Duration) -> KillOutcome {
+    win::kill_adopted_job(proof, grace)
+}
+
+#[cfg(not(windows))]
+fn kill_adopted_job(_proof: &AdoptProof, _grace: Duration) -> KillOutcome {
+    // Only Windows has a Game Job: a Job proof is never produced elsewhere.
+    KillOutcome::Gone
+}
 
 /// What one candidate child's own handle reports, as `select_tree` needs it. Every field is an
 /// `Option` because every read can fail, and a read that failed proves nothing.
@@ -299,6 +347,27 @@ mod win {
                 terminate_stamped_tree(&leader, deadline)
             }
         }
+    }
+
+    /// The Job arm of `kill_adopted_tree`: the Game Job named for the leader's pid and stamp is
+    /// opened again and must still hold a process, then it is terminated and given `grace` (capped
+    /// at `TERMINATE_SETTLE`) to empty. `Gone` when no such Job opens or it holds nothing (an empty
+    /// squatter included: nothing is terminated); `NotOurs` when the terminate is refused.
+    pub fn kill_adopted_job(proof: &crate::adopt::AdoptProof, grace: Duration) -> KillOutcome {
+        let Some(job) = GameJob::open(proof.leader_pid, proof.leader_stamp) else {
+            return KillOutcome::Gone;
+        };
+        if !matches!(job.active_processes(), Some(n) if n > 0) {
+            return KillOutcome::Gone;
+        }
+        if !job.terminate() {
+            return KillOutcome::NotOurs;
+        }
+        let deadline = Instant::now() + grace.min(TERMINATE_SETTLE);
+        while Instant::now() < deadline && job.active_processes().is_some_and(|n| n > 0) {
+            std::thread::sleep(Duration::from_millis(20));
+        }
+        KillOutcome::Killed
     }
 
     /// How many times the descendant walk repeats to catch a process the tree started while it
@@ -585,6 +654,29 @@ mod unix {
             return KillOutcome::NotOurs;
         }
         match i32::try_from(pid) {
+            Ok(pgid) => terminate_known_group(pgid, grace),
+            // A pid that does not fit an i32 cannot be a group this crate could signal.
+            Err(_) => KillOutcome::NotOurs,
+        }
+    }
+
+    /// The member arm of `kill_adopted_tree`: `pid` is the recorded member `identify` proved. The
+    /// proof is repeated here, immediately before the signal (alive, recorded stamp, still in group
+    /// `leader_pid`), and the group is then ended through `terminate_known_group`, which refuses
+    /// `pgid <= 1` and answers `Gone` for an empty group. The group cannot have been recycled while
+    /// the proven member lives.
+    pub(crate) fn kill_adopted_member(
+        proof: &crate::adopt::AdoptProof,
+        pid: u32,
+        grace: Duration,
+    ) -> KillOutcome {
+        let Some(member) = proof.members.iter().find(|m| m.pid == pid) else {
+            return KillOutcome::Gone;
+        };
+        if !crate::adopt::member_holds(proof.leader_pid, member) {
+            return KillOutcome::Gone;
+        }
+        match i32::try_from(proof.leader_pid) {
             Ok(pgid) => terminate_known_group(pgid, grace),
             // A pid that does not fit an i32 cannot be a group this crate could signal.
             Err(_) => KillOutcome::NotOurs,

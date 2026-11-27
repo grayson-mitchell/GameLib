@@ -4,7 +4,7 @@
 //! The contract is shared with the TS side through `src/common/__fixtures__/logFrameVectors.json`.
 
 use gamelib_core::paths::{log_file, GameLogType, LogRunner, LogTarget, Platform};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::prefix::{Level, Prefix};
@@ -33,7 +33,7 @@ pub struct FrameBatch {
 
 /// One flat struct for every target kind. The closed-set fields are read as strings and checked
 /// explicitly, so each failure maps to its own category.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct FrameTarget {
     pub kind: String,

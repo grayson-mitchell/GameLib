@@ -528,7 +528,12 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     // Phase 88.2 plan 17: 210 -> 213, launch_wine_command, launch_wine_path and launch_script_run.
     // Phase 88.2 plan 17 task 2: 213 -> 217, launch_spawn_async, launch_tracked_kill, launch_tracked_kill_all and launch_games_running.
     // Phase 88.2 plan 20: 217 -> 218, launch_ask_force_uninstall.
-    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(218)
+    // Phase 88.3 plan 06: 218 -> 219, launch_run.
+    // Phase 88.3 plan 11: 219 -> 222, launch_flight_begin, launch_flight_wait and launch_flight_end.
+    // Phase 88.3 plan 12: 222 -> 223, launch_readopted_announce.
+    // Phase 88.3 plan 13: 223 -> 224, launch_window_raise.
+    // Phase 88.3 plan 19: 224 -> 223, launch_script_run, which no TS caller reaches any more (the Rust funnel runs the launch scripts).
+    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(223)
     expect(router).not.toContain('_ =>')
   })
 
@@ -1111,12 +1116,11 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       // the false answer for an id no run holds and a real `/bin/sh` run ended by its stream id and by its abort id.
       'launch_runner_kill',
       'launch_runner_abort',
-      // Phase 88.2 plan 17: the wine command, the winepath translation and a game's launch script (`wineCommandRun`, `winePathGet` and `scriptRun` in `launchrust/runner.ts`). PROVEN:
-      // `launch_dispatch::tests` drives each arm's decode, not-ready and the fixed bad-args, a wine that is not installed refused without a spawn, and a real script run over the shell's host
-      // that answers `true` whatever its code and an error that carries the OS's text; `gamelib-launch`'s `golden_wine_launch.rs`, `golden_wine_path.rs` and `script_real.rs` drive the crate.
+      // Phase 88.2 plan 17: the wine command and the winepath translation (`wineCommandRun` and `winePathGet` in `launchrust/runner.ts`). PROVEN:
+      // `launch_dispatch::tests` drives each arm's decode, not-ready and the fixed bad-args, and a wine that is not installed refused without a spawn; `gamelib-launch`'s
+      // `golden_wine_launch.rs` and `golden_wine_path.rs` drive the crate. (`launch_script_run`, a game's launch script, was retired in 88.3-19: the Rust funnel runs it in process.)
       'launch_wine_command',
       'launch_wine_path',
-      'launch_script_run',
       // Phase 88.2 plan 17: `spawnAsync`, the tracked kill, the kill of every tracked run and the running-game query (`spawnAsyncRun`, `trackedKill`, `trackedKillAll` and `gamesRunning` in
       // `launchrust/runner.ts`). PROVEN: `launch_dispatch::tests` drives each arm's decode, not-ready and the fixed bad-args, a real `/bin/sh` spawnAsync that answers its result and the OS's text
       // for a program that cannot start, a tracked kill that ends a real run by its key and a kill-all that ends the rest; `gamelib-launch`'s `golden_spawn_async.rs` drives the crate.
@@ -1127,6 +1131,22 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       // Phase 88.2 plan 20: the deleted-folder prompt (`askForceUninstall` in `launchrust/runner.ts`). PROVEN: `launch_dispatch::tests` drives the arm's decode, not-ready and the fixed bad-args;
       // `gamelib-launch`'s `ask_force_uninstall` tests drive the crate op and the shell's EOF test drives a Yes over hooks the sidecar never answers.
       'launch_ask_force_uninstall',
+      // Phase 88.3 plan 06: one Play through the Rust launch funnel (`launch_run`, `RUST_LAUNCH_RUN`). PROVEN: `launch_dispatch::tests` drives the arm's decode, not-ready, the fixed bad-args and a full
+      // run (native game, scripted manager hooks) that answers `{ status: 'done' }` after `launch_facts` and `launch`; `gamelib-launch`'s `funnel.rs` replays golden/funnel against the crate.
+      'launch_run',
+      // Phase 88.3 plan 11: a leader outside the funnel leads, joins and ends a flight in the one Rust single-flight table (`launchFlightBegin`, `launchFlightWait` and
+      // `launchFlightEnd` shims arrive with 88.3-18). PROVEN: `launch_dispatch::tests` drives each arm's decode, not-ready and the fixed bad-args, a begin then end that
+      // releases the key, a joiner answered the leader's value and one answered `abandoned` after the sidecar-EOF release; `gamelib-launch`'s `single_flight.rs` drives the crate.
+      'launch_flight_begin',
+      'launch_flight_wait',
+      'launch_flight_end',
+      // Phase 88.3 plan 12: the announcement of the games the shell re-adopted at boot (`announceReadoptedGames`, called from the sidecar's `frontendReady` on every delivery).
+      // PROVEN: `launch_dispatch::tests` drives the arm's not-ready and fixed bad-args and, over a real surviving game, the boot scan, the announce answering 1 with a `playing` push, `launch_games_running` reading
+      // true and the quit's kill ending it by its proof; `gamelib-launch`'s `readopt.rs` tests drive the crate.
+      'launch_readopted_announce',
+      // Phase 88.3 plan 13: the Wine window raiser (`raiseWineWindow`, the boot's `windowRaiser`). PROVEN: `launch_dispatch::tests` drives the arm's
+      // not-ready, its fixed bad-args and the no-op answer off macOS; `gamelib-launch`'s `golden_window_raise.rs` replays every recorded TS case.
+      'launch_window_raise',
       // Phase 94 plan 11: the shortcut exists check (`shortcutsResolvers.ts` resolver). PROVEN: `shortcuts_dispatch::tests`
       // drives the arm's decode, not-ready and a real exists answer on a FakeHome; `golden_paths.rs` replays the TS goldens.
       'shortcuts_exist',

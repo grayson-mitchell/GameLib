@@ -172,9 +172,6 @@ jest.mock('../bridge/launchTarget', () => ({
 jest.mock('../bridge/helperProcess', () => ({
   ensureBridgeHelperReady: jest.fn()
 }))
-jest.mock('backend/launcher', () => ({
-  runWineCommand: jest.fn()
-}))
 
 jest.mock('../nativeInstallSetting', () => ({
   isSteamNativeInstallEnabled: jest.fn()

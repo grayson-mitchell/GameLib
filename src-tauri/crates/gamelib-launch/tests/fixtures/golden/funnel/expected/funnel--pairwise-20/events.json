@@ -1,0 +1,272 @@
+[
+  {
+    "kind": "play",
+    "n": 1
+  },
+  {
+    "kind": "hook",
+    "hook": "getSettings",
+    "runner": "legendary",
+    "args": []
+  },
+  {
+    "kind": "config",
+    "member": "getSettings",
+    "args": []
+  },
+  {
+    "kind": "tsStore",
+    "op": "set",
+    "key": "legendary-app.firstPlayed",
+    "value": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "kind": "log",
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Launching Title of legendary (legendary-app)"
+  },
+  {
+    "kind": "frontend",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "legendary-app",
+        "runner": "legendary",
+        "status": "launching"
+      }
+    ]
+  },
+  {
+    "kind": "bus",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "legendary-app",
+        "runner": "legendary",
+        "status": "launching"
+      }
+    ]
+  },
+  {
+    "kind": "appState",
+    "member": "hideMainWindow",
+    "args": []
+  },
+  {
+    "kind": "log",
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Preventing display from sleep"
+  },
+  {
+    "kind": "appState",
+    "member": "wakeLock.start",
+    "args": [
+      "prevent-display-sleep"
+    ]
+  },
+  {
+    "kind": "config",
+    "member": "getSettings",
+    "args": []
+  },
+  {
+    "kind": "gameConfig",
+    "member": "getSettings",
+    "appName": "legendary-app",
+    "args": []
+  },
+  {
+    "kind": "rust",
+    "channel": "engine_launch_select",
+    "args": [
+      {
+        "runner": "legendary",
+        "appName": "legendary-app",
+        "title": "Title of legendary",
+        "isNative": true,
+        "settings": {
+          "verboseLogs": true,
+          "autoSyncSaves": false,
+          "savesPath": "/pins/saves",
+          "gogSaves": [],
+          "wineVersion": {
+            "name": "Wine-Test",
+            "bin": "/pins/wines/Wine-Test/bin/wine",
+            "type": "wine"
+          },
+          "afterLaunchScriptPath": "/pins/scripts/after.sh"
+        },
+        "offline": false
+      }
+    ],
+    "reply": {
+      "kind": "skip"
+    }
+  },
+  {
+    "kind": "frontend",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "legendary-app",
+        "runner": "legendary",
+        "status": "launching"
+      }
+    ]
+  },
+  {
+    "kind": "bus",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "legendary-app",
+        "runner": "legendary",
+        "status": "launching"
+      }
+    ]
+  },
+  {
+    "kind": "hook",
+    "hook": "launch",
+    "runner": "legendary",
+    "args": [
+      null,
+      null,
+      null
+    ],
+    "writer": {
+      "target": {
+        "kind": "game",
+        "appName": "legendary-app",
+        "runner": "legendary",
+        "type": "launch"
+      },
+      "rotationClaimed": false
+    }
+  },
+  {
+    "kind": "gameLog",
+    "target": {
+      "kind": "game",
+      "appName": "legendary-app",
+      "runner": "legendary",
+      "type": "launch"
+    },
+    "rotate": true,
+    "raw": "Running script after Title of legendary (/pins/scripts/after.sh)\n"
+  },
+  {
+    "kind": "script",
+    "when": "after",
+    "appName": "legendary-app",
+    "wine": "Wine-Test",
+    "beforeLaunchScriptPath": null,
+    "afterLaunchScriptPath": "/pins/scripts/after.sh",
+    "target": {
+      "kind": "game",
+      "appName": "legendary-app",
+      "runner": "legendary",
+      "type": "launch"
+    }
+  },
+  {
+    "kind": "gameLog",
+    "target": {
+      "kind": "game",
+      "appName": "legendary-app",
+      "runner": "legendary",
+      "type": "launch"
+    },
+    "rotate": false,
+    "raw": "============= End of log ============="
+  },
+  {
+    "kind": "runsForMe",
+    "op": "set",
+    "key": "games",
+    "value": {
+      "legendary-app_legendary": "auto"
+    }
+  },
+  {
+    "kind": "frontend",
+    "channel": "runsForMeChanged",
+    "args": [
+      {
+        "legendary-app_legendary": "auto"
+      }
+    ]
+  },
+  {
+    "kind": "log",
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Runs for me: auto-set for legendary-app (legendary) after 90s of play"
+  },
+  {
+    "kind": "log",
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Stopping Display Power Saver Blocker"
+  },
+  {
+    "kind": "appState",
+    "member": "wakeLock.stop",
+    "args": [
+      7
+    ]
+  },
+  {
+    "kind": "tsStore",
+    "op": "set",
+    "key": "legendary-app.lastPlayed",
+    "value": "2026-01-01T00:01:30.000Z"
+  },
+  {
+    "kind": "tsStore",
+    "op": "set",
+    "key": "legendary-app.totalPlayed",
+    "value": 1
+  },
+  {
+    "kind": "config",
+    "member": "getSettings",
+    "args": []
+  },
+  {
+    "kind": "rust",
+    "channel": "info_recent_add",
+    "args": [
+      {
+        "appName": "legendary-app",
+        "title": "Title of legendary",
+        "runner": "legendary"
+      }
+    ],
+    "reply": null
+  },
+  {
+    "kind": "frontend",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "legendary-app",
+        "runner": "legendary",
+        "status": "done"
+      }
+    ]
+  },
+  {
+    "kind": "bus",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "legendary-app",
+        "runner": "legendary",
+        "status": "done"
+      }
+    ]
+  }
+]

@@ -112,7 +112,7 @@ describe('T-B: producer wiring pin (Focused(true) block references the channel +
 // Hybrid pattern: the LIGHT direct-transport harness (`startRpcServer` + `PassThrough`,
 // `storeEmbedWireContract.test.ts`'s own pattern) avoids the heavy `init`/`startSidecar`
 // bootstrap, combined with `steamFlows.test.ts`'s mock set -- needed because
-// `steamFlowRegistration.ts`'s import graph (via `launcher.ts`) is too heavy to import safely
+// `steamFlowRegistration.ts`'s import graph (via `launchrust/launcher.ts`) is too heavy to import safely
 // under Jest without it, even though this file drives none of those flows.
 jest.mock('os', () => {
   const actual = jest.requireActual('os')
@@ -156,9 +156,6 @@ jest.mock('../../storeManagers/steam/user', () => ({
 }))
 
 const launchEventCallbackMock = jest.fn()
-jest.mock('../../launcher', () => ({
-  launchEventCallback: (...args: unknown[]) => launchEventCallbackMock(...args)
-}))
 
 // The steam manager is a REAL SteamLibraryManager (built from test deps, 66.1-23 -- there is no
 // import-time singleton any more) that `steamFlowRegistration.ts` dispatches through, so

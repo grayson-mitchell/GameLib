@@ -1,0 +1,65 @@
+[
+  {
+    "event": "construct",
+    "pendingTimers": 0
+  },
+  {
+    "event": "action",
+    "op": "raise",
+    "as": "r1",
+    "input": {
+      "context": "bridge:1",
+      "pids": [
+        "123"
+      ],
+      "processNames": [
+        "Avernum 6.exe"
+      ]
+    }
+  },
+  {
+    "event": "spawn",
+    "at": 0,
+    "program": "osascript",
+    "argv": [
+      "-e",
+      "<script>",
+      "1",
+      "123",
+      "Avernum 6.exe"
+    ]
+  },
+  {
+    "event": "log",
+    "level": "info",
+    "prefix": "Steam",
+    "text": "raiseWineGameWindow [bridge:1]: raised (Avernum 6.exe pid=123)"
+  },
+  {
+    "event": "timer",
+    "at": 0,
+    "ms": 2500
+  },
+  {
+    "event": "action",
+    "op": "advance",
+    "ms": 2500
+  },
+  {
+    "event": "spawn",
+    "at": 2500,
+    "program": "osascript",
+    "argv": [
+      "-e",
+      "<script>",
+      "1",
+      "123",
+      "Avernum 6.exe"
+    ]
+  },
+  {
+    "event": "settled",
+    "raise": "r1",
+    "at": 2500
+  }
+]

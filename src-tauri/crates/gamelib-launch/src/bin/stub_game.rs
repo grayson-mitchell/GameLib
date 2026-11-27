@@ -14,6 +14,12 @@
 //! - `shell --user-data <dir> --args <json>`: the stand-in shell. Builds a `LaunchCtx` over a `StoreHost` rooted
 //!   at `<dir>` the way `gamelib-launch-cli` does (no keyring, no real profile), runs `launch_runner_call`
 //!   with the JSON array `<json>`, prints the reply and exits.
+//! - `shell --user-data <dir> --funnel <params json> --game <stub args json> [--after-script <path>]`: the
+//!   stand-in shell running one funnel launch (88.3-09). `run_launch` runs over in-binary manager hooks that
+//!   answer `launch_facts` (a native sideload game whose install folder is `<dir>/install`, with the script at
+//!   `<path>` as its after-script) and `launch` (a game-class `call_runner` of the stub game with `<stub args
+//!   json>`, a JSON array of the stub's own arguments). A test ends this process with SIGKILL while the game
+//!   runs, and a later context over the same `<dir>` re-adopts the game from its launch record.
 
 use std::io::Write;
 use std::path::PathBuf;
@@ -22,12 +28,23 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use gamelib_core::clock::SystemClock;
+use gamelib_core::process::BoxFuture;
 use gamelib_core::shutdown::Shutdown;
 use gamelib_engine::ctx::{EngineCtx, EnginePaths, Platform};
 use gamelib_info::ctx::{InfoCtx, InfoPaths, Platform as InfoPlatform};
 use gamelib_info::http::ReqwestHttp;
 use gamelib_knownfix::ctx::KnownFixCtx;
 use gamelib_launch::ctx::LaunchCtx;
+use gamelib_launch::funnel::steps::testing::RecordingSteps;
+use gamelib_launch::funnel::{run::run_launch, FunnelHost, LaunchParams};
+use gamelib_launch::hooks::{
+    HookError, LaunchFacts, LaunchHookArgs, LaunchHookReply, ManagerHooks,
+};
+use gamelib_launch::runner::call_runner::{
+    call_runner, RunnerCallArgs, RunnerHost, RunnerProps, SpawnClassArg,
+};
+use gamelib_launch::runner::stream::NullSink;
+use gamelib_launch::runner::{RunnerErrors, RunnerName};
 use gamelib_proc::SpecProcRunner;
 use gamelib_store::host::StoreHost;
 use gamelib_wine::ctx::WineCtx;
@@ -174,23 +191,14 @@ fn info_platform() -> InfoPlatform {
     }
 }
 
-fn shell(args: &[String]) -> ! {
-    let user_data = PathBuf::from(value(args, "--user-data").expect("--user-data <dir>"));
-    let op_args: Vec<serde_json::Value> =
-        match serde_json::from_str(value(args, "--args").expect("--args <json>")) {
-            Ok(serde_json::Value::Array(items)) => items,
-            _ => {
-                eprintln!("--args must be a JSON array");
-                exit(2);
-            }
-        };
+fn launch_ctx(user_data: &std::path::Path) -> LaunchCtx {
     let info = Arc::new(InfoCtx::new(
         Arc::new(StoreHost::new()),
         Arc::new(SystemClock),
         info_platform(),
         InfoPaths {
-            app_folder: user_data.clone(),
-            user_data: user_data.clone(),
+            app_folder: user_data.to_path_buf(),
+            user_data: user_data.to_path_buf(),
             temp: user_data.join("temp"),
             public_dir: None,
         },
@@ -204,11 +212,11 @@ fn shell(args: &[String]) -> ! {
             Arc::new(SystemClock),
             platform(),
             EnginePaths {
-                app_folder: user_data.clone(),
+                app_folder: user_data.to_path_buf(),
                 tools_path: user_data.join("tools"),
                 user_home: user_data.join("home"),
                 temp: user_data.join("temp"),
-                user_data: user_data.clone(),
+                user_data: user_data.to_path_buf(),
             },
             Shutdown::new(),
         )
@@ -221,7 +229,23 @@ fn shell(args: &[String]) -> ! {
         "0.0.0",
     ));
     let wine = Arc::new(WineCtx::new(engine.clone(), user_data.join("tools")));
-    let ctx = LaunchCtx::new(engine, knownfix, wine, info);
+    LaunchCtx::new(engine, knownfix, wine, info)
+}
+
+fn shell(args: &[String]) -> ! {
+    let user_data = PathBuf::from(value(args, "--user-data").expect("--user-data <dir>"));
+    if args.iter().any(|a| a == "--funnel") {
+        funnel_shell(&user_data, args);
+    }
+    let op_args: Vec<serde_json::Value> =
+        match serde_json::from_str(value(args, "--args").expect("--args <json>")) {
+            Ok(serde_json::Value::Array(items)) => items,
+            _ => {
+                eprintln!("--args must be a JSON array");
+                exit(2);
+            }
+        };
+    let ctx = launch_ctx(&user_data);
     match gamelib_launch::dispatch_sync("launch_runner_call", &op_args, &ctx) {
         Ok(reply) => {
             println!("{reply}");
@@ -232,4 +256,143 @@ fn shell(args: &[String]) -> ! {
             exit(2)
         }
     }
+}
+
+struct QuietErrors;
+
+impl RunnerErrors for QuietErrors {
+    fn handle(&self, _error: &str, _app_name: &str, _runner: RunnerName) {}
+}
+
+/// The managers of the funnel shell: facts for one native sideload game, and a `launch` that runs the stub game
+/// as the game class, with the funnel's own log hand-off as its log target (what `game.launch` does).
+struct FunnelHooks {
+    /// A context without these hooks (they would otherwise hold a reference to themselves).
+    ctx: LaunchCtx,
+    game_args: Vec<String>,
+    install_path: PathBuf,
+    after_script: Option<String>,
+}
+
+impl ManagerHooks for FunnelHooks {
+    fn game_title(
+        &self,
+        _runner: RunnerName,
+        app_name: &str,
+    ) -> BoxFuture<Result<String, HookError>> {
+        let title = app_name.to_string();
+        Box::pin(async move { Ok(title) })
+    }
+
+    fn force_uninstall(
+        &self,
+        _runner: RunnerName,
+        _app_name: &str,
+    ) -> BoxFuture<Result<(), HookError>> {
+        Box::pin(async { Ok(()) })
+    }
+
+    fn launch_facts(
+        &self,
+        _runner: RunnerName,
+        app_name: &str,
+    ) -> BoxFuture<Result<LaunchFacts, HookError>> {
+        let mut settings = serde_json::json!({ "verboseLogs": true });
+        if let Some(script) = &self.after_script {
+            settings["afterLaunchScriptPath"] = serde_json::json!(script);
+        }
+        let facts: LaunchFacts = serde_json::from_value(serde_json::json!({
+            "gameInfo": {
+                "title": app_name,
+                "install": { "install_path": self.install_path, "executable": "stub" },
+            },
+            "settings": settings,
+            "isNative": true,
+            "verboseLogs": true,
+        }))
+        .expect("the facts read");
+        Box::pin(async move { Ok(facts) })
+    }
+
+    fn launch(
+        &self,
+        _runner: RunnerName,
+        app_name: &str,
+        args: LaunchHookArgs,
+    ) -> BoxFuture<Result<LaunchHookReply, HookError>> {
+        // The key every launch site tracks its run under is the app name (`abortId` / `trackKey`).
+        let call = RunnerCallArgs {
+            stream_id: String::new(),
+            command_parts: self.game_args.clone(),
+            runner: RunnerProps {
+                name: RunnerName::Sideload,
+                bin: std::env::current_exe()
+                    .expect("current_exe")
+                    .to_string_lossy()
+                    .into_owned(),
+                dir: None,
+                log_prefix: "Sideload".to_string(),
+            },
+            env: Default::default(),
+            wrappers: Vec::new(),
+            log_message_prefix: None,
+            log_targets: vec![args.log.to_runner_hand_off()],
+            log_sanitizer: None,
+            abort_id: Some(app_name.to_string()),
+            track_key: Some(app_name.to_string()),
+            cwd: None,
+            skip_error_handler: false,
+            observe: true,
+            spawn_class: SpawnClassArg::Game,
+        };
+        let ctx = self.ctx.clone();
+        Box::pin(async move {
+            let host = RunnerHost::default();
+            let result = call_runner(&ctx, call, &host, Arc::new(NullSink)).await;
+            Ok(LaunchHookReply {
+                launched: result.error.is_none() && result.abort.is_none(),
+                rotated: false,
+            })
+        })
+    }
+}
+
+/// `shell --funnel`: one funnel launch of the stub game, run to its end (or until this process is killed).
+fn funnel_shell(user_data: &std::path::Path, args: &[String]) -> ! {
+    let params: LaunchParams =
+        match serde_json::from_str(value(args, "--funnel").expect("--funnel <json>")) {
+            Ok(params) => params,
+            Err(e) => {
+                eprintln!("--funnel must be launch params: {e}");
+                exit(2);
+            }
+        };
+    let game_args: Vec<String> =
+        match serde_json::from_str(value(args, "--game").expect("--game <json>")) {
+            Ok(game_args) => game_args,
+            Err(e) => {
+                eprintln!("--game must be a JSON array of strings: {e}");
+                exit(2);
+            }
+        };
+    let install_path = user_data.join("install");
+    std::fs::create_dir_all(&install_path).expect("the install folder");
+    let base = launch_ctx(user_data).with_errors(Arc::new(QuietErrors));
+    let hooks = Arc::new(FunnelHooks {
+        ctx: base.clone(),
+        game_args,
+        install_path,
+        after_script: value(args, "--after-script").map(str::to_string),
+    });
+    let ctx = base
+        .with_hooks(hooks)
+        .with_steps(Arc::new(RecordingSteps::new()));
+    let runtime = tokio::runtime::Builder::new_multi_thread()
+        .worker_threads(2)
+        .enable_all()
+        .build()
+        .expect("runtime");
+    let status = runtime.block_on(run_launch(&ctx, params, &FunnelHost::default()));
+    println!("{status:?}");
+    exit(0)
 }

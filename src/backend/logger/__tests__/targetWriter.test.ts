@@ -454,6 +454,93 @@ describe('LogWriter facade over the forwarder', () => {
     expect(batchesFor(frames, 'game')).toHaveLength(1)
   })
   // 88.2-16 (D-02, D-30): a runner call hands its writers to Rust, and the TS facade stays the only rotator.
+  describe('rotationOwed and rotationClaimed (88.3-08, D-29)', () => {
+    it('a facade whose rotation is not owed never sends rotate: true, and never claims one', async () => {
+      const { index, LogWriter, frames } = load()
+      const w = new LogWriter(GAME, false, { rotationOwed: false })
+      expect(w.rotationClaimed).toBe(false)
+      await w.writeString('raw\n')
+      await w.logInfo('structured')
+      await w.logError(['an', 'error'])
+      await index.flushLogForwarder()
+      const batches = batchesFor(frames, 'game')
+      expect(batches.length).toBeGreaterThan(0)
+      for (const b of batches) expect(b.rotate).toBe(false)
+      expect(w.rotationClaimed).toBe(false)
+    })
+
+    it('a facade whose rotation is owed claims it on its first accepted entry, once', async () => {
+      const { index, LogWriter, frames } = load()
+      const w = new LogWriter(GAME, false, { rotationOwed: true })
+      expect(w.rotationClaimed).toBe(false)
+      await w.logInfo('first')
+      expect(w.rotationClaimed).toBe(true)
+      await w.logInfo('second')
+      await index.flushLogForwarder()
+      const rotates = batchesFor(frames, 'game').map((b) => b.rotate)
+      expect(rotates.filter(Boolean)).toHaveLength(1)
+      expect(rotates[0]).toBe(true)
+    })
+
+    it('a facade that writes nothing leaves the rotation unclaimed', async () => {
+      const { LogWriter } = load()
+      const w = new LogWriter(GAME, false, { rotationOwed: true })
+      expect(w.rotationClaimed).toBe(false)
+    })
+
+    it('a disabled facade with the rotation owed sends nothing and claims nothing; a forced write claims it', async () => {
+      const { index, LogWriter, frames } = load()
+      const w = new LogWriter(GAME, true, { rotationOwed: true })
+      await w.logWarning('hidden')
+      await w.writeString('hidden\n')
+      await index.flushLogForwarder()
+      expect(batchesFor(frames, 'game')).toEqual([])
+      expect(w.rotationClaimed).toBe(false)
+      await w.logWarning('forced', { forceLog: true })
+      await index.flushLogForwarder()
+      expect(w.rotationClaimed).toBe(true)
+      expect(batchesFor(frames, 'game')[0]?.rotate).toBe(true)
+    })
+
+    it('the default is the old rule: owed for a game target, never for the general one', async () => {
+      const { LogWriter } = load()
+      const game = new LogWriter(GAME, false)
+      await game.logInfo('x')
+      expect(game.rotationClaimed).toBe(true)
+      const general = new LogWriter({ kind: 'general' }, false)
+      await general.logInfo('x')
+      expect(general.rotationClaimed).toBe(false)
+    })
+
+    it('gameLogWriterFromHandOff takes the target and the switch from the hand-off and owes exactly its rotate', async () => {
+      const { index, frames } = load()
+      const owed = index.gameLogWriterFromHandOff({
+        target: GAME,
+        disabled: false,
+        rotate: true
+      })
+      const spent = index.gameLogWriterFromHandOff({
+        target: GAME,
+        disabled: false,
+        rotate: false
+      })
+      const off = index.gameLogWriterFromHandOff({
+        target: GAME,
+        disabled: true,
+        rotate: false
+      })
+      expect(owed.target).toEqual(GAME)
+      await spent.logInfo('spent')
+      await off.logInfo('off')
+      await index.flushLogForwarder()
+      expect(batchesFor(frames, 'game')).toHaveLength(1)
+      expect(batchesFor(frames, 'game')[0]?.rotate).toBe(false)
+      expect(spent.rotationClaimed).toBe(false)
+      await owed.logInfo('owed')
+      expect(owed.rotationClaimed).toBe(true)
+    })
+  })
+
   describe('handOff', () => {
     it('answers the target and the disabled flag, claiming the owed rotation once', async () => {
       const { index, LogWriter, frames } = load()

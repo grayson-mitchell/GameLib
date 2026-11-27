@@ -16,7 +16,7 @@ use gamelib_engine::sinks::EngineUi;
 use gamelib_log::format::is_js_space;
 use gamelib_log::frame::{target_of, FrameTarget};
 use gamelib_log::{Level, Prefix, SystemTz, TargetBatch, TzOffset};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 /// Where log entries go. The app's is [`GamelibLogSink`]; a test's records what it was given.
@@ -58,7 +58,7 @@ impl LaunchLogSink for GamelibLogSink {
 /// One log writer of the caller, as the sidecar hands it over: the typed target (the `LogFrameTarget`
 /// shape, a validated name and never a path), whether its logs are disabled, and whether its rotation
 /// is still owed.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct LogHandOff {
     pub target: FrameTarget,

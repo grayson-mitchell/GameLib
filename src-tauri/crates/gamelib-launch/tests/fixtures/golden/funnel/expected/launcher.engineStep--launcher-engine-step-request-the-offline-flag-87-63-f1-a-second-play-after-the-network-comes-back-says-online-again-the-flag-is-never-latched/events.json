@@ -1,0 +1,560 @@
+[
+  {
+    "kind": "play",
+    "n": 1
+  },
+  {
+    "kind": "hook",
+    "hook": "getSettings",
+    "runner": "legendary",
+    "args": []
+  },
+  {
+    "kind": "config",
+    "member": "getSettings",
+    "args": []
+  },
+  {
+    "kind": "log",
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Launching Quail (Quail)"
+  },
+  {
+    "kind": "frontend",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "Quail",
+        "runner": "legendary",
+        "status": "launching"
+      }
+    ]
+  },
+  {
+    "kind": "bus",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "Quail",
+        "runner": "legendary",
+        "status": "launching"
+      }
+    ]
+  },
+  {
+    "kind": "log",
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Preventing display from sleep"
+  },
+  {
+    "kind": "appState",
+    "member": "wakeLock.start",
+    "args": [
+      "prevent-display-sleep"
+    ]
+  },
+  {
+    "kind": "config",
+    "member": "getSettings",
+    "args": []
+  },
+  {
+    "kind": "gameConfig",
+    "member": "getSettings",
+    "appName": "Quail",
+    "args": []
+  },
+  {
+    "kind": "rust",
+    "channel": "engine_launch_select",
+    "args": [
+      {
+        "runner": "legendary",
+        "appName": "Quail",
+        "title": "Quail",
+        "isNative": false,
+        "settings": {
+          "verboseLogs": true,
+          "autoSyncSaves": false,
+          "savesPath": "",
+          "gogSaves": [],
+          "wineVersion": {
+            "name": "stored",
+            "bin": "/pins/wines/stored/bin/wine",
+            "type": "wine"
+          }
+        },
+        "offline": true
+      }
+    ],
+    "reply": {
+      "kind": "skip"
+    }
+  },
+  {
+    "kind": "config",
+    "member": "getSettings",
+    "args": []
+  },
+  {
+    "kind": "rust",
+    "channel": "launch_check_wine_before_launch",
+    "args": [
+      {
+        "appName": "Quail",
+        "runner": "legendary",
+        "wineVersion": {
+          "name": "stored",
+          "bin": "/pins/wines/stored/bin/wine",
+          "type": "wine"
+        },
+        "verboseLogs": true,
+        "disableLogs": false
+      }
+    ],
+    "reply": {
+      "ok": true,
+      "log": [
+        {
+          "level": "info",
+          "parts": [
+            "Wine check: ok"
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "kind": "gameLog",
+    "target": {
+      "kind": "game",
+      "appName": "Quail",
+      "runner": "legendary",
+      "type": "launch"
+    },
+    "rotate": true,
+    "level": "INFO",
+    "prefix": "",
+    "text": "Wine check: ok"
+  },
+  {
+    "kind": "frontend",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "Quail",
+        "runner": "legendary",
+        "status": "launching"
+      }
+    ]
+  },
+  {
+    "kind": "bus",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "Quail",
+        "runner": "legendary",
+        "status": "launching"
+      }
+    ]
+  },
+  {
+    "kind": "hook",
+    "hook": "launch",
+    "runner": "legendary",
+    "args": [
+      null,
+      null,
+      null
+    ],
+    "writer": {
+      "target": {
+        "kind": "game",
+        "appName": "Quail",
+        "runner": "legendary",
+        "type": "launch"
+      },
+      "rotationClaimed": true
+    }
+  },
+  {
+    "kind": "gameLog",
+    "target": {
+      "kind": "game",
+      "appName": "Quail",
+      "runner": "legendary",
+      "type": "launch"
+    },
+    "rotate": false,
+    "raw": "============= End of log ============="
+  },
+  {
+    "kind": "runsForMe",
+    "op": "set",
+    "key": "games",
+    "value": {
+      "Quail_legendary": "auto"
+    }
+  },
+  {
+    "kind": "frontend",
+    "channel": "runsForMeChanged",
+    "args": [
+      {
+        "Quail_legendary": "auto"
+      }
+    ]
+  },
+  {
+    "kind": "log",
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Runs for me: auto-set for Quail (legendary) after 90s of play"
+  },
+  {
+    "kind": "log",
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Stopping Display Power Saver Blocker"
+  },
+  {
+    "kind": "appState",
+    "member": "wakeLock.stop",
+    "args": [
+      7
+    ]
+  },
+  {
+    "kind": "tsStore",
+    "op": "set",
+    "key": "Quail.lastPlayed",
+    "value": "2026-01-01T00:01:30.000Z"
+  },
+  {
+    "kind": "tsStore",
+    "op": "set",
+    "key": "Quail.totalPlayed",
+    "value": 1
+  },
+  {
+    "kind": "config",
+    "member": "getSettings",
+    "args": []
+  },
+  {
+    "kind": "rust",
+    "channel": "info_recent_add",
+    "args": [
+      {
+        "appName": "Quail",
+        "title": "Quail",
+        "runner": "legendary"
+      }
+    ],
+    "reply": null
+  },
+  {
+    "kind": "frontend",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "Quail",
+        "runner": "legendary",
+        "status": "done"
+      }
+    ]
+  },
+  {
+    "kind": "bus",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "Quail",
+        "runner": "legendary",
+        "status": "done"
+      }
+    ]
+  },
+  {
+    "kind": "play",
+    "n": 2
+  },
+  {
+    "kind": "hook",
+    "hook": "getSettings",
+    "runner": "legendary",
+    "args": []
+  },
+  {
+    "kind": "config",
+    "member": "getSettings",
+    "args": []
+  },
+  {
+    "kind": "log",
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Launching Quail (Quail)"
+  },
+  {
+    "kind": "frontend",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "Quail",
+        "runner": "legendary",
+        "status": "launching"
+      }
+    ]
+  },
+  {
+    "kind": "bus",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "Quail",
+        "runner": "legendary",
+        "status": "launching"
+      }
+    ]
+  },
+  {
+    "kind": "log",
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Preventing display from sleep"
+  },
+  {
+    "kind": "appState",
+    "member": "wakeLock.start",
+    "args": [
+      "prevent-display-sleep"
+    ]
+  },
+  {
+    "kind": "config",
+    "member": "getSettings",
+    "args": []
+  },
+  {
+    "kind": "gameConfig",
+    "member": "getSettings",
+    "appName": "Quail",
+    "args": []
+  },
+  {
+    "kind": "rust",
+    "channel": "engine_launch_select",
+    "args": [
+      {
+        "runner": "legendary",
+        "appName": "Quail",
+        "title": "Quail",
+        "isNative": false,
+        "settings": {
+          "verboseLogs": true,
+          "autoSyncSaves": false,
+          "savesPath": "",
+          "gogSaves": [],
+          "wineVersion": {
+            "name": "stored",
+            "bin": "/pins/wines/stored/bin/wine",
+            "type": "wine"
+          }
+        },
+        "offline": false
+      }
+    ],
+    "reply": {
+      "kind": "skip"
+    }
+  },
+  {
+    "kind": "config",
+    "member": "getSettings",
+    "args": []
+  },
+  {
+    "kind": "rust",
+    "channel": "launch_check_wine_before_launch",
+    "args": [
+      {
+        "appName": "Quail",
+        "runner": "legendary",
+        "wineVersion": {
+          "name": "stored",
+          "bin": "/pins/wines/stored/bin/wine",
+          "type": "wine"
+        },
+        "verboseLogs": true,
+        "disableLogs": false
+      }
+    ],
+    "reply": {
+      "ok": true,
+      "log": [
+        {
+          "level": "info",
+          "parts": [
+            "Wine check: ok"
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "kind": "gameLog",
+    "target": {
+      "kind": "game",
+      "appName": "Quail",
+      "runner": "legendary",
+      "type": "launch"
+    },
+    "rotate": true,
+    "level": "INFO",
+    "prefix": "",
+    "text": "Wine check: ok"
+  },
+  {
+    "kind": "frontend",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "Quail",
+        "runner": "legendary",
+        "status": "launching"
+      }
+    ]
+  },
+  {
+    "kind": "bus",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "Quail",
+        "runner": "legendary",
+        "status": "launching"
+      }
+    ]
+  },
+  {
+    "kind": "hook",
+    "hook": "launch",
+    "runner": "legendary",
+    "args": [
+      null,
+      null,
+      null
+    ],
+    "writer": {
+      "target": {
+        "kind": "game",
+        "appName": "Quail",
+        "runner": "legendary",
+        "type": "launch"
+      },
+      "rotationClaimed": true
+    }
+  },
+  {
+    "kind": "gameLog",
+    "target": {
+      "kind": "game",
+      "appName": "Quail",
+      "runner": "legendary",
+      "type": "launch"
+    },
+    "rotate": false,
+    "raw": "============= End of log ============="
+  },
+  {
+    "kind": "runsForMe",
+    "op": "set",
+    "key": "games",
+    "value": {
+      "Quail_legendary": "auto"
+    }
+  },
+  {
+    "kind": "frontend",
+    "channel": "runsForMeChanged",
+    "args": [
+      {
+        "Quail_legendary": "auto"
+      }
+    ]
+  },
+  {
+    "kind": "log",
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Runs for me: auto-set for Quail (legendary) after 90s of play"
+  },
+  {
+    "kind": "log",
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Stopping Display Power Saver Blocker"
+  },
+  {
+    "kind": "appState",
+    "member": "wakeLock.stop",
+    "args": [
+      7
+    ]
+  },
+  {
+    "kind": "tsStore",
+    "op": "set",
+    "key": "Quail.lastPlayed",
+    "value": "2026-01-01T00:03:00.000Z"
+  },
+  {
+    "kind": "tsStore",
+    "op": "set",
+    "key": "Quail.totalPlayed",
+    "value": 1
+  },
+  {
+    "kind": "config",
+    "member": "getSettings",
+    "args": []
+  },
+  {
+    "kind": "rust",
+    "channel": "info_recent_add",
+    "args": [
+      {
+        "appName": "Quail",
+        "title": "Quail",
+        "runner": "legendary"
+      }
+    ],
+    "reply": null
+  },
+  {
+    "kind": "frontend",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "Quail",
+        "runner": "legendary",
+        "status": "done"
+      }
+    ]
+  },
+  {
+    "kind": "bus",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "Quail",
+        "runner": "legendary",
+        "status": "done"
+      }
+    ]
+  }
+]

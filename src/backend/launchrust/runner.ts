@@ -4,7 +4,6 @@ import {
   RUST_LAUNCH_RUNNER_CALL,
   RUST_LAUNCH_GAMES_RUNNING,
   RUST_LAUNCH_RUNNER_KILL,
-  RUST_LAUNCH_SCRIPT_RUN,
   RUST_LAUNCH_SPAWN_ASYNC,
   RUST_LAUNCH_TRACKED_KILL,
   RUST_LAUNCH_TRACKED_KILL_ALL,
@@ -14,13 +13,14 @@ import {
 import type { RustInvokeArgsOf } from 'common/types/ipc/rustInvoke'
 import {
   LAUNCH_MANAGER_OPS,
-  sidecarInternalInvokeArgs,
+  launchManagerCallUnion,
   sidecarInternalSendArgs
 } from 'common/types/ipc/sidecarInternal'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import type { IpcRegistry } from 'backend/sidecar/ipcRegistry'
 import type { RunnerStreams } from 'backend/runnerStream'
-import type { StoreManagers } from 'backend/services/types'
+import { answerFunnelHook, hookRefusal } from './funnelHooks'
+import type { FunnelHookDeps } from './funnelHooks'
 import { resolveTitleForGame } from 'backend/utils/gameTitle'
 
 /**
@@ -115,23 +115,6 @@ export async function winePathGet(
   args: WinePathRequest
 ): Promise<unknown> {
   return deps.requestRustInvoke(RUST_LAUNCH_WINE_PATH, [args])
-}
-
-/** One launch script run, as the `launch_script_run` zod schema takes it. */
-export type ScriptRunRequest = RustInvokeArgsOf<
-  typeof RUST_LAUNCH_SCRIPT_RUN
->[0]
-
-/**
- * `runScriptForGame` (88.2-17, D-02): a game's before or after launch script, run to its exit. Resolves `true` once it has
- * exited, whatever its code, as `unknown`. A script that could not be started rejects with the OS's text. A script runs as
- * long as the user wrote it to, so the channel is unbounded.
- */
-export async function scriptRun(
-  deps: RustInvokeDeps,
-  args: ScriptRunRequest
-): Promise<unknown> {
-  return deps.requestRustInvoke(RUST_LAUNCH_SCRIPT_RUN, [args])
 }
 
 /** One spawnAsync call, as the `launch_spawn_async` zod schema takes it. */
@@ -243,16 +226,19 @@ function managerCallRefusal(args: unknown[]): string {
         : ''
     return `launchManagerCall: unknown op${named}`
   }
-  return `launchManagerCall: bad arguments for ${op}`
+  return hookRefusal(op)
 }
 
 /**
- * Answers the shell's `launchManagerCall` (88.2-18, 88.2-20, D-26): the Rust launch crate's ManagerHooks, called as `[op,
- * { runner, appName }]`.
+ * Answers the shell's `launchManagerCall` (88.2-18, 88.2-20, 88.3-08, D-26): the Rust launch crate's ManagerHooks, called as
+ * `[op, payload]`.
  *
  * - `game_title` resolves the title the dialog shows, the manager's title with the app name as its fallback
  *   (`resolveTitleForGame`), as text.
  * - `force_uninstall` awaits the manager's `forceUninstall()` for the game and resolves `true` once it is done.
+ * - every other op is one of the funnel's eight (`launch_facts`, `launch`, `sync_saves`, `set_presence`, `clear_presence`,
+ *   `persist_bottle_wine_version`, `update_gog_playtime`, `wine_settings_write`) and is answered by `answerFunnelHook`, the
+ *   one place a funnel op reaches a manager.
  *
  * The frame is validated by the sidecar's boundary and again here, so a forged call is refused before any manager is
  * touched. A refusal never carries the runner or the app name. A manager that throws rejects the call, which the shell maps
@@ -260,18 +246,27 @@ function managerCallRefusal(args: unknown[]): string {
  */
 export function registerLaunchManagerHooks(
   ipc: Pick<IpcRegistry, 'handle'>,
-  deps: { libraryManagers: StoreManagers['library'] }
+  deps: FunnelHookDeps
 ): void {
   ipc.handle(
     'launchManagerCall',
     async (_event: unknown, ...args: unknown[]) => {
-      const parsed = sidecarInternalInvokeArgs.launchManagerCall.safeParse(args)
+      const parsed = launchManagerCallUnion.safeParse(args)
       if (!parsed.success) throw new Error(managerCallRefusal(args))
-      const [op, { runner, appName }] = parsed.data
-      const game = deps.libraryManagers[runner].getGame(appName)
-      if (op === 'game_title') return resolveTitleForGame(game, appName)
-      await game.forceUninstall()
-      return true
+      const call = parsed.data
+      if (call[0] === 'game_title') {
+        const { runner, appName } = call[1]
+        return resolveTitleForGame(
+          deps.libraryManagers[runner].getGame(appName),
+          appName
+        )
+      }
+      if (call[0] === 'force_uninstall') {
+        const { runner, appName } = call[1]
+        await deps.libraryManagers[runner].getGame(appName).forceUninstall()
+        return true
+      }
+      return answerFunnelHook(deps, call)
     }
   )
 }

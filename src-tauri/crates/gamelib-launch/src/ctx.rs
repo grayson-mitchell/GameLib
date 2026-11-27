@@ -2,6 +2,7 @@
 //! information context the launch builders and the prepare step read. The crate reads no environment
 //! variable and no profile path of its own.
 
+use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 
 use gamelib_engine::ctx::EngineCtx;
@@ -9,7 +10,11 @@ use gamelib_info::ctx::InfoCtx;
 use gamelib_knownfix::ctx::KnownFixCtx;
 use gamelib_wine::ctx::WineCtx;
 
-use crate::game::registry::TrackedRegistry;
+use crate::funnel::flights::LaunchFlights;
+use crate::funnel::session::LaunchSessions;
+use crate::funnel::shell::{FunnelShell, PowerState};
+use crate::funnel::steps::FunnelSteps;
+use crate::game::registry::{KillCause, TrackedRegistry};
 use crate::game::spawn::{GameSpawner, ProcGameSpawner};
 use crate::hooks::ManagerHooks;
 use crate::prepare::deps::WineManagerFacts;
@@ -57,6 +62,23 @@ pub struct LaunchCtx {
     pub registry: Arc<TrackedRegistry>,
     /// How a game-class run starts its game: `gamelib_proc::spawn_game_tracked` unless a test sets a scripted one.
     pub game_spawner: Arc<dyn GameSpawner>,
+    /// The launches in flight (88.3-04, D-04): the one single-flight table, keyed `<runner>:<appName>`.
+    pub flights: Arc<LaunchFlights>,
+    /// The window and the display-sleep blocker (88.3-04). `None` (the CLI, a headless run): no window to hide,
+    /// no blocker to hold, no app to exit.
+    pub shell: Option<Arc<dyn FunnelShell>>,
+    /// The in-process steps of a launch (88.3-04). `None` is [`crate::funnel::steps::CtxFunnelSteps`], the real
+    /// functions; a test sets a recorder through [`LaunchCtx::with_steps`].
+    pub steps: Option<Arc<dyn FunnelSteps>>,
+    /// The display-sleep blocker this context holds (the TS launcher's per-instance `PowerState`).
+    pub power: Arc<PowerState>,
+    /// The funnel launches whose game is about to run or is running (88.3-07): where a spawn finds the facts
+    /// of its record, and where the quit-kill marks a session whose game it ended.
+    pub sessions: Arc<LaunchSessions>,
+    /// Whether the renderer is listening for `gameStatusUpdate` (88.3-09, Pitfall 9): set by
+    /// `game::readopt::announce`. A game re-adopted after it is announced at once; one adopted before it waits
+    /// for the announcement.
+    pub frontend_ready: Arc<AtomicBool>,
 }
 
 impl LaunchCtx {
@@ -67,6 +89,18 @@ impl LaunchCtx {
         info: Arc<InfoCtx>,
     ) -> LaunchCtx {
         let log_sink: Arc<dyn LaunchLogSink> = Arc::new(GamelibLogSink::new(engine.clock.clone()));
+        let registry = Arc::new(TrackedRegistry::new());
+        let sessions = Arc::new(LaunchSessions::new());
+        {
+            // The quit's Yes ending a funnel game is D-31: the session is marked and its play time recorded at
+            // the kill. A manager's Stop and the other causes are not the quit.
+            let sessions = Arc::clone(&sessions);
+            registry.set_kill_observer(Arc::new(move |cause, ids| {
+                if cause == KillCause::QuitAll {
+                    sessions.quit_killed(&ids.runner, &ids.key);
+                }
+            }));
+        }
         LaunchCtx {
             engine,
             knownfix,
@@ -78,8 +112,14 @@ impl LaunchCtx {
             runner: Arc::new(RunnerTables::new()),
             errors: None,
             hooks: None,
-            registry: Arc::new(TrackedRegistry::new()),
+            registry,
             game_spawner: Arc::new(ProcGameSpawner),
+            flights: Arc::new(LaunchFlights::new()),
+            shell: None,
+            steps: None,
+            power: Arc::new(PowerState::new()),
+            sessions,
+            frontend_ready: Arc::new(AtomicBool::new(false)),
         }
     }
 
@@ -122,6 +162,18 @@ impl LaunchCtx {
     /// The same context with the shell's wine-manager facts.
     pub fn with_manager(mut self, manager: Arc<dyn WineManagerFacts>) -> LaunchCtx {
         self.manager = Some(manager);
+        self
+    }
+
+    /// The same context with the shell's window and wake-lock hooks.
+    pub fn with_shell(mut self, shell: Arc<dyn FunnelShell>) -> LaunchCtx {
+        self.shell = Some(shell);
+        self
+    }
+
+    /// The same context with other funnel steps (a test's recorder).
+    pub fn with_steps(mut self, steps: Arc<dyn FunnelSteps>) -> LaunchCtx {
+        self.steps = Some(steps);
         self
     }
 }

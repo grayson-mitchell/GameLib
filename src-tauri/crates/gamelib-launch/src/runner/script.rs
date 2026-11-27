@@ -27,7 +27,7 @@ use std::sync::{Arc, Mutex};
 
 use gamelib_core::process::{PostExit, ProcSpec};
 use gamelib_log::{Entry, Level, Prefix};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use super::call_runner::{RunnerHost, RUNNER_READ_CHUNK};
 use super::lock;
@@ -36,7 +36,7 @@ use crate::ctx::LaunchCtx;
 use crate::game::end::EXIT_DRAIN_GRACE;
 
 /// Which end of the game session the script belongs to (`HEROIC_GAME_SCRIPT_STAGE`).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ScriptStage {
     Before,
@@ -56,7 +56,7 @@ impl ScriptStage {
 const STOPPED: &str = "the launch script was stopped because GameLib is closing";
 
 /// One script run (`launch_script_run`'s first argument). Strict: an unknown key is a bad argument.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ScriptRunArgs {
     /// `gameSettings[`${stage}LaunchScriptPath`]`: the program to run.

@@ -15,7 +15,6 @@ import {
   mockPlatform,
   type OraclePlatform
 } from 'backend/testUtils/engineWineOracle/harness'
-import * as osPath from 'backend/utils/os/path'
 
 const NODE_PLATFORM: Readonly<Record<OraclePlatform, NodeJS.Platform>> = {
   mac: 'darwin',
@@ -61,45 +60,6 @@ export function injectProbe<T extends object, K extends keyof T & string>(
   }
   const replaced = jest.replaceProperty(target, name, impl)
   return () => replaced.restore()
-}
-
-/**
- * Makes `searchForExecutableOnPath(name)` answer from `found` (88.1-01, D-13): a name that maps to a
- * path resolves to it, a name that maps to `null` or is absent from the map resolves to `null`.
- * The real PATH is never scanned, so a launch case can say "gamescope is installed" or "gamemoderun is
- * not" on any machine. A `jest.spyOn` on the module object (never `jest.mock`); the returned function
- * restores it.
- */
-export function injectExecutableOnPath(
-  found: Record<string, string | null>
-): () => void {
-  const spy = jest.spyOn(osPath, 'searchForExecutableOnPath')
-  spy.mockImplementation((executable: string) =>
-    Promise.resolve(found[executable] ?? null)
-  )
-  return () => spy.mockRestore()
-}
-
-/**
- * The answer of `onlineMonitor.isOnline()` for a case that does not build a whole launcher deps object.
- * Returns the fake monitor (`{ isOnline }`) and the number of times it was asked, so a case can pin
- * both the branch it took and that it asked. `createFakeLauncherDeps` builds the same shape from its
- * `online` option; this is the stand-alone form for the pure builders.
- */
-export function injectOnline(online: boolean): {
-  monitor: { isOnline: () => boolean }
-  asked: () => number
-} {
-  let asked = 0
-  return {
-    monitor: {
-      isOnline: () => {
-        asked += 1
-        return online
-      }
-    },
-    asked: () => asked
-  }
 }
 
 /**

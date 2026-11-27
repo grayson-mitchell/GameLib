@@ -1121,56 +1121,56 @@ Plans:
   3. A game launched from the UI starts and runs on macOS (live, signed 88.3 build over the signed 87 gap build) and on Windows and Linux (CI plus Phase 99)
   4. `launcher.ts` and every remaining ported TS and registration are deleted, leaving only scheduled shims
 
-**Plans:** 22 plans in 16 waves; planned 2026-11-27 (goldens are recorded from the TS before each Rust slice, D-25; every plan fits the 100k budget and stays below 15 files; no 88.3 commit outside .planning/ lands before the 88.1-24 and 88.2-25 pushes)
+**Plans:** 20/22 plans executed in 16 waves; planned 2026-11-27 (goldens are recorded from the TS before each Rust slice, D-25; every plan fits the 100k budget and stays below 15 files; no 88.3 commit outside .planning/ lands before the 88.1-24 and 88.2-25 pushes)
 
 Plans:
 **Wave 1**
-- [ ] 88.3-01-PLAN.md — Goldens: golden/funnel recorded through the real TS launchEventCallback (pairwise, every launcher.engineStep title, named incidents)
-- [ ] 88.3-02-PLAN.md — Goldens: golden/single_flight (every flight title, the Steam joins), golden/runs_for_me (kept as the live TS pin), golden/window_raise
-- [ ] 88.3-03-PLAN.md — gamelib-proc: the adopted-game proof (leader stamp, member stamp and pgid, the Windows Game Job) and kill_adopted_tree, with orphan arms
-- [ ] 88.3-15-PLAN.md — The stale `backend/launcher` stubs leave nine Steam and GOG tests, ceilings lowered
+- [x] 88.3-01-PLAN.md — Goldens: golden/funnel recorded through the real TS launchEventCallback (pairwise, every launcher.engineStep title, named incidents)
+- [x] 88.3-02-PLAN.md — Goldens: golden/single_flight (every flight title, the Steam joins), golden/runs_for_me (kept as the live TS pin), golden/window_raise
+- [x] 88.3-03-PLAN.md — gamelib-proc: the adopted-game proof (leader stamp, member stamp and pgid, the Windows Game Job) and kill_adopted_tree, with orphan arms
+- [x] 88.3-15-PLAN.md — The stale `backend/launcher` stubs leave nine Steam and GOG tests, ceilings lowered
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 88.3-04-PLAN.md — Rust funnel tracer over ManagerHooks, FunnelShell and FunnelSteps; the one LaunchFlights table; golden/single_flight replayed
+- [x] 88.3-04-PLAN.md — Rust funnel tracer over ManagerHooks, FunnelShell and FunnelSteps; the one LaunchFlights table; golden/single_flight replayed
 
 **Wave 3** *(blocked on Wave 2 completion)*
-- [ ] 88.3-05-PLAN.md — Every funnel branch, the playtime step and runs-for-me; golden/funnel at its floor; two Plays through the funnel spawn one stub game
+- [x] 88.3-05-PLAN.md — Every funnel branch, the playtime step and runs-for-me; golden/funnel at its floor; two Plays through the funnel spawn one stub game
 
 **Wave 4** *(blocked on Wave 3 completion)*
-- [ ] 88.3-06-PLAN.md — launch_run end to end, the funnel hooks over launchManagerCall, ShellFunnel
-- [ ] 88.3-07-PLAN.md — The per-launch record and launch sessions; D-31 quit-kill (playtime at the kill, after-script owed); the sidecar-loss exit watch
-- [ ] 88.3-14-PLAN.md — Retire the funnel and single-flight TS drivers behind the RED-first funnelOraclePortComplete gate
+- [x] 88.3-06-PLAN.md — launch_run end to end, the funnel hooks over launchManagerCall, ShellFunnel
+- [x] 88.3-07-PLAN.md — The per-launch record and launch sessions; D-31 quit-kill (playtime at the kill, after-script owed); the sidecar-loss exit watch
+- [x] 88.3-14-PLAN.md — Retire the funnel and single-flight TS drivers behind the RED-first funnelOraclePortComplete gate
 
 **Wave 5** *(blocked on Wave 4 completion)*
-- [ ] 88.3-08-PLAN.md — The TS answers to the funnel hooks and the per-game log facade built from the hand-off (one rotation per launch)
-- [ ] 88.3-09-PLAN.md — Boot re-adoption: bounded scan, proven match, adopted entries, re-adopted line, exit watch; Force Quit survival stub arms
+- [x] 88.3-08-PLAN.md — The TS answers to the funnel hooks and the per-game log facade built from the hand-off (one rotation per launch)
+- [x] 88.3-09-PLAN.md — Boot re-adoption: bounded scan, proven match, adopted entries, re-adopted line, exit watch; Force Quit survival stub arms
 
 **Wave 6** *(blocked on Wave 5 completion)*
-- [ ] 88.3-10-PLAN.md — The launchRun shim: every non-Steam Play runs through the Rust funnel
+- [x] 88.3-10-PLAN.md — The launchRun shim: every non-Steam Play runs through the Rust funnel
 
 **Wave 7** *(blocked on Wave 6 completion)*
-- [ ] 88.3-11-PLAN.md — Sidecar-led flights in the Rust table (begin, wait, end), released at sidecar EOF
+- [x] 88.3-11-PLAN.md — Sidecar-led flights in the Rust table (begin, wait, end), released at sidecar EOF
 
 **Wave 8** *(blocked on Wave 7 completion)*
-- [ ] 88.3-12-PLAN.md — Re-adoption at boot in the shell and the Playing announcement on every frontendReady
+- [x] 88.3-12-PLAN.md — Re-adoption at boot in the shell and the Playing announcement on every frontendReady
 
 **Wave 9** *(blocked on Wave 8 completion)*
-- [ ] 88.3-13-PLAN.md — The Wine window raiser in Rust, golden/window_raise replayed, its channel and shim
+- [x] 88.3-13-PLAN.md — The Wine window raiser in Rust, golden/window_raise replayed, its channel and shim
 
 **Wave 10** *(blocked on Wave 9 completion)*
-- [ ] 88.3-16-PLAN.md — The Launcher moves to launchrust/launcher.ts as scheduled shims; launcher.ts is test-only
+- [x] 88.3-16-PLAN.md — The Launcher moves to launchrust/launcher.ts as scheduled shims; launcher.ts is test-only
 
 **Wave 11** *(blocked on Wave 10 completion)*
-- [ ] 88.3-17-PLAN.md — Sync with main; delete launcher.ts behind the RED-first funnelPortComplete gate
+- [x] 88.3-17-PLAN.md — Sync with main; delete launcher.ts behind the RED-first funnelPortComplete gate
 
 **Wave 12** *(blocked on Wave 11 completion)*
-- [ ] 88.3-18-PLAN.md — The Steam dispatch joins the Rust table; delete launchSingleFlight.ts behind singleFlightPortComplete
+- [x] 88.3-18-PLAN.md — The Steam dispatch joins the Rust table; delete launchSingleFlight.ts behind singleFlightPortComplete
 
 **Wave 13** *(blocked on Wave 12 completion)*
-- [ ] 88.3-19-PLAN.md — Retire the scriptRun shim and the launch_script_run channel; nothing left due in 88.3
+- [x] 88.3-19-PLAN.md — Retire the scriptRun shim and the launch_script_run channel; nothing left due in 88.3
 
 **Wave 14** *(blocked on Wave 13 completion)*
-- [ ] 88.3-20-PLAN.md — Delete the TS window raiser; launchSurvivors, the census of every shim and glue piece left and why
+- [x] 88.3-20-PLAN.md — Delete the TS window raiser; launchSurvivors, the census of every shim and glue piece left and why
 
 **Wave 15** *(blocked on Wave 14 completion)*
 - [ ] 88.3-21-PLAN.md — Clean-worktree proof, push checkpoint, three-OS CI, Phase 99 handoff, the signed Phase 88 build

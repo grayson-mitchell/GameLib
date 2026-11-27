@@ -6,7 +6,6 @@
 import { rustInvokeArgs } from 'common/types/ipc/rustInvoke'
 import {
   RUST_LAUNCH_RUNNER_CALL,
-  RUST_LAUNCH_SCRIPT_RUN,
   RUST_LAUNCH_WINE_COMMAND,
   RUST_LAUNCH_WINE_PATH
 } from 'common/types/sidecarTransport'
@@ -19,7 +18,7 @@ import {
 } from 'backend/launchrust/runner'
 import LogWriter from 'backend/logger/targetWriter'
 import type { CommandRunner } from 'backend/services/types'
-import type { GameInfo, GameSettings } from 'common/types'
+import type { GameSettings } from 'common/types'
 import type { LogFrameTarget } from 'common/types/sidecarTransport'
 
 import {
@@ -460,7 +459,6 @@ describe('createRunnerAdapter.runWineCommand', () => {
     expect(Object.keys(asRunner).sort()).toEqual([
       'callRunner',
       'getWinePath',
-      'runScriptForGame',
       'runWineCommand'
     ])
   })
@@ -518,111 +516,5 @@ describe('createRunnerAdapter.getWinePath', () => {
     await expect(
       bad.adapter.getWinePath({ path: '/x', gameSettings: WINE_SETTINGS })
     ).rejects.toThrow('not a path')
-  })
-})
-
-describe('createRunnerAdapter.runScriptForGame', () => {
-  const gameInfo = {
-    app_name: 'app-1',
-    runner: 'gog',
-    title: 'Ünïcode "Title"',
-    install: {
-      executable: 'bin/game',
-      install_path: '/games/app-1'
-    }
-  } as unknown as GameInfo
-
-  it('sends the script path, the HEROIC fields and the exact JSON.stringify text', async () => {
-    const r = rig(() => true)
-    const writer = new LogWriter(GAME_TARGET, false)
-    const answer = await r.adapter.runScriptForGame(
-      gameInfo,
-      WINE_SETTINGS,
-      'before',
-      writer
-    )
-    expect(answer).toBe(true)
-    const { channel, args } = invokeAt(r, 0)
-    expect(channel).toBe(RUST_LAUNCH_SCRIPT_RUN)
-    const [request] = args as [Record<string, unknown>]
-    expect(() =>
-      rustInvokeArgs[RUST_LAUNCH_SCRIPT_RUN].parse(args)
-    ).not.toThrow()
-    expect(request).toEqual({
-      scriptPath: '/scripts/before.sh',
-      stage: 'before',
-      appName: 'app-1',
-      executable: 'bin/game',
-      prefix: '/prefix',
-      runner: 'gog',
-      title: 'Ünïcode "Title"',
-      installPath: '/games/app-1',
-      settingsJson: JSON.stringify(WINE_SETTINGS),
-      infoJson: JSON.stringify(gameInfo),
-      verbose: true,
-      logTarget: { target: GAME_TARGET, disabled: false, rotate: true }
-    })
-    // Verbose logs: the flush precedes the call so the TS lines of the writer come first.
-    expect(r.events).toEqual(['flushed', 'invoke'])
-  })
-
-  it('hands the writer off only when verbose logs are on, so its rotation is not spent on a silent script', async () => {
-    const r = rig(() => true)
-    const writer = new LogWriter(GAME_TARGET, false)
-    const quiet = { ...WINE_SETTINGS, verboseLogs: false } as GameSettings
-    await r.adapter.runScriptForGame(gameInfo, quiet, 'after', writer)
-    const [request] = invokeAt(r, 0).args as [Record<string, unknown>]
-    expect(request.scriptPath).toBe('/scripts/after.sh')
-    expect(request.stage).toBe('after')
-    expect(request).not.toHaveProperty('verbose')
-    expect(request).not.toHaveProperty('logTarget')
-    expect(r.events).toEqual(['invoke'])
-    expect(writer.handOff()).toMatchObject({ rotate: true })
-  })
-
-  it('leaves out the facts the game does not have', async () => {
-    const r = rig(() => true)
-    const bare = { app_name: 'a', runner: 'gog', title: 'T' } as GameInfo
-    const settings = {
-      beforeLaunchScriptPath: '/s.sh',
-      verboseLogs: false
-    } as unknown as GameSettings
-    await r.adapter.runScriptForGame(
-      bare,
-      settings,
-      'before',
-      new LogWriter(GAME_TARGET, false)
-    )
-    const [request] = invokeAt(r, 0).args as [Record<string, unknown>]
-    for (const key of ['executable', 'prefix', 'installPath']) {
-      expect(request).not.toHaveProperty(key)
-    }
-  })
-
-  it('rejects with the Rust text as an Error when the script could not be started', async () => {
-    const r = rig(() => {
-      throw new Error('No such file or directory (os error 2)')
-    })
-    await expect(
-      r.adapter.runScriptForGame(
-        gameInfo,
-        WINE_SETTINGS,
-        'before',
-        new LogWriter(GAME_TARGET, false)
-      )
-    ).rejects.toThrow('No such file or directory (os error 2)')
-  })
-
-  it('refuses settings that name no script before it calls Rust', async () => {
-    const r = rig(() => true)
-    await expect(
-      r.adapter.runScriptForGame(
-        gameInfo,
-        { verboseLogs: false } as unknown as GameSettings,
-        'before',
-        new LogWriter(GAME_TARGET, false)
-      )
-    ).rejects.toThrow('no script')
-    expect(r.invokes).toHaveLength(0)
   })
 })

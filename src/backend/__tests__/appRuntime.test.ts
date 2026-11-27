@@ -1,11 +1,13 @@
 /**
  * 66.4-17: the boot-owned app runtime. Two runtimes share nothing (event bus, launch flights);
- * launch single-flight joins per instance; the frontend-ready flag flips once per
+ * launch single-flight joins per table (88.3-18: the table is Rust's, so the flights are the glue over a fake of it, one fake
+ * per runtime unless a test hands two runtimes the same one); the frontend-ready flag flips once per
  * instance; construction arms nothing. (The CrossOver index fetch layer and memo it once held are
  * Rust's, 86-19, and their cases moved with the TS module, 86-24.)
  */
 import * as logger from 'backend/logger'
 
+import { createFakeLaunchFlightTransport } from 'backend/testUtils/fakeLaunchFlightTransport'
 import { createTestAppRuntime } from 'backend/testUtils/testAppRuntime'
 import type { GameStatus } from 'common/types'
 
@@ -58,7 +60,7 @@ describe('createAppRuntime', () => {
   })
 })
 
-describe('launch single-flight', () => {
+describe('launch single-flight (the glue over the Rust table)', () => {
   it('joins a second launch of the same game and runs the owner once', async () => {
     const { launchFlights } = createTestAppRuntime()
     let release!: (v: string) => void
@@ -68,6 +70,7 @@ describe('launch single-flight', () => {
     const onJoin = jest.fn()
     const first = launchFlights.singleFlightLaunch('gog', 'g1', onJoin, run)
     const second = launchFlights.singleFlightLaunch('gog', 'g1', onJoin, run)
+    await new Promise(setImmediate)
     release('done')
     await expect(first).resolves.toBe('done')
     await expect(second).resolves.toBe('done')
@@ -84,7 +87,35 @@ describe('launch single-flight', () => {
     expect(run).toHaveBeenCalledTimes(2)
   })
 
-  it('does not join across runtimes', async () => {
+  it('joins across runtimes that share one Rust table', async () => {
+    const shared = createFakeLaunchFlightTransport()
+    const a = createTestAppRuntime(shared.deps)
+    const b = createTestAppRuntime(shared.deps)
+    let release!: (v: string) => void
+    const runA = jest.fn(
+      () => new Promise<string>((resolve) => (release = resolve))
+    )
+    const runB = jest.fn().mockResolvedValue('b')
+    const owner = a.launchFlights.singleFlightLaunch(
+      'gog',
+      'g1',
+      jest.fn(),
+      runA
+    )
+    const joiner = b.launchFlights.singleFlightLaunch(
+      'gog',
+      'g1',
+      jest.fn(),
+      runB
+    )
+    await new Promise(setImmediate)
+    release('a')
+    await expect(owner).resolves.toBe('a')
+    await expect(joiner).resolves.toBe('a')
+    expect(runB).not.toHaveBeenCalled()
+  })
+
+  it('does not join across runtimes with their own tables', async () => {
     const a = createTestAppRuntime()
     const b = createTestAppRuntime()
     let release!: () => void

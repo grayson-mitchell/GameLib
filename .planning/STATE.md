@@ -2,14 +2,14 @@
 gsd_state_version: "1.0"
 milestone: v0.11
 milestone_name: Node Sidecar Retirement
-current_phase: "88.2"
-current_phase_name: Command runner and game processes
+current_phase: "88.3"
+current_phase_name: Launch funnel, re-adoption and the live gate
 status: executing
-stopped_at: Completed 88.2-30-PLAN.md
-last_updated: "2026-11-27T10:34:41.423Z"
+stopped_at: Completed 88.3-20-PLAN.md
+last_updated: "2026-11-28T02:07:35.178Z"
 last_activity: 2026-11-27
-last_activity_desc: Phase 88.2 execution started
-state_head: 1772aae6839081eb160a73e972058b2a013df570
+last_activity_desc: Phase 88.3 execution started
+state_head: 4b7f9d44c5ad686f8f30522b0515a861f9ad8f36
 progress:
   total_phases: 26
   completed_phases: 23
@@ -25,7 +25,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-25)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 88.2 — Command runner and game processes
+**Current focus:** Phase 88.3 — Launch funnel, re-adoption and the live gate
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -76,10 +76,10 @@ See: .planning/PROJECT.md (updated 2026-11-25)
 
 ## Current Position
 
-Phase: 88.2 (Command runner and game processes) — EXECUTING
-Plan: 31 of 31
+Phase: 88.3 (Launch funnel, re-adoption and the live gate) — EXECUTING
+Plan: 21 of 22
 Status: Ready to execute
-Last activity: 2026-11-28 — Completed quick task 261128-4j2: Add to Steam LaunchOptions percent-encodes the app name and runner; todo closed
+Last activity: 2026-11-28 — Phase 88.3 plans 01-20 executed (21 release and 22 UAT await the operator); quick task 261128-4j2 completed: Add to Steam LaunchOptions percent-encodes the app name and runner; todo closed
 Progress: [████████████████░░░░] 204/257 plans ([█████████░] 88%)
 
 ## Native-Install Arc Phase Map (21–25)
@@ -577,6 +577,26 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 88.2 P28 | 30min | 2 tasks | 4 files |
 | Phase 88.2 P29 | 25min | 2 tasks | 8 files |
 | Phase 88.2 P30 | 10 min | 3 tasks | 11 files |
+| Phase 88.3 P01 | 1h | 2 tasks | 4 files |
+| Phase 88.3 P02 | 1h | 2 tasks | 3 files |
+| Phase 88.3 P03 | ~1h | 2 tasks | 7 files |
+| Phase 88.3 P15 | 10min | 2 tasks | 12 files |
+| Phase 88.3 P04 | not measured | 2 tasks | 19 files |
+| Phase 88.3 P05 | 35min | 3 tasks | 22 files |
+| Phase 88.3 P06 | 50min | 2 tasks | 12 files |
+| Phase 88.3 P07 | 35min | 3 tasks | 17 files |
+| Phase 88.3 P14 | 12min | 2 tasks | 9 files |
+| Phase 88.3 P08 | 50 min | 2 tasks | 10 files |
+| Phase 88.3 P09 | 100min | 3 tasks | 13 files |
+| Phase 88.3 P10 | 35min | 2 tasks | 8 files |
+| Phase 88.3 P11 | 60min | 2 tasks | 13 files |
+| Phase 88.3 P12 | 50m | 2 tasks | 14 files |
+| Phase 88.3 P13 | 1h45m | 2 tasks | 20 files |
+| Phase 88.3 P16 | 25min | 2 tasks | 11 files |
+| Phase 88.3 P17 | 40min | 2 tasks | 25 files |
+| Phase 88.3 P18 | 60min | 2 tasks | 15 files |
+| Phase 88.3 P19 | 25min | 2 tasks | 19 files |
+| Phase 88.3 P20 | ~40min | 2 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -1307,6 +1327,26 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 88.2]: 88.2-29: a clean SpecProcRunner exit releases the helper's Windows kill-on-close Job (unix parity, WR-03); timeout, cancel, shutdown and SIGKILL keep close=kill
 - [Phase 88.2]: 88.2-30: bestEffortTrackedKill lives in storeManagerCommon, not launchrust, because the shim schedule requires every launchrust export to be a one-call shim
 - [Phase 88.2]: 88.2-30: the spawnAsync abort retries with a 25 ms to 500 ms doubling backoff until the call settles; the unref'd timer is cleared in finally
+- [Phase 88.3]: 88.3-01: golden/funnel is recorded from the real TS funnel only (59 cases); the launch hook's writer state is derived from earlier frames, never handOff(); six D-20 candidates listed in the SUMMARY for 88.3-05 to file
+- [Phase 88.3]: 88.3-02: golden/single_flight, runs_for_me and window_raise recorded from the real TS; the runs-for-me vectors test stays live as the TS-side pin
+- [Phase 88.3]: 88.3-03: identify answers NotOurs for a live leader with another stamp before any member is read; kill_adopted_tree re-proves the member (alive, stamp, pgid) immediately before it signals; Windows Job arm only works while a handle to the Game Job is held
+- [Phase 88.3]: 88.3-15: a launcher stub is proven stale by swapping its factory for one that throws and running the suite; pass means never loaded
+- [Phase 88.3]: 88.3-04: run_launch ports only the tracer path; branches 88.3-05 owns end with launch:unported:<branch> before any side effect
+- [Phase 88.3]: 88.3-04: new ManagerHooks ops launch_facts and launch default to unavailable until 88.3-06 implements them in the shell
+- [Phase 88.3]: 88.3-05: every branch of the TS funnel is in run_launch; a rejection the TS let escape the launch answers a fixed launch:<what>:<word> and leaves undone what the TS left undone (D-20)
+- [Phase 88.3]: 88.3-06: funnel hook payloads fixed (launch_facts, launch, sync_saves, set_presence, clear_presence, persist_bottle_wine_version, update_gog_playtime, wine_settings_write); false = store defines none (presence, bottle) or sync threw
+- [Phase 88.3]: 88.3-07: the quit-kill bookkeeping runs under the killed game's own handle lock so the funnel tail cannot start before it finishes; the record is removed only by SessionGuard::finish, never by drop
+- [Phase 88.3]: 88.3-14: a launchOracle harness file is deleted only when git grep at HEAD shows no importer beyond the retired drivers; baseEnv, probes, pairwise and census stay
+- [Phase 88.3]: 88.3-08: launchManagerCall boundary schema is a tuple [op, unknown] refined by a per-op union (the channel table takes tuples); the launch hand-off must name the call's own game and the launch log type
+- [Phase 88.3]: 88.3-09: a re-adopted game is a registry entry holding an AdoptProof, ended only through kill_adopted_tree; its play time is recorded through the same function as a quit-kill's (launch-start totalPlayed); 88.3-12 should call readopt::start_with_host with the shell's RunnerHost so owed after-scripts inherit an environment
+- [Phase 88.3]: 88.3-10: settleLaunchStatus lives in launchBuilderReply.ts (schedule discovery scope), launchRun takes the schema's request type, the Launcher copies LaunchParams through toLaunchRunRequest
+- [Phase 88.3]: 88.3-11: launch_flight_wait answers the leader's value or the string abandoned, and rejects with launch_flight_wait:shutdown at app shutdown; begin answers {lead:id}|{join:true}; end answers a boolean
+- [Phase 88.3]: 88.3-12: the boot scan runs start_with_host over the shell's own runner host on the launch-readopt thread, and frontendReady announces re-adopted games on every delivery outside the one-shot boot-work guard
+- [Phase 88.3]: 88.3-13: the Rust window raise has no stop; its waits end on the shutdown token and the call returns (the TS stop() left it pending forever). A failed osascript logs the fixed line only, and osascript has no per-attempt time limit (the Automation consent prompt).
+- [Phase 88.3]: 88.3-17: raise shim takes its warning line as a dep and funnel.shims spies the logger, so backend-di-ceilings needs no baseline entry; gates that read launcher.ts follow the launcher to launchrust/launcher.ts
+- [Phase 88.3]: 88.3-18: the Steam dispatch's single flight is the glue over the Rust table; a refused begin rejects the caller, no TS fallback
+- [Phase 88.3]: 88.3-19: launch_script_run sidecar channel retired end to end; the crate op stays for the goldens. Channel pins 224 -> 223.
+- [Phase 88.3]: 88.3-20: windowsExeNameFromCommand is a twin in launchrust/raise.ts (deletedBy 96), pinned by golden/window_raise name vectors; settleLaunchStatus is scheduled for 98 with launchRun
 
 ### Pending Todos
 
@@ -1409,6 +1449,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261128-2xo | Humble expiry keeps an absolute value only when it names a real calendar date (written Y/M/D, four-digit year 1000-9999, parse lands on that date): Feb 30, bare year, year-month, 2-digit year, no year and years <1000 now fall through to the next field. Same rule in `classify.ts` and `classify.rs`; goldens re-recorded from TS (6 flipped, 56 added, 548 total), no delta; `HUMBLE_CLASSIFIER_VERSION` kept at 7. Todo closed. | 2026-11-28 | 0510abc0b, f6debdb7f, f1213001d | jest 7 humble suites 1046/1046 on Windows; gamelib-humble 282 lib + vectors_classify 548; clippy/fmt, clippy ratchet, codecheck, planning-gates 12/12 green | [261128-2xo-humble-expiry-rejects-calendar-invalid-a](./quick/261128-2xo-humble-expiry-rejects-calendar-invalid-a/) |
 | 261128-3qh | Humble expiry digest OS notification shows the title and date verbatim (`Tom & Jerry's ... 1/2/2027`): the four TS `i18next.t` digest calls pass `escapeValue: false` (global init untouched), Rust `build_digest_copy` uses `Catalog::t_unescaped`; alerts goldens re-recorded from TS (hostile case renamed), i18n `rendered.json` regenerated; no delta. Todo closed. | 2026-11-28 | 00aa8661a, 4afead0fa, 352a778ae | jest 3 suites 72/72 on Windows; gamelib-humble 283 lib + golden_alerts, gamelib-i18n green; clippy/fmt, clippy ratchet, codecheck, planning-gates 12/12 green | [261128-3qh-humble-expiry-digest-notification-render](./quick/261128-3qh-humble-expiry-digest-notification-render/) |
 | 261128-4j2 | Add to Steam `LaunchOptions` percent-encodes the app name and runner (`launch_url(app_name, runner, true)`, the `.lnk` call) in Rust `steam/entry.rs`, so a `"` can no longer end the quoted launch URL; no TS to change (removed in 94-24). Hostile golden replays the encoded bytes via a permanent `steam/deltas.json` entry (oracle gone); 47/48 recorded LaunchOptions unchanged, appid and grid ids unmoved; removal already accepts both forms. Todo closed. | 2026-11-28 | 24903e2b9, cd47bab9d, 936ef351c | gamelib-shortcuts 203 passed / 1 ignored on Windows (lib 98, golden_steam 17); clippy 1.99.1/fmt green, shortcutsFixtureRedaction 8/8, planning-gates 12/12 | [261128-4j2-a-steam-shortcut-writes-the-app-name-and](./quick/261128-4j2-a-steam-shortcut-writes-the-app-name-and/) |
+| 261128-9fj | macOS run.sh escapes apostrophe in launch URL | 2026-11-28 | 5bc0831be | — | [261128-9fj-macos-run-sh-escapes-apostrophe-in-launc](./quick/261128-9fj-macos-run-sh-escapes-apostrophe-in-launc/) |
 
 ## Deferred Items
 
@@ -1607,8 +1648,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-27T10:34:37.455Z
-Stopped at: Completed 88.2-30-PLAN.md
+Last session: 2026-11-28T02:07:29.802Z
+Stopped at: Completed 88.3-20-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.

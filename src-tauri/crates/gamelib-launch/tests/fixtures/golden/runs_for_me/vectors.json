@@ -1,0 +1,1224 @@
+[
+  {
+    "name": "after-session-unset-0",
+    "kind": "after-session",
+    "input": {
+      "current": null,
+      "elapsedMs": 0
+    },
+    "output": {
+      "state": null
+    }
+  },
+  {
+    "name": "after-session-unset-threshold-minus-1",
+    "kind": "after-session",
+    "input": {
+      "current": null,
+      "elapsedMs": 59999
+    },
+    "output": {
+      "state": null
+    }
+  },
+  {
+    "name": "after-session-unset-threshold",
+    "kind": "after-session",
+    "input": {
+      "current": null,
+      "elapsedMs": 60000
+    },
+    "output": {
+      "state": "auto"
+    }
+  },
+  {
+    "name": "after-session-unset-threshold-plus-1",
+    "kind": "after-session",
+    "input": {
+      "current": null,
+      "elapsedMs": 60001
+    },
+    "output": {
+      "state": "auto"
+    }
+  },
+  {
+    "name": "after-session-unset-an-hour",
+    "kind": "after-session",
+    "input": {
+      "current": null,
+      "elapsedMs": 3600000
+    },
+    "output": {
+      "state": "auto"
+    }
+  },
+  {
+    "name": "after-session-auto-0",
+    "kind": "after-session",
+    "input": {
+      "current": "auto",
+      "elapsedMs": 0
+    },
+    "output": {
+      "state": "auto"
+    }
+  },
+  {
+    "name": "after-session-auto-threshold-minus-1",
+    "kind": "after-session",
+    "input": {
+      "current": "auto",
+      "elapsedMs": 59999
+    },
+    "output": {
+      "state": "auto"
+    }
+  },
+  {
+    "name": "after-session-auto-threshold",
+    "kind": "after-session",
+    "input": {
+      "current": "auto",
+      "elapsedMs": 60000
+    },
+    "output": {
+      "state": "auto"
+    }
+  },
+  {
+    "name": "after-session-auto-threshold-plus-1",
+    "kind": "after-session",
+    "input": {
+      "current": "auto",
+      "elapsedMs": 60001
+    },
+    "output": {
+      "state": "auto"
+    }
+  },
+  {
+    "name": "after-session-auto-an-hour",
+    "kind": "after-session",
+    "input": {
+      "current": "auto",
+      "elapsedMs": 3600000
+    },
+    "output": {
+      "state": "auto"
+    }
+  },
+  {
+    "name": "after-session-user-on-0",
+    "kind": "after-session",
+    "input": {
+      "current": "user-on",
+      "elapsedMs": 0
+    },
+    "output": {
+      "state": "user-on"
+    }
+  },
+  {
+    "name": "after-session-user-on-threshold-minus-1",
+    "kind": "after-session",
+    "input": {
+      "current": "user-on",
+      "elapsedMs": 59999
+    },
+    "output": {
+      "state": "user-on"
+    }
+  },
+  {
+    "name": "after-session-user-on-threshold",
+    "kind": "after-session",
+    "input": {
+      "current": "user-on",
+      "elapsedMs": 60000
+    },
+    "output": {
+      "state": "user-on"
+    }
+  },
+  {
+    "name": "after-session-user-on-threshold-plus-1",
+    "kind": "after-session",
+    "input": {
+      "current": "user-on",
+      "elapsedMs": 60001
+    },
+    "output": {
+      "state": "user-on"
+    }
+  },
+  {
+    "name": "after-session-user-on-an-hour",
+    "kind": "after-session",
+    "input": {
+      "current": "user-on",
+      "elapsedMs": 3600000
+    },
+    "output": {
+      "state": "user-on"
+    }
+  },
+  {
+    "name": "after-session-user-off-0",
+    "kind": "after-session",
+    "input": {
+      "current": "user-off",
+      "elapsedMs": 0
+    },
+    "output": {
+      "state": "user-off"
+    }
+  },
+  {
+    "name": "after-session-user-off-threshold-minus-1",
+    "kind": "after-session",
+    "input": {
+      "current": "user-off",
+      "elapsedMs": 59999
+    },
+    "output": {
+      "state": "user-off"
+    }
+  },
+  {
+    "name": "after-session-user-off-threshold",
+    "kind": "after-session",
+    "input": {
+      "current": "user-off",
+      "elapsedMs": 60000
+    },
+    "output": {
+      "state": "user-off"
+    }
+  },
+  {
+    "name": "after-session-user-off-threshold-plus-1",
+    "kind": "after-session",
+    "input": {
+      "current": "user-off",
+      "elapsedMs": 60001
+    },
+    "output": {
+      "state": "user-off"
+    }
+  },
+  {
+    "name": "after-session-user-off-an-hour",
+    "kind": "after-session",
+    "input": {
+      "current": "user-off",
+      "elapsedMs": 3600000
+    },
+    "output": {
+      "state": "user-off"
+    }
+  },
+  {
+    "name": "after-session-unset-negative",
+    "kind": "after-session",
+    "input": {
+      "current": null,
+      "elapsedMs": -1
+    },
+    "output": {
+      "state": null
+    }
+  },
+  {
+    "name": "after-toggle-on",
+    "kind": "after-toggle",
+    "input": {
+      "on": true
+    },
+    "output": {
+      "state": "user-on"
+    }
+  },
+  {
+    "name": "after-toggle-off",
+    "kind": "after-toggle",
+    "input": {
+      "on": false
+    },
+    "output": {
+      "state": "user-off"
+    }
+  },
+  {
+    "name": "is-on-unset",
+    "kind": "is-on",
+    "input": {
+      "state": null
+    },
+    "output": {
+      "on": false
+    }
+  },
+  {
+    "name": "is-on-auto",
+    "kind": "is-on",
+    "input": {
+      "state": "auto"
+    },
+    "output": {
+      "on": true
+    }
+  },
+  {
+    "name": "is-on-user-on",
+    "kind": "is-on",
+    "input": {
+      "state": "user-on"
+    },
+    "output": {
+      "on": true
+    }
+  },
+  {
+    "name": "is-on-user-off",
+    "kind": "is-on",
+    "input": {
+      "state": "user-off"
+    },
+    "output": {
+      "on": false
+    }
+  },
+  {
+    "name": "key-plain",
+    "kind": "key",
+    "input": {
+      "appName": "Quail",
+      "runner": "legendary"
+    },
+    "output": {
+      "key": "Quail_legendary"
+    }
+  },
+  {
+    "name": "key-gog",
+    "kind": "key",
+    "input": {
+      "appName": "1207658930",
+      "runner": "gog"
+    },
+    "output": {
+      "key": "1207658930_gog"
+    }
+  },
+  {
+    "name": "key-steam",
+    "kind": "key",
+    "input": {
+      "appName": "570",
+      "runner": "steam"
+    },
+    "output": {
+      "key": "570_steam"
+    }
+  },
+  {
+    "name": "key-with-dots-and-underscores",
+    "kind": "key",
+    "input": {
+      "appName": "a.b_c",
+      "runner": "sideload"
+    },
+    "output": {
+      "key": "a.b_c_sideload"
+    }
+  },
+  {
+    "name": "map-valid-states",
+    "kind": "map",
+    "input": {
+      "games": {
+        "a_legendary": "auto",
+        "b_gog": "user-on",
+        "c_nile": "user-off"
+      }
+    },
+    "output": {
+      "map": {
+        "a_legendary": "auto",
+        "b_gog": "user-on",
+        "c_nile": "user-off"
+      }
+    }
+  },
+  {
+    "name": "map-drops-garbage-values",
+    "kind": "map",
+    "input": {
+      "games": {
+        "a_legendary": "auto",
+        "b_gog": "maybe",
+        "c_nile": 1,
+        "d_steam": null,
+        "e_sideload": true,
+        "f_legendary": ""
+      }
+    },
+    "output": {
+      "map": {
+        "a_legendary": "auto"
+      }
+    }
+  },
+  {
+    "name": "map-empty-object",
+    "kind": "map",
+    "input": {
+      "games": {}
+    },
+    "output": {
+      "map": {}
+    }
+  },
+  {
+    "name": "map-null-is-empty",
+    "kind": "map",
+    "input": {
+      "games": null
+    },
+    "output": {
+      "map": {}
+    }
+  },
+  {
+    "name": "map-number-is-empty",
+    "kind": "map",
+    "input": {
+      "games": 7
+    },
+    "output": {
+      "map": {}
+    }
+  },
+  {
+    "name": "map-string-is-empty",
+    "kind": "map",
+    "input": {
+      "games": "auto"
+    },
+    "output": {
+      "map": {}
+    }
+  },
+  {
+    "name": "map-array-keeps-valid-items-by-index",
+    "kind": "map",
+    "input": {
+      "games": [
+        "auto",
+        "nope",
+        "user-off"
+      ]
+    },
+    "output": {
+      "map": {
+        "0": "auto",
+        "2": "user-off"
+      }
+    }
+  },
+  {
+    "name": "record-darwin-unset-at-threshold",
+    "kind": "record-session",
+    "input": {
+      "appName": "Quail",
+      "runner": "legendary",
+      "elapsedMs": 60000,
+      "games": {},
+      "platform": "darwin"
+    },
+    "output": {
+      "threw": null,
+      "reads": [
+        {
+          "key": "games",
+          "fallback": {}
+        },
+        {
+          "key": "games",
+          "fallback": {}
+        }
+      ],
+      "writes": [
+        {
+          "key": "games",
+          "value": {
+            "Quail_legendary": "auto"
+          }
+        }
+      ],
+      "frontend": [
+        {
+          "channel": "runsForMeChanged",
+          "args": [
+            {
+              "Quail_legendary": "auto"
+            }
+          ]
+        }
+      ],
+      "logs": [
+        {
+          "level": "info",
+          "prefix": "Backend",
+          "text": "Runs for me: auto-set for Quail (legendary) after 60s of play"
+        }
+      ]
+    }
+  },
+  {
+    "name": "record-darwin-unset-over-threshold",
+    "kind": "record-session",
+    "input": {
+      "appName": "Quail",
+      "runner": "legendary",
+      "elapsedMs": 3600000,
+      "games": {},
+      "platform": "darwin"
+    },
+    "output": {
+      "threw": null,
+      "reads": [
+        {
+          "key": "games",
+          "fallback": {}
+        },
+        {
+          "key": "games",
+          "fallback": {}
+        }
+      ],
+      "writes": [
+        {
+          "key": "games",
+          "value": {
+            "Quail_legendary": "auto"
+          }
+        }
+      ],
+      "frontend": [
+        {
+          "channel": "runsForMeChanged",
+          "args": [
+            {
+              "Quail_legendary": "auto"
+            }
+          ]
+        }
+      ],
+      "logs": [
+        {
+          "level": "info",
+          "prefix": "Backend",
+          "text": "Runs for me: auto-set for Quail (legendary) after 3600s of play"
+        }
+      ]
+    }
+  },
+  {
+    "name": "record-darwin-unset-below-threshold",
+    "kind": "record-session",
+    "input": {
+      "appName": "Quail",
+      "runner": "legendary",
+      "elapsedMs": 59999,
+      "games": {},
+      "platform": "darwin"
+    },
+    "output": {
+      "threw": null,
+      "reads": [
+        {
+          "key": "games",
+          "fallback": {}
+        }
+      ],
+      "writes": [],
+      "frontend": [],
+      "logs": []
+    }
+  },
+  {
+    "name": "record-darwin-user-off-is-never-overridden",
+    "kind": "record-session",
+    "input": {
+      "appName": "Quail",
+      "runner": "legendary",
+      "elapsedMs": 3600000,
+      "games": {
+        "Quail_legendary": "user-off"
+      },
+      "platform": "darwin"
+    },
+    "output": {
+      "threw": null,
+      "reads": [
+        {
+          "key": "games",
+          "fallback": {}
+        }
+      ],
+      "writes": [],
+      "frontend": [],
+      "logs": []
+    }
+  },
+  {
+    "name": "record-darwin-user-on-is-left-alone",
+    "kind": "record-session",
+    "input": {
+      "appName": "Quail",
+      "runner": "legendary",
+      "elapsedMs": 3600000,
+      "games": {
+        "Quail_legendary": "user-on"
+      },
+      "platform": "darwin"
+    },
+    "output": {
+      "threw": null,
+      "reads": [
+        {
+          "key": "games",
+          "fallback": {}
+        }
+      ],
+      "writes": [],
+      "frontend": [],
+      "logs": []
+    }
+  },
+  {
+    "name": "record-darwin-auto-already-set-writes-nothing",
+    "kind": "record-session",
+    "input": {
+      "appName": "Quail",
+      "runner": "legendary",
+      "elapsedMs": 3600000,
+      "games": {
+        "Quail_legendary": "auto"
+      },
+      "platform": "darwin"
+    },
+    "output": {
+      "threw": null,
+      "reads": [
+        {
+          "key": "games",
+          "fallback": {}
+        }
+      ],
+      "writes": [],
+      "frontend": [],
+      "logs": []
+    }
+  },
+  {
+    "name": "record-linux-unset-over-threshold-is-a-no-op",
+    "kind": "record-session",
+    "input": {
+      "appName": "Quail",
+      "runner": "legendary",
+      "elapsedMs": 3600000,
+      "games": {},
+      "platform": "linux"
+    },
+    "output": {
+      "threw": null,
+      "reads": [],
+      "writes": [],
+      "frontend": [],
+      "logs": []
+    }
+  },
+  {
+    "name": "record-win32-unset-over-threshold-is-a-no-op",
+    "kind": "record-session",
+    "input": {
+      "appName": "Quail",
+      "runner": "legendary",
+      "elapsedMs": 3600000,
+      "games": {},
+      "platform": "win32"
+    },
+    "output": {
+      "threw": null,
+      "reads": [],
+      "writes": [],
+      "frontend": [],
+      "logs": []
+    }
+  },
+  {
+    "name": "record-darwin-keeps-the-other-games-in-the-written-record",
+    "kind": "record-session",
+    "input": {
+      "appName": "Quail",
+      "runner": "legendary",
+      "elapsedMs": 60000,
+      "games": {
+        "Wren_gog": "user-on",
+        "Heron_nile": "auto"
+      },
+      "platform": "darwin"
+    },
+    "output": {
+      "threw": null,
+      "reads": [
+        {
+          "key": "games",
+          "fallback": {}
+        },
+        {
+          "key": "games",
+          "fallback": {}
+        }
+      ],
+      "writes": [
+        {
+          "key": "games",
+          "value": {
+            "Wren_gog": "user-on",
+            "Heron_nile": "auto",
+            "Quail_legendary": "auto"
+          }
+        }
+      ],
+      "frontend": [
+        {
+          "channel": "runsForMeChanged",
+          "args": [
+            {
+              "Wren_gog": "user-on",
+              "Heron_nile": "auto",
+              "Quail_legendary": "auto"
+            }
+          ]
+        }
+      ],
+      "logs": [
+        {
+          "level": "info",
+          "prefix": "Backend",
+          "text": "Runs for me: auto-set for Quail (legendary) after 60s of play"
+        }
+      ]
+    }
+  },
+  {
+    "name": "record-darwin-drops-garbage-from-the-written-record",
+    "kind": "record-session",
+    "input": {
+      "appName": "Quail",
+      "runner": "legendary",
+      "elapsedMs": 60000,
+      "games": {
+        "Wren_gog": "user-on",
+        "Heron_nile": "maybe",
+        "Egret_steam": 3
+      },
+      "platform": "darwin"
+    },
+    "output": {
+      "threw": null,
+      "reads": [
+        {
+          "key": "games",
+          "fallback": {}
+        },
+        {
+          "key": "games",
+          "fallback": {}
+        }
+      ],
+      "writes": [
+        {
+          "key": "games",
+          "value": {
+            "Wren_gog": "user-on",
+            "Quail_legendary": "auto"
+          }
+        }
+      ],
+      "frontend": [
+        {
+          "channel": "runsForMeChanged",
+          "args": [
+            {
+              "Wren_gog": "user-on",
+              "Quail_legendary": "auto"
+            }
+          ]
+        }
+      ],
+      "logs": [
+        {
+          "level": "info",
+          "prefix": "Backend",
+          "text": "Runs for me: auto-set for Quail (legendary) after 60s of play"
+        }
+      ]
+    }
+  },
+  {
+    "name": "record-darwin-app-name-with-dots-writes-the-whole-record",
+    "kind": "record-session",
+    "input": {
+      "appName": "com.example.game",
+      "runner": "legendary",
+      "elapsedMs": 60000,
+      "games": {
+        "Wren_gog": "auto"
+      },
+      "platform": "darwin"
+    },
+    "output": {
+      "threw": null,
+      "reads": [
+        {
+          "key": "games",
+          "fallback": {}
+        },
+        {
+          "key": "games",
+          "fallback": {}
+        }
+      ],
+      "writes": [
+        {
+          "key": "games",
+          "value": {
+            "Wren_gog": "auto",
+            "com.example.game_legendary": "auto"
+          }
+        }
+      ],
+      "frontend": [
+        {
+          "channel": "runsForMeChanged",
+          "args": [
+            {
+              "Wren_gog": "auto",
+              "com.example.game_legendary": "auto"
+            }
+          ]
+        }
+      ],
+      "logs": [
+        {
+          "level": "info",
+          "prefix": "Backend",
+          "text": "Runs for me: auto-set for com.example.game (legendary) after 60s of play"
+        }
+      ]
+    }
+  },
+  {
+    "name": "record-darwin-other-runner-is-a-different-key",
+    "kind": "record-session",
+    "input": {
+      "appName": "Quail",
+      "runner": "gog",
+      "elapsedMs": 60000,
+      "games": {
+        "Quail_legendary": "user-off"
+      },
+      "platform": "darwin"
+    },
+    "output": {
+      "threw": null,
+      "reads": [
+        {
+          "key": "games",
+          "fallback": {}
+        },
+        {
+          "key": "games",
+          "fallback": {}
+        }
+      ],
+      "writes": [
+        {
+          "key": "games",
+          "value": {
+            "Quail_legendary": "user-off",
+            "Quail_gog": "auto"
+          }
+        }
+      ],
+      "frontend": [
+        {
+          "channel": "runsForMeChanged",
+          "args": [
+            {
+              "Quail_legendary": "user-off",
+              "Quail_gog": "auto"
+            }
+          ]
+        }
+      ],
+      "logs": [
+        {
+          "level": "info",
+          "prefix": "Backend",
+          "text": "Runs for me: auto-set for Quail (gog) after 60s of play"
+        }
+      ]
+    }
+  },
+  {
+    "name": "record-darwin-logs-seconds-rounded-down",
+    "kind": "record-session",
+    "input": {
+      "appName": "Quail",
+      "runner": "legendary",
+      "elapsedMs": 60499,
+      "games": {},
+      "platform": "darwin"
+    },
+    "output": {
+      "threw": null,
+      "reads": [
+        {
+          "key": "games",
+          "fallback": {}
+        },
+        {
+          "key": "games",
+          "fallback": {}
+        }
+      ],
+      "writes": [
+        {
+          "key": "games",
+          "value": {
+            "Quail_legendary": "auto"
+          }
+        }
+      ],
+      "frontend": [
+        {
+          "channel": "runsForMeChanged",
+          "args": [
+            {
+              "Quail_legendary": "auto"
+            }
+          ]
+        }
+      ],
+      "logs": [
+        {
+          "level": "info",
+          "prefix": "Backend",
+          "text": "Runs for me: auto-set for Quail (legendary) after 60s of play"
+        }
+      ]
+    }
+  },
+  {
+    "name": "record-darwin-logs-seconds-rounded-up",
+    "kind": "record-session",
+    "input": {
+      "appName": "Quail",
+      "runner": "legendary",
+      "elapsedMs": 60500,
+      "games": {},
+      "platform": "darwin"
+    },
+    "output": {
+      "threw": null,
+      "reads": [
+        {
+          "key": "games",
+          "fallback": {}
+        },
+        {
+          "key": "games",
+          "fallback": {}
+        }
+      ],
+      "writes": [
+        {
+          "key": "games",
+          "value": {
+            "Quail_legendary": "auto"
+          }
+        }
+      ],
+      "frontend": [
+        {
+          "channel": "runsForMeChanged",
+          "args": [
+            {
+              "Quail_legendary": "auto"
+            }
+          ]
+        }
+      ],
+      "logs": [
+        {
+          "level": "info",
+          "prefix": "Backend",
+          "text": "Runs for me: auto-set for Quail (legendary) after 61s of play"
+        }
+      ]
+    }
+  },
+  {
+    "name": "record-darwin-null-store-value-is-treated-as-empty",
+    "kind": "record-session",
+    "input": {
+      "appName": "Quail",
+      "runner": "legendary",
+      "elapsedMs": 60000,
+      "games": null,
+      "platform": "darwin"
+    },
+    "output": {
+      "threw": null,
+      "reads": [
+        {
+          "key": "games",
+          "fallback": {}
+        },
+        {
+          "key": "games",
+          "fallback": {}
+        }
+      ],
+      "writes": [
+        {
+          "key": "games",
+          "value": {
+            "Quail_legendary": "auto"
+          }
+        }
+      ],
+      "frontend": [
+        {
+          "channel": "runsForMeChanged",
+          "args": [
+            {
+              "Quail_legendary": "auto"
+            }
+          ]
+        }
+      ],
+      "logs": [
+        {
+          "level": "info",
+          "prefix": "Backend",
+          "text": "Runs for me: auto-set for Quail (legendary) after 60s of play"
+        }
+      ]
+    }
+  },
+  {
+    "name": "record-darwin-array-store-value-is-read-by-index",
+    "kind": "record-session",
+    "input": {
+      "appName": "Quail",
+      "runner": "legendary",
+      "elapsedMs": 60000,
+      "games": [
+        "auto"
+      ],
+      "platform": "darwin"
+    },
+    "output": {
+      "threw": null,
+      "reads": [
+        {
+          "key": "games",
+          "fallback": {}
+        },
+        {
+          "key": "games",
+          "fallback": {}
+        }
+      ],
+      "writes": [
+        {
+          "key": "games",
+          "value": {
+            "0": "auto",
+            "Quail_legendary": "auto"
+          }
+        }
+      ],
+      "frontend": [
+        {
+          "channel": "runsForMeChanged",
+          "args": [
+            {
+              "0": "auto",
+              "Quail_legendary": "auto"
+            }
+          ]
+        }
+      ],
+      "logs": [
+        {
+          "level": "info",
+          "prefix": "Backend",
+          "text": "Runs for me: auto-set for Quail (legendary) after 60s of play"
+        }
+      ]
+    }
+  },
+  {
+    "name": "record-darwin-store-get-throws-is-logged-and-swallowed",
+    "kind": "record-session",
+    "input": {
+      "appName": "Quail",
+      "runner": "legendary",
+      "elapsedMs": 60000,
+      "games": {},
+      "platform": "darwin",
+      "getThrows": "store unreadable"
+    },
+    "output": {
+      "threw": null,
+      "reads": [
+        {
+          "key": "games",
+          "fallback": {}
+        }
+      ],
+      "writes": [],
+      "frontend": [],
+      "logs": [
+        {
+          "level": "warning",
+          "prefix": "Backend",
+          "text": "Runs for me: could not record play session for Quail: Error: store unreadable"
+        }
+      ]
+    }
+  },
+  {
+    "name": "record-darwin-store-set-throws-is-logged-and-swallowed",
+    "kind": "record-session",
+    "input": {
+      "appName": "Quail",
+      "runner": "legendary",
+      "elapsedMs": 60000,
+      "games": {},
+      "platform": "darwin",
+      "setThrows": "disk full"
+    },
+    "output": {
+      "threw": null,
+      "reads": [
+        {
+          "key": "games",
+          "fallback": {}
+        },
+        {
+          "key": "games",
+          "fallback": {}
+        }
+      ],
+      "writes": [],
+      "frontend": [],
+      "logs": [
+        {
+          "level": "warning",
+          "prefix": "Backend",
+          "text": "Runs for me: could not record play session for Quail: Error: disk full"
+        }
+      ]
+    }
+  },
+  {
+    "name": "record-darwin-push-throws-after-the-write-is-logged-and-swallowed",
+    "kind": "record-session",
+    "input": {
+      "appName": "Quail",
+      "runner": "legendary",
+      "elapsedMs": 60000,
+      "games": {},
+      "platform": "darwin",
+      "pushThrows": "renderer gone"
+    },
+    "output": {
+      "threw": null,
+      "reads": [
+        {
+          "key": "games",
+          "fallback": {}
+        },
+        {
+          "key": "games",
+          "fallback": {}
+        }
+      ],
+      "writes": [
+        {
+          "key": "games",
+          "value": {
+            "Quail_legendary": "auto"
+          }
+        }
+      ],
+      "frontend": [
+        {
+          "channel": "runsForMeChanged",
+          "args": [
+            {
+              "Quail_legendary": "auto"
+            }
+          ]
+        }
+      ],
+      "logs": [
+        {
+          "level": "warning",
+          "prefix": "Backend",
+          "text": "Runs for me: could not record play session for Quail: Error: renderer gone"
+        }
+      ]
+    }
+  },
+  {
+    "name": "record-darwin-store-get-throws-below-threshold-still-logs",
+    "kind": "record-session",
+    "input": {
+      "appName": "Quail",
+      "runner": "legendary",
+      "elapsedMs": 0,
+      "games": {},
+      "platform": "darwin",
+      "getThrows": "store unreadable"
+    },
+    "output": {
+      "threw": null,
+      "reads": [
+        {
+          "key": "games",
+          "fallback": {}
+        }
+      ],
+      "writes": [],
+      "frontend": [],
+      "logs": [
+        {
+          "level": "warning",
+          "prefix": "Backend",
+          "text": "Runs for me: could not record play session for Quail: Error: store unreadable"
+        }
+      ]
+    }
+  }
+]

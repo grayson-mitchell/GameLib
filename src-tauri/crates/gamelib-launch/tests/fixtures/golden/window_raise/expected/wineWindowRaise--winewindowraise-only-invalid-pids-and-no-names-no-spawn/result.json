@@ -1,0 +1,9 @@
+{
+  "script": null,
+  "raises": {
+    "r1": "resolved"
+  },
+  "spawns": 0,
+  "pendingTimersAtEnd": 0,
+  "endAt": 0
+}

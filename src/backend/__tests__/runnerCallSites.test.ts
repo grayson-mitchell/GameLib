@@ -6,15 +6,13 @@
  *   still reached the TS registry would fail here rather than pass quietly. The Steam direct launch keeps the TS
  *   `killTracked` (Phase 90's), and a source check pins that.
  * - D-02: the three auth runner calls pass the name of a Rust sanitizer, never a function.
- * - the 82 amendment: gog's deleted-folder call and the launcher's folder-missing prompt send `launch_ask_force_uninstall`.
+ * - the 82 amendment: gog's deleted-folder call sends `launch_ask_force_uninstall`; the launcher's folder-missing prompt is Rust's (golden/funnel).
  */
 import { readFileSync } from 'fs'
 import { join } from 'path'
 
 import * as logger from 'backend/logger'
 import { LogPrefix } from 'backend/logger'
-import { createLauncher } from 'backend/launcher'
-import { createTestToolsSlices } from 'backend/testUtils/testServices'
 import GOGGame from 'backend/storeManagers/gog/games'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import { createTestManagerDeps } from 'backend/testUtils/testServices'
@@ -255,52 +253,15 @@ describe('the folder-missing prompt is asked in Rust through askForceUninstall (
     ])
   })
 
-  it("the launcher's folder-missing path asks before it reports done, then aborts", async () => {
-    const order: string[] = []
-    const invokes: Invoke[] = []
-    const base = createTestToolsSlices()
-    const launcher = createLauncher({
-      ...base,
-      requestRustInvoke: ((channel: string, args: unknown[]) => {
-        invokes.push({ channel, args })
-        order.push(channel)
-        return Promise.resolve(1)
-      }) as unknown as ManagerDeps['requestRustInvoke'],
-      sendFrontendMessage: ((channel: string, payload: { status?: string }) => {
-        if (channel === 'gameStatusUpdate')
-          order.push(`status:${payload.status}`)
-      }) as unknown as ManagerDeps['sendFrontendMessage'],
-      libraryManagers: {
-        gog: {
-          getGame: () => ({
-            getGameInfo: () => ({
-              app_name: 'gog-1',
-              install: { install_path: join(BACKEND, 'definitely-not-here') }
-            })
-          })
-        }
-      } as never,
-      launchHooks: { gog: {} } as never,
-      commandRunner: {} as never,
-      runner: {} as never,
-      spawnAsync: (() => Promise.reject(new Error('unscripted'))) as never,
-      stores: {} as never
-    })
-
-    const result = await launcher.launchEventCallback({
-      appName: 'gog-1',
-      runner: 'gog'
-    })
-
-    expect(result).toEqual({ status: 'abort' })
-    expect(asks(invokes).map((i) => i.args)).toEqual([
-      [{ runner: 'gog', appName: 'gog-1' }]
-    ])
-    expect(order).toEqual(['launch_ask_force_uninstall', 'status:done'])
-  })
+  // 88.3-17: the launcher's folder-missing case (ask first, then report done and abort) was a TS-funnel test. The funnel is
+  // deleted; the case lives on as `golden/funnel` `funnel--folder-missing-asks-and-aborts`, which `gamelib-launch/tests/funnel.rs`
+  // replays in Rust.
 
   it('no non-test file still imports errorHandler or askForceUninstall from backend/utils', () => {
-    for (const file of ['launcher.ts', 'storeManagers/gog/games.ts']) {
+    for (const file of [
+      'launchrust/launcher.ts',
+      'storeManagers/gog/games.ts'
+    ]) {
       const text = source(file)
       expect(text).not.toMatch(/\berrorHandler\b/)
       expect(text).not.toMatch(

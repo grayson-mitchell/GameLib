@@ -1,0 +1,363 @@
+[
+  {
+    "kind": "play",
+    "n": 1
+  },
+  {
+    "kind": "hook",
+    "hook": "getSettings",
+    "runner": "sideload",
+    "args": []
+  },
+  {
+    "kind": "config",
+    "member": "getSettings",
+    "args": []
+  },
+  {
+    "kind": "tsStore",
+    "op": "set",
+    "key": "sideload-app.firstPlayed",
+    "value": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "kind": "log",
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Launching Title of sideload (sideload-app)"
+  },
+  {
+    "kind": "frontend",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "sideload-app",
+        "runner": "sideload",
+        "status": "syncing-saves"
+      }
+    ]
+  },
+  {
+    "kind": "bus",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "sideload-app",
+        "runner": "sideload",
+        "status": "syncing-saves"
+      }
+    ]
+  },
+  {
+    "kind": "log",
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Downloading saves for Title of sideload"
+  },
+  {
+    "kind": "hook",
+    "hook": "syncSaves",
+    "runner": "sideload",
+    "args": [
+      "--skip-upload",
+      "/pins/saves",
+      []
+    ]
+  },
+  {
+    "kind": "log",
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Saves for Title of sideload downloaded"
+  },
+  {
+    "kind": "frontend",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "sideload-app",
+        "runner": "sideload",
+        "status": "launching"
+      }
+    ]
+  },
+  {
+    "kind": "bus",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "sideload-app",
+        "runner": "sideload",
+        "status": "launching"
+      }
+    ]
+  },
+  {
+    "kind": "log",
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Preventing display from sleep"
+  },
+  {
+    "kind": "appState",
+    "member": "wakeLock.start",
+    "args": [
+      "prevent-display-sleep"
+    ]
+  },
+  {
+    "kind": "config",
+    "member": "getSettings",
+    "args": []
+  },
+  {
+    "kind": "gameConfig",
+    "member": "getSettings",
+    "appName": "sideload-app",
+    "args": []
+  },
+  {
+    "kind": "rust",
+    "channel": "engine_launch_select",
+    "args": [
+      {
+        "runner": "sideload",
+        "appName": "sideload-app",
+        "title": "Title of sideload",
+        "isNative": true,
+        "settings": {
+          "verboseLogs": true,
+          "autoSyncSaves": true,
+          "savesPath": "/pins/saves",
+          "gogSaves": [],
+          "wineVersion": {
+            "name": "Wine-Test",
+            "bin": "/pins/wines/Wine-Test/bin/wine",
+            "type": "wine"
+          },
+          "afterLaunchScriptPath": "/pins/scripts/after.sh",
+          "lastUsedLaunchOption": {
+            "type": "basic",
+            "name": "Windowed",
+            "parameters": "--windowed"
+          }
+        },
+        "offline": false
+      }
+    ],
+    "reply": {
+      "kind": "skip"
+    }
+  },
+  {
+    "kind": "frontend",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "sideload-app",
+        "runner": "sideload",
+        "status": "launching"
+      }
+    ]
+  },
+  {
+    "kind": "bus",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "sideload-app",
+        "runner": "sideload",
+        "status": "launching"
+      }
+    ]
+  },
+  {
+    "kind": "hook",
+    "hook": "launch",
+    "runner": "sideload",
+    "args": [
+      {
+        "type": "basic",
+        "name": "Windowed",
+        "parameters": "--windowed"
+      },
+      null,
+      null
+    ],
+    "writer": {
+      "target": {
+        "kind": "game",
+        "appName": "sideload-app",
+        "runner": "sideload",
+        "type": "launch"
+      },
+      "rotationClaimed": false
+    }
+  },
+  {
+    "kind": "gameLog",
+    "target": {
+      "kind": "game",
+      "appName": "sideload-app",
+      "runner": "sideload",
+      "type": "launch"
+    },
+    "rotate": true,
+    "raw": "Running script after Title of sideload (/pins/scripts/after.sh)\n"
+  },
+  {
+    "kind": "script",
+    "when": "after",
+    "appName": "sideload-app",
+    "wine": "Wine-Test",
+    "beforeLaunchScriptPath": null,
+    "afterLaunchScriptPath": "/pins/scripts/after.sh",
+    "target": {
+      "kind": "game",
+      "appName": "sideload-app",
+      "runner": "sideload",
+      "type": "launch"
+    }
+  },
+  {
+    "kind": "gameLog",
+    "target": {
+      "kind": "game",
+      "appName": "sideload-app",
+      "runner": "sideload",
+      "type": "launch"
+    },
+    "rotate": false,
+    "raw": "============= End of log ============="
+  },
+  {
+    "kind": "log",
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Stopping Display Power Saver Blocker"
+  },
+  {
+    "kind": "appState",
+    "member": "wakeLock.stop",
+    "args": [
+      7
+    ]
+  },
+  {
+    "kind": "tsStore",
+    "op": "set",
+    "key": "sideload-app.lastPlayed",
+    "value": "2026-01-01T00:01:30.000Z"
+  },
+  {
+    "kind": "tsStore",
+    "op": "set",
+    "key": "sideload-app.totalPlayed",
+    "value": 1
+  },
+  {
+    "kind": "config",
+    "member": "getSettings",
+    "args": []
+  },
+  {
+    "kind": "rust",
+    "channel": "info_recent_add",
+    "args": [
+      {
+        "appName": "sideload-app",
+        "title": "Title of sideload",
+        "runner": "sideload"
+      }
+    ],
+    "reply": null
+  },
+  {
+    "kind": "frontend",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "sideload-app",
+        "runner": "sideload",
+        "status": "done"
+      }
+    ]
+  },
+  {
+    "kind": "bus",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "sideload-app",
+        "runner": "sideload",
+        "status": "done"
+      }
+    ]
+  },
+  {
+    "kind": "frontend",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "sideload-app",
+        "runner": "sideload",
+        "status": "syncing-saves"
+      }
+    ]
+  },
+  {
+    "kind": "bus",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "sideload-app",
+        "runner": "sideload",
+        "status": "syncing-saves"
+      }
+    ]
+  },
+  {
+    "kind": "log",
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Uploading saves for Title of sideload"
+  },
+  {
+    "kind": "hook",
+    "hook": "syncSaves",
+    "runner": "sideload",
+    "args": [
+      "--skip-download",
+      "/pins/saves",
+      []
+    ]
+  },
+  {
+    "kind": "log",
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Saves uploaded for Title of sideload"
+  },
+  {
+    "kind": "frontend",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "sideload-app",
+        "runner": "sideload",
+        "status": "done"
+      }
+    ]
+  },
+  {
+    "kind": "bus",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "sideload-app",
+        "runner": "sideload",
+        "status": "done"
+      }
+    ]
+  }
+]

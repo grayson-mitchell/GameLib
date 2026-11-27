@@ -344,9 +344,11 @@ const LONG_RUNNING_CHANNELS: &[&str] = &[
     "steamRemoveAllCopies",
     // Phase 88.2 plan 18 (D-26): the Rust-to-sidecar channel the Rust launch services ask the TS library
     // managers through (`launch_dispatch::SidecarManagerHooks`). 88.2 sends `game_title` and
-    // `force_uninstall`, both quick; 88.3 adds the funnel's `launch` hook to this same channel, and that one
-    // spans a whole play session, so no wall-clock value is correct for the channel (the `launch` shape
-    // above). Added on that shape, not timed. A hook pending when the sidecar closes fails through
+    // `force_uninstall`, both quick; the funnel's `launch` hook (88.3-06) now spans a whole play session on this
+    // same channel, so no wall-clock value is correct for the channel (the `launch` shape above). The funnel's
+    // other seven ops (`launch_facts`, `sync_saves`, the presence pair, `persist_bottle_wine_version`,
+    // `update_gog_playtime`, `wine_settings_write`) are quick, but they share the channel's one entry. Added on
+    // that shape, not timed. A hook pending when the sidecar closes fails through
     // `drain_pending_invokes`, and each call waits on a thread of its own, never the shared blocking pool.
     "launchManagerCall",
 ];
@@ -1955,6 +1957,9 @@ fn run_setup(
         // Phase 88.1 (88.1-07, D-20): the launch context, over the engine, known-fix and wine contexts just built.
         // Nothing here reads a file or spawns; a launch channel before this answers not ready.
         launch_dispatch::install(app.handle());
+        // Phase 88.3 (88.3-12, D-08, D-10): re-adopt the games a crashed GameLib left running, once per boot, on its own named
+        // thread (bounded in the crate), so setup does not wait for it.
+        launch_dispatch::start_readoption();
     }
     // Phase 94 (SVC-05, D-20): the one shortcuts context, built right after the host opened. Nothing here
     // spawns a process or waits; an op before this answers not-ready.

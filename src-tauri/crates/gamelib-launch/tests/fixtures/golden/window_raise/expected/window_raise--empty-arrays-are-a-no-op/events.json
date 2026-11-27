@@ -1,0 +1,21 @@
+[
+  {
+    "event": "construct",
+    "pendingTimers": 0
+  },
+  {
+    "event": "action",
+    "op": "raise",
+    "as": "r1",
+    "input": {
+      "context": "c",
+      "pids": [],
+      "processNames": []
+    }
+  },
+  {
+    "event": "settled",
+    "raise": "r1",
+    "at": 0
+  }
+]

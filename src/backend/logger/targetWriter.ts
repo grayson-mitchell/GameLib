@@ -73,16 +73,27 @@ export default class LogWriter {
   readonly #refused: boolean
   /** Whether the next accepted entry still has to carry the rotate flag. */
   #rotatePending: boolean
+  /** True once this writer claimed a rotation: the funnel's hand-off asks it (88.3-08). */
+  #rotationClaimed = false
   #closed = false
   /** Tail of the chain of Promise-valued raw messages, so one writer's entries keep their order. */
   #tail: Promise<void> = Promise.resolve()
   /** How many chained steps have not finished: while any are, later entries queue behind them. */
   #pending = 0
 
-  public constructor(target: LogFrameTarget, logsDisabled: boolean) {
+  /**
+   * `rotationOwed` says whether this writer still owes the file's rotation. The default is the old rule, owed for a
+   * non-general target. The Rust launch funnel's hand-off (88.3-08, D-29) builds a facade over a log the funnel already
+   * rotated, or one it still owes, so the rotation is claimed once between them: `{ rotationOwed: log.rotate }`.
+   */
+  public constructor(
+    target: LogFrameTarget,
+    logsDisabled: boolean,
+    options?: { rotationOwed?: boolean }
+  ) {
     this.#target = target
     this.#logsDisabled = logsDisabled
-    this.#rotatePending = target.kind !== 'general'
+    this.#rotatePending = options?.rotationOwed ?? target.kind !== 'general'
     const refusal = logTargetRefusal(target)
     this.#refused = refusal !== null
     if (refusal !== null) {
@@ -94,10 +105,16 @@ export default class LogWriter {
     return this.#target
   }
 
+  /** Whether this writer claimed a rotation (its first accepted entry, or a hand-off): read-only, never resets. */
+  public get rotationClaimed(): boolean {
+    return this.#rotationClaimed
+  }
+
   /** The rotate flag for the entry being accepted now: true exactly once, claimed synchronously. */
   #claimRotate(): boolean {
     const rotate = this.#rotatePending
     this.#rotatePending = false
+    if (rotate) this.#rotationClaimed = true
     return rotate
   }
 

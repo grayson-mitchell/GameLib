@@ -159,9 +159,6 @@ jest.mock('../depot', () => ({
 }))
 
 // ── backend/launcher mock — runWineCommand (D-05 no-auto-drive regression) ────
-jest.mock('backend/launcher', () => ({
-  runWineCommand: jest.fn()
-}))
 
 // ── bridge/allowlist mock — bridgeAllowlist.has (D-UAT-24-02, 24-17) ────────
 // Defaulted to false in the shared beforeEach below so EVERY pre-existing

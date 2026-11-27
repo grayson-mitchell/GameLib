@@ -393,38 +393,3 @@ export function createTestManagerDeps(
     loginWindowSeam: overrides.loginWindowSeam ?? createLoginWindowSeamSlot()
   }
 }
-
-/**
- * The config, app-info and host slices `createTools` (ToolsDeps) and the engine source read.
- * A test spreads this into its tools deps literal.
- */
-export function createTestToolsSlices(
-  overrides: { sendFrontendMessage?: ManagerDeps['sendFrontendMessage'] } = {}
-) {
-  const host = createTestHostServices()
-  const config = createTestGlobalConfig()
-  return {
-    config,
-    gameConfigs: createTestGameConfigs(),
-    appInfo: TEST_APP_INFO,
-    dialogs: host.dialogs,
-    sendFrontendMessage:
-      overrides.sendFrontendMessage ?? host.sendFrontendMessage,
-    requestRustInvoke: host.requestRustInvoke,
-    appState: host.appState,
-    notifications: host.notifications,
-    onlineMonitor: createTestOnlineMonitor(),
-    steamLaunchRuntime: createTestSteamLaunchRuntime(),
-    bridgeRuntime: createTestBridgeRuntime(),
-    steamInstallRuntime: createTestSteamInstallRuntime(),
-    gogRuntime: createTestGogRuntime(),
-    legendaryRuntime: createTestLegendaryRuntime(),
-    nileRuntime: createTestNileRuntime(),
-    infoCaches: createTestInfoCaches(),
-    aborts: createTestAbortRegistry(),
-    appRuntime: createTestAppRuntime(),
-    windowRaiser: createTestWindowRaiser(),
-    paths: createTestPaths(),
-    steamBottle: createTestSteamBottle({ stores: createTestStores(), config })
-  }
-}

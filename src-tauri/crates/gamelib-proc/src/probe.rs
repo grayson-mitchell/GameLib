@@ -24,6 +24,25 @@ pub fn group_alive(pgid: u32) -> bool {
     }
 }
 
+/// The non-zombie members of process group `pgid`, in no particular order. A group outlives its
+/// leader while any member remains, so this is how a game tree is enumerated after the leader has
+/// gone (Pitfall 10: a Wine or CrossOver launcher exits about a second in and leaves the game in
+/// its group). Empty for `pgid <= 1` (never a group GameLib created) and off unix. On unix systems
+/// other than Linux and macOS no portable listing exists, so the answer is empty there (documented,
+/// not an error): a caller that needs members must not depend on it.
+pub fn group_pids(pgid: u32) -> Vec<u32> {
+    match i32::try_from(pgid) {
+        Ok(p) if p > 1 => imp::group_pids(pgid),
+        _ => Vec::new(),
+    }
+}
+
+/// The process group id of `pid`, `None` when the process does not exist or the call fails (and
+/// off unix, where there are no process groups).
+pub fn pgid_of(pid: u32) -> Option<u32> {
+    imp::pgid_of(pid)
+}
+
 /// Windows: the creation time of the process `handle` names, read through that handle so a caller
 /// holding it can check a stamp and then act on the very same process.
 #[cfg(windows)]
@@ -67,26 +86,32 @@ mod imp {
 
     /// Field 5 (pgrp) is token 2 after the comm field (state is token 0, ppid token 1). Zombies
     /// (Z) and the dead (X) do not count: a killed member nobody has reaped yet is not alive.
-    pub fn group_alive(pgid: u32) -> bool {
+    pub fn group_pids(pgid: u32) -> Vec<u32> {
         let Ok(dir) = std::fs::read_dir("/proc") else {
-            return false;
+            return Vec::new();
         };
-        dir.flatten().any(|entry| {
-            let Some(pid) = entry
-                .file_name()
-                .to_str()
-                .and_then(|n| n.parse::<u32>().ok())
-            else {
-                return false;
-            };
-            let Some(rest) = stat_after_comm(pid) else {
-                return false;
-            };
-            let mut fields = rest.split_whitespace();
-            let state = fields.next();
-            let pgrp = fields.nth(1).and_then(|f| f.parse::<u32>().ok());
-            !matches!(state, Some("Z") | Some("X")) && pgrp == Some(pgid)
-        })
+        let mut members: Vec<u32> = dir
+            .flatten()
+            .filter_map(|entry| {
+                let pid = entry.file_name().to_str()?.parse::<u32>().ok()?;
+                let rest = stat_after_comm(pid)?;
+                let mut fields = rest.split_whitespace();
+                let state = fields.next();
+                let pgrp = fields.nth(1).and_then(|f| f.parse::<u32>().ok());
+                (!matches!(state, Some("Z") | Some("X")) && pgrp == Some(pgid)).then_some(pid)
+            })
+            .collect();
+        members.sort_unstable();
+        members
+    }
+
+    pub fn group_alive(pgid: u32) -> bool {
+        !group_pids(pgid).is_empty()
+    }
+
+    pub fn pgid_of(pid: u32) -> Option<u32> {
+        let rest = stat_after_comm(pid)?;
+        rest.split_whitespace().nth(2)?.parse().ok()
     }
 }
 
@@ -130,12 +155,12 @@ mod imp {
     const PROC_PGRP_ONLY: u32 = 2;
 
     /// Lists the pids whose process group is `pgid` and keeps the ones that are not zombies.
-    pub fn group_alive(pgid: u32) -> bool {
+    pub fn group_pids(pgid: u32) -> Vec<u32> {
         let unit = std::mem::size_of::<libc::c_int>();
         // SAFETY: a null buffer with size 0 only asks for the byte count `proc_listpids` needs.
         let needed = unsafe { libc::proc_listpids(PROC_PGRP_ONLY, pgid, std::ptr::null_mut(), 0) };
         if needed <= 0 {
-            return false;
+            return Vec::new();
         }
         // Headroom for members forked between the two calls.
         let cap = needed as usize / unit + 8;
@@ -151,10 +176,26 @@ mod imp {
             )
         };
         if written <= 0 {
-            return false;
+            return Vec::new();
         }
         let count = (written as usize / unit).min(cap);
-        pids[..count].iter().any(|&p| p > 0 && is_alive(p as u32))
+        let mut members: Vec<u32> = pids[..count]
+            .iter()
+            .filter(|&&p| p > 0 && is_alive(p as u32))
+            .map(|&p| p as u32)
+            .collect();
+        members.sort_unstable();
+        members
+    }
+
+    pub fn group_alive(pgid: u32) -> bool {
+        !group_pids(pgid).is_empty()
+    }
+
+    pub fn pgid_of(pid: u32) -> Option<u32> {
+        // SAFETY: getpgid takes a plain pid and returns -1 on error; no pointers.
+        let r = unsafe { libc::getpgid(pid as libc::pid_t) };
+        u32::try_from(r).ok()
     }
 }
 
@@ -168,6 +209,17 @@ mod imp {
 
     pub fn start_time(_pid: u32) -> Option<u64> {
         None
+    }
+
+    /// No portable listing of a group's members here: empty (see `probe::group_pids`).
+    pub fn group_pids(_pgid: u32) -> Vec<u32> {
+        Vec::new()
+    }
+
+    pub fn pgid_of(pid: u32) -> Option<u32> {
+        // SAFETY: getpgid takes a plain pid and returns -1 on error; no pointers.
+        let r = unsafe { libc::getpgid(pid as libc::pid_t) };
+        u32::try_from(r).ok()
     }
 
     /// `kill(-pgid, 0)` probes the whole group; EPERM means it exists but is not ours to signal.
@@ -279,6 +331,14 @@ mod imp {
     pub fn group_alive(_pgid: u32) -> bool {
         false
     }
+
+    pub fn group_pids(_pgid: u32) -> Vec<u32> {
+        Vec::new()
+    }
+
+    pub fn pgid_of(_pid: u32) -> Option<u32> {
+        None
+    }
 }
 
 #[cfg(test)]
@@ -337,6 +397,26 @@ mod tests {
             !is_alive(pid),
             "a process that exited with 259 is not alive"
         );
+    }
+
+    #[test]
+    fn group_pids_refuses_the_pgids_that_are_never_ours() {
+        for bad in [0, 1, u32::MAX] {
+            assert!(group_pids(bad).is_empty(), "pgid {bad}");
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn pgid_of_reads_this_processs_group_and_none_for_a_missing_pid() {
+        // SAFETY: getpgrp takes no arguments and cannot fail.
+        let own = unsafe { libc::getpgrp() } as u32;
+        assert_eq!(pgid_of(std::process::id()), Some(own));
+        assert!(
+            group_pids(own).contains(&std::process::id()),
+            "the test process is a member of its own group"
+        );
+        assert_eq!(pgid_of(u32::MAX), None);
     }
 
     #[cfg(unix)]

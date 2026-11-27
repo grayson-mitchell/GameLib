@@ -157,12 +157,12 @@ const TOOLS_SHIM_IMPORTERS: readonly string[] = [
 ]
 /**
  * Every non-test importer of `launchrust/builders.ts` (the check is per file, so every row of that file lists them
- * all): the launcher binds the shims into its members, which the three managers' `launch()` call (88.1-07). The command
+ * all): the launcher (`launchrust/launcher.ts` since 88.3-16) binds the shims into its members, which the three managers' `launch()` call (88.1-07). The command
  * runner's `wine` binding called three of them from `bootstrap.ts` (88.1-08) until the boot stopped building the TS runner
  * (88.2-21).
  */
 const LAUNCH_BUILDER_SHIM_IMPORTERS: readonly string[] = [
-  'src/backend/launcher.ts'
+  'src/backend/launchrust/launcher.ts'
 ]
 /** Every non-test importer of `launchrust/prepare.ts` (the check is per file): the interim prepare adapters (88.1-15). */
 const LAUNCH_PREPARE_SHIM_IMPORTERS: readonly string[] = [
@@ -230,7 +230,6 @@ const BOTTLES_SHIM_IMPORTERS: readonly string[] = [
 /** Every non-test importer of `enginewine/launch.ts` (the check is per file, so every row of that file lists them all). */
 const LAUNCH_SHIM_IMPORTERS: readonly string[] = [
   'src/backend/launchEngineStep.ts',
-  'src/backend/launcher.ts',
   'src/backend/sidecar/appShellFlowRegistration.ts',
   'src/backend/storeManagers/gog/setup.ts',
   'src/backend/storeManagers/nile/setup.ts'
@@ -290,6 +289,36 @@ const DEADLINE_SHIM_IMPORTERS: readonly string[] = [
   'src/backend/storeManagers/steam/engine/bridgeDeadline.ts',
   'src/backend/storeManagers/steam/gameBridgeWineLaunch.ts'
 ]
+// 88.3-12: the importers of `launchrust/funnel.ts`, every one counted per file. The Launcher's `launchEventCallback` (in
+// `launchrust/launcher.ts` since 88.3-16) calls `launchRun`; the sidecar's `frontendReady` handler calls `announceReadoptedGames`.
+const FUNNEL_SHIM_IMPORTERS: readonly string[] = [
+  'src/backend/launchrust/launcher.ts',
+  'src/backend/sidecar/appShellFlowRegistration.ts'
+]
+
+// 88.3-18: the importers of `launchrust/flights.ts`, every one counted per file. The app runtime builds the boot's launch
+// single-flight with `createRustLaunchFlights`; the three flight shims are called only from inside that glue.
+const FLIGHTS_SHIM_IMPORTERS: readonly string[] = ['src/backend/appRuntime.ts']
+
+// 88.3-16: the importers of `launchrust/launcher.ts`, every one counted per file. `createStoreManagers` builds the launcher, the
+// service types name its interface and the prepare adapters read its deps (88.3-17 deleted the test-facing TS funnel that extended them).
+const LAUNCHER_IMPORTERS: readonly string[] = [
+  'src/backend/launchAdapters.ts',
+  'src/backend/services/types.ts',
+  'src/backend/storeManagers/index.ts'
+]
+
+// 88.3-13: the importers of `launchrust/raise.ts`, every one counted per file. The sidecar bootstrap builds the raiser, and the
+// service types name its interface. 88.3-20: the Steam bottle monitor imports the exe-name twin and the raiser's type, and the
+// bottled-Steam launch the type, now that `utils/wineWindowRaise.ts` is deleted, and the test services' recording fake names the type.
+const RAISE_SHIM_IMPORTERS: readonly string[] = [
+  'src/backend/services/types.ts',
+  'src/backend/sidecar/bootstrap.ts',
+  'src/backend/storeManagers/steam/bottleProcessMonitor.ts',
+  'src/backend/storeManagers/steam/bottledSteam.ts',
+  'src/backend/testUtils/testAbortRegistry.ts'
+]
+
 // 88.2-16: the importers of `launchrust/runner.ts`, every one counted per file. The adapter calls `runnerCall`. 88.2-19: the
 // sidecar bootstrap imports `gamesRunning` and `trackedKillAll` for the quit handler (D-27). 88.2-20: `handlers.ts` imports
 // `registerLaunchManagerHooks` to answer the shell's hook calls. 88.2-21: the bootstrap also builds the kill-aware stream
@@ -297,7 +326,6 @@ const DEADLINE_SHIM_IMPORTERS: readonly string[] = [
 // and the spawnAsync adapter calls `spawnAsyncRun` and `runnerKill`. 88.2-22: the legendary, nile and sideload managers' `stop()`
 // calls `trackedKill`, and gog's launch and the launcher's folder-missing prompt call `askForceUninstall`.
 const RUNNER_SHIM_IMPORTERS: readonly string[] = [
-  'src/backend/launcher.ts',
   'src/backend/runnerAdapter.ts',
   'src/backend/sidecar/bootstrap.ts',
   'src/backend/sidecar/handlers.ts',
@@ -1186,8 +1214,8 @@ export const SCHEDULE: readonly ScheduleRow[] = [
   },
   // 88.2-17 (D-02, D-19): the rest of the runner transport. `wineCommandRun` is `runWineCommand` (the wine command core with the
   // game and helper spawn classes) and goes with the Steam bridge's wine launch, which 97 moves into Rust; `winePathGet` is
-  // `getWinePath`, which the store managers' wine path use leaves with their move in 92; `scriptRun` is `runScriptForGame`, the
-  // launcher's before and after scripts, which the Rust launcher (88.3) runs itself. Same file as `runnerCall`, so the same
+  // `getWinePath`, which the store managers' wine path use leaves with their move in 92. (A third row, `scriptRun`, the
+  // launcher's before and after scripts, left with its shim in 88.3-19: the Rust funnel runs them itself.) Same file as `runnerCall`, so the same
   // `callers`: the adapter (88.2-16, 88.2-17) is the one importer until the boot wiring (88.2-21).
   {
     name: 'wineCommandRun',
@@ -1204,14 +1232,6 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     channel: 'RUST_LAUNCH_WINE_PATH',
     callers: RUNNER_SHIM_IMPORTERS,
     deletedBy: 92
-  },
-  {
-    name: 'scriptRun',
-    file: 'src/backend/launchrust/runner.ts',
-    shape: 'shim',
-    channel: 'RUST_LAUNCH_SCRIPT_RUN',
-    callers: RUNNER_SHIM_IMPORTERS,
-    deletedBy: 88.3
   },
   // 88.2-17 (D-02, D-07, D-19): spawnAsync, the tracked kills and the running-game query. `spawnAsyncRun` is `spawnAsync` over a
   // stream, and `trackedKillAll` and `gamesRunning` are the quit handler's reads of the Rust registry; all three go with the shell
@@ -1260,6 +1280,135 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     wiring: ['registerLaunchManagerHooks'],
     callers: RUNNER_SHIM_IMPORTERS,
     deletedBy: 92
+  },
+  // 88.3-08 (D-26, D-29): the TS side of the Rust launch funnel's eight manager hook ops. `answerFunnelHook` answers each
+  // `launchManagerCall` op as the TS funnel (`runLaunchEventCallback`) made the same call, `hookRefusal` is the one refusal text
+  // that names only the op; `registerLaunchManagerHooks` (the `askForceUninstall` row's wiring) hands every funnel op to it. They
+  // are pinned by `managerHooks.test.ts`, which drives each op's answer and refusal against scripted managers. Both leave with
+  // the managers in 91 and 92, which implement the hooks in Rust.
+  {
+    name: 'answerFunnelHook',
+    file: 'src/backend/launchrust/funnelHooks.ts',
+    shape: 'twin',
+    vectors: 'src/backend/launchrust/__tests__/managerHooks.test.ts',
+    callers: ['src/backend/launchrust/runner.ts'],
+    deletedBy: 92
+  },
+  {
+    name: 'hookRefusal',
+    file: 'src/backend/launchrust/funnelHooks.ts',
+    shape: 'twin',
+    vectors: 'src/backend/launchrust/__tests__/managerHooks.test.ts',
+    callers: ['src/backend/launchrust/runner.ts'],
+    deletedBy: 92
+  },
+  // 88.3-10 (D-01, D-04, D-25): one Play of a non-Steam game, through the Rust launch funnel. `launchRun` is the one typed
+  // `RUST_LAUNCH_RUN` call, reached through the Launcher's `launchEventCallback` member from its two entry points: the sidecar
+  // `launch` handler's non-Steam arm (`steamFlowRegistration.ts`) and the `gamelib://launch` deep link (`protocol.ts`). Both go
+  // through `deps.launcher`, so `launcher.ts` is the one importer. The `launch` channel's own move into Rust is 90.2; the deep
+  // link moves in 98, which is the phase that deletes the shim. Its settle helper, `settleLaunchStatus`, lives in
+  // `launchBuilderReply.ts` with the other narrowing helpers, outside the discovery scope.
+  {
+    name: 'launchRun',
+    file: 'src/backend/launchrust/funnel.ts',
+    shape: 'shim',
+    channel: 'RUST_LAUNCH_RUN',
+    callers: FUNNEL_SHIM_IMPORTERS,
+    deletedBy: 98
+  },
+  // 88.3-16 (D-01, D-25): the Launcher the TS managers call, built once per boot by `createStoreManagers`. Every member is one of the
+  // shims above (the builders, the prepare adapters over `prepare.ts`, `launchRun`) behind a `launchBuilderReply.ts` narrowing, so
+  // the module holds no launch logic; it was `createLauncher` in `backend/launcher.ts` until the Rust funnel took every Play. It is
+  // glue over shims, the same kind as `createRustWindowRaiser`, pinned by the builder shim tests. Its last member leaves with the
+  // `launch` channel and the deep link in 98, the phase that deletes `launchRun`.
+  {
+    name: 'createLauncher',
+    file: 'src/backend/launchrust/launcher.ts',
+    shape: 'twin',
+    vectors: 'src/backend/__tests__/launcher.builderShims.test.ts',
+    callers: LAUNCHER_IMPORTERS,
+    deletedBy: 98
+  },
+  // 88.3-12 (D-19, Pitfall 9): the announcement of the games the shell re-adopted at boot. `announceReadoptedGames` is the one typed
+  // `RUST_LAUNCH_READOPTED_ANNOUNCE` call, reached from the sidecar's `frontendReady` handler on every delivery (outside the one-shot
+  // boot-work guard). `frontendReady` itself moves out of the sidecar in Phase 98, which is the phase that deletes the shim.
+  {
+    name: 'announceReadoptedGames',
+    file: 'src/backend/launchrust/funnel.ts',
+    shape: 'shim',
+    channel: 'RUST_LAUNCH_READOPTED_ANNOUNCE',
+    callers: FUNNEL_SHIM_IMPORTERS,
+    deletedBy: 98
+  },
+  // 88.3-18 (D-04, SC4): the one launch single-flight table is Rust's (88.3-11); the TS Steam dispatch joins it through three
+  // typed calls, `RUST_LAUNCH_FLIGHT_BEGIN`, `_WAIT` and `_END`, reached only through the glue `createRustLaunchFlights` (the boot's
+  // `appRuntime.launchFlights`). Its three Steam callers are `dispatchSteamLaunch`, `dispatchSteamLaunchWithoutSteamOnce` and
+  // `restartSteamNowForAdoption`; 90.2 moves the Steam dispatch into Rust, the phase that deletes the shims and the glue. The glue is
+  // the same kind as `createRustWindowRaiser`: a twin of the TS table's `singleFlightLaunch` call shape, pinned by
+  // `flights.shims.test.ts` over a fake of the Rust table.
+  {
+    name: 'launchFlightBegin',
+    file: 'src/backend/launchrust/flights.ts',
+    shape: 'shim',
+    channel: 'RUST_LAUNCH_FLIGHT_BEGIN',
+    callers: FLIGHTS_SHIM_IMPORTERS,
+    deletedBy: 90.2
+  },
+  {
+    name: 'launchFlightWait',
+    file: 'src/backend/launchrust/flights.ts',
+    shape: 'shim',
+    channel: 'RUST_LAUNCH_FLIGHT_WAIT',
+    callers: FLIGHTS_SHIM_IMPORTERS,
+    deletedBy: 90.2
+  },
+  {
+    name: 'launchFlightEnd',
+    file: 'src/backend/launchrust/flights.ts',
+    shape: 'shim',
+    channel: 'RUST_LAUNCH_FLIGHT_END',
+    callers: FLIGHTS_SHIM_IMPORTERS,
+    deletedBy: 90.2
+  },
+  {
+    name: 'createRustLaunchFlights',
+    file: 'src/backend/launchrust/flights.ts',
+    shape: 'twin',
+    vectors: 'src/backend/launchrust/__tests__/flights.shims.test.ts',
+    callers: FLIGHTS_SHIM_IMPORTERS,
+    deletedBy: 90.2
+  },
+  // 88.3-13 (D-19, D-21): the Wine window raiser. `raiseWineWindow` is the one typed `RUST_LAUNCH_WINDOW_RAISE` call; its glue,
+  // `createRustWindowRaiser`, is the raiser the boot's 'abort-registry' step builds (`bootstrap.ts`) and the bottle monitor, the
+  // bottled-Steam launch and the common launch call through `services.windowRaiser`. `services/types.ts` imports the interface.
+  // The glue is a twin of the TS raiser's call shape (`raise(deps, opts)`, never rejects), pinned by `raise.shims.test.ts`. Their last
+  // callers move with the bottle lifecycle in Phase 96, which deletes both.
+  {
+    name: 'raiseWineWindow',
+    file: 'src/backend/launchrust/raise.ts',
+    shape: 'shim',
+    channel: 'RUST_LAUNCH_WINDOW_RAISE',
+    callers: RAISE_SHIM_IMPORTERS,
+    deletedBy: 96
+  },
+  {
+    name: 'createRustWindowRaiser',
+    file: 'src/backend/launchrust/raise.ts',
+    shape: 'twin',
+    vectors: 'src/backend/launchrust/__tests__/raise.shims.test.ts',
+    callers: RAISE_SHIM_IMPORTERS,
+    deletedBy: 96
+  },
+  // 88.3-20 (D-24): `windowsExeNameFromCommand`, moved here unchanged from the deleted `utils/wineWindowRaise.ts`. The Steam bottle
+  // monitor calls it inline to name a bottle's Windows process, so it cannot be an async shim; `raise.shims.test.ts` replays the
+  // name vectors of `golden/window_raise` against it. It leaves with the bottle lifecycle in Phase 96.
+  {
+    name: 'windowsExeNameFromCommand',
+    file: 'src/backend/launchrust/raise.ts',
+    shape: 'twin',
+    vectors: 'src/backend/launchrust/__tests__/raise.shims.test.ts',
+    callers: RAISE_SHIM_IMPORTERS,
+    deletedBy: 96
   },
   // 88-13 (87 D-24): the synchronous known-fix twins, for callers 88 cannot make async. The launcher's `installFixes`
   // and `getKnownFixesEnvVariables` read the tier-1 fix inline until 88.1-17 deleted them; the Steam bridge keeps its own
@@ -2049,6 +2198,8 @@ describe('engineWineShimSchedule detector (planted fixtures)', () => {
       expect(rowsDueIn(SCHEDULE, 88.1)).toEqual([])
       // 88.2-24 deleted `createCommandRunner` and the `validWine` shim, the last two rows 88.2 owned: nothing is due in 88.2 now.
       expect(rowsDueIn(SCHEDULE, 88.2)).toEqual([])
+      // 88.3-19 deleted `scriptRun`, the one row 88.3 owned (the Rust funnel runs the launch scripts in process): nothing is due in 88.3.
+      expect(rowsDueIn(SCHEDULE, 88.3)).toEqual([])
     })
 
     it('noIntraPhaseRowsLeft fails while a row has deletedBy 87 and passes once none does', () => {

@@ -1,0 +1,68 @@
+[
+  {
+    "event": "step",
+    "op": "begin",
+    "caller": "hold",
+    "runner": "steam",
+    "app": "1",
+    "onJoin": "notify"
+  },
+  {
+    "event": "run",
+    "caller": "hold",
+    "key": "steam:1"
+  },
+  {
+    "event": "step",
+    "op": "begin",
+    "caller": "other-app",
+    "runner": "steam",
+    "app": "2",
+    "onJoin": "notify",
+    "body": {
+      "resolves": true
+    }
+  },
+  {
+    "event": "run",
+    "caller": "other-app",
+    "key": "steam:2"
+  },
+  {
+    "event": "received",
+    "caller": "other-app",
+    "value": true
+  },
+  {
+    "event": "step",
+    "op": "begin",
+    "caller": "other-runner",
+    "runner": "gog",
+    "app": "1",
+    "onJoin": "notify",
+    "body": {
+      "resolves": true
+    }
+  },
+  {
+    "event": "run",
+    "caller": "other-runner",
+    "key": "gog:1"
+  },
+  {
+    "event": "received",
+    "caller": "other-runner",
+    "value": true
+  },
+  {
+    "event": "step",
+    "op": "settle",
+    "caller": "hold",
+    "value": true
+  },
+  {
+    "event": "received",
+    "caller": "hold",
+    "value": true
+  }
+]

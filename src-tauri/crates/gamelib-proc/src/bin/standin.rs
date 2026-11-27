@@ -12,6 +12,9 @@
 //!   shares the game's session), records its pid in the file, then writes a line to stdout every
 //!   50 ms forever. Its stdout is a file or null, which is the Pitfall 5 point: the writes must
 //!   keep succeeding after the parent is gone.
+//!   `--leader-exit-ms <ms>` makes the leader exit that long after it has recorded its child, so the
+//!   child outlives it in the same group (the Wine loader shape, Pitfall 10); the parent's
+//!   `--game-leader-exit-ms <ms>` flag passes it on.
 //! - `game-child`: idle.
 //! - `game-tree --game-pids <path>`: a game whose leader exits at once. Spawns one `game-child` with
 //!   a plain std `Command` (so it shares the leader's session and group), records its pid in the
@@ -51,6 +54,8 @@
 //! dropped its guard; its grandchild's pid goes in the manifest's `detached` array (always present,
 //! empty without the flag), not in `helpers` or `grandchildren`, because it is meant to outlive the
 //! run and the quit (WR-03).
+//! `--game-leader-exit-ms <ms>` makes the game's leader exit that long after it has recorded its
+//! child, which keeps running in the leader's group (the re-adoption tests of 88.3-03).
 //! `--no-reaper` skips starting the reaper (the negative control: a SIGKILL of the
 //! parent must then leave its helpers alive). `--leak-pipe` (unix) adds a fourth helper holding a
 //! duplicate of the reaper pipe's write end as its stdin, so EOF never reaches the reaper.
@@ -327,12 +332,23 @@ fn game(args: &[String]) -> ! {
         .spawn()
         .expect("spawn game child");
     std::fs::write(&pids_path, format!("{}\n", child.id())).expect("write game child pid");
+    let exit_at = has_flag(args, "--leader-exit-ms").then(|| {
+        let ms: u64 = flag(args, "--leader-exit-ms")
+            .to_string_lossy()
+            .parse()
+            .expect("--leader-exit-ms is a number of milliseconds");
+        Instant::now() + Duration::from_millis(ms)
+    });
     let mut out = std::io::stdout();
     loop {
         // Ignore write errors: a game that died on a closed pipe is exactly what the harness is
         // here to rule out, and it must not be this process panicking instead.
         let _ = writeln!(out, "game tick");
         let _ = out.flush();
+        if exit_at.is_some_and(|at| Instant::now() >= at) {
+            // The child stays: a group that outlives its leader.
+            std::process::exit(0);
+        }
         std::thread::sleep(Duration::from_millis(50));
     }
 }
@@ -405,6 +421,14 @@ fn parent(args: &[String]) {
         .then(|| flag(args, "--game-stamp").to_string_lossy().into_owned());
     if let Some(gate) = &game_stamp_arg {
         game_args.extend(["--wait-for", gate.as_str()]);
+    }
+    let leader_exit_arg = has_flag(args, "--game-leader-exit-ms").then(|| {
+        flag(args, "--game-leader-exit-ms")
+            .to_string_lossy()
+            .into_owned()
+    });
+    if let Some(ms) = &leader_exit_arg {
+        game_args.extend(["--leader-exit-ms", ms.as_str()]);
     }
     let game_cmd = self_command("game", &game_args);
     // The handle (or child) is held until exit; dropping a `Child` never kills it, but holding it

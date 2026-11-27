@@ -53,6 +53,7 @@ import {
   dispatchSteamLaunchWithoutSteamOnce
 } from '../launchDispatch'
 import { createTestAppRuntime } from 'backend/testUtils/testAppRuntime'
+import { createFakeLaunchFlightTransport } from 'backend/testUtils/fakeLaunchFlightTransport'
 
 describe('dispatchSteamLaunch', () => {
   const appId = '999002'
@@ -166,6 +167,35 @@ describe('WR-03: single-flight at the launch IPC entry', () => {
         body: expect.stringContaining('already starting')
       })
     )
+  })
+
+  // 88.3-18 (D-04): the tracer. The single flight is Rust's table, so the two dispatches reach it as one begin each, one
+  // wait for the joiner and one end for the leader, over the glue and a fake of that table.
+  it('two concurrent dispatches go through the Rust single-flight table: two begins, one wait, one end', async () => {
+    const table = createFakeLaunchFlightTransport()
+    deps.appRuntime = createTestAppRuntime(table.deps)
+    let resolveLaunch!: (v: boolean) => void
+    launchMock.mockReturnValue(
+      new Promise<boolean>((res) => {
+        resolveLaunch = res
+      })
+    )
+
+    const a = dispatchSteamLaunch(deps, appId)
+    const b = dispatchSteamLaunch(deps, appId)
+    await new Promise(setImmediate)
+    resolveLaunch(true)
+    await expect(a).resolves.toBe(true)
+    await expect(b).resolves.toBe(true)
+
+    expect(table.sent.map((s) => s.channel).sort()).toEqual([
+      'launch_flight_begin',
+      'launch_flight_begin',
+      'launch_flight_end',
+      'launch_flight_wait'
+    ])
+    expect(launchMock).toHaveBeenCalledTimes(1)
+    expect(table.heldKeys()).toEqual([])
   })
 
   it('releases after settle: a later dispatch launches again', async () => {

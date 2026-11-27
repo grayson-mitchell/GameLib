@@ -158,9 +158,12 @@ const WINE_CORE: SliceSpec = {
 describe('wineCorePortComplete', () => {
   runSlice(WINE_CORE)
 
-  it('validWine is gone from launcher.ts and enginewine/wineCore.ts is deleted (88.2-24)', () => {
+  it('launcher.ts is deleted (88.3-17), the boot launcher module carries no validWine, and enginewine/wineCore.ts is deleted (88.2-24)', () => {
+    expect(tsWalk.files.some((f) => f.path === 'src/backend/launcher.ts')).toBe(
+      false
+    )
     const launcher = tsWalk.files.find(
-      (f) => f.path === 'src/backend/launcher.ts'
+      (f) => f.path === 'src/backend/launchrust/launcher.ts'
     )
     expect(launcher).toBeDefined()
     expect(launcher?.code ?? '').not.toMatch(/\bvalidWine\b/)

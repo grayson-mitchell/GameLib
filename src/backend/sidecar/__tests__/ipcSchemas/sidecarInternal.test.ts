@@ -12,6 +12,17 @@ import {
 
 const noArgs = { valid: [[]], invalid: [['x']] }
 
+function launchTarget() {
+  return { kind: 'game', appName: 'a', runner: 'gog', type: 'launch' }
+}
+function launchLog() {
+  return { target: launchTarget(), disabled: false, rotate: false }
+}
+/** A good `launch` payload for the game `gog`/`a`, with `over` laid on top. */
+function launchVector(over: Record<string, unknown> = {}) {
+  return { runner: 'gog', appName: 'a', log: launchLog(), ...over }
+}
+
 const invokeTable: FixtureTable<typeof sidecarInternalInvokeArgs> = {
   // terminate_veto.rs sends an empty arg list
   health: noArgs,
@@ -94,21 +105,170 @@ const invokeTable: FixtureTable<typeof sidecarInternalInvokeArgs> = {
       [{ kind: 'macArchVerdict', appId: '480', seq: 3, verdict: '16' }]
     ]
   },
-  // 88.2-18 / 88.2-20: the shell's ManagerHooks call, `[op, { runner, appName }]`
+  // 88.2-18 / 88.2-20 / 88.3-08: the shell's ManagerHooks call, `[op, payload]`: 88.2's two ops carry `{ runner, appName }`,
+  // each of the eight funnel ops (88.3-06) its own strict payload
   launchManagerCall: {
     valid: [
       ['game_title', { runner: 'legendary', appName: 'some-app' }],
-      ['force_uninstall', { runner: 'steam', appName: '480' }]
+      ['force_uninstall', { runner: 'steam', appName: '480' }],
+      ['launch_facts', { runner: 'gog', appName: 'a' }],
+      ['launch', launchVector()],
+      [
+        'launch',
+        launchVector({
+          launchArguments: { type: 'basic', name: 'Default' },
+          args: ['--a', '-b'],
+          skipVersionCheck: false
+        })
+      ],
+      [
+        'sync_saves',
+        {
+          runner: 'gog',
+          appName: 'a',
+          direction: '--skip-upload',
+          savesPath: '/saves',
+          gogSaves: [{ name: 'Slot', location: '/g' }]
+        }
+      ],
+      [
+        'sync_saves',
+        {
+          runner: 'legendary',
+          appName: 'a',
+          direction: '--skip-download',
+          savesPath: null,
+          gogSaves: []
+        }
+      ],
+      ['set_presence', { runner: 'gog', appName: 'a' }],
+      ['clear_presence', { runner: 'gog' }],
+      [
+        'persist_bottle_wine_version',
+        { runner: 'steam', appName: '480', wine: { bin: '/w', name: 'n' } }
+      ],
+      [
+        'update_gog_playtime',
+        {
+          appName: 'a',
+          start: '2026-11-28T10:00:00.000Z',
+          end: '2026-11-28T10:30:00.000Z'
+        }
+      ],
+      ['wine_settings_write', { appName: 'a' }],
+      ['wine_settings_write', { appName: 'a', global: {}, game: {} }]
     ],
     invalid: [
       [],
       ['game_title'],
-      ['launch', { runner: 'gog', appName: 'a' }],
+      ['delete_everything', { runner: 'gog', appName: 'a' }],
       ['game_title', { runner: 'epic', appName: 'a' }],
       ['game_title', { runner: 'gog', appName: '' }],
       ['game_title', { runner: 'gog', appName: 'a'.repeat(257) }],
       ['game_title', { runner: 'gog', appName: 'a', extra: 1 }],
-      ['game_title', { runner: 'gog', appName: 'a' }, 'third']
+      ['game_title', { runner: 'gog', appName: 'a' }, 'third'],
+      // a payload that fits another op
+      ['launch', { runner: 'gog', appName: 'a' }],
+      ['launch_facts', launchVector()],
+      ['clear_presence', { runner: 'gog', appName: 'a' }],
+      ['set_presence', { runner: 'gog' }],
+      // launch
+      ['launch', launchVector({ extra: 1 })],
+      ['launch', launchVector({ args: [1] })],
+      ['launch', launchVector({ skipVersionCheck: 'yes' })],
+      ['launch', launchVector({ launchArguments: 'basic' })],
+      ['launch', launchVector({ log: { disabled: false, rotate: false } })],
+      [
+        'launch',
+        launchVector({
+          log: { target: { kind: 'general' }, disabled: false, rotate: false }
+        })
+      ],
+      [
+        'launch',
+        launchVector({
+          log: {
+            target: { ...launchTarget(), type: 'install' },
+            disabled: false,
+            rotate: false
+          }
+        })
+      ],
+      [
+        'launch',
+        launchVector({
+          log: {
+            target: { ...launchTarget(), appName: 'other' },
+            disabled: false,
+            rotate: false
+          }
+        })
+      ],
+      ['launch', launchVector({ log: { ...launchLog(), rotate: 'yes' } })],
+      // sync_saves
+      [
+        'sync_saves',
+        {
+          runner: 'gog',
+          appName: 'a',
+          direction: '--force',
+          savesPath: '/s',
+          gogSaves: []
+        }
+      ],
+      [
+        'sync_saves',
+        {
+          runner: 'gog',
+          appName: 'a',
+          direction: '--skip-upload',
+          savesPath: 3,
+          gogSaves: []
+        }
+      ],
+      [
+        'sync_saves',
+        {
+          runner: 'gog',
+          appName: 'a',
+          direction: '--skip-upload',
+          savesPath: '/s',
+          gogSaves: ['x']
+        }
+      ],
+      ['sync_saves', { runner: 'gog', appName: 'a' }],
+      // clear_presence
+      ['clear_presence', {}],
+      ['clear_presence', { runner: 'epic' }],
+      // persist_bottle_wine_version
+      [
+        'persist_bottle_wine_version',
+        { runner: 'steam', appName: '480', extra: 1, wine: {} }
+      ],
+      ['persist_bottle_wine_version', { appName: '480', wine: {} }],
+      // update_gog_playtime
+      [
+        'update_gog_playtime',
+        { appName: 'a', start: 'not a date', end: '2026-11-28T10:30:00.000Z' }
+      ],
+      [
+        'update_gog_playtime',
+        { appName: 'a', start: '2026-11-28T10:00:00.000Z' }
+      ],
+      ['update_gog_playtime', { appName: 'a', start: '', end: '' }],
+      [
+        'update_gog_playtime',
+        {
+          runner: 'gog',
+          appName: 'a',
+          start: '2026-11-28T10:00:00.000Z',
+          end: '2026-11-28T10:30:00.000Z'
+        }
+      ],
+      // wine_settings_write
+      ['wine_settings_write', {}],
+      ['wine_settings_write', { appName: 'a', key: 'wineVersion' }],
+      ['wine_settings_write', { appName: '' }]
     ]
   }
 }

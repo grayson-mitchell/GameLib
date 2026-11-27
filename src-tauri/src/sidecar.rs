@@ -637,6 +637,10 @@ pub(crate) fn start_reader(
             shell_log(&invoke_abandoned_message("sidecar exited", &id, &channel));
         }
 
+        // A launch flight the sidecar led can never be ended by it now: give each key back and tell its joiners `abandoned`
+        // (88.3-11, Pitfall 8), so no joiner waits for a leader that is gone.
+        launch_dispatch::release_sidecar_flights();
+
         // D-08: no consumer remains for any depot job's events or responses, so stop them all.
         // Runs for an intentional shutdown too; the exit path then waits for finalize.
         on_sidecar_eof_cancel_jobs();

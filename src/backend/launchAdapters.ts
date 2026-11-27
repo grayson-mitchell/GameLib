@@ -7,7 +7,7 @@ import type {
 import { asStoreGame } from 'common/gameInfoNarrowing'
 import { isStore } from 'common/storeCapabilities'
 import type { Game } from 'common/types/game_manager'
-import type { LauncherDeps } from './launcher'
+import type { LauncherDeps } from './launchrust/launcher'
 import type { GlobalConfigSlice } from './config'
 import type { GameConfigs } from './game_config'
 import type { RustInvokeDeps } from './host/rustInvokeDeps'

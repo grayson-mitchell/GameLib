@@ -1,0 +1,9 @@
+{
+  "script": "on run argv\n  set theArgs to argv\n  set pidCount to (item 1 of theArgs) as integer\n  set argCount to count of theArgs\n  tell application \"System Events\"\n    repeat with i from 1 to pidCount\n      set pidVal to (item (i + 1) of theArgs) as integer\n      set procs to (every process whose unix id is pidVal and visible is true)\n      if (count of procs) > 0 then\n        set p to item 1 of procs\n        set frontmost of p to true\n        return (name of p) & \" pid=\" & (unix id of p)\n      end if\n    end repeat\n    repeat with j from (pidCount + 2) to argCount\n      set nameVal to (item j of theArgs)\n      set procs to (every process whose name is nameVal and visible is true)\n      if (count of procs) > 0 then\n        set p to item 1 of procs\n        set frontmost of p to true\n        return (name of p) & \" pid=\" & (unix id of p)\n      end if\n    end repeat\n    return \"none\"\n  end tell\nend run",
+  "raises": {
+    "r1": "resolved"
+  },
+  "spawns": 2,
+  "pendingTimersAtEnd": 0,
+  "endAt": 2500
+}

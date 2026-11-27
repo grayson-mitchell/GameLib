@@ -51,7 +51,7 @@ export function steamRootDefault(
  * What the config reports outward (66.4-17): the boot wires `onSettingChanged` to its event bus's
  * `settingChanged` event. Optional so a test that does not observe the event builds a config bare.
  */
-export type GlobalConfigPaths = Pick<
+type GlobalConfigPaths = Pick<
   AppPaths,
   | 'configPath'
   | 'gamesConfigPath'

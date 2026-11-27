@@ -1802,6 +1802,7 @@ dependencies = [
  "gamelib-store",
  "gamelib-testutil",
  "gamelib-wine",
+ "libc",
  "serde",
  "serde_json",
  "sha2",

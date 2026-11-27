@@ -82,7 +82,6 @@ const SCHEDULE: readonly ScheduleRow[] = [
     shape: 'shim',
     channel: 'RUST_INFO_RECENT_ADD',
     callers: [
-      'src/backend/launcher.ts',
       'src/backend/storeManagers/sideload/games.ts',
       'src/backend/storeManagers/steam/launchDispatch.ts'
     ],
@@ -94,7 +93,6 @@ const SCHEDULE: readonly ScheduleRow[] = [
     shape: 'shim',
     channel: 'RUST_INFO_RECENT_REMOVE',
     callers: [
-      'src/backend/launcher.ts',
       'src/backend/storeManagers/sideload/games.ts',
       'src/backend/storeManagers/steam/launchDispatch.ts'
     ],

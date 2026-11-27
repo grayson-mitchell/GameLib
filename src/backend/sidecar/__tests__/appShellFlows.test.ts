@@ -286,6 +286,7 @@ import {
   RUST_APP_EXIT,
   RUST_DIALOG_MESSAGE,
   RUST_ENGINE_DIALOG_DISPLAYED,
+  RUST_LAUNCH_READOPTED_ANNOUNCE,
   RUST_NOTIFICATION_SHOW,
   RUST_STORE_READ_ONLY_NOTICE,
   RUST_TRAY_SET_ICON,
@@ -1344,6 +1345,107 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
           ([channel]) => channel === 'readOnlyStoresNotice'
         )
       ).toHaveLength(0)
+    })
+
+    // Phase 88.3 (88.3-12, D-19, Pitfall 9): the shell re-adopts the games a crashed GameLib left running at boot, and
+    // announces them as Playing once the renderer listens. `frontendReady` asks for the announcement on EVERY delivery
+    // (a renderer reload starts with empty status listeners), outside the one-shot boot-work guard that still runs once.
+    // ISOLATED like the tests above so the module-scoped one-shot flag starts unflipped.
+    function isolatedFrontendReady(
+      rustInvokeImpl: (channel: string) => Promise<unknown>
+    ): { rustInvoke: jest.Mock; initQueue: jest.Mock; deliver: () => void } {
+      let rustInvoke!: jest.Mock
+      let initQueue!: jest.Mock
+      let frontendReadyListener!: () => void
+      inFreshRegistry(() => {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        require('backend/config').createGlobalConfig.mockReturnValue({
+          getSettings: () => ({ language: 'en' }),
+          setSetting: jest.fn(),
+          set: jest.fn(),
+          flush: jest.fn()
+        })
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        rustInvoke = require('../sidecarRpc').requestRustInvoke
+        rustInvoke.mockImplementation(rustInvokeImpl)
+        initQueue = downloadQueueStub.initQueue
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        require('../../logger').initHeadless()
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        require('../appShellFlowRegistration').registerAppShellFlows(
+          directDeps()
+        )
+        ;[frontendReadyListener] = directListeners().get('frontendReady')
+      })
+      return { rustInvoke, initQueue, deliver: frontendReadyListener }
+    }
+
+    it('88.3-12: TWO frontendReady deliveries send TWO announce calls while the boot work runs ONCE', async () => {
+      const { rustInvoke, initQueue, deliver } = isolatedFrontendReady(() =>
+        Promise.resolve(1)
+      )
+      jest.useFakeTimers({ doNotFake: ['setImmediate'] })
+      try {
+        deliver()
+        await flush()
+        deliver()
+        await flush()
+        jest.advanceTimersByTime(5000)
+      } finally {
+        jest.useRealTimers()
+      }
+      const announceCalls = rustInvoke.mock.calls.filter(
+        ([channel]) => channel === RUST_LAUNCH_READOPTED_ANNOUNCE
+      )
+      expect(announceCalls).toEqual([
+        [RUST_LAUNCH_READOPTED_ANNOUNCE, []],
+        [RUST_LAUNCH_READOPTED_ANNOUNCE, []]
+      ])
+      expect(initQueue).toHaveBeenCalledTimes(1)
+      expect(
+        rustInvoke.mock.calls.filter(
+          ([channel]) => channel === RUST_STORE_READ_ONLY_NOTICE
+        )
+      ).toHaveLength(1)
+    })
+
+    it('88.3-12: a rejecting announce logs one fixed warning and leaves frontendReady’s other work intact', async () => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {})
+      const secret = '/Users/someone/secret-profile-path'
+      const { rustInvoke, initQueue, deliver } = isolatedFrontendReady(
+        (channel) =>
+          channel === RUST_LAUNCH_READOPTED_ANNOUNCE
+            ? Promise.reject(new Error(secret))
+            : Promise.resolve(1)
+      )
+      jest.useFakeTimers({ doNotFake: ['setImmediate'] })
+      try {
+        expect(() => deliver()).not.toThrow()
+        await flush()
+        jest.advanceTimersByTime(5000)
+      } finally {
+        jest.useRealTimers()
+      }
+      try {
+        expect(initQueue).toHaveBeenCalledTimes(1)
+        expect(
+          rustInvoke.mock.calls.filter(
+            ([channel]) => channel === RUST_STORE_READ_ONLY_NOTICE
+          )
+        ).toHaveLength(1)
+        const announceWarnings = warn.mock.calls.filter(([message]) =>
+          String(message).includes('announceReadoptedGames')
+        )
+        expect(announceWarnings).toEqual([
+          [
+            '[appShellFlowRegistration] frontendReady -> announceReadoptedGames failed'
+          ]
+        ])
+        // The rejection's own text (it can carry a path) is never logged.
+        expect(JSON.stringify(warn.mock.calls)).not.toContain(secret)
+      } finally {
+        warn.mockRestore()
+      }
     })
 
     // T-35-107 (35-21 threat model): the Snap warning dialog is DELIBERATELY left outside

@@ -1,0 +1,697 @@
+[
+  {
+    "id": "single-flight--a-second-begin-joins-the-first",
+    "note": "the tracer: a second begin on the same key runs nothing, its notifier runs once, both callers get the owner's result",
+    "kind": "flights",
+    "steps": [
+      {
+        "op": "begin",
+        "caller": "a",
+        "runner": "steam",
+        "app": "1"
+      },
+      {
+        "op": "begin",
+        "caller": "b",
+        "runner": "steam",
+        "app": "1",
+        "onJoin": "notify"
+      },
+      {
+        "op": "settle",
+        "caller": "a",
+        "value": "ok"
+      }
+    ]
+  },
+  {
+    "id": "launchSingleFlight--singleflightlaunch-joins-a-concurrent-same-key-call-run-once-onjoin-once-same-result",
+    "note": "two concurrent callers on steam:1: the body runs once, the notifier once, both receive ok",
+    "kind": "flights",
+    "steps": [
+      {
+        "op": "begin",
+        "caller": "a",
+        "runner": "steam",
+        "app": "1",
+        "onJoin": "notify"
+      },
+      {
+        "op": "begin",
+        "caller": "b",
+        "runner": "steam",
+        "app": "1",
+        "onJoin": "notify"
+      },
+      {
+        "op": "settle",
+        "caller": "a",
+        "value": "ok"
+      }
+    ]
+  },
+  {
+    "id": "launchSingleFlight--singleflightlaunch-does-not-join-a-different-appname-or-runner",
+    "note": "steam:1 held; steam:2 and gog:1 each run their own body and no notifier fires",
+    "kind": "flights",
+    "steps": [
+      {
+        "op": "begin",
+        "caller": "hold",
+        "runner": "steam",
+        "app": "1",
+        "onJoin": "notify"
+      },
+      {
+        "op": "begin",
+        "caller": "other-app",
+        "runner": "steam",
+        "app": "2",
+        "onJoin": "notify",
+        "body": {
+          "resolves": true
+        }
+      },
+      {
+        "op": "begin",
+        "caller": "other-runner",
+        "runner": "gog",
+        "app": "1",
+        "onJoin": "notify",
+        "body": {
+          "resolves": true
+        }
+      },
+      {
+        "op": "settle",
+        "caller": "hold",
+        "value": true
+      }
+    ]
+  },
+  {
+    "id": "launchSingleFlight--singleflightlaunch-releases-after-settle-so-a-later-call-runs-again",
+    "note": "a body that settled releases its entry: the probe after it runs instead of joining",
+    "kind": "flights",
+    "steps": [
+      {
+        "op": "begin",
+        "caller": "a",
+        "runner": "steam",
+        "app": "1",
+        "body": {
+          "resolves": 1
+        }
+      },
+      {
+        "op": "probe",
+        "caller": "later",
+        "runner": "steam",
+        "app": "1"
+      }
+    ]
+  },
+  {
+    "id": "launchSingleFlight--singleflightlaunch-owner-rejection-rejects-both-callers-and-releases",
+    "note": "the owner rejects: both callers reject with boom and the entry is released",
+    "kind": "flights",
+    "steps": [
+      {
+        "op": "begin",
+        "caller": "a",
+        "runner": "steam",
+        "app": "1"
+      },
+      {
+        "op": "begin",
+        "caller": "b",
+        "runner": "steam",
+        "app": "1",
+        "onJoin": "notify"
+      },
+      {
+        "op": "reject",
+        "caller": "a",
+        "word": "boom"
+      },
+      {
+        "op": "probe",
+        "caller": "again",
+        "runner": "steam",
+        "app": "1"
+      }
+    ]
+  },
+  {
+    "id": "launchSingleFlight--singleflightlaunch-a-throwing-onjoin-does-not-reject-the-joiner",
+    "note": "a notifier that throws is swallowed: the joiner still receives the owner's ok",
+    "kind": "flights",
+    "steps": [
+      {
+        "op": "begin",
+        "caller": "a",
+        "runner": "steam",
+        "app": "1"
+      },
+      {
+        "op": "begin",
+        "caller": "b",
+        "runner": "steam",
+        "app": "1",
+        "onJoin": "throws"
+      },
+      {
+        "op": "settle",
+        "caller": "a",
+        "value": "ok"
+      }
+    ]
+  },
+  {
+    "id": "launcher_launchSingleFlight--launcheventcallback-single-flight-wr-03-runs-the-body-once-for-two-concurrent-calls-and-shares-the-result",
+    "note": "two concurrent launches of Quail: one launch, one per-game log, two launching pushes and one done push; the joiner line is logged once; both callers receive done",
+    "kind": "launcher",
+    "scenario": {
+      "online": false,
+      "gameSettings": {
+        "verboseLogs": true
+      }
+    },
+    "steps": [
+      {
+        "op": "call",
+        "caller": "a",
+        "app": "Quail"
+      },
+      {
+        "op": "call",
+        "caller": "b",
+        "app": "Quail"
+      },
+      {
+        "op": "finish",
+        "launch": 0,
+        "value": true
+      },
+      {
+        "op": "await",
+        "caller": "a"
+      },
+      {
+        "op": "await",
+        "caller": "b"
+      }
+    ]
+  },
+  {
+    "id": "launcher_launchSingleFlight--launcheventcallback-single-flight-wr-03-releases-after-settle-a-later-call-launches-again",
+    "note": "after the first launch settled, a second Play launches again (two launches, two per-game logs)",
+    "kind": "launcher",
+    "scenario": {
+      "online": false,
+      "gameSettings": {
+        "verboseLogs": true
+      }
+    },
+    "steps": [
+      {
+        "op": "call",
+        "caller": "a",
+        "app": "Quail"
+      },
+      {
+        "op": "finish",
+        "launch": 0,
+        "value": true
+      },
+      {
+        "op": "await",
+        "caller": "a"
+      },
+      {
+        "op": "call",
+        "caller": "b",
+        "app": "Quail"
+      },
+      {
+        "op": "finish",
+        "launch": 1,
+        "value": true
+      },
+      {
+        "op": "await",
+        "caller": "b"
+      }
+    ]
+  },
+  {
+    "id": "launcher_launchSingleFlight--launcheventcallback-single-flight-wr-03-does-not-join-a-different-appname",
+    "note": "Quail and Wren launch at once: two launches, no joiner line",
+    "kind": "launcher",
+    "scenario": {
+      "online": false,
+      "gameSettings": {
+        "verboseLogs": true
+      }
+    },
+    "steps": [
+      {
+        "op": "call",
+        "caller": "a",
+        "app": "Quail"
+      },
+      {
+        "op": "call",
+        "caller": "b",
+        "app": "Wren"
+      },
+      {
+        "op": "finish",
+        "launch": 0,
+        "value": true
+      },
+      {
+        "op": "finish",
+        "launch": 1,
+        "value": true
+      },
+      {
+        "op": "await",
+        "caller": "a"
+      },
+      {
+        "op": "await",
+        "caller": "b"
+      }
+    ]
+  },
+  {
+    "id": "launcher_launchSingleFlight--launcheventcallback-single-flight-wr-03-cr-41-a-rejected-recent-games-write-still-finishes-the-launch-cr-41-offline-resolves-done-sends-done-once-and-logs-the-failure",
+    "note": "offline, info_recent_add rejects with write-failed: the launch still resolves done, done is sent once and the failure is one warning",
+    "kind": "launcher",
+    "scenario": {
+      "online": false,
+      "gameSettings": {
+        "verboseLogs": true
+      },
+      "recentAddRejects": "info_recent_add:write-failed"
+    },
+    "steps": [
+      {
+        "op": "call",
+        "caller": "a",
+        "app": "Quail"
+      },
+      {
+        "op": "finish",
+        "launch": 0,
+        "value": true
+      },
+      {
+        "op": "await",
+        "caller": "a"
+      }
+    ]
+  },
+  {
+    "id": "launcher_launchSingleFlight--launcheventcallback-single-flight-wr-03-cr-41-a-rejected-recent-games-write-still-finishes-the-launch-cr-41-online-with-autosyncsaves-the-save-upload-still-runs",
+    "note": "online with autoSyncSaves, info_recent_add rejects: the save upload still runs and done is sent twice (once before the upload, once after)",
+    "kind": "launcher",
+    "scenario": {
+      "online": true,
+      "gameSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": true,
+        "savesPath": "/saves"
+      },
+      "recentAddRejects": "info_recent_add:write-failed"
+    },
+    "steps": [
+      {
+        "op": "call",
+        "caller": "a",
+        "app": "Quail"
+      },
+      {
+        "op": "finish",
+        "launch": 0,
+        "value": true
+      },
+      {
+        "op": "await",
+        "caller": "a"
+      }
+    ]
+  },
+  {
+    "id": "appRuntime--launch-single-flight-joins-a-second-launch-of-the-same-game-and-runs-the-owner-once",
+    "note": "gog:g1 on one runtime: the owner body runs once, the notifier once, both receive done",
+    "kind": "flights",
+    "steps": [
+      {
+        "op": "begin",
+        "caller": "first",
+        "runner": "gog",
+        "app": "g1",
+        "onJoin": "notify"
+      },
+      {
+        "op": "begin",
+        "caller": "second",
+        "runner": "gog",
+        "app": "g1",
+        "onJoin": "notify"
+      },
+      {
+        "op": "settle",
+        "caller": "first",
+        "value": "done"
+      }
+    ]
+  },
+  {
+    "id": "appRuntime--launch-single-flight-releases-the-entry-when-the-owner-settles",
+    "note": "the entry is already gone one microtask after the owner's promise is awaited (the finally runs before the awaiter)",
+    "kind": "flights",
+    "steps": [
+      {
+        "op": "begin",
+        "caller": "first",
+        "runner": "gog",
+        "app": "g1",
+        "body": {
+          "resolves": "x"
+        },
+        "settle": "none"
+      },
+      {
+        "op": "await",
+        "caller": "first",
+        "settle": "micro"
+      },
+      {
+        "op": "probe",
+        "caller": "second",
+        "runner": "gog",
+        "app": "g1"
+      }
+    ]
+  },
+  {
+    "id": "appRuntime--launch-single-flight-does-not-join-across-runtimes",
+    "note": "two tables share nothing: the same key on table b runs its own body while table a holds the owner",
+    "kind": "flights",
+    "steps": [
+      {
+        "op": "begin",
+        "caller": "owner-a",
+        "runner": "gog",
+        "app": "g1",
+        "table": "a"
+      },
+      {
+        "op": "begin",
+        "caller": "other-b",
+        "runner": "gog",
+        "app": "g1",
+        "table": "b",
+        "body": {
+          "resolves": null
+        }
+      },
+      {
+        "op": "settle",
+        "caller": "owner-a",
+        "value": null
+      }
+    ]
+  },
+  {
+    "id": "launchDispatch--wr-03-single-flight-at-the-launch-ipc-entry-two-concurrent-dispatches-launch-once-record-once-notify-once",
+    "note": "two dispatches of steam:999003: the body (launch and recent-game write) runs once, the already-starting notice fires once, both receive true",
+    "kind": "flights",
+    "steps": [
+      {
+        "op": "begin",
+        "caller": "a",
+        "runner": "steam",
+        "app": "999003",
+        "onJoin": "notify-steam"
+      },
+      {
+        "op": "begin",
+        "caller": "b",
+        "runner": "steam",
+        "app": "999003",
+        "onJoin": "notify-steam"
+      },
+      {
+        "op": "settle",
+        "caller": "a",
+        "value": true
+      }
+    ]
+  },
+  {
+    "id": "launchDispatch--wr-03-single-flight-at-the-launch-ipc-entry-releases-after-settle-a-later-dispatch-launches-again",
+    "note": "a settled dispatch releases the entry: the next dispatch of steam:999003 runs its own body",
+    "kind": "flights",
+    "steps": [
+      {
+        "op": "begin",
+        "caller": "a",
+        "runner": "steam",
+        "app": "999003",
+        "onJoin": "notify-steam",
+        "body": {
+          "resolves": true
+        }
+      },
+      {
+        "op": "probe",
+        "caller": "later",
+        "runner": "steam",
+        "app": "999003"
+      }
+    ]
+  },
+  {
+    "id": "launchDispatch--phase-81-d-05-the-one-shot-launch-without-steam-from-the-refused-restart-notice-joins-the-steam-single-flight-a-second-press-gets-the-already-starting-notice-and-launches-nothing-more",
+    "note": "the without-Steam press and a second press share the steam flight: one body, one notice, both receive true",
+    "kind": "flights",
+    "steps": [
+      {
+        "op": "begin",
+        "caller": "a",
+        "runner": "steam",
+        "app": "999003",
+        "onJoin": "notify-steam"
+      },
+      {
+        "op": "begin",
+        "caller": "b",
+        "runner": "steam",
+        "app": "999003",
+        "onJoin": "notify-steam"
+      },
+      {
+        "op": "settle",
+        "caller": "a",
+        "value": true
+      }
+    ]
+  },
+  {
+    "id": "adoptionStatus--restartsteamnowforadoption-d-02-a-second-click-and-a-play-pressed-meanwhile-join-the-flight-in-progress-one-restart-no-recent-game-t-81-28",
+    "note": "the restart owns steam:APP, a second click and a Play both join (the notifier only sets a flag), the flight resolves false so a joining Play records no recent game",
+    "kind": "flights",
+    "steps": [
+      {
+        "op": "begin",
+        "caller": "restart",
+        "runner": "steam",
+        "app": "112100",
+        "onJoin": "notify"
+      },
+      {
+        "op": "begin",
+        "caller": "second-click",
+        "runner": "steam",
+        "app": "112100",
+        "onJoin": "notify"
+      },
+      {
+        "op": "begin",
+        "caller": "play",
+        "runner": "steam",
+        "app": "112100",
+        "onJoin": "notify-steam"
+      },
+      {
+        "op": "settle",
+        "caller": "restart",
+        "value": false
+      }
+    ]
+  },
+  {
+    "id": "single-flight--a-held-leader-keeps-its-joiners-waiting",
+    "note": "the leader never settles: two joiners are notified and receive nothing, and the entry is still held when probed",
+    "kind": "flights",
+    "steps": [
+      {
+        "op": "begin",
+        "caller": "leader",
+        "runner": "steam",
+        "app": "1"
+      },
+      {
+        "op": "begin",
+        "caller": "joiner-1",
+        "runner": "steam",
+        "app": "1",
+        "onJoin": "notify"
+      },
+      {
+        "op": "begin",
+        "caller": "joiner-2",
+        "runner": "steam",
+        "app": "1",
+        "onJoin": "notify-steam"
+      },
+      {
+        "op": "probe",
+        "caller": "late",
+        "runner": "steam",
+        "app": "1"
+      }
+    ]
+  },
+  {
+    "id": "single-flight--a-rejecting-onjoin-does-not-reject-the-joiner",
+    "note": "a notifier that returns a rejected promise is swallowed as well: the joiner still receives ok",
+    "kind": "flights",
+    "steps": [
+      {
+        "op": "begin",
+        "caller": "a",
+        "runner": "steam",
+        "app": "1"
+      },
+      {
+        "op": "begin",
+        "caller": "b",
+        "runner": "steam",
+        "app": "1",
+        "onJoin": "rejects"
+      },
+      {
+        "op": "settle",
+        "caller": "a",
+        "value": "ok"
+      }
+    ]
+  },
+  {
+    "id": "single-flight--a-joiner-gets-the-owners-own-promise",
+    "note": "the joiner is handed the owner's promise object itself, not a derived one (samePromiseAsOwner)",
+    "kind": "flights",
+    "steps": [
+      {
+        "op": "begin",
+        "caller": "a",
+        "runner": "steam",
+        "app": "1"
+      },
+      {
+        "op": "begin",
+        "caller": "b",
+        "runner": "steam",
+        "app": "1",
+        "onJoin": "notify"
+      },
+      {
+        "op": "settle",
+        "caller": "a",
+        "value": 7
+      }
+    ]
+  },
+  {
+    "id": "single-flight--the-key-is-runner-and-app-name-joined-by-a-colon",
+    "note": "runner \"a\" with app \"b:c\" and runner \"a:b\" with app \"c\" make the same key `a:b:c`, so the second joins (recorded as the TS behaves)",
+    "kind": "flights",
+    "steps": [
+      {
+        "op": "begin",
+        "caller": "first",
+        "runner": "a",
+        "app": "b:c",
+        "onJoin": "notify"
+      },
+      {
+        "op": "begin",
+        "caller": "second",
+        "runner": "a:b",
+        "app": "c",
+        "onJoin": "notify"
+      },
+      {
+        "op": "settle",
+        "caller": "first",
+        "value": 1
+      }
+    ]
+  },
+  {
+    "id": "single-flight--a-rejected-owner-releases-and-the-next-begin-runs",
+    "note": "after an owner rejection the entry is gone: a new begin runs its own body and resolves",
+    "kind": "flights",
+    "steps": [
+      {
+        "op": "begin",
+        "caller": "a",
+        "runner": "steam",
+        "app": "1",
+        "body": {
+          "rejects": "boom"
+        }
+      },
+      {
+        "op": "begin",
+        "caller": "b",
+        "runner": "steam",
+        "app": "1",
+        "body": {
+          "resolves": "fresh"
+        }
+      }
+    ]
+  },
+  {
+    "id": "single-flight--an-owner-that-settles-before-the-joiner-asks-does-not-join",
+    "note": "the owner settled and was released in an earlier step: a later begin on the same key runs its own body",
+    "kind": "flights",
+    "steps": [
+      {
+        "op": "begin",
+        "caller": "a",
+        "runner": "steam",
+        "app": "1",
+        "body": {
+          "resolves": "one"
+        }
+      },
+      {
+        "op": "begin",
+        "caller": "b",
+        "runner": "steam",
+        "app": "1",
+        "onJoin": "notify",
+        "body": {
+          "resolves": "two"
+        }
+      }
+    ]
+  }
+]

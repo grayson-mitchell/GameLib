@@ -1,0 +1,11 @@
+{
+  "received": {
+    "a": {
+      "rejected": "boom"
+    },
+    "b": {
+      "value": "fresh"
+    }
+  },
+  "pending": []
+}

@@ -179,14 +179,6 @@ jest.mock('../utils', () => ({
   getShellPath: jest.fn((path: string) => Promise.resolve(path))
 }))
 
-// ── ../launcher mock ─────────────────────────────────────────────────────────────────────────
-jest.mock('../launcher', () => ({
-  callRunner: jest.fn(),
-  getWinePath: jest.fn(),
-  setupWineEnvVars: jest.fn(),
-  verifyWinePrefix: jest.fn()
-}))
-
 // ── backend/macArch/recovery mock ────────────────────────────────────────────────────────────
 // 7f9920654 (quick 261029-t39) made legendary/library.ts import this module, whose load chain
 // (macArch/stores -> constants/paths) evaluates app.getAppPath() and constructs a real

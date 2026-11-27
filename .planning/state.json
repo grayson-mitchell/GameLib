@@ -556,7 +556,7 @@
     {
       "number": "87",
       "name": "Engine, Wine and tools",
-      "status": "pending"
+      "status": "complete"
     },
     {
       "number": "88",
@@ -566,7 +566,7 @@
     {
       "number": "88.1",
       "name": "Launch builders and prepare steps",
-      "status": "in_progress"
+      "status": "pending"
     },
     {
       "number": "88.2",
@@ -576,7 +576,7 @@
     {
       "number": "88.3",
       "name": "Launch funnel, re-adoption and the live gate",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "number": "89",
@@ -605,7 +605,12 @@
     },
     {
       "number": "92",
-      "name": "GOG, Amazon and sideloaded runners",
+      "name": "GOG runner",
+      "status": "pending"
+    },
+    {
+      "number": "92.1",
+      "name": "Amazon and sideloaded runners",
       "status": "pending"
     },
     {
@@ -657,7 +662,7 @@
   "next": {
     "command": "/gsd-progress --next",
     "label": "Advance to the next step",
-    "reason": "Phase 33 of 50 · 92% · executing"
+    "reason": "Phase 35 of 51 · 88% · executing"
   },
-  "updated_at": "2026-11-25T07:01:27.249Z"
+  "updated_at": "2026-11-28T02:07:13.025Z"
 }

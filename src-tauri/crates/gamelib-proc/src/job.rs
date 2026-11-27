@@ -18,12 +18,13 @@ mod win {
     use crate::diag::diag;
     use std::os::windows::io::{AsRawHandle, FromRawHandle, OwnedHandle, RawHandle};
     use windows_sys::Win32::Foundation::{
-        CloseHandle, GetLastError, SetLastError, ERROR_ALREADY_EXISTS,
+        CloseHandle, GetLastError, SetLastError, ERROR_ALREADY_EXISTS, ERROR_MORE_DATA,
     };
     use windows_sys::Win32::System::JobObjects::{
         AssignProcessToJobObject, CreateJobObjectW, JobObjectBasicAccountingInformation,
-        JobObjectExtendedLimitInformation, OpenJobObjectW, QueryInformationJobObject,
-        SetInformationJobObject, TerminateJobObject, JOBOBJECT_BASIC_ACCOUNTING_INFORMATION,
+        JobObjectBasicProcessIdList, JobObjectExtendedLimitInformation, OpenJobObjectW,
+        QueryInformationJobObject, SetInformationJobObject, TerminateJobObject,
+        JOBOBJECT_BASIC_ACCOUNTING_INFORMATION, JOBOBJECT_BASIC_PROCESS_ID_LIST,
         JOBOBJECT_EXTENDED_LIMIT_INFORMATION, JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE,
     };
     use windows_sys::Win32::System::SystemServices::{JOB_OBJECT_QUERY, JOB_OBJECT_TERMINATE};
@@ -267,6 +268,60 @@ mod win {
                 )
             };
             (ok != 0).then_some(info.ActiveProcesses)
+        }
+
+        /// The pids of the processes the Job holds now (`JobObjectBasicProcessIdList`), `None` when
+        /// the query fails. Needs query rights. One retry with the size the first answer asked for.
+        pub fn process_ids(&self) -> Option<Vec<u32>> {
+            let mut capacity = 64usize;
+            for _ in 0..2 {
+                // The list struct is two u32 counts then a `ULONG_PTR` array; a `u64` buffer of two
+                // header words plus `capacity` entries is aligned for it and large enough on 32-bit
+                // and 64-bit targets alike.
+                let words = 2 + capacity;
+                let mut buf: Vec<u64> = vec![0; words];
+                // SAFETY: the handle is a valid Job handle; the pointer and size describe `buf`,
+                // which outlives the call; the returned length is not needed.
+                let ok = unsafe {
+                    QueryInformationJobObject(
+                        self.handle.as_raw_handle() as _,
+                        JobObjectBasicProcessIdList,
+                        buf.as_mut_ptr() as *mut core::ffi::c_void,
+                        (words * std::mem::size_of::<u64>()) as u32,
+                        std::ptr::null_mut(),
+                    )
+                };
+                let header = buf.as_ptr() as *const JOBOBJECT_BASIC_PROCESS_ID_LIST;
+                // SAFETY: `buf` is at least as large and as aligned as the list struct, and
+                // zero-initialised before the call, so reading the two counts is valid whether or
+                // not the call filled them in.
+                let (assigned, in_list) = unsafe {
+                    (
+                        (*header).NumberOfAssignedProcesses as usize,
+                        (*header).NumberOfProcessIdsInList as usize,
+                    )
+                };
+                if ok == 0 {
+                    // SAFETY: GetLastError has no preconditions.
+                    let err = unsafe { GetLastError() };
+                    if err == ERROR_MORE_DATA && assigned > capacity {
+                        capacity = assigned + 16;
+                        continue;
+                    }
+                    return None;
+                }
+                // SAFETY: `header` points at the list struct inside `buf`; taking the address of its
+                // trailing array field reads nothing.
+                let list = unsafe { std::ptr::addr_of!((*header).ProcessIdList) } as *const usize;
+                // SAFETY: the call reported `in_list` entries and `buf` holds `capacity` of them
+                // after the header; `in_list` is clamped to that.
+                return Some(
+                    (0..in_list.min(capacity))
+                        .map(|i| unsafe { *list.add(i) } as u32)
+                        .collect(),
+                );
+            }
+            None
         }
     }
 }

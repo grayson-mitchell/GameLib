@@ -3,8 +3,8 @@
  * deps it was built with and narrows the untyped answer, so a manager gets a typed value or an error and never a
  * malformed variable in a game's environment.
  */
-import { createLauncher } from 'backend/launcher'
-import type { LauncherDeps } from 'backend/launcher'
+import { createLauncher } from 'backend/launchrust/launcher'
+import type { LauncherDeps } from 'backend/launchrust/launcher'
 import type { GameSettings } from 'common/types'
 import {
   RUST_LAUNCH_KNOWN_FIX_ENV,

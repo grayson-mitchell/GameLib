@@ -1,0 +1,50 @@
+[
+  {
+    "event": "step",
+    "op": "begin",
+    "caller": "first",
+    "runner": "gog",
+    "app": "g1",
+    "onJoin": "notify"
+  },
+  {
+    "event": "run",
+    "caller": "first",
+    "key": "gog:g1"
+  },
+  {
+    "event": "step",
+    "op": "begin",
+    "caller": "second",
+    "runner": "gog",
+    "app": "g1",
+    "onJoin": "notify"
+  },
+  {
+    "event": "joined",
+    "caller": "second",
+    "key": "gog:g1",
+    "samePromiseAsOwner": true
+  },
+  {
+    "event": "onJoin",
+    "caller": "second",
+    "key": "gog:g1"
+  },
+  {
+    "event": "step",
+    "op": "settle",
+    "caller": "first",
+    "value": "done"
+  },
+  {
+    "event": "received",
+    "caller": "first",
+    "value": "done"
+  },
+  {
+    "event": "received",
+    "caller": "second",
+    "value": "done"
+  }
+]
