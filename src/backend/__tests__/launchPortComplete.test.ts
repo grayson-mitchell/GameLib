@@ -780,6 +780,62 @@ describe('commandRunnerPortComplete', () => {
   })
 })
 
+/**
+ * 88.3-14, D-18 and D-25 (funnel half): the TS drivers that recorded `golden/funnel` and `golden/single_flight` are
+ * deleted now that Rust replays every case they recorded (`gamelib-launch/tests/funnel.rs` prints `golden funnel: compared
+ * 59 floor 59`, `tests/single_flight.rs` prints `golden single_flight: compared 24 floor 24`). The two drivers, `funnelTrace.ts`
+ * (the transcript harness both drive) and its self-test go, and so do the two harness files only the drivers used:
+ * `fakeLauncherDeps.ts` (imported by the single-flight driver, `funnelTrace.ts` and its own test) and `spawnClass.ts` (no
+ * importer outside its own test), each with its test. Every golden stays, because the Rust replays read them.
+ *
+ * Kept on purpose: `runsForMe.vectors.test.ts` (not a driver; it pins the surviving TS runs-for-me to the vectors Rust
+ * reads), and the four harness files a surviving test still imports: `baseEnv.ts` and `probes.ts`
+ * (`launchrust/__tests__/knownFixTwins.vectors.test.ts`), `pairwise.ts` and `census.ts` (the `oracle/knownFix*.cases.ts`
+ * files, whose twins 97 deletes; `census.ts` and `probes.ts` also serve the window-raise driver, which 88.3-20 retires
+ * with the TS raiser). `golden/window_raise` stays kept by the same rule.
+ *
+ * `forbiddenIdentifiers` is the exports of the deleted files that something else could still name, each checked with
+ * `git grep -w` on 2026-11-28: only the deleted files named them (`probes.ts` mentions `createFakeLauncherDeps` in a
+ * comment, which this walk strips). The scenario and transcript types are not listed: they are unnamed anywhere else too,
+ * but they are exports of one file this slice already holds deleted.
+ */
+const FUNNEL_ORACLE: SliceSpec = {
+  deleted: [
+    'src/backend/__tests__/oracle/funnel.oracle.test.ts',
+    'src/backend/__tests__/oracle/singleFlight.oracle.test.ts',
+    'src/backend/testUtils/launchOracle/funnelTrace.ts',
+    'src/backend/testUtils/launchOracle/__tests__/funnelTrace.test.ts',
+    'src/backend/testUtils/launchOracle/fakeLauncherDeps.ts',
+    'src/backend/testUtils/launchOracle/__tests__/fakeLauncherDeps.test.ts',
+    'src/backend/testUtils/launchOracle/spawnClass.ts',
+    'src/backend/testUtils/launchOracle/__tests__/spawnClass.test.ts'
+  ],
+  kept: [
+    'src-tauri/crates/gamelib-launch/tests/fixtures/golden/funnel',
+    'src-tauri/crates/gamelib-launch/tests/fixtures/golden/single_flight',
+    'src-tauri/crates/gamelib-launch/tests/fixtures/golden/runs_for_me',
+    'src-tauri/crates/gamelib-launch/tests/fixtures/golden/window_raise',
+    'src/backend/runsForMe/__tests__/runsForMe.vectors.test.ts',
+    'src/backend/testUtils/launchOracle/baseEnv.ts',
+    'src/backend/testUtils/launchOracle/probes.ts',
+    'src/backend/testUtils/launchOracle/pairwise.ts',
+    'src/backend/testUtils/launchOracle/census.ts'
+  ],
+  forbiddenIdentifiers: [
+    'recordFunnel',
+    'createFakeLauncherDeps',
+    'recordingLogWriter',
+    'attachSpawnClass',
+    'loadClasses'
+  ],
+  identifierRoot: 'src/backend',
+  flag: 'GAMELIB_LAUNCH'
+}
+
+describe('funnelOraclePortComplete', () => {
+  runSlice(FUNNEL_ORACLE)
+})
+
 /** The one file 88.2 leaves as scheduled shims: the runner, the wine command, the script, the spawnAsync and the tracked-kill transport calls. */
 const RUNNER_SURVIVOR_FILES = ['src/backend/launchrust/runner.ts'] as const
 
