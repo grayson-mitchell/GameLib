@@ -35,6 +35,9 @@ use gamelib_shortcuts::ctx::{
     ShortcutsMutation, ShortcutsSummary, ShortcutsUi, SteamShortcutsFile, WikiLookup,
 };
 use gamelib_shortcuts::http::ReqwestHttp;
+#[cfg(windows)]
+use gamelib_shortcuts::registry::Win32ShellFolders;
+use gamelib_shortcuts::registry::{ShellFolderSource, WindowsShellFolder};
 use gamelib_store::host::StoreHost;
 
 /// The one context, set once by [`install`].
@@ -321,7 +324,7 @@ pub(crate) fn build_ctx(
         .with_log(Arc::new(ShellShortcutsLog));
     // The Windows shell folders are read natively (RegGetValueW); `reg.exe` stays the fallback.
     #[cfg(windows)]
-    let ctx = ctx.with_shell_folders(Arc::new(gamelib_shortcuts::registry::Win32ShellFolders));
+    let ctx = ctx.with_shell_folders(Arc::new(Win32ShellFolders));
     ctx
 }
 
@@ -435,6 +438,33 @@ pub(crate) fn rpc_shortcuts_steam_is_added(args: &[Value]) -> Result<Value, Stri
     gamelib_shortcuts::dispatch_sync("shortcuts_steam_is_added", args, ctx)
 }
 
+/// `windows_shell_folder_read` (quick 261128-7wv): the raw, unexpanded `User Shell Folders` value of the
+/// folder named in `args`, or `null` when `source` is absent or cannot read it. Bad args answer a fixed
+/// literal that never echoes the input.
+fn shell_folder_read_with(
+    source: Option<&dyn ShellFolderSource>,
+    args: &[Value],
+) -> Result<Value, String> {
+    let folder = match WindowsShellFolderReadArgs::from_args(args)?.name {
+        WindowsShellFolderReadArgsName::Desktop => WindowsShellFolder::Desktop,
+        WindowsShellFolderReadArgsName::Personal => WindowsShellFolder::Personal,
+    };
+    Ok(source
+        .and_then(|s| s.read(folder))
+        .map_or(Value::Null, Value::String))
+}
+
+/// `windows_shell_folder_read`: the native read on Windows (`RegGetValueW`), `null` elsewhere. It needs
+/// no installed context, so it answers before [`install`] too. It logs nothing: the value holds the
+/// user's name and never reaches a log (T-28-04).
+pub(crate) fn rpc_windows_shell_folder_read(args: &[Value]) -> Result<Value, String> {
+    #[cfg(windows)]
+    let source: Option<&dyn ShellFolderSource> = Some(&Win32ShellFolders);
+    #[cfg(not(windows))]
+    let source: Option<&dyn ShellFolderSource> = None;
+    shell_folder_read_with(source, args)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -466,6 +496,57 @@ mod tests {
         match title {
             Some(title) => vec![json!({ "appName": "App", "runner": "legendary", "title": title })],
             None => vec![json!({ "appName": "App", "runner": "legendary" })],
+        }
+    }
+
+    /// A source answering a fixed raw value and recording which folder it was asked for.
+    struct FakeFolders {
+        answer: Option<String>,
+        asked: Mutex<Vec<WindowsShellFolder>>,
+    }
+
+    impl ShellFolderSource for FakeFolders {
+        fn read(&self, folder: WindowsShellFolder) -> Option<String> {
+            if let Ok(mut asked) = self.asked.lock() {
+                asked.push(folder);
+            }
+            self.answer.clone()
+        }
+    }
+
+    #[test]
+    fn the_shell_folder_channel_answers_the_raw_value_or_null() {
+        let fake = FakeFolders {
+            answer: Some("%USERPROFILE%\\ドキュメント".to_string()),
+            asked: Mutex::new(Vec::new()),
+        };
+        assert_eq!(
+            shell_folder_read_with(Some(&fake), &[json!({ "name": "Personal" })]),
+            Ok(json!("%USERPROFILE%\\ドキュメント"))
+        );
+        assert_eq!(
+            fake.asked.lock().map(|a| a.clone()).unwrap_or_default(),
+            vec![WindowsShellFolder::Personal]
+        );
+        let none = FakeFolders {
+            answer: None,
+            asked: Mutex::new(Vec::new()),
+        };
+        assert_eq!(
+            shell_folder_read_with(Some(&none), &[json!({ "name": "Desktop" })]),
+            Ok(Value::Null)
+        );
+        assert_eq!(
+            shell_folder_read_with(None, &[json!({ "name": "Desktop" })]),
+            Ok(Value::Null)
+        );
+    }
+
+    #[test]
+    fn the_shell_folder_channel_rejects_bad_args_without_echoing_them() {
+        let want = Err("windows_shell_folder_read:bad-args".to_string());
+        for bad in [vec![json!({ "name": "Startup" })], vec![json!({})], vec![]] {
+            assert_eq!(shell_folder_read_with(None, &bad), want, "{bad:?}");
         }
     }
 

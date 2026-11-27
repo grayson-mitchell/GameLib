@@ -26,7 +26,8 @@ import {
   RUST_SHORTCUTS_REMOVE,
   RUST_SHORTCUTS_STEAM_ADD,
   RUST_SHORTCUTS_STEAM_IS_ADDED,
-  RUST_SHORTCUTS_STEAM_REMOVE
+  RUST_SHORTCUTS_STEAM_REMOVE,
+  RUST_WINDOWS_SHELL_FOLDER_READ
 } from 'common/types/sidecarTransport'
 
 const fixture = (name: string): Record<string, unknown> =>
@@ -94,7 +95,8 @@ describe('rustInvokeArgs', () => {
     // Phase 88.3 plan 12: 222 -> 223, launch_readopted_announce.
     // Phase 88.3 plan 13: 223 -> 224, launch_window_raise.
     // Phase 88.3 plan 19: 224 -> 223, launch_script_run, which no TS caller reaches any more (the Rust funnel runs the launch scripts).
-    expect(RUST_INVOKE_CHANNELS).toHaveLength(223)
+    // Quick 261128-7wv: 223 -> 224, windows_shell_folder_read.
+    expect(RUST_INVOKE_CHANNELS).toHaveLength(224)
   })
 
   it('parses the store-embed wire fixtures', () => {
@@ -338,6 +340,20 @@ describe('rustInvokeArgs', () => {
       [game, game]
     ]) {
       expect(exist.safeParse(bad).success).toBe(false)
+    }
+  })
+
+  it('accepts only the two readable shell folders and rejects drift (quick 261128-7wv)', () => {
+    const read = rustInvokeArgs[RUST_WINDOWS_SHELL_FOLDER_READ]
+    expect(read.safeParse([{ name: 'Desktop' }]).success).toBe(true)
+    expect(read.safeParse([{ name: 'Personal' }]).success).toBe(true)
+    for (const bad of [
+      [{ name: 'Startup' }],
+      [{ name: 'Desktop', extra: 1 }],
+      [{}],
+      []
+    ]) {
+      expect(read.safeParse(bad).success).toBe(false)
     }
   })
 

@@ -246,6 +246,7 @@ pub(crate) enum RustInvokeChannel {
     ShortcutsSteamAdd,
     ShortcutsSteamRemove,
     ShortcutsSteamIsAdded,
+    WindowsShellFolderRead,
 }
 
 impl RustInvokeChannel {
@@ -473,6 +474,7 @@ impl RustInvokeChannel {
         RustInvokeChannel::ShortcutsSteamAdd,
         RustInvokeChannel::ShortcutsSteamRemove,
         RustInvokeChannel::ShortcutsSteamIsAdded,
+        RustInvokeChannel::WindowsShellFolderRead,
     ];
 
     pub(crate) fn from_name(name: &str) -> Option<Self> {
@@ -700,6 +702,7 @@ impl RustInvokeChannel {
             "shortcuts_steam_add" => Some(RustInvokeChannel::ShortcutsSteamAdd),
             "shortcuts_steam_remove" => Some(RustInvokeChannel::ShortcutsSteamRemove),
             "shortcuts_steam_is_added" => Some(RustInvokeChannel::ShortcutsSteamIsAdded),
+            "windows_shell_folder_read" => Some(RustInvokeChannel::WindowsShellFolderRead),
             _ => None,
         }
     }
@@ -929,6 +932,7 @@ impl RustInvokeChannel {
             RustInvokeChannel::ShortcutsSteamAdd => "shortcuts_steam_add",
             RustInvokeChannel::ShortcutsSteamRemove => "shortcuts_steam_remove",
             RustInvokeChannel::ShortcutsSteamIsAdded => "shortcuts_steam_is_added",
+            RustInvokeChannel::WindowsShellFolderRead => "windows_shell_folder_read",
         }
     }
 }
@@ -5394,5 +5398,25 @@ impl ShortcutsSteamIsAddedArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let first = args.first().ok_or_else(|| "shortcuts_steam_is_added:bad-args".to_string())?;
         serde_json::from_value(first.clone()).map_err(|_| "shortcuts_steam_is_added:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct WindowsShellFolderReadArgs {
+    pub(crate) name: WindowsShellFolderReadArgsName,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+pub(crate) enum WindowsShellFolderReadArgsName {
+    #[serde(rename = "Desktop")]
+    Desktop,
+    #[serde(rename = "Personal")]
+    Personal,
+}
+
+impl WindowsShellFolderReadArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "windows_shell_folder_read:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "windows_shell_folder_read:bad-args".to_string())
     }
 }

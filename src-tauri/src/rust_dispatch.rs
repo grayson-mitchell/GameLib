@@ -370,5 +370,8 @@ pub(crate) fn dispatch_rust_channel(
         RustInvokeChannel::ShortcutsSteamIsAdded => {
             shortcuts_dispatch::rpc_shortcuts_steam_is_added(args)
         }
+        RustInvokeChannel::WindowsShellFolderRead => {
+            shortcuts_dispatch::rpc_windows_shell_folder_read(args)
+        }
     }
 }

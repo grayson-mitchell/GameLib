@@ -224,6 +224,7 @@ import {
   RUST_TRAY_SET_ICON,
   RUST_WAKE_LOCK_START,
   RUST_WAKE_LOCK_STOP,
+  RUST_WINDOWS_SHELL_FOLDER_READ,
   type RustInvokeChannel
 } from '../sidecarTransport'
 
@@ -1035,6 +1036,11 @@ export const rustInvokeArgs = {
   [RUST_SHORTCUTS_STEAM_ADD]: z.tuple([shortcutSteamArgs]),
   [RUST_SHORTCUTS_STEAM_REMOVE]: z.tuple([shortcutSteamArgs]),
   [RUST_SHORTCUTS_STEAM_IS_ADDED]: z.tuple([shortcutSteamArgs]),
+  // Quick 261128-7wv: the raw Windows shell-folder read. The enum is the whole readable set, so the sidecar
+  // cannot ask for any other registry value.
+  [RUST_WINDOWS_SHELL_FOLDER_READ]: z.tuple([
+    z.object({ name: z.enum(['Desktop', 'Personal']) }).strict()
+  ]),
   [RUST_STEAM_API_PIN_RESOLVE]: empty,
   // Phase 87 (SVC-02, 87-20): the wine-manager op. The releases-info check takes the ReleasesInfo object, of
   // which the crate reads the five feed stamps (an unknown key is ignored there, as in the TS).
