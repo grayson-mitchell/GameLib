@@ -1,0 +1,329 @@
+[
+  {
+    "kind": "play",
+    "n": 1
+  },
+  {
+    "kind": "hook",
+    "hook": "getSettings",
+    "runner": "gog",
+    "args": []
+  },
+  {
+    "kind": "config",
+    "member": "getSettings",
+    "args": []
+  },
+  {
+    "kind": "tsStore",
+    "op": "set",
+    "key": "gog-app.firstPlayed",
+    "value": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "kind": "log",
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Launching Title of gog (gog-app)"
+  },
+  {
+    "kind": "frontend",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "gog-app",
+        "runner": "gog",
+        "status": "launching"
+      }
+    ]
+  },
+  {
+    "kind": "bus",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "gog-app",
+        "runner": "gog",
+        "status": "launching"
+      }
+    ]
+  },
+  {
+    "kind": "appState",
+    "member": "hideMainWindow",
+    "args": []
+  },
+  {
+    "kind": "log",
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Preventing display from sleep"
+  },
+  {
+    "kind": "appState",
+    "member": "wakeLock.start",
+    "args": [
+      "prevent-display-sleep"
+    ]
+  },
+  {
+    "kind": "config",
+    "member": "getSettings",
+    "args": []
+  },
+  {
+    "kind": "gameConfig",
+    "member": "getSettings",
+    "appName": "gog-app",
+    "args": []
+  },
+  {
+    "kind": "rust",
+    "channel": "engine_launch_select",
+    "args": [
+      {
+        "runner": "gog",
+        "appName": "gog-app",
+        "title": "Title of gog",
+        "platform": "windows",
+        "isNative": false,
+        "settings": {
+          "verboseLogs": true,
+          "autoSyncSaves": false,
+          "savesPath": "/pins/saves",
+          "gogSaves": [
+            {
+              "name": "saves",
+              "location": "/pins/gog/saves"
+            }
+          ],
+          "wineVersion": {
+            "name": "Wine-Test",
+            "bin": "/pins/wines/Wine-Test/bin/wine",
+            "type": "wine"
+          },
+          "afterLaunchScriptPath": "/pins/scripts/after.sh"
+        },
+        "offline": false
+      }
+    ],
+    "reply": {
+      "kind": "use",
+      "key": "gog:gog-app",
+      "selection": {},
+      "prefix": {},
+      "logLines": [
+        "engine=use"
+      ],
+      "launchSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": false,
+        "savesPath": "/pins/saves",
+        "gogSaves": [
+          {
+            "name": "saves",
+            "location": "/pins/gog/saves"
+          }
+        ],
+        "wineVersion": {
+          "name": "Overlay",
+          "bin": "/pins/engines/crossover/bin/wine",
+          "type": "crossover"
+        },
+        "afterLaunchScriptPath": "/pins/scripts/after.sh"
+      }
+    }
+  },
+  {
+    "kind": "log",
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Engine: gog:gog-app engine=use"
+  },
+  {
+    "kind": "gameLog",
+    "target": {
+      "kind": "game",
+      "appName": "gog-app",
+      "runner": "gog",
+      "type": "launch"
+    },
+    "rotate": true,
+    "level": "INFO",
+    "prefix": "",
+    "text": "engine=use"
+  },
+  {
+    "kind": "frontend",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "gog-app",
+        "runner": "gog",
+        "status": "launching"
+      }
+    ]
+  },
+  {
+    "kind": "bus",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "gog-app",
+        "runner": "gog",
+        "status": "launching"
+      }
+    ]
+  },
+  {
+    "kind": "hook",
+    "hook": "launch",
+    "runner": "gog",
+    "args": [
+      null,
+      null,
+      null
+    ],
+    "writer": {
+      "target": {
+        "kind": "game",
+        "appName": "gog-app",
+        "runner": "gog",
+        "type": "launch"
+      },
+      "rotationClaimed": true
+    }
+  },
+  {
+    "kind": "hook",
+    "hook": "setPresence",
+    "runner": "gog",
+    "args": [
+      "gog-app"
+    ]
+  },
+  {
+    "kind": "gameLog",
+    "target": {
+      "kind": "game",
+      "appName": "gog-app",
+      "runner": "gog",
+      "type": "launch"
+    },
+    "rotate": false,
+    "raw": "Running script after Title of gog (/pins/scripts/after.sh)\n"
+  },
+  {
+    "kind": "script",
+    "when": "after",
+    "appName": "gog-app",
+    "wine": "Overlay",
+    "beforeLaunchScriptPath": null,
+    "afterLaunchScriptPath": "/pins/scripts/after.sh",
+    "target": {
+      "kind": "game",
+      "appName": "gog-app",
+      "runner": "gog",
+      "type": "launch"
+    }
+  },
+  {
+    "kind": "gameLog",
+    "target": {
+      "kind": "game",
+      "appName": "gog-app",
+      "runner": "gog",
+      "type": "launch"
+    },
+    "rotate": false,
+    "raw": "============= End of log ============="
+  },
+  {
+    "kind": "rust",
+    "channel": "engine_launch_end",
+    "args": [
+      {
+        "key": "gog:gog-app"
+      }
+    ],
+    "reply": null
+  },
+  {
+    "kind": "hook",
+    "hook": "clearPresence",
+    "runner": "gog",
+    "args": []
+  },
+  {
+    "kind": "log",
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Stopping Display Power Saver Blocker"
+  },
+  {
+    "kind": "appState",
+    "member": "wakeLock.stop",
+    "args": [
+      7
+    ]
+  },
+  {
+    "kind": "tsStore",
+    "op": "set",
+    "key": "gog-app.lastPlayed",
+    "value": "2026-01-01T00:01:30.000Z"
+  },
+  {
+    "kind": "tsStore",
+    "op": "set",
+    "key": "gog-app.totalPlayed",
+    "value": 1
+  },
+  {
+    "kind": "config",
+    "member": "getSettings",
+    "args": []
+  },
+  {
+    "kind": "log",
+    "level": "warning",
+    "prefix": {
+      "prefix": "Backend"
+    },
+    "text": "Posting playtime session to server skipped - playtime sync disabled"
+  },
+  {
+    "kind": "rust",
+    "channel": "info_recent_add",
+    "args": [
+      {
+        "appName": "gog-app",
+        "title": "Title of gog",
+        "runner": "gog"
+      }
+    ],
+    "reply": null
+  },
+  {
+    "kind": "frontend",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "gog-app",
+        "runner": "gog",
+        "status": "done"
+      }
+    ]
+  },
+  {
+    "kind": "bus",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "gog-app",
+        "runner": "gog",
+        "status": "done"
+      }
+    ]
+  }
+]

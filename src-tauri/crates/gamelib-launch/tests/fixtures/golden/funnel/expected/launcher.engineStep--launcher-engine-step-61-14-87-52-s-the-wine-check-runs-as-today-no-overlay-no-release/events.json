@@ -1,0 +1,121 @@
+[
+  {
+    "kind": "play",
+    "n": 1
+  },
+  {
+    "kind": "hook",
+    "hook": "getSettings",
+    "runner": "legendary",
+    "args": []
+  },
+  {
+    "kind": "config",
+    "member": "getSettings",
+    "args": []
+  },
+  {
+    "kind": "log",
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Launching Quail (Quail)"
+  },
+  {
+    "kind": "frontend",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "Quail",
+        "runner": "legendary",
+        "status": "launching"
+      }
+    ]
+  },
+  {
+    "kind": "bus",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "Quail",
+        "runner": "legendary",
+        "status": "launching"
+      }
+    ]
+  },
+  {
+    "kind": "log",
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Preventing display from sleep"
+  },
+  {
+    "kind": "appState",
+    "member": "wakeLock.start",
+    "args": [
+      "prevent-display-sleep"
+    ]
+  },
+  {
+    "kind": "config",
+    "member": "getSettings",
+    "args": []
+  },
+  {
+    "kind": "gameConfig",
+    "member": "getSettings",
+    "appName": "Quail",
+    "args": []
+  },
+  {
+    "kind": "rust",
+    "channel": "engine_launch_select",
+    "args": [
+      {
+        "runner": "legendary",
+        "appName": "Quail",
+        "title": "Quail",
+        "isNative": false,
+        "settings": {
+          "verboseLogs": true,
+          "autoSyncSaves": false,
+          "savesPath": "",
+          "gogSaves": [],
+          "wineVersion": {
+            "name": "stored",
+            "bin": "/pins/wines/stored/bin/wine",
+            "type": "wine"
+          }
+        },
+        "offline": true
+      }
+    ],
+    "reply": {
+      "kind": "legacy",
+      "key": "legendary:Quail",
+      "logLines": []
+    }
+  },
+  {
+    "kind": "config",
+    "member": "getSettings",
+    "args": []
+  },
+  {
+    "kind": "rust",
+    "channel": "launch_check_wine_before_launch",
+    "args": [
+      {
+        "appName": "Quail",
+        "runner": "legendary",
+        "wineVersion": {
+          "name": "stored",
+          "bin": "/pins/wines/stored/bin/wine",
+          "type": "wine"
+        },
+        "verboseLogs": true,
+        "disableLogs": false
+      }
+    ],
+    "rejected": "funnel trace: unscripted rust channel \"launch_check_wine_before_launch\""
+  }
+]

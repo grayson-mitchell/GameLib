@@ -60,6 +60,12 @@ export const WAKE_LOCK_ID = 7
 /** How a scripted collaborator answers: it resolves a value or rejects with a message. */
 export type Answer = { resolves: unknown } | { rejects: string }
 
+/**
+ * What a Rust channel answers: one `Answer` for every call, or a `sequence` whose nth entry answers the nth call of that
+ * channel (the last entry answers every call after it), so a second Play can meet a different reply than the first.
+ */
+export type RustAnswer = Answer | { sequence: readonly Answer[] }
+
 export interface FunnelScenario {
   runner: Runner
   appName: string
@@ -103,7 +109,7 @@ export interface FunnelScenario {
     args?: string[]
   }
   /** A reply per Rust channel. An unlisted channel rejects by name. */
-  rust: Record<string, Answer>
+  rust: Record<string, RustAnswer>
   hooks: {
     /** `game.launch(...)`. */
     launch: Answer
@@ -190,7 +196,8 @@ export function funnelScenario(patch: Patch<FunnelScenario>): FunnelScenario {
       typeof current === 'object' &&
       !Array.isArray(current) &&
       !('resolves' in value) &&
-      !('rejects' in value)
+      !('rejects' in value) &&
+      !('sequence' in value)
         ? { ...current, ...value }
         : value
   }
@@ -299,9 +306,19 @@ function snap<T>(value: T): T {
 const messageOf = (error: unknown): string =>
   error instanceof Error ? error.message : String(error)
 
+/**
+ * A scripted rejection carries the message and nothing else: an `Error`'s stack names the machine's own source paths, and
+ * a log line that prints it (`logWriter.logError(exception)`) would put them into a committed golden.
+ */
+function scriptedError(message: string): Error {
+  const error = new Error(message)
+  error.stack = `Error: ${message}`
+  return error
+}
+
 function answer(scripted: Answer): Promise<unknown> {
   return 'rejects' in scripted
-    ? Promise.reject(new Error(scripted.rejects))
+    ? Promise.reject(scriptedError(scripted.rejects))
     : Promise.resolve(scripted.resolves)
 }
 
@@ -337,6 +354,7 @@ export function recordFunnel(
         }
       })
 
+      const rustCalls = new Map<string, number>()
       const requestRustInvoke = ((channel: string, args: unknown[]) => {
         const event: FunnelEvent = {
           kind: 'rust',
@@ -344,13 +362,21 @@ export function recordFunnel(
           args: snap(args)
         }
         push(event)
-        const scripted = Object.prototype.hasOwnProperty.call(s.rust, channel)
+        const call = rustCalls.get(channel) ?? 0
+        rustCalls.set(channel, call + 1)
+        const entry = Object.prototype.hasOwnProperty.call(s.rust, channel)
           ? s.rust[channel]
           : undefined
+        const scripted =
+          entry && 'sequence' in entry
+            ? entry.sequence[Math.min(call, entry.sequence.length - 1)]
+            : entry
         const reply = scripted
           ? answer(scripted)
           : Promise.reject(
-              new Error(`funnel trace: unscripted rust channel "${channel}"`)
+              scriptedError(
+                `funnel trace: unscripted rust channel "${channel}"`
+              )
             )
         return reply.then(
           (value) => {
@@ -487,7 +513,7 @@ export function recordFunnel(
         showMessageBox: (...args: unknown[]) => {
           push({ kind: 'dialog', member: 'showMessageBox', args: snap(args) })
           return Promise.reject(
-            new Error('funnel trace: the funnel shows no dialog of its own')
+            scriptedError('funnel trace: the funnel shows no dialog of its own')
           )
         },
         showErrorBox: (...args: unknown[]) => {

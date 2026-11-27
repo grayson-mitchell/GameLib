@@ -92,6 +92,35 @@ describe('recordFunnel', () => {
     await expect(hidden('linux', false)).resolves.toBe(true)
   })
 
+  it('answers the nth call of a channel with the nth entry of a sequence, the last one repeating', async () => {
+    const { result, events } = await recordFunnel({
+      ...funnelScenario({ playAgain: { online: true } }),
+      rust: {
+        engine_launch_select: {
+          sequence: [
+            { rejects: 'first is down' },
+            { resolves: { kind: 'skip' } }
+          ]
+        },
+        info_recent_add: { resolves: null }
+      }
+    })
+    expect(result.plays).toEqual([
+      { rejected: 'first is down' },
+      { status: 'done' }
+    ])
+    expect(of(events, 'play').map((e) => e.n)).toEqual([1, 2])
+  })
+
+  it('records a scripted rejection without a stack, so no source path reaches a golden', async () => {
+    const { events } = await recordFunnel(
+      funnelScenario({ hooks: { launch: { rejects: 'the game fell over' } } })
+    )
+    const text = JSON.stringify(events)
+    expect(text).toContain('Error: the game fell over')
+    expect(text).not.toContain('    at ')
+  })
+
   it('puts the real clock and the logger back when a run ends, also after a rejection', async () => {
     await recordFunnel({ ...funnelScenario({}), rust: {} })
     expect(jest.isMockFunction(logger.logInfo)).toBe(false)

@@ -1,0 +1,385 @@
+[
+  {
+    "kind": "play",
+    "n": 1
+  },
+  {
+    "kind": "hook",
+    "hook": "getSettings",
+    "runner": "legendary",
+    "args": []
+  },
+  {
+    "kind": "config",
+    "member": "getSettings",
+    "args": []
+  },
+  {
+    "kind": "log",
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Launching Title of legendary (legendary-app)"
+  },
+  {
+    "kind": "frontend",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "legendary-app",
+        "runner": "legendary",
+        "status": "syncing-saves"
+      }
+    ]
+  },
+  {
+    "kind": "bus",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "legendary-app",
+        "runner": "legendary",
+        "status": "syncing-saves"
+      }
+    ]
+  },
+  {
+    "kind": "log",
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Downloading saves for Title of legendary"
+  },
+  {
+    "kind": "hook",
+    "hook": "syncSaves",
+    "runner": "legendary",
+    "args": [
+      "--skip-upload",
+      "/pins/saves",
+      []
+    ]
+  },
+  {
+    "kind": "log",
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Saves for Title of legendary downloaded"
+  },
+  {
+    "kind": "frontend",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "legendary-app",
+        "runner": "legendary",
+        "status": "launching"
+      }
+    ]
+  },
+  {
+    "kind": "bus",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "legendary-app",
+        "runner": "legendary",
+        "status": "launching"
+      }
+    ]
+  },
+  {
+    "kind": "log",
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Preventing display from sleep"
+  },
+  {
+    "kind": "appState",
+    "member": "wakeLock.start",
+    "args": [
+      "prevent-display-sleep"
+    ]
+  },
+  {
+    "kind": "config",
+    "member": "getSettings",
+    "args": []
+  },
+  {
+    "kind": "gameConfig",
+    "member": "getSettings",
+    "appName": "legendary-app",
+    "args": []
+  },
+  {
+    "kind": "gameLog",
+    "target": {
+      "kind": "game",
+      "appName": "legendary-app",
+      "runner": "legendary",
+      "type": "launch"
+    },
+    "rotate": true,
+    "level": "WARNING",
+    "prefix": "",
+    "text": "IMPORTANT: Logs are disabled"
+  },
+  {
+    "kind": "gameLog",
+    "target": {
+      "kind": "game",
+      "appName": "legendary-app",
+      "runner": "legendary",
+      "type": "launch"
+    },
+    "rotate": false,
+    "level": "WARNING",
+    "prefix": "",
+    "text": "Turn on Verbose logs in the game's settings (Advanced tab) before reporting an issue."
+  },
+  {
+    "kind": "rust",
+    "channel": "engine_launch_select",
+    "args": [
+      {
+        "runner": "legendary",
+        "appName": "legendary-app",
+        "title": "Title of legendary",
+        "platform": "Windows",
+        "isNative": false,
+        "settings": {
+          "verboseLogs": false,
+          "autoSyncSaves": true,
+          "savesPath": "/pins/saves",
+          "gogSaves": [],
+          "wineVersion": {
+            "name": "Wine-Test",
+            "bin": "/pins/wines/Wine-Test/bin/wine",
+            "type": "wine"
+          },
+          "lastUsedLaunchOption": {
+            "type": "basic",
+            "name": "Windowed",
+            "parameters": "--windowed"
+          }
+        },
+        "offline": false
+      }
+    ],
+    "reply": {
+      "kind": "use",
+      "key": "legendary:legendary-app",
+      "selection": {},
+      "prefix": {},
+      "logLines": [
+        "engine=use"
+      ],
+      "launchSettings": {
+        "verboseLogs": false,
+        "autoSyncSaves": true,
+        "savesPath": "/pins/saves",
+        "gogSaves": [],
+        "wineVersion": {
+          "name": "Overlay",
+          "bin": "/pins/engines/crossover/bin/wine",
+          "type": "crossover"
+        },
+        "lastUsedLaunchOption": {
+          "type": "basic",
+          "name": "Windowed",
+          "parameters": "--windowed"
+        }
+      }
+    }
+  },
+  {
+    "kind": "log",
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Engine: legendary:legendary-app engine=use"
+  },
+  {
+    "kind": "frontend",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "legendary-app",
+        "runner": "legendary",
+        "status": "launching"
+      }
+    ]
+  },
+  {
+    "kind": "bus",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "legendary-app",
+        "runner": "legendary",
+        "status": "launching"
+      }
+    ]
+  },
+  {
+    "kind": "hook",
+    "hook": "launch",
+    "runner": "legendary",
+    "args": [
+      {
+        "type": "basic",
+        "name": "Windowed",
+        "parameters": "--windowed"
+      },
+      null,
+      null
+    ],
+    "writer": {
+      "target": {
+        "kind": "game",
+        "appName": "legendary-app",
+        "runner": "legendary",
+        "type": "launch"
+      },
+      "rotationClaimed": true
+    }
+  },
+  {
+    "kind": "rust",
+    "channel": "engine_launch_end",
+    "args": [
+      {
+        "key": "legendary:legendary-app"
+      }
+    ],
+    "reply": null
+  },
+  {
+    "kind": "log",
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Stopping Display Power Saver Blocker"
+  },
+  {
+    "kind": "appState",
+    "member": "wakeLock.stop",
+    "args": [
+      7
+    ]
+  },
+  {
+    "kind": "tsStore",
+    "op": "set",
+    "key": "legendary-app.lastPlayed",
+    "value": "2026-01-01T00:01:30.000Z"
+  },
+  {
+    "kind": "tsStore",
+    "op": "set",
+    "key": "legendary-app.totalPlayed",
+    "value": 121
+  },
+  {
+    "kind": "config",
+    "member": "getSettings",
+    "args": []
+  },
+  {
+    "kind": "rust",
+    "channel": "info_recent_add",
+    "args": [
+      {
+        "appName": "legendary-app",
+        "title": "Title of legendary",
+        "runner": "legendary"
+      }
+    ],
+    "reply": null
+  },
+  {
+    "kind": "frontend",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "legendary-app",
+        "runner": "legendary",
+        "status": "done"
+      }
+    ]
+  },
+  {
+    "kind": "bus",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "legendary-app",
+        "runner": "legendary",
+        "status": "done"
+      }
+    ]
+  },
+  {
+    "kind": "frontend",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "legendary-app",
+        "runner": "legendary",
+        "status": "syncing-saves"
+      }
+    ]
+  },
+  {
+    "kind": "bus",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "legendary-app",
+        "runner": "legendary",
+        "status": "syncing-saves"
+      }
+    ]
+  },
+  {
+    "kind": "log",
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Uploading saves for Title of legendary"
+  },
+  {
+    "kind": "hook",
+    "hook": "syncSaves",
+    "runner": "legendary",
+    "args": [
+      "--skip-download",
+      "/pins/saves",
+      []
+    ]
+  },
+  {
+    "kind": "log",
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Saves uploaded for Title of legendary"
+  },
+  {
+    "kind": "frontend",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "legendary-app",
+        "runner": "legendary",
+        "status": "done"
+      }
+    ]
+  },
+  {
+    "kind": "bus",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "legendary-app",
+        "runner": "legendary",
+        "status": "done"
+      }
+    ]
+  }
+]

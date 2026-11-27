@@ -1,0 +1,305 @@
+[
+  {
+    "kind": "play",
+    "n": 1
+  },
+  {
+    "kind": "hook",
+    "hook": "getSettings",
+    "runner": "legendary",
+    "args": []
+  },
+  {
+    "kind": "config",
+    "member": "getSettings",
+    "args": []
+  },
+  {
+    "kind": "tsStore",
+    "op": "set",
+    "key": "alpha.firstPlayed",
+    "value": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "kind": "log",
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Launching Alpha (alpha)"
+  },
+  {
+    "kind": "frontend",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "alpha",
+        "runner": "legendary",
+        "status": "launching"
+      }
+    ]
+  },
+  {
+    "kind": "bus",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "alpha",
+        "runner": "legendary",
+        "status": "launching"
+      }
+    ]
+  },
+  {
+    "kind": "log",
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Preventing display from sleep"
+  },
+  {
+    "kind": "appState",
+    "member": "wakeLock.start",
+    "args": [
+      "prevent-display-sleep"
+    ]
+  },
+  {
+    "kind": "config",
+    "member": "getSettings",
+    "args": []
+  },
+  {
+    "kind": "gameConfig",
+    "member": "getSettings",
+    "appName": "alpha",
+    "args": []
+  },
+  {
+    "kind": "rust",
+    "channel": "engine_launch_select",
+    "args": [
+      {
+        "runner": "legendary",
+        "appName": "alpha",
+        "title": "Alpha",
+        "platform": "Windows",
+        "isNative": false,
+        "settings": {
+          "verboseLogs": true,
+          "autoSyncSaves": false,
+          "savesPath": "",
+          "gogSaves": [],
+          "wineVersion": {
+            "name": "Wine-Test",
+            "bin": "/pins/wines/Wine-Test/bin/wine",
+            "type": "wine"
+          }
+        },
+        "offline": false
+      }
+    ],
+    "reply": {
+      "kind": "skip"
+    }
+  },
+  {
+    "kind": "config",
+    "member": "getSettings",
+    "args": []
+  },
+  {
+    "kind": "rust",
+    "channel": "launch_check_wine_before_launch",
+    "args": [
+      {
+        "appName": "alpha",
+        "runner": "legendary",
+        "wineVersion": {
+          "name": "Wine-Test",
+          "bin": "/pins/wines/Wine-Test/bin/wine",
+          "type": "wine"
+        },
+        "verboseLogs": true,
+        "disableLogs": false
+      }
+    ],
+    "reply": {
+      "ok": true,
+      "log": [
+        {
+          "level": "info",
+          "parts": [
+            "Wine check: the game wine was replaced"
+          ]
+        }
+      ],
+      "wineVersion": {
+        "name": "Wine-Healed",
+        "bin": "/pins/wines/Wine-Healed/bin/wine",
+        "type": "wine"
+      }
+    }
+  },
+  {
+    "kind": "gameLog",
+    "target": {
+      "kind": "game",
+      "appName": "alpha",
+      "runner": "legendary",
+      "type": "launch"
+    },
+    "rotate": true,
+    "level": "INFO",
+    "prefix": "",
+    "text": "Wine check: the game wine was replaced"
+  },
+  {
+    "kind": "hook",
+    "hook": "persistBottleWineVersion",
+    "runner": "legendary",
+    "args": [
+      {
+        "name": "Wine-Healed",
+        "bin": "/pins/wines/Wine-Healed/bin/wine",
+        "type": "wine"
+      }
+    ]
+  },
+  {
+    "kind": "frontend",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "alpha",
+        "runner": "legendary",
+        "status": "launching"
+      }
+    ]
+  },
+  {
+    "kind": "bus",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "alpha",
+        "runner": "legendary",
+        "status": "launching"
+      }
+    ]
+  },
+  {
+    "kind": "hook",
+    "hook": "launch",
+    "runner": "legendary",
+    "args": [
+      null,
+      null,
+      null
+    ],
+    "writer": {
+      "target": {
+        "kind": "game",
+        "appName": "alpha",
+        "runner": "legendary",
+        "type": "launch"
+      },
+      "rotationClaimed": true
+    }
+  },
+  {
+    "kind": "gameLog",
+    "target": {
+      "kind": "game",
+      "appName": "alpha",
+      "runner": "legendary",
+      "type": "launch"
+    },
+    "rotate": false,
+    "raw": "============= End of log ============="
+  },
+  {
+    "kind": "runsForMe",
+    "op": "set",
+    "key": "games",
+    "value": {
+      "alpha_legendary": "auto"
+    }
+  },
+  {
+    "kind": "frontend",
+    "channel": "runsForMeChanged",
+    "args": [
+      {
+        "alpha_legendary": "auto"
+      }
+    ]
+  },
+  {
+    "kind": "log",
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Runs for me: auto-set for alpha (legendary) after 90s of play"
+  },
+  {
+    "kind": "log",
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Stopping Display Power Saver Blocker"
+  },
+  {
+    "kind": "appState",
+    "member": "wakeLock.stop",
+    "args": [
+      7
+    ]
+  },
+  {
+    "kind": "tsStore",
+    "op": "set",
+    "key": "alpha.lastPlayed",
+    "value": "2026-01-01T00:01:30.000Z"
+  },
+  {
+    "kind": "tsStore",
+    "op": "set",
+    "key": "alpha.totalPlayed",
+    "value": 1
+  },
+  {
+    "kind": "config",
+    "member": "getSettings",
+    "args": []
+  },
+  {
+    "kind": "rust",
+    "channel": "info_recent_add",
+    "args": [
+      {
+        "appName": "alpha",
+        "title": "Alpha",
+        "runner": "legendary"
+      }
+    ],
+    "reply": null
+  },
+  {
+    "kind": "frontend",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "alpha",
+        "runner": "legendary",
+        "status": "done"
+      }
+    ]
+  },
+  {
+    "kind": "bus",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "alpha",
+        "runner": "legendary",
+        "status": "done"
+      }
+    ]
+  }
+]

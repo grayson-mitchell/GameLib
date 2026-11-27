@@ -69,5 +69,5078 @@
       },
       "sessionMs": 90000
     }
+  },
+  {
+    "id": "funnel--pairwise-01",
+    "axes": {
+      "runner": "legendary",
+      "native": "native",
+      "engine": "skip",
+      "verboseLogs": "on",
+      "disableLogs": "off",
+      "saves": "off",
+      "window": "none",
+      "scripts": "none",
+      "launchResult": "true",
+      "launchOption": "none",
+      "firstPlay": "first",
+      "playtimeSync": "on"
+    },
+    "scenario": {
+      "runner": "legendary",
+      "appName": "legendary-app",
+      "title": "Title of legendary",
+      "native": true,
+      "platform": "linux",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": true,
+      "tsStore": {
+        "hasApp": false,
+        "totalPlayed": 0
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": false,
+        "noTrayIcon": false,
+        "disableLogs": false,
+        "disablePlaytimeSync": false
+      },
+      "gameSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": false,
+        "savesPath": "/pins/saves",
+        "gogSaves": [],
+        "wineVersion": {
+          "name": "Wine-Test",
+          "bin": "/pins/wines/Wine-Test/bin/wine",
+          "type": "wine"
+        }
+      },
+      "gameConfigSettings": {
+        "verboseLogs": true
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "resolves": {
+            "kind": "skip"
+          }
+        },
+        "info_recent_add": {
+          "resolves": null
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": true
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": false,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000
+    }
+  },
+  {
+    "id": "funnel--pairwise-02",
+    "axes": {
+      "runner": "gog",
+      "native": "windows",
+      "engine": "skip",
+      "verboseLogs": "off",
+      "disableLogs": "on",
+      "saves": "on-online",
+      "window": "minimize-mac",
+      "scripts": "before",
+      "launchResult": "false",
+      "launchOption": "last-used",
+      "firstPlay": "repeat",
+      "playtimeSync": "off"
+    },
+    "scenario": {
+      "runner": "gog",
+      "appName": "gog-app",
+      "title": "Title of gog",
+      "native": false,
+      "platform": "mac",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": true,
+      "tsStore": {
+        "hasApp": true,
+        "totalPlayed": 120
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": true,
+        "noTrayIcon": true,
+        "disableLogs": true,
+        "disablePlaytimeSync": true
+      },
+      "gameSettings": {
+        "verboseLogs": false,
+        "autoSyncSaves": true,
+        "savesPath": "/pins/saves",
+        "gogSaves": [
+          {
+            "name": "saves",
+            "location": "/pins/gog/saves"
+          }
+        ],
+        "wineVersion": {
+          "name": "Wine-Test",
+          "bin": "/pins/wines/Wine-Test/bin/wine",
+          "type": "wine"
+        },
+        "beforeLaunchScriptPath": "/pins/scripts/before.sh",
+        "lastUsedLaunchOption": {
+          "type": "basic",
+          "name": "Windowed",
+          "parameters": "--windowed"
+        }
+      },
+      "gameConfigSettings": {
+        "verboseLogs": false
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "resolves": {
+            "kind": "skip"
+          }
+        },
+        "info_recent_add": {
+          "resolves": null
+        },
+        "launch_check_wine_before_launch": {
+          "resolves": {
+            "ok": true,
+            "log": [
+              {
+                "level": "info",
+                "parts": [
+                  "Wine check: ok"
+                ]
+              }
+            ]
+          }
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": false
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": true,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000,
+      "installPlatform": "windows"
+    }
+  },
+  {
+    "id": "funnel--pairwise-03",
+    "axes": {
+      "runner": "nile",
+      "native": "windows",
+      "engine": "legacy",
+      "verboseLogs": "on",
+      "disableLogs": "off",
+      "saves": "on-offline",
+      "window": "minimize-tray",
+      "scripts": "after",
+      "launchResult": "true",
+      "launchOption": "last-used",
+      "firstPlay": "repeat",
+      "playtimeSync": "on"
+    },
+    "scenario": {
+      "runner": "nile",
+      "appName": "nile-app",
+      "title": "Title of nile",
+      "native": false,
+      "platform": "linux",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": false,
+      "tsStore": {
+        "hasApp": true,
+        "totalPlayed": 120
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": true,
+        "noTrayIcon": false,
+        "disableLogs": false,
+        "disablePlaytimeSync": false
+      },
+      "gameSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": true,
+        "savesPath": "/pins/saves",
+        "gogSaves": [],
+        "wineVersion": {
+          "name": "Wine-Test",
+          "bin": "/pins/wines/Wine-Test/bin/wine",
+          "type": "wine"
+        },
+        "afterLaunchScriptPath": "/pins/scripts/after.sh",
+        "lastUsedLaunchOption": {
+          "type": "basic",
+          "name": "Windowed",
+          "parameters": "--windowed"
+        }
+      },
+      "gameConfigSettings": {
+        "verboseLogs": true
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "resolves": {
+            "kind": "legacy",
+            "key": "nile:nile-app",
+            "logLines": [
+              "engine=legacy"
+            ]
+          }
+        },
+        "info_recent_add": {
+          "resolves": null
+        },
+        "launch_check_wine_before_launch": {
+          "resolves": {
+            "ok": true,
+            "log": [
+              {
+                "level": "info",
+                "parts": [
+                  "Wine check: ok"
+                ]
+              }
+            ]
+          }
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": true
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": false,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000,
+      "installPlatform": "Windows"
+    }
+  },
+  {
+    "id": "funnel--pairwise-04",
+    "axes": {
+      "runner": "sideload",
+      "native": "windows",
+      "engine": "use",
+      "verboseLogs": "off",
+      "disableLogs": "on",
+      "saves": "on-offline",
+      "window": "minimize-no-tray-linux",
+      "scripts": "both",
+      "launchResult": "false",
+      "launchOption": "none",
+      "firstPlay": "first",
+      "playtimeSync": "on"
+    },
+    "scenario": {
+      "runner": "sideload",
+      "appName": "sideload-app",
+      "title": "Title of sideload",
+      "native": false,
+      "platform": "linux",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": false,
+      "tsStore": {
+        "hasApp": false,
+        "totalPlayed": 0
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": true,
+        "noTrayIcon": true,
+        "disableLogs": true,
+        "disablePlaytimeSync": false
+      },
+      "gameSettings": {
+        "verboseLogs": false,
+        "autoSyncSaves": true,
+        "savesPath": "/pins/saves",
+        "gogSaves": [],
+        "wineVersion": {
+          "name": "Wine-Test",
+          "bin": "/pins/wines/Wine-Test/bin/wine",
+          "type": "wine"
+        },
+        "beforeLaunchScriptPath": "/pins/scripts/before.sh",
+        "afterLaunchScriptPath": "/pins/scripts/after.sh"
+      },
+      "gameConfigSettings": {
+        "verboseLogs": false
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "resolves": {
+            "kind": "use",
+            "key": "sideload:sideload-app",
+            "selection": {},
+            "prefix": {},
+            "logLines": [
+              "engine=use"
+            ],
+            "launchSettings": {
+              "verboseLogs": false,
+              "autoSyncSaves": true,
+              "savesPath": "/pins/saves",
+              "gogSaves": [],
+              "wineVersion": {
+                "name": "Overlay",
+                "bin": "/pins/engines/crossover/bin/wine",
+                "type": "crossover"
+              },
+              "beforeLaunchScriptPath": "/pins/scripts/before.sh",
+              "afterLaunchScriptPath": "/pins/scripts/after.sh"
+            }
+          }
+        },
+        "info_recent_add": {
+          "resolves": null
+        },
+        "engine_launch_end": {
+          "resolves": null
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": false
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": false,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000,
+      "installPlatform": "Windows"
+    }
+  },
+  {
+    "id": "funnel--pairwise-05",
+    "axes": {
+      "runner": "gog",
+      "native": "native",
+      "engine": "skip",
+      "verboseLogs": "on",
+      "disableLogs": "off",
+      "saves": "on-online",
+      "window": "minimize-no-tray-linux",
+      "scripts": "both",
+      "launchResult": "true",
+      "launchOption": "none",
+      "firstPlay": "repeat",
+      "playtimeSync": "off"
+    },
+    "scenario": {
+      "runner": "gog",
+      "appName": "gog-app",
+      "title": "Title of gog",
+      "native": true,
+      "platform": "linux",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": true,
+      "tsStore": {
+        "hasApp": true,
+        "totalPlayed": 120
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": true,
+        "noTrayIcon": true,
+        "disableLogs": false,
+        "disablePlaytimeSync": true
+      },
+      "gameSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": true,
+        "savesPath": "/pins/saves",
+        "gogSaves": [
+          {
+            "name": "saves",
+            "location": "/pins/gog/saves"
+          }
+        ],
+        "wineVersion": {
+          "name": "Wine-Test",
+          "bin": "/pins/wines/Wine-Test/bin/wine",
+          "type": "wine"
+        },
+        "beforeLaunchScriptPath": "/pins/scripts/before.sh",
+        "afterLaunchScriptPath": "/pins/scripts/after.sh"
+      },
+      "gameConfigSettings": {
+        "verboseLogs": true
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "resolves": {
+            "kind": "skip"
+          }
+        },
+        "info_recent_add": {
+          "resolves": null
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": true
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": true,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000
+    }
+  },
+  {
+    "id": "funnel--pairwise-06",
+    "axes": {
+      "runner": "gog",
+      "native": "windows",
+      "engine": "legacy",
+      "verboseLogs": "off",
+      "disableLogs": "on",
+      "saves": "off",
+      "window": "none",
+      "scripts": "none",
+      "launchResult": "false",
+      "launchOption": "last-used",
+      "firstPlay": "first",
+      "playtimeSync": "off"
+    },
+    "scenario": {
+      "runner": "gog",
+      "appName": "gog-app",
+      "title": "Title of gog",
+      "native": false,
+      "platform": "linux",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": true,
+      "tsStore": {
+        "hasApp": false,
+        "totalPlayed": 0
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": false,
+        "noTrayIcon": false,
+        "disableLogs": true,
+        "disablePlaytimeSync": true
+      },
+      "gameSettings": {
+        "verboseLogs": false,
+        "autoSyncSaves": false,
+        "savesPath": "/pins/saves",
+        "gogSaves": [
+          {
+            "name": "saves",
+            "location": "/pins/gog/saves"
+          }
+        ],
+        "wineVersion": {
+          "name": "Wine-Test",
+          "bin": "/pins/wines/Wine-Test/bin/wine",
+          "type": "wine"
+        },
+        "lastUsedLaunchOption": {
+          "type": "basic",
+          "name": "Windowed",
+          "parameters": "--windowed"
+        }
+      },
+      "gameConfigSettings": {
+        "verboseLogs": false
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "resolves": {
+            "kind": "legacy",
+            "key": "gog:gog-app",
+            "logLines": [
+              "engine=legacy"
+            ]
+          }
+        },
+        "info_recent_add": {
+          "resolves": null
+        },
+        "launch_check_wine_before_launch": {
+          "resolves": {
+            "ok": true,
+            "log": [
+              {
+                "level": "info",
+                "parts": [
+                  "Wine check: ok"
+                ]
+              }
+            ]
+          }
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": false
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": true,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000,
+      "installPlatform": "windows"
+    }
+  },
+  {
+    "id": "funnel--pairwise-07",
+    "axes": {
+      "runner": "nile",
+      "native": "native",
+      "engine": "skip",
+      "verboseLogs": "off",
+      "disableLogs": "on",
+      "saves": "on-online",
+      "window": "minimize-tray",
+      "scripts": "after",
+      "launchResult": "false",
+      "launchOption": "none",
+      "firstPlay": "first",
+      "playtimeSync": "on"
+    },
+    "scenario": {
+      "runner": "nile",
+      "appName": "nile-app",
+      "title": "Title of nile",
+      "native": true,
+      "platform": "linux",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": true,
+      "tsStore": {
+        "hasApp": false,
+        "totalPlayed": 0
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": true,
+        "noTrayIcon": false,
+        "disableLogs": true,
+        "disablePlaytimeSync": false
+      },
+      "gameSettings": {
+        "verboseLogs": false,
+        "autoSyncSaves": true,
+        "savesPath": "/pins/saves",
+        "gogSaves": [],
+        "wineVersion": {
+          "name": "Wine-Test",
+          "bin": "/pins/wines/Wine-Test/bin/wine",
+          "type": "wine"
+        },
+        "afterLaunchScriptPath": "/pins/scripts/after.sh"
+      },
+      "gameConfigSettings": {
+        "verboseLogs": false
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "resolves": {
+            "kind": "skip"
+          }
+        },
+        "info_recent_add": {
+          "resolves": null
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": false
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": false,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000
+    }
+  },
+  {
+    "id": "funnel--pairwise-08",
+    "axes": {
+      "runner": "sideload",
+      "native": "windows",
+      "engine": "use",
+      "verboseLogs": "on",
+      "disableLogs": "off",
+      "saves": "off",
+      "window": "minimize-mac",
+      "scripts": "before",
+      "launchResult": "true",
+      "launchOption": "none",
+      "firstPlay": "repeat",
+      "playtimeSync": "on"
+    },
+    "scenario": {
+      "runner": "sideload",
+      "appName": "sideload-app",
+      "title": "Title of sideload",
+      "native": false,
+      "platform": "mac",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": true,
+      "tsStore": {
+        "hasApp": true,
+        "totalPlayed": 120
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": true,
+        "noTrayIcon": true,
+        "disableLogs": false,
+        "disablePlaytimeSync": false
+      },
+      "gameSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": false,
+        "savesPath": "/pins/saves",
+        "gogSaves": [],
+        "wineVersion": {
+          "name": "Wine-Test",
+          "bin": "/pins/wines/Wine-Test/bin/wine",
+          "type": "wine"
+        },
+        "beforeLaunchScriptPath": "/pins/scripts/before.sh"
+      },
+      "gameConfigSettings": {
+        "verboseLogs": true
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "resolves": {
+            "kind": "use",
+            "key": "sideload:sideload-app",
+            "selection": {},
+            "prefix": {},
+            "logLines": [
+              "engine=use"
+            ],
+            "launchSettings": {
+              "verboseLogs": true,
+              "autoSyncSaves": false,
+              "savesPath": "/pins/saves",
+              "gogSaves": [],
+              "wineVersion": {
+                "name": "Overlay",
+                "bin": "/pins/engines/crossover/bin/wine",
+                "type": "crossover"
+              },
+              "beforeLaunchScriptPath": "/pins/scripts/before.sh"
+            }
+          }
+        },
+        "info_recent_add": {
+          "resolves": null
+        },
+        "engine_launch_end": {
+          "resolves": null
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": true
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": false,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000,
+      "installPlatform": "Windows"
+    }
+  },
+  {
+    "id": "funnel--pairwise-09",
+    "axes": {
+      "runner": "legendary",
+      "native": "native",
+      "engine": "skip",
+      "verboseLogs": "on",
+      "disableLogs": "on",
+      "saves": "on-offline",
+      "window": "minimize-mac",
+      "scripts": "before",
+      "launchResult": "false",
+      "launchOption": "last-used",
+      "firstPlay": "first",
+      "playtimeSync": "on"
+    },
+    "scenario": {
+      "runner": "legendary",
+      "appName": "legendary-app",
+      "title": "Title of legendary",
+      "native": true,
+      "platform": "mac",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": false,
+      "tsStore": {
+        "hasApp": false,
+        "totalPlayed": 0
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": true,
+        "noTrayIcon": true,
+        "disableLogs": true,
+        "disablePlaytimeSync": false
+      },
+      "gameSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": true,
+        "savesPath": "/pins/saves",
+        "gogSaves": [],
+        "wineVersion": {
+          "name": "Wine-Test",
+          "bin": "/pins/wines/Wine-Test/bin/wine",
+          "type": "wine"
+        },
+        "beforeLaunchScriptPath": "/pins/scripts/before.sh",
+        "lastUsedLaunchOption": {
+          "type": "basic",
+          "name": "Windowed",
+          "parameters": "--windowed"
+        }
+      },
+      "gameConfigSettings": {
+        "verboseLogs": true
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "resolves": {
+            "kind": "skip"
+          }
+        },
+        "info_recent_add": {
+          "resolves": null
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": false
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": false,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000
+    }
+  },
+  {
+    "id": "funnel--pairwise-10",
+    "axes": {
+      "runner": "legendary",
+      "native": "windows",
+      "engine": "use",
+      "verboseLogs": "off",
+      "disableLogs": "off",
+      "saves": "on-online",
+      "window": "none",
+      "scripts": "none",
+      "launchResult": "true",
+      "launchOption": "last-used",
+      "firstPlay": "repeat",
+      "playtimeSync": "on"
+    },
+    "scenario": {
+      "runner": "legendary",
+      "appName": "legendary-app",
+      "title": "Title of legendary",
+      "native": false,
+      "platform": "linux",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": true,
+      "tsStore": {
+        "hasApp": true,
+        "totalPlayed": 120
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": false,
+        "noTrayIcon": false,
+        "disableLogs": false,
+        "disablePlaytimeSync": false
+      },
+      "gameSettings": {
+        "verboseLogs": false,
+        "autoSyncSaves": true,
+        "savesPath": "/pins/saves",
+        "gogSaves": [],
+        "wineVersion": {
+          "name": "Wine-Test",
+          "bin": "/pins/wines/Wine-Test/bin/wine",
+          "type": "wine"
+        },
+        "lastUsedLaunchOption": {
+          "type": "basic",
+          "name": "Windowed",
+          "parameters": "--windowed"
+        }
+      },
+      "gameConfigSettings": {
+        "verboseLogs": false
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "resolves": {
+            "kind": "use",
+            "key": "legendary:legendary-app",
+            "selection": {},
+            "prefix": {},
+            "logLines": [
+              "engine=use"
+            ],
+            "launchSettings": {
+              "verboseLogs": false,
+              "autoSyncSaves": true,
+              "savesPath": "/pins/saves",
+              "gogSaves": [],
+              "wineVersion": {
+                "name": "Overlay",
+                "bin": "/pins/engines/crossover/bin/wine",
+                "type": "crossover"
+              },
+              "lastUsedLaunchOption": {
+                "type": "basic",
+                "name": "Windowed",
+                "parameters": "--windowed"
+              }
+            }
+          }
+        },
+        "info_recent_add": {
+          "resolves": null
+        },
+        "engine_launch_end": {
+          "resolves": null
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": true
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": false,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000,
+      "installPlatform": "Windows"
+    }
+  },
+  {
+    "id": "funnel--pairwise-11",
+    "axes": {
+      "runner": "gog",
+      "native": "windows",
+      "engine": "use",
+      "verboseLogs": "on",
+      "disableLogs": "off",
+      "saves": "off",
+      "window": "minimize-tray",
+      "scripts": "after",
+      "launchResult": "false",
+      "launchOption": "none",
+      "firstPlay": "first",
+      "playtimeSync": "off"
+    },
+    "scenario": {
+      "runner": "gog",
+      "appName": "gog-app",
+      "title": "Title of gog",
+      "native": false,
+      "platform": "linux",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": true,
+      "tsStore": {
+        "hasApp": false,
+        "totalPlayed": 0
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": true,
+        "noTrayIcon": false,
+        "disableLogs": false,
+        "disablePlaytimeSync": true
+      },
+      "gameSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": false,
+        "savesPath": "/pins/saves",
+        "gogSaves": [
+          {
+            "name": "saves",
+            "location": "/pins/gog/saves"
+          }
+        ],
+        "wineVersion": {
+          "name": "Wine-Test",
+          "bin": "/pins/wines/Wine-Test/bin/wine",
+          "type": "wine"
+        },
+        "afterLaunchScriptPath": "/pins/scripts/after.sh"
+      },
+      "gameConfigSettings": {
+        "verboseLogs": true
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "resolves": {
+            "kind": "use",
+            "key": "gog:gog-app",
+            "selection": {},
+            "prefix": {},
+            "logLines": [
+              "engine=use"
+            ],
+            "launchSettings": {
+              "verboseLogs": true,
+              "autoSyncSaves": false,
+              "savesPath": "/pins/saves",
+              "gogSaves": [
+                {
+                  "name": "saves",
+                  "location": "/pins/gog/saves"
+                }
+              ],
+              "wineVersion": {
+                "name": "Overlay",
+                "bin": "/pins/engines/crossover/bin/wine",
+                "type": "crossover"
+              },
+              "afterLaunchScriptPath": "/pins/scripts/after.sh"
+            }
+          }
+        },
+        "info_recent_add": {
+          "resolves": null
+        },
+        "engine_launch_end": {
+          "resolves": null
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": false
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": true,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000,
+      "installPlatform": "windows"
+    }
+  },
+  {
+    "id": "funnel--pairwise-12",
+    "axes": {
+      "runner": "legendary",
+      "native": "windows",
+      "engine": "legacy",
+      "verboseLogs": "on",
+      "disableLogs": "on",
+      "saves": "off",
+      "window": "minimize-no-tray-linux",
+      "scripts": "both",
+      "launchResult": "true",
+      "launchOption": "last-used",
+      "firstPlay": "first",
+      "playtimeSync": "on"
+    },
+    "scenario": {
+      "runner": "legendary",
+      "appName": "legendary-app",
+      "title": "Title of legendary",
+      "native": false,
+      "platform": "linux",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": true,
+      "tsStore": {
+        "hasApp": false,
+        "totalPlayed": 0
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": true,
+        "noTrayIcon": true,
+        "disableLogs": true,
+        "disablePlaytimeSync": false
+      },
+      "gameSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": false,
+        "savesPath": "/pins/saves",
+        "gogSaves": [],
+        "wineVersion": {
+          "name": "Wine-Test",
+          "bin": "/pins/wines/Wine-Test/bin/wine",
+          "type": "wine"
+        },
+        "beforeLaunchScriptPath": "/pins/scripts/before.sh",
+        "afterLaunchScriptPath": "/pins/scripts/after.sh",
+        "lastUsedLaunchOption": {
+          "type": "basic",
+          "name": "Windowed",
+          "parameters": "--windowed"
+        }
+      },
+      "gameConfigSettings": {
+        "verboseLogs": true
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "resolves": {
+            "kind": "legacy",
+            "key": "legendary:legendary-app",
+            "logLines": [
+              "engine=legacy"
+            ]
+          }
+        },
+        "info_recent_add": {
+          "resolves": null
+        },
+        "launch_check_wine_before_launch": {
+          "resolves": {
+            "ok": true,
+            "log": [
+              {
+                "level": "info",
+                "parts": [
+                  "Wine check: ok"
+                ]
+              }
+            ]
+          }
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": true
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": false,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000,
+      "installPlatform": "Windows"
+    }
+  },
+  {
+    "id": "funnel--pairwise-13",
+    "axes": {
+      "runner": "sideload",
+      "native": "native",
+      "engine": "skip",
+      "verboseLogs": "on",
+      "disableLogs": "off",
+      "saves": "on-online",
+      "window": "none",
+      "scripts": "after",
+      "launchResult": "true",
+      "launchOption": "last-used",
+      "firstPlay": "first",
+      "playtimeSync": "on"
+    },
+    "scenario": {
+      "runner": "sideload",
+      "appName": "sideload-app",
+      "title": "Title of sideload",
+      "native": true,
+      "platform": "linux",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": true,
+      "tsStore": {
+        "hasApp": false,
+        "totalPlayed": 0
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": false,
+        "noTrayIcon": false,
+        "disableLogs": false,
+        "disablePlaytimeSync": false
+      },
+      "gameSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": true,
+        "savesPath": "/pins/saves",
+        "gogSaves": [],
+        "wineVersion": {
+          "name": "Wine-Test",
+          "bin": "/pins/wines/Wine-Test/bin/wine",
+          "type": "wine"
+        },
+        "afterLaunchScriptPath": "/pins/scripts/after.sh",
+        "lastUsedLaunchOption": {
+          "type": "basic",
+          "name": "Windowed",
+          "parameters": "--windowed"
+        }
+      },
+      "gameConfigSettings": {
+        "verboseLogs": true
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "resolves": {
+            "kind": "skip"
+          }
+        },
+        "info_recent_add": {
+          "resolves": null
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": true
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": false,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000
+    }
+  },
+  {
+    "id": "funnel--pairwise-14",
+    "axes": {
+      "runner": "gog",
+      "native": "windows",
+      "engine": "legacy",
+      "verboseLogs": "on",
+      "disableLogs": "off",
+      "saves": "on-offline",
+      "window": "none",
+      "scripts": "before",
+      "launchResult": "true",
+      "launchOption": "none",
+      "firstPlay": "first",
+      "playtimeSync": "on"
+    },
+    "scenario": {
+      "runner": "gog",
+      "appName": "gog-app",
+      "title": "Title of gog",
+      "native": false,
+      "platform": "linux",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": false,
+      "tsStore": {
+        "hasApp": false,
+        "totalPlayed": 0
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": false,
+        "noTrayIcon": false,
+        "disableLogs": false,
+        "disablePlaytimeSync": false
+      },
+      "gameSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": true,
+        "savesPath": "/pins/saves",
+        "gogSaves": [
+          {
+            "name": "saves",
+            "location": "/pins/gog/saves"
+          }
+        ],
+        "wineVersion": {
+          "name": "Wine-Test",
+          "bin": "/pins/wines/Wine-Test/bin/wine",
+          "type": "wine"
+        },
+        "beforeLaunchScriptPath": "/pins/scripts/before.sh"
+      },
+      "gameConfigSettings": {
+        "verboseLogs": true
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "resolves": {
+            "kind": "legacy",
+            "key": "gog:gog-app",
+            "logLines": [
+              "engine=legacy"
+            ]
+          }
+        },
+        "info_recent_add": {
+          "resolves": null
+        },
+        "launch_check_wine_before_launch": {
+          "resolves": {
+            "ok": true,
+            "log": [
+              {
+                "level": "info",
+                "parts": [
+                  "Wine check: ok"
+                ]
+              }
+            ]
+          }
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": true
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": true,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000,
+      "installPlatform": "windows"
+    }
+  },
+  {
+    "id": "funnel--pairwise-15",
+    "axes": {
+      "runner": "nile",
+      "native": "windows",
+      "engine": "legacy",
+      "verboseLogs": "on",
+      "disableLogs": "off",
+      "saves": "off",
+      "window": "minimize-mac",
+      "scripts": "none",
+      "launchResult": "true",
+      "launchOption": "none",
+      "firstPlay": "first",
+      "playtimeSync": "on"
+    },
+    "scenario": {
+      "runner": "nile",
+      "appName": "nile-app",
+      "title": "Title of nile",
+      "native": false,
+      "platform": "mac",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": true,
+      "tsStore": {
+        "hasApp": false,
+        "totalPlayed": 0
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": true,
+        "noTrayIcon": true,
+        "disableLogs": false,
+        "disablePlaytimeSync": false
+      },
+      "gameSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": false,
+        "savesPath": "/pins/saves",
+        "gogSaves": [],
+        "wineVersion": {
+          "name": "Wine-Test",
+          "bin": "/pins/wines/Wine-Test/bin/wine",
+          "type": "wine"
+        }
+      },
+      "gameConfigSettings": {
+        "verboseLogs": true
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "resolves": {
+            "kind": "legacy",
+            "key": "nile:nile-app",
+            "logLines": [
+              "engine=legacy"
+            ]
+          }
+        },
+        "info_recent_add": {
+          "resolves": null
+        },
+        "launch_check_wine_before_launch": {
+          "resolves": {
+            "ok": true,
+            "log": [
+              {
+                "level": "info",
+                "parts": [
+                  "Wine check: ok"
+                ]
+              }
+            ]
+          }
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": true
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": false,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000,
+      "installPlatform": "Windows"
+    }
+  },
+  {
+    "id": "funnel--pairwise-16",
+    "axes": {
+      "runner": "sideload",
+      "native": "windows",
+      "engine": "legacy",
+      "verboseLogs": "on",
+      "disableLogs": "off",
+      "saves": "on-online",
+      "window": "minimize-tray",
+      "scripts": "none",
+      "launchResult": "true",
+      "launchOption": "none",
+      "firstPlay": "first",
+      "playtimeSync": "on"
+    },
+    "scenario": {
+      "runner": "sideload",
+      "appName": "sideload-app",
+      "title": "Title of sideload",
+      "native": false,
+      "platform": "linux",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": true,
+      "tsStore": {
+        "hasApp": false,
+        "totalPlayed": 0
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": true,
+        "noTrayIcon": false,
+        "disableLogs": false,
+        "disablePlaytimeSync": false
+      },
+      "gameSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": true,
+        "savesPath": "/pins/saves",
+        "gogSaves": [],
+        "wineVersion": {
+          "name": "Wine-Test",
+          "bin": "/pins/wines/Wine-Test/bin/wine",
+          "type": "wine"
+        }
+      },
+      "gameConfigSettings": {
+        "verboseLogs": true
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "resolves": {
+            "kind": "legacy",
+            "key": "sideload:sideload-app",
+            "logLines": [
+              "engine=legacy"
+            ]
+          }
+        },
+        "info_recent_add": {
+          "resolves": null
+        },
+        "launch_check_wine_before_launch": {
+          "resolves": {
+            "ok": true,
+            "log": [
+              {
+                "level": "info",
+                "parts": [
+                  "Wine check: ok"
+                ]
+              }
+            ]
+          }
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": true
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": false,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000,
+      "installPlatform": "Windows"
+    }
+  },
+  {
+    "id": "funnel--pairwise-17",
+    "axes": {
+      "runner": "nile",
+      "native": "windows",
+      "engine": "use",
+      "verboseLogs": "on",
+      "disableLogs": "off",
+      "saves": "off",
+      "window": "none",
+      "scripts": "both",
+      "launchResult": "true",
+      "launchOption": "none",
+      "firstPlay": "first",
+      "playtimeSync": "on"
+    },
+    "scenario": {
+      "runner": "nile",
+      "appName": "nile-app",
+      "title": "Title of nile",
+      "native": false,
+      "platform": "linux",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": true,
+      "tsStore": {
+        "hasApp": false,
+        "totalPlayed": 0
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": false,
+        "noTrayIcon": false,
+        "disableLogs": false,
+        "disablePlaytimeSync": false
+      },
+      "gameSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": false,
+        "savesPath": "/pins/saves",
+        "gogSaves": [],
+        "wineVersion": {
+          "name": "Wine-Test",
+          "bin": "/pins/wines/Wine-Test/bin/wine",
+          "type": "wine"
+        },
+        "beforeLaunchScriptPath": "/pins/scripts/before.sh",
+        "afterLaunchScriptPath": "/pins/scripts/after.sh"
+      },
+      "gameConfigSettings": {
+        "verboseLogs": true
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "resolves": {
+            "kind": "use",
+            "key": "nile:nile-app",
+            "selection": {},
+            "prefix": {},
+            "logLines": [
+              "engine=use"
+            ],
+            "launchSettings": {
+              "verboseLogs": true,
+              "autoSyncSaves": false,
+              "savesPath": "/pins/saves",
+              "gogSaves": [],
+              "wineVersion": {
+                "name": "Overlay",
+                "bin": "/pins/engines/crossover/bin/wine",
+                "type": "crossover"
+              },
+              "beforeLaunchScriptPath": "/pins/scripts/before.sh",
+              "afterLaunchScriptPath": "/pins/scripts/after.sh"
+            }
+          }
+        },
+        "info_recent_add": {
+          "resolves": null
+        },
+        "engine_launch_end": {
+          "resolves": null
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": true
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": false,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000,
+      "installPlatform": "Windows"
+    }
+  },
+  {
+    "id": "funnel--pairwise-18",
+    "axes": {
+      "runner": "gog",
+      "native": "native",
+      "engine": "skip",
+      "verboseLogs": "on",
+      "disableLogs": "off",
+      "saves": "on-offline",
+      "window": "minimize-no-tray-linux",
+      "scripts": "none",
+      "launchResult": "true",
+      "launchOption": "none",
+      "firstPlay": "first",
+      "playtimeSync": "off"
+    },
+    "scenario": {
+      "runner": "gog",
+      "appName": "gog-app",
+      "title": "Title of gog",
+      "native": true,
+      "platform": "linux",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": false,
+      "tsStore": {
+        "hasApp": false,
+        "totalPlayed": 0
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": true,
+        "noTrayIcon": true,
+        "disableLogs": false,
+        "disablePlaytimeSync": true
+      },
+      "gameSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": true,
+        "savesPath": "/pins/saves",
+        "gogSaves": [
+          {
+            "name": "saves",
+            "location": "/pins/gog/saves"
+          }
+        ],
+        "wineVersion": {
+          "name": "Wine-Test",
+          "bin": "/pins/wines/Wine-Test/bin/wine",
+          "type": "wine"
+        }
+      },
+      "gameConfigSettings": {
+        "verboseLogs": true
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "resolves": {
+            "kind": "skip"
+          }
+        },
+        "info_recent_add": {
+          "resolves": null
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": true
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": true,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000
+    }
+  },
+  {
+    "id": "funnel--pairwise-19",
+    "axes": {
+      "runner": "nile",
+      "native": "native",
+      "engine": "skip",
+      "verboseLogs": "on",
+      "disableLogs": "off",
+      "saves": "off",
+      "window": "minimize-no-tray-linux",
+      "scripts": "before",
+      "launchResult": "true",
+      "launchOption": "none",
+      "firstPlay": "first",
+      "playtimeSync": "on"
+    },
+    "scenario": {
+      "runner": "nile",
+      "appName": "nile-app",
+      "title": "Title of nile",
+      "native": true,
+      "platform": "linux",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": true,
+      "tsStore": {
+        "hasApp": false,
+        "totalPlayed": 0
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": true,
+        "noTrayIcon": true,
+        "disableLogs": false,
+        "disablePlaytimeSync": false
+      },
+      "gameSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": false,
+        "savesPath": "/pins/saves",
+        "gogSaves": [],
+        "wineVersion": {
+          "name": "Wine-Test",
+          "bin": "/pins/wines/Wine-Test/bin/wine",
+          "type": "wine"
+        },
+        "beforeLaunchScriptPath": "/pins/scripts/before.sh"
+      },
+      "gameConfigSettings": {
+        "verboseLogs": true
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "resolves": {
+            "kind": "skip"
+          }
+        },
+        "info_recent_add": {
+          "resolves": null
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": true
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": false,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000
+    }
+  },
+  {
+    "id": "funnel--pairwise-20",
+    "axes": {
+      "runner": "legendary",
+      "native": "native",
+      "engine": "skip",
+      "verboseLogs": "on",
+      "disableLogs": "off",
+      "saves": "off",
+      "window": "minimize-mac",
+      "scripts": "after",
+      "launchResult": "true",
+      "launchOption": "none",
+      "firstPlay": "first",
+      "playtimeSync": "on"
+    },
+    "scenario": {
+      "runner": "legendary",
+      "appName": "legendary-app",
+      "title": "Title of legendary",
+      "native": true,
+      "platform": "mac",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": true,
+      "tsStore": {
+        "hasApp": false,
+        "totalPlayed": 0
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": true,
+        "noTrayIcon": true,
+        "disableLogs": false,
+        "disablePlaytimeSync": false
+      },
+      "gameSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": false,
+        "savesPath": "/pins/saves",
+        "gogSaves": [],
+        "wineVersion": {
+          "name": "Wine-Test",
+          "bin": "/pins/wines/Wine-Test/bin/wine",
+          "type": "wine"
+        },
+        "afterLaunchScriptPath": "/pins/scripts/after.sh"
+      },
+      "gameConfigSettings": {
+        "verboseLogs": true
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "resolves": {
+            "kind": "skip"
+          }
+        },
+        "info_recent_add": {
+          "resolves": null
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": true
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": false,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000
+    }
+  },
+  {
+    "id": "funnel--pairwise-21",
+    "axes": {
+      "runner": "legendary",
+      "native": "native",
+      "engine": "skip",
+      "verboseLogs": "on",
+      "disableLogs": "off",
+      "saves": "off",
+      "window": "minimize-tray",
+      "scripts": "before",
+      "launchResult": "true",
+      "launchOption": "none",
+      "firstPlay": "first",
+      "playtimeSync": "on"
+    },
+    "scenario": {
+      "runner": "legendary",
+      "appName": "legendary-app",
+      "title": "Title of legendary",
+      "native": true,
+      "platform": "linux",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": true,
+      "tsStore": {
+        "hasApp": false,
+        "totalPlayed": 0
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": true,
+        "noTrayIcon": false,
+        "disableLogs": false,
+        "disablePlaytimeSync": false
+      },
+      "gameSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": false,
+        "savesPath": "/pins/saves",
+        "gogSaves": [],
+        "wineVersion": {
+          "name": "Wine-Test",
+          "bin": "/pins/wines/Wine-Test/bin/wine",
+          "type": "wine"
+        },
+        "beforeLaunchScriptPath": "/pins/scripts/before.sh"
+      },
+      "gameConfigSettings": {
+        "verboseLogs": true
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "resolves": {
+            "kind": "skip"
+          }
+        },
+        "info_recent_add": {
+          "resolves": null
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": true
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": false,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000
+    }
+  },
+  {
+    "id": "funnel--pairwise-22",
+    "axes": {
+      "runner": "legendary",
+      "native": "native",
+      "engine": "skip",
+      "verboseLogs": "on",
+      "disableLogs": "off",
+      "saves": "off",
+      "window": "minimize-mac",
+      "scripts": "both",
+      "launchResult": "true",
+      "launchOption": "none",
+      "firstPlay": "first",
+      "playtimeSync": "on"
+    },
+    "scenario": {
+      "runner": "legendary",
+      "appName": "legendary-app",
+      "title": "Title of legendary",
+      "native": true,
+      "platform": "mac",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": true,
+      "tsStore": {
+        "hasApp": false,
+        "totalPlayed": 0
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": true,
+        "noTrayIcon": true,
+        "disableLogs": false,
+        "disablePlaytimeSync": false
+      },
+      "gameSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": false,
+        "savesPath": "/pins/saves",
+        "gogSaves": [],
+        "wineVersion": {
+          "name": "Wine-Test",
+          "bin": "/pins/wines/Wine-Test/bin/wine",
+          "type": "wine"
+        },
+        "beforeLaunchScriptPath": "/pins/scripts/before.sh",
+        "afterLaunchScriptPath": "/pins/scripts/after.sh"
+      },
+      "gameConfigSettings": {
+        "verboseLogs": true
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "resolves": {
+            "kind": "skip"
+          }
+        },
+        "info_recent_add": {
+          "resolves": null
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": true
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": false,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000
+    }
+  },
+  {
+    "id": "funnel--pairwise-23",
+    "axes": {
+      "runner": "legendary",
+      "native": "native",
+      "engine": "skip",
+      "verboseLogs": "on",
+      "disableLogs": "off",
+      "saves": "off",
+      "window": "minimize-tray",
+      "scripts": "both",
+      "launchResult": "true",
+      "launchOption": "none",
+      "firstPlay": "first",
+      "playtimeSync": "on"
+    },
+    "scenario": {
+      "runner": "legendary",
+      "appName": "legendary-app",
+      "title": "Title of legendary",
+      "native": true,
+      "platform": "linux",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": true,
+      "tsStore": {
+        "hasApp": false,
+        "totalPlayed": 0
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": true,
+        "noTrayIcon": false,
+        "disableLogs": false,
+        "disablePlaytimeSync": false
+      },
+      "gameSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": false,
+        "savesPath": "/pins/saves",
+        "gogSaves": [],
+        "wineVersion": {
+          "name": "Wine-Test",
+          "bin": "/pins/wines/Wine-Test/bin/wine",
+          "type": "wine"
+        },
+        "beforeLaunchScriptPath": "/pins/scripts/before.sh",
+        "afterLaunchScriptPath": "/pins/scripts/after.sh"
+      },
+      "gameConfigSettings": {
+        "verboseLogs": true
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "resolves": {
+            "kind": "skip"
+          }
+        },
+        "info_recent_add": {
+          "resolves": null
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": true
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": false,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000
+    }
+  },
+  {
+    "id": "funnel--pairwise-24",
+    "axes": {
+      "runner": "legendary",
+      "native": "native",
+      "engine": "skip",
+      "verboseLogs": "on",
+      "disableLogs": "off",
+      "saves": "off",
+      "window": "minimize-no-tray-linux",
+      "scripts": "after",
+      "launchResult": "true",
+      "launchOption": "none",
+      "firstPlay": "first",
+      "playtimeSync": "on"
+    },
+    "scenario": {
+      "runner": "legendary",
+      "appName": "legendary-app",
+      "title": "Title of legendary",
+      "native": true,
+      "platform": "linux",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": true,
+      "tsStore": {
+        "hasApp": false,
+        "totalPlayed": 0
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": true,
+        "noTrayIcon": true,
+        "disableLogs": false,
+        "disablePlaytimeSync": false
+      },
+      "gameSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": false,
+        "savesPath": "/pins/saves",
+        "gogSaves": [],
+        "wineVersion": {
+          "name": "Wine-Test",
+          "bin": "/pins/wines/Wine-Test/bin/wine",
+          "type": "wine"
+        },
+        "afterLaunchScriptPath": "/pins/scripts/after.sh"
+      },
+      "gameConfigSettings": {
+        "verboseLogs": true
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "resolves": {
+            "kind": "skip"
+          }
+        },
+        "info_recent_add": {
+          "resolves": null
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": true
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": false,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000
+    }
+  },
+  {
+    "id": "launcher.engineStep--launcher-engine-step-61-14-87-52-runs-the-step-once-after-the-log-writer-and-before-the-wine-check-sending-the-launch-facts",
+    "note": "launcher engine step (61-14, 87-52) > runs the step once, after the log writer and before the Wine check, sending the launch facts",
+    "scenario": {
+      "runner": "legendary",
+      "appName": "Quail",
+      "title": "Quail",
+      "native": false,
+      "platform": "mac",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": false,
+      "tsStore": {
+        "hasApp": true,
+        "totalPlayed": 0
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": false,
+        "noTrayIcon": true,
+        "disableLogs": false,
+        "disablePlaytimeSync": true
+      },
+      "gameSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": false,
+        "savesPath": "",
+        "gogSaves": [],
+        "wineVersion": {
+          "name": "stored",
+          "bin": "/pins/wines/stored/bin/wine",
+          "type": "wine"
+        }
+      },
+      "gameConfigSettings": {
+        "verboseLogs": true
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "resolves": {
+            "kind": "skip"
+          }
+        },
+        "info_recent_add": {
+          "resolves": null
+        },
+        "launch_check_wine_before_launch": {
+          "resolves": {
+            "ok": true,
+            "log": [
+              {
+                "level": "info",
+                "parts": [
+                  "Wine check: ok"
+                ]
+              }
+            ]
+          }
+        },
+        "engine_launch_end": {
+          "resolves": null
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": true
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": false,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000
+    }
+  },
+  {
+    "id": "launcher.engineStep--launcher-engine-step-61-14-87-52-use-skips-the-wine-check-runs-on-the-reply-s-settings-writes-its-log-lines-and-releases-after-the-launch",
+    "note": "launcher engine step (61-14, 87-52) > 'use': skips the Wine check, runs on the reply's settings, writes its log lines and releases after the launch",
+    "scenario": {
+      "runner": "legendary",
+      "appName": "Quail",
+      "title": "Quail",
+      "native": false,
+      "platform": "mac",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": false,
+      "tsStore": {
+        "hasApp": true,
+        "totalPlayed": 0
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": false,
+        "noTrayIcon": true,
+        "disableLogs": false,
+        "disablePlaytimeSync": true
+      },
+      "gameSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": false,
+        "savesPath": "",
+        "gogSaves": [],
+        "wineVersion": {
+          "name": "stored",
+          "bin": "/pins/wines/stored/bin/wine",
+          "type": "wine"
+        }
+      },
+      "gameConfigSettings": {
+        "verboseLogs": true
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "resolves": {
+            "kind": "use",
+            "key": "legendary:Quail",
+            "selection": {},
+            "prefix": {},
+            "logLines": [
+              "engine=crossover version=24.0",
+              "bottle=Quail"
+            ],
+            "launchSettings": {
+              "verboseLogs": true,
+              "wineVersion": {
+                "name": "overlay",
+                "bin": "/pins/wines/overlay/bin/wine",
+                "type": "wine"
+              },
+              "afterLaunchScriptPath": "/overlay/after.sh"
+            }
+          }
+        },
+        "info_recent_add": {
+          "resolves": null
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": true
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": false,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000
+    }
+  },
+  {
+    "id": "launcher.engineStep--launcher-engine-step-61-14-87-52-use-releases-the-selection-when-the-launch-throws",
+    "note": "launcher engine step (61-14, 87-52) > 'use': releases the selection when the launch throws",
+    "scenario": {
+      "runner": "legendary",
+      "appName": "Quail",
+      "title": "Quail",
+      "native": false,
+      "platform": "mac",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": false,
+      "tsStore": {
+        "hasApp": true,
+        "totalPlayed": 0
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": false,
+        "noTrayIcon": true,
+        "disableLogs": false,
+        "disablePlaytimeSync": true
+      },
+      "gameSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": false,
+        "savesPath": "",
+        "gogSaves": [],
+        "wineVersion": {
+          "name": "stored",
+          "bin": "/pins/wines/stored/bin/wine",
+          "type": "wine"
+        }
+      },
+      "gameConfigSettings": {
+        "verboseLogs": true
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "resolves": {
+            "kind": "use",
+            "key": "legendary:Quail",
+            "selection": {},
+            "prefix": {},
+            "logLines": [
+              "engine=crossover version=24.0",
+              "bottle=Quail"
+            ],
+            "launchSettings": {
+              "verboseLogs": true,
+              "wineVersion": {
+                "name": "overlay",
+                "bin": "/pins/wines/overlay/bin/wine",
+                "type": "wine"
+              },
+              "afterLaunchScriptPath": "/overlay/after.sh"
+            }
+          }
+        },
+        "info_recent_add": {
+          "resolves": null
+        }
+      },
+      "hooks": {
+        "launch": {
+          "rejects": "boom"
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": false,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000
+    }
+  },
+  {
+    "id": "launcher.engineStep--launcher-engine-step-61-14-87-52-s-the-wine-check-runs-as-today-no-overlay-no-release",
+    "note": "launcher engine step (61-14, 87-52) > '%s': the Wine check runs as today, no overlay, no release",
+    "scenario": {
+      "runner": "legendary",
+      "appName": "Quail",
+      "title": "Quail",
+      "native": false,
+      "platform": "mac",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": false,
+      "tsStore": {
+        "hasApp": true,
+        "totalPlayed": 0
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": false,
+        "noTrayIcon": true,
+        "disableLogs": false,
+        "disablePlaytimeSync": true
+      },
+      "gameSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": false,
+        "savesPath": "",
+        "gogSaves": [],
+        "wineVersion": {
+          "name": "stored",
+          "bin": "/pins/wines/stored/bin/wine",
+          "type": "wine"
+        }
+      },
+      "gameConfigSettings": {
+        "verboseLogs": true
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "resolves": {
+            "kind": "legacy",
+            "key": "legendary:Quail",
+            "logLines": []
+          }
+        },
+        "info_recent_add": {
+          "resolves": null
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": true
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": false,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000
+    }
+  },
+  {
+    "id": "launcher.engineStep--launcher-engine-step-61-14-87-52-refused-reports-done-closes-the-log-aborts-and-never-launches",
+    "note": "launcher engine step (61-14, 87-52) > 'refused': reports done, closes the log, aborts, and never launches",
+    "scenario": {
+      "runner": "legendary",
+      "appName": "Quail",
+      "title": "Quail",
+      "native": false,
+      "platform": "mac",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": false,
+      "tsStore": {
+        "hasApp": true,
+        "totalPlayed": 0
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": false,
+        "noTrayIcon": true,
+        "disableLogs": false,
+        "disablePlaytimeSync": true
+      },
+      "gameSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": false,
+        "savesPath": "",
+        "gogSaves": [],
+        "wineVersion": {
+          "name": "stored",
+          "bin": "/pins/wines/stored/bin/wine",
+          "type": "wine"
+        }
+      },
+      "gameConfigSettings": {
+        "verboseLogs": true
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "resolves": {
+            "kind": "refused",
+            "key": "legendary:Quail",
+            "logLines": [
+              "refused"
+            ]
+          }
+        },
+        "info_recent_add": {
+          "resolves": null
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": true
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": false,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000
+    }
+  },
+  {
+    "id": "launcher.engineStep--launcher-engine-step-61-14-87-52-a-reply-the-crate-never-produces-fails-the-launch-instead-of-guessing-an-engine",
+    "note": "launcher engine step (61-14, 87-52) > a reply the crate never produces fails the launch instead of guessing an engine",
+    "scenario": {
+      "runner": "legendary",
+      "appName": "Quail",
+      "title": "Quail",
+      "native": false,
+      "platform": "mac",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": false,
+      "tsStore": {
+        "hasApp": true,
+        "totalPlayed": 0
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": false,
+        "noTrayIcon": true,
+        "disableLogs": false,
+        "disablePlaytimeSync": true
+      },
+      "gameSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": false,
+        "savesPath": "",
+        "gogSaves": [],
+        "wineVersion": {
+          "name": "stored",
+          "bin": "/pins/wines/stored/bin/wine",
+          "type": "wine"
+        }
+      },
+      "gameConfigSettings": {
+        "verboseLogs": true
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "resolves": {
+            "kind": "use",
+            "key": "legendary:Quail",
+            "logLines": []
+          }
+        },
+        "info_recent_add": {
+          "resolves": null
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": true
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": false,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000
+    }
+  },
+  {
+    "id": "launcher.engineStep--the-end-of-a-launch-releases-the-display-sleep-blocker-87-73-rf2-refused-stops-the-blocker-it-started-once-logs-it-once-sends-done-once",
+    "note": "the end of a launch releases the display sleep blocker (87-73, RF2) > 'refused': stops the blocker it started once, logs it once, sends done once",
+    "scenario": {
+      "runner": "legendary",
+      "appName": "Quail",
+      "title": "Quail",
+      "native": false,
+      "platform": "mac",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": false,
+      "tsStore": {
+        "hasApp": true,
+        "totalPlayed": 0
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": false,
+        "noTrayIcon": true,
+        "disableLogs": false,
+        "disablePlaytimeSync": true
+      },
+      "gameSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": false,
+        "savesPath": "",
+        "gogSaves": [],
+        "wineVersion": {
+          "name": "stored",
+          "bin": "/pins/wines/stored/bin/wine",
+          "type": "wine"
+        }
+      },
+      "gameConfigSettings": {
+        "verboseLogs": true
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "resolves": {
+            "kind": "refused",
+            "key": "legendary:Quail",
+            "logLines": []
+          }
+        },
+        "info_recent_add": {
+          "resolves": null
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": true
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": false,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000
+    }
+  },
+  {
+    "id": "launcher.engineStep--the-end-of-a-launch-releases-the-display-sleep-blocker-87-73-rf2-after-a-refused-launch-the-next-launch-starts-a-fresh-blocker-the-id-was-cleared",
+    "note": "the end of a launch releases the display sleep blocker (87-73, RF2) > after a refused launch the next launch starts a fresh blocker (the id was cleared)",
+    "scenario": {
+      "runner": "legendary",
+      "appName": "Quail",
+      "title": "Quail",
+      "native": false,
+      "platform": "mac",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": false,
+      "tsStore": {
+        "hasApp": true,
+        "totalPlayed": 0
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": false,
+        "noTrayIcon": true,
+        "disableLogs": false,
+        "disablePlaytimeSync": true
+      },
+      "gameSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": false,
+        "savesPath": "",
+        "gogSaves": [],
+        "wineVersion": {
+          "name": "stored",
+          "bin": "/pins/wines/stored/bin/wine",
+          "type": "wine"
+        }
+      },
+      "gameConfigSettings": {
+        "verboseLogs": true
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "sequence": [
+            {
+              "resolves": {
+                "kind": "refused",
+                "key": "legendary:Quail",
+                "logLines": []
+              }
+            },
+            {
+              "resolves": {
+                "kind": "skip"
+              }
+            }
+          ]
+        },
+        "info_recent_add": {
+          "resolves": null
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": true
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": false,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000,
+      "playAgain": {
+        "online": false
+      }
+    }
+  },
+  {
+    "id": "launcher.engineStep--the-end-of-a-launch-releases-the-display-sleep-blocker-87-73-rf2-a-rejected-engine-step-sends-done-stops-and-clears-the-blocker-and-rejects-with-the-original-error",
+    "note": "the end of a launch releases the display sleep blocker (87-73, RF2) > a rejected engine step sends done, stops and clears the blocker, and rejects with the original error",
+    "scenario": {
+      "runner": "legendary",
+      "appName": "Quail",
+      "title": "Quail",
+      "native": false,
+      "platform": "mac",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": false,
+      "tsStore": {
+        "hasApp": true,
+        "totalPlayed": 0
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": false,
+        "noTrayIcon": true,
+        "disableLogs": false,
+        "disablePlaytimeSync": true
+      },
+      "gameSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": false,
+        "savesPath": "",
+        "gogSaves": [],
+        "wineVersion": {
+          "name": "stored",
+          "bin": "/pins/wines/stored/bin/wine",
+          "type": "wine"
+        }
+      },
+      "gameConfigSettings": {
+        "verboseLogs": true
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "sequence": [
+            {
+              "rejects": "engine_launch_select is down"
+            },
+            {
+              "resolves": {
+                "kind": "skip"
+              }
+            }
+          ]
+        },
+        "info_recent_add": {
+          "resolves": null
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": true
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": false,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000,
+      "playAgain": {
+        "online": false
+      }
+    }
+  },
+  {
+    "id": "launcher.engineStep--the-end-of-a-launch-releases-the-display-sleep-blocker-87-73-rf2-a-failed-wine-check-stops-and-clears-the-blocker-and-sends-done-once",
+    "note": "the end of a launch releases the display sleep blocker (87-73, RF2) > a failed Wine check stops and clears the blocker and sends done once",
+    "scenario": {
+      "runner": "legendary",
+      "appName": "Quail",
+      "title": "Quail",
+      "native": false,
+      "platform": "mac",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": false,
+      "tsStore": {
+        "hasApp": true,
+        "totalPlayed": 0
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": false,
+        "noTrayIcon": true,
+        "disableLogs": false,
+        "disablePlaytimeSync": true
+      },
+      "gameSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": false,
+        "savesPath": "",
+        "gogSaves": [],
+        "wineVersion": {
+          "name": "stored",
+          "bin": "/pins/wines/stored/bin/wine",
+          "type": "wine"
+        }
+      },
+      "gameConfigSettings": {
+        "verboseLogs": true
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "resolves": {
+            "kind": "skip"
+          }
+        },
+        "info_recent_add": {
+          "resolves": null
+        },
+        "launch_check_wine_before_launch": {
+          "sequence": [
+            {
+              "resolves": {
+                "ok": false,
+                "log": []
+              }
+            },
+            {
+              "resolves": {
+                "ok": true,
+                "log": [
+                  {
+                    "level": "info",
+                    "parts": [
+                      "Wine check: ok"
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": true
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": false,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000,
+      "playAgain": {
+        "online": false
+      }
+    }
+  },
+  {
+    "id": "launcher.engineStep--the-end-of-a-launch-releases-the-display-sleep-blocker-87-73-rf2-a-normal-launch-stops-the-blocker-once-at-its-end-and-clears-the-id",
+    "note": "the end of a launch releases the display sleep blocker (87-73, RF2) > a normal launch stops the blocker once at its end and clears the id",
+    "scenario": {
+      "runner": "legendary",
+      "appName": "Quail",
+      "title": "Quail",
+      "native": false,
+      "platform": "mac",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": false,
+      "tsStore": {
+        "hasApp": true,
+        "totalPlayed": 0
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": false,
+        "noTrayIcon": true,
+        "disableLogs": false,
+        "disablePlaytimeSync": true
+      },
+      "gameSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": false,
+        "savesPath": "",
+        "gogSaves": [],
+        "wineVersion": {
+          "name": "stored",
+          "bin": "/pins/wines/stored/bin/wine",
+          "type": "wine"
+        }
+      },
+      "gameConfigSettings": {
+        "verboseLogs": true
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "resolves": {
+            "kind": "skip"
+          }
+        },
+        "info_recent_add": {
+          "resolves": null
+        },
+        "launch_check_wine_before_launch": {
+          "resolves": {
+            "ok": true,
+            "log": [
+              {
+                "level": "info",
+                "parts": [
+                  "Wine check: ok"
+                ]
+              }
+            ]
+          }
+        },
+        "engine_launch_end": {
+          "resolves": null
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": true
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": false,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000,
+      "playAgain": {
+        "online": false
+      }
+    }
+  },
+  {
+    "id": "launcher.engineStep--launcher-engine-step-request-the-offline-flag-87-63-f1-with-the-monitor-in-s-the-request-says-offline-s",
+    "note": "launcher engine step request: the offline flag (87-63, F1) > with the monitor in %s the request says offline: %s",
+    "scenario": {
+      "runner": "legendary",
+      "appName": "Quail",
+      "title": "Quail",
+      "native": false,
+      "platform": "mac",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": false,
+      "tsStore": {
+        "hasApp": true,
+        "totalPlayed": 0
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": false,
+        "noTrayIcon": true,
+        "disableLogs": false,
+        "disablePlaytimeSync": true
+      },
+      "gameSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": false,
+        "savesPath": "",
+        "gogSaves": [],
+        "wineVersion": {
+          "name": "stored",
+          "bin": "/pins/wines/stored/bin/wine",
+          "type": "wine"
+        }
+      },
+      "gameConfigSettings": {
+        "verboseLogs": true
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "resolves": {
+            "kind": "skip"
+          }
+        },
+        "info_recent_add": {
+          "resolves": null
+        },
+        "launch_check_wine_before_launch": {
+          "resolves": {
+            "ok": true,
+            "log": [
+              {
+                "level": "info",
+                "parts": [
+                  "Wine check: ok"
+                ]
+              }
+            ]
+          }
+        },
+        "engine_launch_end": {
+          "resolves": null
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": true
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": false,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000
+    }
+  },
+  {
+    "id": "launcher.engineStep--launcher-engine-step-request-the-offline-flag-87-63-f1-reads-the-monitor-when-the-request-is-built-not-when-play-was-pressed-the-epic-offline-prompt-path",
+    "note": "launcher engine step request: the offline flag (87-63, F1) > reads the monitor when the request is built, not when Play was pressed (the Epic offline prompt path)",
+    "scenario": {
+      "runner": "legendary",
+      "appName": "Quail",
+      "title": "Quail",
+      "native": false,
+      "platform": "mac",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": true,
+      "tsStore": {
+        "hasApp": true,
+        "totalPlayed": 0
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": false,
+        "noTrayIcon": true,
+        "disableLogs": false,
+        "disablePlaytimeSync": true
+      },
+      "gameSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": false,
+        "savesPath": "",
+        "gogSaves": [],
+        "wineVersion": {
+          "name": "stored",
+          "bin": "/pins/wines/stored/bin/wine",
+          "type": "wine"
+        }
+      },
+      "gameConfigSettings": {
+        "verboseLogs": true
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "resolves": {
+            "kind": "skip"
+          }
+        },
+        "info_recent_add": {
+          "resolves": null
+        },
+        "launch_check_wine_before_launch": {
+          "resolves": {
+            "ok": true,
+            "log": [
+              {
+                "level": "info",
+                "parts": [
+                  "Wine check: ok"
+                ]
+              }
+            ]
+          }
+        },
+        "engine_launch_end": {
+          "resolves": null
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": true
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": false,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000,
+      "goesOfflineDuringGetSettings": true
+    }
+  },
+  {
+    "id": "launcher.engineStep--launcher-engine-step-request-the-offline-flag-87-63-f1-a-second-play-after-the-network-comes-back-says-online-again-the-flag-is-never-latched",
+    "note": "launcher engine step request: the offline flag (87-63, F1) > a second Play after the network comes back says online again (the flag is never latched)",
+    "scenario": {
+      "runner": "legendary",
+      "appName": "Quail",
+      "title": "Quail",
+      "native": false,
+      "platform": "mac",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": false,
+      "tsStore": {
+        "hasApp": true,
+        "totalPlayed": 0
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": false,
+        "noTrayIcon": true,
+        "disableLogs": false,
+        "disablePlaytimeSync": true
+      },
+      "gameSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": false,
+        "savesPath": "",
+        "gogSaves": [],
+        "wineVersion": {
+          "name": "stored",
+          "bin": "/pins/wines/stored/bin/wine",
+          "type": "wine"
+        }
+      },
+      "gameConfigSettings": {
+        "verboseLogs": true
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "resolves": {
+            "kind": "skip"
+          }
+        },
+        "info_recent_add": {
+          "resolves": null
+        },
+        "launch_check_wine_before_launch": {
+          "resolves": {
+            "ok": true,
+            "log": [
+              {
+                "level": "info",
+                "parts": [
+                  "Wine check: ok"
+                ]
+              }
+            ]
+          }
+        },
+        "engine_launch_end": {
+          "resolves": null
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": true
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": false,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000,
+      "playAgain": {
+        "online": true
+      }
+    }
+  },
+  {
+    "id": "funnel--folder-missing-asks-and-aborts",
+    "note": "the install folder is gone: Rust asks whether to uninstall, the funnel reports done and aborts before any settings read",
+    "scenario": {
+      "runner": "legendary",
+      "appName": "alpha",
+      "title": "Alpha",
+      "native": true,
+      "platform": "linux",
+      "isCLINoGui": false,
+      "installPath": "absent",
+      "online": true,
+      "tsStore": {
+        "hasApp": false,
+        "totalPlayed": 0
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": false,
+        "noTrayIcon": false,
+        "disableLogs": false,
+        "disablePlaytimeSync": false
+      },
+      "gameSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": false,
+        "savesPath": "",
+        "gogSaves": [],
+        "wineVersion": {
+          "name": "Wine-Test",
+          "bin": "/pins/wines/Wine-Test/bin/wine",
+          "type": "wine"
+        }
+      },
+      "gameConfigSettings": {
+        "verboseLogs": true
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "resolves": {
+            "kind": "skip"
+          }
+        },
+        "info_recent_add": {
+          "resolves": null
+        },
+        "launch_ask_force_uninstall": {
+          "resolves": 0
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": true
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": false,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000
+    }
+  },
+  {
+    "id": "funnel--engine-refused-releases-the-blocker",
+    "note": "the engine step refuses: the display blocker is released, done is sent, the log is closed, the result is abort",
+    "scenario": {
+      "runner": "legendary",
+      "appName": "alpha",
+      "title": "Alpha",
+      "native": false,
+      "platform": "mac",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": true,
+      "tsStore": {
+        "hasApp": false,
+        "totalPlayed": 0
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": false,
+        "noTrayIcon": false,
+        "disableLogs": false,
+        "disablePlaytimeSync": false
+      },
+      "gameSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": false,
+        "savesPath": "",
+        "gogSaves": [],
+        "wineVersion": {
+          "name": "Wine-Test",
+          "bin": "/pins/wines/Wine-Test/bin/wine",
+          "type": "wine"
+        }
+      },
+      "gameConfigSettings": {
+        "verboseLogs": true
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "resolves": {
+            "kind": "refused",
+            "key": "legendary:alpha",
+            "logLines": [
+              "refused"
+            ]
+          }
+        },
+        "info_recent_add": {
+          "resolves": null
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": true
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": false,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000,
+      "installPlatform": "Windows"
+    }
+  },
+  {
+    "id": "funnel--engine-throws-releases-the-blocker-and-rethrows",
+    "note": "the engine request rejects: done, the blocker released, the log closed and the same error rethrown",
+    "scenario": {
+      "runner": "legendary",
+      "appName": "alpha",
+      "title": "Alpha",
+      "native": false,
+      "platform": "mac",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": true,
+      "tsStore": {
+        "hasApp": false,
+        "totalPlayed": 0
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": false,
+        "noTrayIcon": false,
+        "disableLogs": false,
+        "disablePlaytimeSync": false
+      },
+      "gameSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": false,
+        "savesPath": "",
+        "gogSaves": [],
+        "wineVersion": {
+          "name": "Wine-Test",
+          "bin": "/pins/wines/Wine-Test/bin/wine",
+          "type": "wine"
+        }
+      },
+      "gameConfigSettings": {
+        "verboseLogs": true
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "rejects": "engine_launch_select is down"
+        },
+        "info_recent_add": {
+          "resolves": null
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": true
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": false,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000,
+      "installPlatform": "Windows"
+    }
+  },
+  {
+    "id": "funnel--wine-check-fails-releases-the-blocker",
+    "note": "the Wine check answers not ok: an error line, the blocker released, done, the log closed, the result is error",
+    "scenario": {
+      "runner": "legendary",
+      "appName": "alpha",
+      "title": "Alpha",
+      "native": false,
+      "platform": "mac",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": true,
+      "tsStore": {
+        "hasApp": false,
+        "totalPlayed": 0
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": false,
+        "noTrayIcon": false,
+        "disableLogs": false,
+        "disablePlaytimeSync": false
+      },
+      "gameSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": false,
+        "savesPath": "",
+        "gogSaves": [],
+        "wineVersion": {
+          "name": "Wine-Test",
+          "bin": "/pins/wines/Wine-Test/bin/wine",
+          "type": "wine"
+        }
+      },
+      "gameConfigSettings": {
+        "verboseLogs": true
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "resolves": {
+            "kind": "skip"
+          }
+        },
+        "info_recent_add": {
+          "resolves": null
+        },
+        "launch_check_wine_before_launch": {
+          "resolves": {
+            "ok": false,
+            "log": [
+              {
+                "level": "error",
+                "parts": [
+                  "Wine check: no usable wine"
+                ]
+              }
+            ]
+          }
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": true
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": false,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000,
+      "installPlatform": "Windows"
+    }
+  },
+  {
+    "id": "funnel--recent-game-rejects-still-done",
+    "note": "CR-41: the recent-game write rejects: a warning is logged and the launch still ends done",
+    "scenario": {
+      "runner": "legendary",
+      "appName": "alpha",
+      "title": "Alpha",
+      "native": true,
+      "platform": "linux",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": true,
+      "tsStore": {
+        "hasApp": false,
+        "totalPlayed": 0
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": false,
+        "noTrayIcon": false,
+        "disableLogs": false,
+        "disablePlaytimeSync": false
+      },
+      "gameSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": false,
+        "savesPath": "",
+        "gogSaves": [],
+        "wineVersion": {
+          "name": "Wine-Test",
+          "bin": "/pins/wines/Wine-Test/bin/wine",
+          "type": "wine"
+        }
+      },
+      "gameConfigSettings": {
+        "verboseLogs": true
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "resolves": {
+            "kind": "skip"
+          }
+        },
+        "info_recent_add": {
+          "rejects": "info_recent_add: the store is locked"
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": true
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": false,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000
+    }
+  },
+  {
+    "id": "funnel--launch-rejects-writes-the-exception",
+    "note": "the launch rejects: the exception goes to the gamelib log and the game log, the launch ends with an error result",
+    "scenario": {
+      "runner": "legendary",
+      "appName": "alpha",
+      "title": "Alpha",
+      "native": true,
+      "platform": "linux",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": true,
+      "tsStore": {
+        "hasApp": false,
+        "totalPlayed": 0
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": false,
+        "noTrayIcon": false,
+        "disableLogs": false,
+        "disablePlaytimeSync": false
+      },
+      "gameSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": false,
+        "savesPath": "",
+        "gogSaves": [],
+        "wineVersion": {
+          "name": "Wine-Test",
+          "bin": "/pins/wines/Wine-Test/bin/wine",
+          "type": "wine"
+        }
+      },
+      "gameConfigSettings": {
+        "verboseLogs": true
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "resolves": {
+            "kind": "skip"
+          }
+        },
+        "info_recent_add": {
+          "resolves": null
+        }
+      },
+      "hooks": {
+        "launch": {
+          "rejects": "the game could not start"
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": false,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000
+    }
+  },
+  {
+    "id": "funnel--cli-no-gui-exits",
+    "note": "launched from the command line without a window: the app exits after the final done",
+    "scenario": {
+      "runner": "legendary",
+      "appName": "alpha",
+      "title": "Alpha",
+      "native": true,
+      "platform": "linux",
+      "isCLINoGui": true,
+      "installPath": "none",
+      "online": true,
+      "tsStore": {
+        "hasApp": false,
+        "totalPlayed": 0
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": false,
+        "noTrayIcon": false,
+        "disableLogs": false,
+        "disablePlaytimeSync": false
+      },
+      "gameSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": false,
+        "savesPath": "",
+        "gogSaves": [],
+        "wineVersion": {
+          "name": "Wine-Test",
+          "bin": "/pins/wines/Wine-Test/bin/wine",
+          "type": "wine"
+        }
+      },
+      "gameConfigSettings": {
+        "verboseLogs": true
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "resolves": {
+            "kind": "skip"
+          }
+        },
+        "info_recent_add": {
+          "resolves": null
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": true
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": false,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000
+    }
+  },
+  {
+    "id": "funnel--gog-playtime-posted",
+    "note": "a GOG launch posts the session to the server and sets and clears presence",
+    "scenario": {
+      "runner": "gog",
+      "appName": "gog-app",
+      "title": "Alpha",
+      "native": true,
+      "platform": "linux",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": true,
+      "tsStore": {
+        "hasApp": false,
+        "totalPlayed": 0
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": false,
+        "noTrayIcon": false,
+        "disableLogs": false,
+        "disablePlaytimeSync": false
+      },
+      "gameSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": false,
+        "savesPath": "",
+        "gogSaves": [],
+        "wineVersion": {
+          "name": "Wine-Test",
+          "bin": "/pins/wines/Wine-Test/bin/wine",
+          "type": "wine"
+        }
+      },
+      "gameConfigSettings": {
+        "verboseLogs": true
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "resolves": {
+            "kind": "skip"
+          }
+        },
+        "info_recent_add": {
+          "resolves": null
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": true
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": true,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000
+    }
+  },
+  {
+    "id": "funnel--gog-playtime-sync-disabled",
+    "note": "a GOG launch with playtime sync disabled logs the skipped post and posts nothing",
+    "scenario": {
+      "runner": "gog",
+      "appName": "gog-app",
+      "title": "Alpha",
+      "native": true,
+      "platform": "linux",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": true,
+      "tsStore": {
+        "hasApp": false,
+        "totalPlayed": 0
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": false,
+        "noTrayIcon": false,
+        "disableLogs": false,
+        "disablePlaytimeSync": true
+      },
+      "gameSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": false,
+        "savesPath": "",
+        "gogSaves": [],
+        "wineVersion": {
+          "name": "Wine-Test",
+          "bin": "/pins/wines/Wine-Test/bin/wine",
+          "type": "wine"
+        }
+      },
+      "gameConfigSettings": {
+        "verboseLogs": true
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "resolves": {
+            "kind": "skip"
+          }
+        },
+        "info_recent_add": {
+          "resolves": null
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": true
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": true,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000
+    }
+  },
+  {
+    "id": "funnel--gog-playtime-post-rejects",
+    "note": "D-20: a rejected GOG playtime post rejects the whole launch, before the recent-game write and before done",
+    "scenario": {
+      "runner": "gog",
+      "appName": "gog-app",
+      "title": "Alpha",
+      "native": true,
+      "platform": "linux",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": true,
+      "tsStore": {
+        "hasApp": false,
+        "totalPlayed": 0
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": false,
+        "noTrayIcon": false,
+        "disableLogs": false,
+        "disablePlaytimeSync": false
+      },
+      "gameSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": false,
+        "savesPath": "",
+        "gogSaves": [],
+        "wineVersion": {
+          "name": "Wine-Test",
+          "bin": "/pins/wines/Wine-Test/bin/wine",
+          "type": "wine"
+        }
+      },
+      "gameConfigSettings": {
+        "verboseLogs": true
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "resolves": {
+            "kind": "skip"
+          }
+        },
+        "info_recent_add": {
+          "resolves": null
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": true
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "rejects": "gog is unreachable"
+        },
+        "presence": true,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000
+    }
+  },
+  {
+    "id": "funnel--saves-download-rejects-logs-and-goes-on",
+    "note": "the cloud save sync rejects before and after the launch: each is logged as an error and the launch goes on",
+    "scenario": {
+      "runner": "legendary",
+      "appName": "alpha",
+      "title": "Alpha",
+      "native": true,
+      "platform": "linux",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": true,
+      "tsStore": {
+        "hasApp": false,
+        "totalPlayed": 0
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": false,
+        "noTrayIcon": false,
+        "disableLogs": false,
+        "disablePlaytimeSync": false
+      },
+      "gameSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": true,
+        "savesPath": "/pins/saves",
+        "gogSaves": [],
+        "wineVersion": {
+          "name": "Wine-Test",
+          "bin": "/pins/wines/Wine-Test/bin/wine",
+          "type": "wine"
+        }
+      },
+      "gameConfigSettings": {
+        "verboseLogs": true
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "resolves": {
+            "kind": "skip"
+          }
+        },
+        "info_recent_add": {
+          "resolves": null
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": true
+        },
+        "syncSaves": {
+          "rejects": "cloud saves are unreachable"
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": false,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000
+    }
+  },
+  {
+    "id": "funnel--persist-bottle-wine-version-hook",
+    "note": "a non-native game whose store defines persistBottleWineVersion: the hook is handed the wine the check settled on",
+    "scenario": {
+      "runner": "legendary",
+      "appName": "alpha",
+      "title": "Alpha",
+      "native": false,
+      "platform": "mac",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": true,
+      "tsStore": {
+        "hasApp": false,
+        "totalPlayed": 0
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": false,
+        "noTrayIcon": false,
+        "disableLogs": false,
+        "disablePlaytimeSync": false
+      },
+      "gameSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": false,
+        "savesPath": "",
+        "gogSaves": [],
+        "wineVersion": {
+          "name": "Wine-Test",
+          "bin": "/pins/wines/Wine-Test/bin/wine",
+          "type": "wine"
+        }
+      },
+      "gameConfigSettings": {
+        "verboseLogs": true
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "resolves": {
+            "kind": "skip"
+          }
+        },
+        "info_recent_add": {
+          "resolves": null
+        },
+        "launch_check_wine_before_launch": {
+          "resolves": {
+            "ok": true,
+            "log": [
+              {
+                "level": "info",
+                "parts": [
+                  "Wine check: the game wine was replaced"
+                ]
+              }
+            ],
+            "wineVersion": {
+              "name": "Wine-Healed",
+              "bin": "/pins/wines/Wine-Healed/bin/wine",
+              "type": "wine"
+            }
+          }
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": true
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": false,
+        "persistBottleWineVersion": true
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000,
+      "installPlatform": "Windows"
+    }
+  },
+  {
+    "id": "funnel--wine-check-heals-and-persists",
+    "note": "the Wine check replaces the game wine and the global one: the game setting and the global setting are both written",
+    "scenario": {
+      "runner": "legendary",
+      "appName": "alpha",
+      "title": "Alpha",
+      "native": false,
+      "platform": "mac",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": true,
+      "tsStore": {
+        "hasApp": false,
+        "totalPlayed": 0
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": false,
+        "noTrayIcon": false,
+        "disableLogs": false,
+        "disablePlaytimeSync": false
+      },
+      "gameSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": false,
+        "savesPath": "",
+        "gogSaves": [],
+        "wineVersion": {
+          "name": "Wine-Test",
+          "bin": "/pins/wines/Wine-Test/bin/wine",
+          "type": "wine"
+        }
+      },
+      "gameConfigSettings": {
+        "verboseLogs": true
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "resolves": {
+            "kind": "skip"
+          }
+        },
+        "info_recent_add": {
+          "resolves": null
+        },
+        "launch_check_wine_before_launch": {
+          "resolves": {
+            "ok": true,
+            "log": [
+              {
+                "level": "info",
+                "parts": [
+                  "Wine check: the game wine was replaced"
+                ]
+              }
+            ],
+            "wineVersion": {
+              "name": "Wine-Healed",
+              "bin": "/pins/wines/Wine-Healed/bin/wine",
+              "type": "wine"
+            },
+            "persistGameWine": true,
+            "globalWineVersion": {
+              "name": "Wine-Healed",
+              "bin": "/pins/wines/Wine-Healed/bin/wine",
+              "type": "wine"
+            }
+          }
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": true
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": false,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000,
+      "installPlatform": "Windows"
+    }
+  },
+  {
+    "id": "funnel--before-script-rejects-releases-engine",
+    "note": "D-20: a rejected before-launch script ends the launch with the engine released and nothing else: the blocker stays held and done is never sent",
+    "scenario": {
+      "runner": "legendary",
+      "appName": "alpha",
+      "title": "Alpha",
+      "native": false,
+      "platform": "mac",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": true,
+      "tsStore": {
+        "hasApp": false,
+        "totalPlayed": 0
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": false,
+        "noTrayIcon": false,
+        "disableLogs": false,
+        "disablePlaytimeSync": false
+      },
+      "gameSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": false,
+        "savesPath": "",
+        "gogSaves": [],
+        "wineVersion": {
+          "name": "Wine-Test",
+          "bin": "/pins/wines/Wine-Test/bin/wine",
+          "type": "wine"
+        },
+        "beforeLaunchScriptPath": "/pins/scripts/before.sh"
+      },
+      "gameConfigSettings": {
+        "verboseLogs": true
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "resolves": {
+            "kind": "use",
+            "key": "legendary:alpha",
+            "selection": {},
+            "prefix": {},
+            "logLines": [
+              "engine=crossover"
+            ],
+            "launchSettings": {
+              "beforeLaunchScriptPath": "/pins/scripts/before.sh",
+              "wineVersion": {
+                "name": "Overlay",
+                "bin": "/pins/engines/crossover/bin/wine",
+                "type": "crossover"
+              }
+            }
+          }
+        },
+        "info_recent_add": {
+          "resolves": null
+        },
+        "engine_launch_end": {
+          "resolves": null
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": true
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": false,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "rejects": "before.sh failed"
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000,
+      "installPlatform": "Windows"
+    }
+  },
+  {
+    "id": "funnel--after-script-rejects",
+    "note": "D-20: a rejected after-launch script skips the log close and rejects the launch after the engine is released",
+    "scenario": {
+      "runner": "legendary",
+      "appName": "alpha",
+      "title": "Alpha",
+      "native": false,
+      "platform": "mac",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": true,
+      "tsStore": {
+        "hasApp": false,
+        "totalPlayed": 0
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": false,
+        "noTrayIcon": false,
+        "disableLogs": false,
+        "disablePlaytimeSync": false
+      },
+      "gameSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": false,
+        "savesPath": "",
+        "gogSaves": [],
+        "wineVersion": {
+          "name": "Wine-Test",
+          "bin": "/pins/wines/Wine-Test/bin/wine",
+          "type": "wine"
+        },
+        "afterLaunchScriptPath": "/pins/scripts/after.sh"
+      },
+      "gameConfigSettings": {
+        "verboseLogs": true
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "resolves": {
+            "kind": "use",
+            "key": "legendary:alpha",
+            "selection": {},
+            "prefix": {},
+            "logLines": [
+              "engine=crossover"
+            ],
+            "launchSettings": {
+              "afterLaunchScriptPath": "/pins/scripts/after.sh",
+              "wineVersion": {
+                "name": "Overlay",
+                "bin": "/pins/engines/crossover/bin/wine",
+                "type": "crossover"
+              }
+            }
+          }
+        },
+        "info_recent_add": {
+          "resolves": null
+        },
+        "engine_launch_end": {
+          "resolves": null
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": true
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": false,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "rejects": "after.sh failed"
+        }
+      },
+      "sessionMs": 90000,
+      "installPlatform": "Windows"
+    }
+  },
+  {
+    "id": "funnel--launch-arguments-win-over-last-used",
+    "note": "explicit launch arguments, skipVersionCheck and args reach the launch; the last used option does not replace them",
+    "scenario": {
+      "runner": "legendary",
+      "appName": "alpha",
+      "title": "Alpha",
+      "native": true,
+      "platform": "linux",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": true,
+      "tsStore": {
+        "hasApp": false,
+        "totalPlayed": 0
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": false,
+        "noTrayIcon": false,
+        "disableLogs": false,
+        "disablePlaytimeSync": false
+      },
+      "gameSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": false,
+        "savesPath": "",
+        "gogSaves": [],
+        "wineVersion": {
+          "name": "Wine-Test",
+          "bin": "/pins/wines/Wine-Test/bin/wine",
+          "type": "wine"
+        },
+        "lastUsedLaunchOption": {
+          "type": "basic",
+          "name": "Windowed",
+          "parameters": "--windowed"
+        }
+      },
+      "gameConfigSettings": {
+        "verboseLogs": true
+      },
+      "params": {
+        "launchArguments": {
+          "type": "basic",
+          "name": "Safe mode",
+          "parameters": "--safe"
+        },
+        "skipVersionCheck": true,
+        "args": [
+          "--extra"
+        ]
+      },
+      "rust": {
+        "engine_launch_select": {
+          "resolves": {
+            "kind": "skip"
+          }
+        },
+        "info_recent_add": {
+          "resolves": null
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": true
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": false,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000
+    }
+  },
+  {
+    "id": "funnel--engine-skip-wine-check-runs",
+    "note": "a skipped engine step leaves the Wine check to run as before, with no overlay and no release",
+    "scenario": {
+      "runner": "legendary",
+      "appName": "alpha",
+      "title": "Alpha",
+      "native": false,
+      "platform": "mac",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": true,
+      "tsStore": {
+        "hasApp": false,
+        "totalPlayed": 0
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": false,
+        "noTrayIcon": false,
+        "disableLogs": false,
+        "disablePlaytimeSync": false
+      },
+      "gameSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": false,
+        "savesPath": "",
+        "gogSaves": [],
+        "wineVersion": {
+          "name": "Wine-Test",
+          "bin": "/pins/wines/Wine-Test/bin/wine",
+          "type": "wine"
+        }
+      },
+      "gameConfigSettings": {
+        "verboseLogs": true
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "resolves": {
+            "kind": "skip"
+          }
+        },
+        "info_recent_add": {
+          "resolves": null
+        },
+        "launch_check_wine_before_launch": {
+          "resolves": {
+            "ok": true,
+            "log": [
+              {
+                "level": "info",
+                "parts": [
+                  "Wine check: ok"
+                ]
+              }
+            ]
+          }
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": true
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": false,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000,
+      "installPlatform": "Windows"
+    }
+  },
+  {
+    "id": "funnel--long-session-sets-runs-for-me-on-mac",
+    "note": "a session past the threshold on macOS writes the runs-for-me record (the store write, the push, the log line)",
+    "scenario": {
+      "runner": "legendary",
+      "appName": "alpha",
+      "title": "Alpha",
+      "native": true,
+      "platform": "mac",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": true,
+      "tsStore": {
+        "hasApp": false,
+        "totalPlayed": 0
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": false,
+        "noTrayIcon": false,
+        "disableLogs": false,
+        "disablePlaytimeSync": false
+      },
+      "gameSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": false,
+        "savesPath": "",
+        "gogSaves": [],
+        "wineVersion": {
+          "name": "Wine-Test",
+          "bin": "/pins/wines/Wine-Test/bin/wine",
+          "type": "wine"
+        }
+      },
+      "gameConfigSettings": {
+        "verboseLogs": true
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "resolves": {
+            "kind": "skip"
+          }
+        },
+        "info_recent_add": {
+          "resolves": null
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": true
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": false,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000
+    }
+  },
+  {
+    "id": "funnel--short-session-leaves-runs-for-me-alone",
+    "note": "a session under the threshold on macOS writes no runs-for-me record",
+    "scenario": {
+      "runner": "legendary",
+      "appName": "alpha",
+      "title": "Alpha",
+      "native": true,
+      "platform": "mac",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": true,
+      "tsStore": {
+        "hasApp": false,
+        "totalPlayed": 0
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": false,
+        "noTrayIcon": false,
+        "disableLogs": false,
+        "disablePlaytimeSync": false
+      },
+      "gameSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": false,
+        "savesPath": "",
+        "gogSaves": [],
+        "wineVersion": {
+          "name": "Wine-Test",
+          "bin": "/pins/wines/Wine-Test/bin/wine",
+          "type": "wine"
+        }
+      },
+      "gameConfigSettings": {
+        "verboseLogs": true
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "resolves": {
+            "kind": "skip"
+          }
+        },
+        "info_recent_add": {
+          "resolves": null
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": true
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": false,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 5000
+    }
+  },
+  {
+    "id": "funnel--steam-playtime-tracked-externally",
+    "note": "a runner whose playtime is tracked outside the funnel (steam) records no play session",
+    "scenario": {
+      "runner": "steam",
+      "appName": "steam-app",
+      "title": "Alpha",
+      "native": true,
+      "platform": "mac",
+      "isCLINoGui": false,
+      "installPath": "none",
+      "online": true,
+      "tsStore": {
+        "hasApp": false,
+        "totalPlayed": 0
+      },
+      "globalSettings": {
+        "minimizeOnLaunch": false,
+        "noTrayIcon": false,
+        "disableLogs": false,
+        "disablePlaytimeSync": false
+      },
+      "gameSettings": {
+        "verboseLogs": true,
+        "autoSyncSaves": false,
+        "savesPath": "",
+        "gogSaves": [],
+        "wineVersion": {
+          "name": "Wine-Test",
+          "bin": "/pins/wines/Wine-Test/bin/wine",
+          "type": "wine"
+        }
+      },
+      "gameConfigSettings": {
+        "verboseLogs": true
+      },
+      "params": {},
+      "rust": {
+        "engine_launch_select": {
+          "resolves": {
+            "kind": "skip"
+          }
+        },
+        "info_recent_add": {
+          "resolves": null
+        }
+      },
+      "hooks": {
+        "launch": {
+          "resolves": true
+        },
+        "syncSaves": {
+          "resolves": null
+        },
+        "updateGOGPlaytime": {
+          "resolves": null
+        },
+        "presence": false,
+        "persistBottleWineVersion": false
+      },
+      "scripts": {
+        "before": {
+          "resolves": true
+        },
+        "after": {
+          "resolves": true
+        }
+      },
+      "sessionMs": 90000
+    }
   }
 ]
