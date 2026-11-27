@@ -1,4 +1,5 @@
 import {
+  RUST_LAUNCH_ASK_FORCE_UNINSTALL,
   RUST_LAUNCH_RUNNER_ABORT,
   RUST_LAUNCH_RUNNER_CALL,
   RUST_LAUNCH_GAMES_RUNNING,
@@ -11,10 +12,15 @@ import {
   RUST_LAUNCH_WINE_PATH
 } from 'common/types/sidecarTransport'
 import type { RustInvokeArgsOf } from 'common/types/ipc/rustInvoke'
-import { sidecarInternalSendArgs } from 'common/types/ipc/sidecarInternal'
+import {
+  sidecarInternalInvokeArgs,
+  sidecarInternalSendArgs
+} from 'common/types/ipc/sidecarInternal'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import type { IpcRegistry } from 'backend/sidecar/ipcRegistry'
 import type { RunnerStreams } from 'backend/runnerStream'
+import type { StoreManagers } from 'backend/services/types'
+import { resolveTitleForGame } from 'backend/utils/gameTitle'
 
 /**
  * The runner command transport (Phase 88.2, 88.2-15, D-02, D-19): `callRunner`'s helper path lives in Rust
@@ -199,4 +205,53 @@ export function registerRunnerOutputListener(
     if (!parsed.success) return
     streams.spawned(parsed.data[0])
   })
+}
+
+/** One deleted-folder prompt, as the `launch_ask_force_uninstall` zod schema takes it. */
+export type AskForceUninstallRequest = RustInvokeArgsOf<
+  typeof RUST_LAUNCH_ASK_FORCE_UNINSTALL
+>[0]
+
+/**
+ * `askForceUninstall` (88.2-20, D-26): asks whether to remove a game whose folder is gone from the installed list, in Rust,
+ * and on Yes removes it through the manager hook (`registerLaunchManagerHooks` below answers the title and the removal).
+ * Resolves the index of the button the user clicked (`0` No, `1` Yes) or `null` for a dismissal, which is answered like No, as
+ * `unknown`. It waits on the user, so the channel is unbounded (`UNBOUNDED_RUST_CHANNELS`). Rejects with Rust's category
+ * word when the call could not be made.
+ */
+export async function askForceUninstall(
+  deps: RustInvokeDeps,
+  args: AskForceUninstallRequest
+): Promise<unknown> {
+  return deps.requestRustInvoke(RUST_LAUNCH_ASK_FORCE_UNINSTALL, [args])
+}
+
+/**
+ * Answers the shell's `launchManagerCall` (88.2-18, 88.2-20, D-26): the Rust launch crate's ManagerHooks, called as `[op,
+ * { runner, appName }]`.
+ *
+ * - `game_title` resolves the title the dialog shows, the manager's title with the app name as its fallback
+ *   (`resolveTitleForGame`), as text.
+ * - `force_uninstall` awaits the manager's `forceUninstall()` for the game and resolves `true` once it is done.
+ *
+ * The frame is validated by the sidecar's boundary and again here, so a forged call is refused before any manager is
+ * touched. A refusal never carries the runner or the app name. A manager that throws rejects the call, which the shell maps
+ * to its own fixed hook failure. One call at boot (88.2-21); it creates no timer or handle.
+ */
+export function registerLaunchManagerHooks(
+  ipc: Pick<IpcRegistry, 'handle'>,
+  deps: { libraryManagers: StoreManagers['library'] }
+): void {
+  ipc.handle(
+    'launchManagerCall',
+    async (_event: unknown, ...args: unknown[]) => {
+      const parsed = sidecarInternalInvokeArgs.launchManagerCall.safeParse(args)
+      if (!parsed.success) throw new Error('launchManagerCall: bad arguments')
+      const [op, { runner, appName }] = parsed.data
+      const game = deps.libraryManagers[runner].getGame(appName)
+      if (op === 'game_title') return resolveTitleForGame(game, appName)
+      await game.forceUninstall()
+      return true
+    }
+  )
 }

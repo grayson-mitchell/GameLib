@@ -350,6 +350,9 @@ pub(crate) fn dispatch_rust_channel(
             launch_dispatch::rpc_launch_tracked_kill_all(args)
         }
         RustInvokeChannel::LaunchGamesRunning => launch_dispatch::rpc_launch_games_running(args),
+        RustInvokeChannel::LaunchAskForceUninstall => {
+            launch_dispatch::rpc_launch_ask_force_uninstall(args)
+        }
         RustInvokeChannel::ShortcutsExist => shortcuts_dispatch::rpc_shortcuts_exist(args),
         RustInvokeChannel::ShortcutsAdd => shortcuts_dispatch::rpc_shortcuts_add(args),
         RustInvokeChannel::ShortcutsRemove => shortcuts_dispatch::rpc_shortcuts_remove(args),

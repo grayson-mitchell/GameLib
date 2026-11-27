@@ -173,6 +173,7 @@ import {
   RUST_LAUNCH_TRACKED_KILL,
   RUST_LAUNCH_TRACKED_KILL_ALL,
   RUST_LAUNCH_GAMES_RUNNING,
+  RUST_LAUNCH_ASK_FORCE_UNINSTALL,
   RUST_LAUNCH_SETUP_ENV_VARS,
   RUST_LAUNCH_SETUP_WINE_ENV_VARS,
   RUST_LAUNCH_SETUP_WRAPPER_ENV_VARS,
@@ -1476,7 +1477,17 @@ export const rustInvokeArgs = {
   ]),
   // Phase 88.2 (SVC-03, 88.2-17, D-07, D-19): `killAllTracked` and the running-game query. Neither takes an argument.
   [RUST_LAUNCH_TRACKED_KILL_ALL]: empty,
-  [RUST_LAUNCH_GAMES_RUNNING]: empty
+  [RUST_LAUNCH_GAMES_RUNNING]: empty,
+  // Phase 88.2 (SVC-03, 88.2-20, D-26, D-19): `askForceUninstall`. `[{ runner, appName }]`, one strict object; the runner is one of
+  // the five names, as the wrapper env's is, and the crate bounds the app name and decodes the object again.
+  [RUST_LAUNCH_ASK_FORCE_UNINSTALL]: z.tuple([
+    z
+      .object({
+        runner: z.enum(['gog', 'legendary', 'nile', 'sideload', 'steam']),
+        appName: z.string()
+      })
+      .strict()
+  ])
 } satisfies Record<RustInvokeChannel, z.ZodTuple>
 
 /** The positional args a `rustInvoke` call for channel `C` sends (input side of the schema). */

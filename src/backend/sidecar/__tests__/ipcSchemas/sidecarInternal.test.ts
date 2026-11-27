@@ -93,6 +93,23 @@ const invokeTable: FixtureTable<typeof sidecarInternalInvokeArgs> = {
       [{ kind: 'installIncomplete', appId: '480', seq: 1, extra: 1 }],
       [{ kind: 'macArchVerdict', appId: '480', seq: 3, verdict: '16' }]
     ]
+  },
+  // 88.2-18 / 88.2-20: the shell's ManagerHooks call, `[op, { runner, appName }]`
+  launchManagerCall: {
+    valid: [
+      ['game_title', { runner: 'legendary', appName: 'some-app' }],
+      ['force_uninstall', { runner: 'steam', appName: '480' }]
+    ],
+    invalid: [
+      [],
+      ['game_title'],
+      ['launch', { runner: 'gog', appName: 'a' }],
+      ['game_title', { runner: 'epic', appName: 'a' }],
+      ['game_title', { runner: 'gog', appName: '' }],
+      ['game_title', { runner: 'gog', appName: 'a'.repeat(257) }],
+      ['game_title', { runner: 'gog', appName: 'a', extra: 1 }],
+      ['game_title', { runner: 'gog', appName: 'a' }, 'third']
+    ]
   }
 }
 
@@ -296,7 +313,7 @@ describe('sidecarInternal schemas', () => {
   runFixtureTable(sidecarInternalInvokeArgs, invokeTable)
   runFixtureTable(sidecarInternalSendArgs, sendTable)
 
-  it('registers the fourteen channels with the right kind and caller', () => {
+  it('registers the fifteen channels with the right kind and caller', () => {
     const shell = [
       'health',
       'trayResolveRunner',
@@ -307,6 +324,7 @@ describe('sidecarInternal schemas', () => {
       'depotJobEvent',
       'storeMirrorEvent',
       'steamPollStateEvent',
+      'launchManagerCall',
       'engineSelectionChanged',
       'engineDeadlineFired',
       'runnerOutput',
@@ -327,6 +345,6 @@ describe('sidecarInternal schemas', () => {
     expect(
       Object.keys(sidecarInternalInvokeArgs).length +
         Object.keys(sidecarInternalSendArgs).length
-    ).toBe(14)
+    ).toBe(15)
   })
 })

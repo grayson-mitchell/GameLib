@@ -1640,6 +1640,15 @@ export const RUST_LAUNCH_TRACKED_KILL_ALL = 'launch_tracked_kill_all' as const
  * takes nothing and answers a boolean. A registry read, so it stays bounded.
  */
 export const RUST_LAUNCH_GAMES_RUNNING = 'launch_games_running' as const
+/**
+ * Phase 88.2 (SVC-03, 88.2-20, D-26, D-19): `askForceUninstall`, the deleted-folder prompt. `launch_ask_force_uninstall` takes
+ * `[{ runner, appName }]` (the runner one of the five names) and answers the index of the button the user clicked (0 No, 1 Yes)
+ * or `null` for a dismissal, which is answered like No: nothing is removed. On Yes Rust asks the TS manager for the game's
+ * title and removes the game from the installed list through the `launchManagerCall` hook channel. It waits on the user, so the
+ * channel is unbounded (`UNBOUNDED_RUST_CHANNELS`), as the dialog channels are.
+ */
+export const RUST_LAUNCH_ASK_FORCE_UNINSTALL =
+  'launch_ask_force_uninstall' as const
 export const RUST_ENGINE_STATE_RECORD_DECISION =
   'engine_state_record_decision' as const
 export const RUST_ENGINE_STATE_PUBLISH_OVERLAY_NOTICE =
@@ -2096,6 +2105,7 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_LAUNCH_TRACKED_KILL,
   RUST_LAUNCH_TRACKED_KILL_ALL,
   RUST_LAUNCH_GAMES_RUNNING,
+  RUST_LAUNCH_ASK_FORCE_UNINSTALL,
   RUST_SHORTCUTS_EXIST,
   RUST_SHORTCUTS_ADD,
   RUST_SHORTCUTS_REMOVE,

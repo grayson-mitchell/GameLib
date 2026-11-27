@@ -8,6 +8,7 @@
 import { rustInvokeArgs } from 'common/types/ipc/rustInvoke'
 import { sidecarInternalSendArgs } from 'common/types/ipc/sidecarInternal'
 import {
+  RUST_LAUNCH_ASK_FORCE_UNINSTALL,
   RUST_LAUNCH_GAMES_RUNNING,
   RUST_LAUNCH_RUNNER_ABORT,
   RUST_LAUNCH_RUNNER_CALL,
@@ -25,6 +26,7 @@ import { createRunnerStreams } from 'backend/runnerStream'
 import type { RunnerChildHandle } from 'backend/runnerStream'
 
 import {
+  askForceUninstall,
   registerRunnerOutputListener,
   runnerAbort,
   runnerCall,
@@ -575,5 +577,50 @@ describe('spawnAsyncRun, trackedKill, trackedKillAll and gamesRunning (88.2-17)'
     await expect(gamesRunning(down)).rejects.toThrow('not-ready')
     await expect(trackedKillAll(down)).rejects.toThrow('not-ready')
     expect(down.calls).toHaveLength(2)
+  })
+})
+
+describe('askForceUninstall (88.2-20)', () => {
+  it('sends [{ runner, appName }] on launch_ask_force_uninstall and answers the clicked index', async () => {
+    const deps = fakeTransport(1)
+    expect(await askForceUninstall(deps, { runner: 'gog', appName: 'a' })).toBe(
+      1
+    )
+    expect(deps.calls).toEqual([
+      [RUST_LAUNCH_ASK_FORCE_UNINSTALL, [{ runner: 'gog', appName: 'a' }]]
+    ])
+    expect(RUST_LAUNCH_ASK_FORCE_UNINSTALL).toBe('launch_ask_force_uninstall')
+    // A dismissal is null, passed through as the caller's to read like No.
+    expect(
+      await askForceUninstall(fakeTransport(null), {
+        runner: 'steam',
+        appName: 'b'
+      })
+    ).toBeNull()
+  })
+
+  it('the arguments pass the same zod schema the sidecar checks: five runner names, one strict object', () => {
+    const schema = rustInvokeArgs[RUST_LAUNCH_ASK_FORCE_UNINSTALL]
+    for (const runner of ['gog', 'legendary', 'nile', 'sideload', 'steam']) {
+      expect(() => schema.parse([{ runner, appName: 'a' }])).not.toThrow()
+    }
+    expect(() => schema.parse([{ runner: 'epic', appName: 'a' }])).toThrow()
+    expect(() => schema.parse([{ runner: 'gog' }])).toThrow()
+    expect(() => schema.parse([{ runner: 'gog', appName: 1 }])).toThrow()
+    expect(() =>
+      schema.parse([{ runner: 'gog', appName: 'a', extra: 1 }])
+    ).toThrow()
+    expect(() => schema.parse([])).toThrow()
+    expect(() => schema.parse([{ runner: 'gog', appName: 'a' }, 'b'])).toThrow()
+  })
+
+  it('a rejected call rejects the caller, with no fallback', async () => {
+    const down = fakeTransport(
+      new Error('launch_ask_force_uninstall:not-ready')
+    )
+    await expect(
+      askForceUninstall(down, { runner: 'gog', appName: 'a' })
+    ).rejects.toThrow('not-ready')
+    expect(down.calls).toHaveLength(1)
   })
 })

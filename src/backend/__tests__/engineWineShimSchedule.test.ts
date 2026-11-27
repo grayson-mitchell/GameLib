@@ -293,10 +293,12 @@ const DEADLINE_SHIM_IMPORTERS: readonly string[] = [
 ]
 // 88.2-16: the importers of `launchrust/runner.ts`, every one counted per file. The adapter calls `runnerCall`; it is the
 // only one until the boot wiring (88.2-21) registers the listener and builds the kill-aware stream table. 88.2-19: the
-// sidecar bootstrap imports `gamesRunning` and `trackedKillAll` for the quit handler (D-27).
+// sidecar bootstrap imports `gamesRunning` and `trackedKillAll` for the quit handler (D-27). 88.2-20: `handlers.ts` imports
+// `registerLaunchManagerHooks` to answer the shell's hook calls.
 const RUNNER_SHIM_IMPORTERS: readonly string[] = [
   'src/backend/runnerAdapter.ts',
-  'src/backend/sidecar/bootstrap.ts'
+  'src/backend/sidecar/bootstrap.ts',
+  'src/backend/sidecar/handlers.ts'
 ]
 
 const COMMAND_RUNNER_IMPORTERS: readonly string[] = [
@@ -1271,6 +1273,19 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     channel: 'RUST_LAUNCH_GAMES_RUNNING',
     callers: RUNNER_SHIM_IMPORTERS,
     deletedBy: 98
+  },
+  // 88.2-20 (D-26, D-19): the deleted-folder prompt. `askForceUninstall` is the TS `askForceUninstall` of `utils.ts` as one call to
+  // Rust, which asks the user and on Yes asks the managers back through `launchManagerCall`; `registerLaunchManagerHooks`
+  // (named in `wiring`, one owner) answers that call with the title and the removal. Both leave with the managers in 92, which
+  // implement the hooks in Rust. The same file as `runnerCall`, so the same `callers`.
+  {
+    name: 'askForceUninstall',
+    file: 'src/backend/launchrust/runner.ts',
+    shape: 'shim',
+    channel: 'RUST_LAUNCH_ASK_FORCE_UNINSTALL',
+    wiring: ['registerLaunchManagerHooks'],
+    callers: RUNNER_SHIM_IMPORTERS,
+    deletedBy: 92
   },
   // 88-13 (87 D-24): the synchronous known-fix twins, for callers 88 cannot make async. The launcher's `installFixes`
   // and `getKnownFixesEnvVariables` read the tier-1 fix inline until 88.1-17 deleted them; the Steam bridge keeps its own

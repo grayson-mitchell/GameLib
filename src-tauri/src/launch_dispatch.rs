@@ -942,6 +942,27 @@ pub(crate) fn rpc_launch_games_running(args: &[Value]) -> Result<Value, String> 
     games_running_over(launch_ctx(), args)
 }
 
+/// The body of the `launch_ask_force_uninstall` arm over a given context: the generated decode (`[{ runner, appName }]`, the
+/// runner one of the five names) and an arity check first, so a bad call is rejected the same fixed `<op>:bad-args` literal before
+/// and after the install and never echoes the sidecar's value, then the crate, which decodes the object strictly again, bounds the
+/// app name, asks the user and on Yes goes back to the sidecar through the manager hooks.
+fn ask_force_uninstall_over(ctx: Option<&Arc<LaunchCtx>>, args: &[Value]) -> Result<Value, String> {
+    LaunchAskForceUninstallArgs::from_args(args)?;
+    if args.len() != 1 {
+        return Err("launch_ask_force_uninstall:bad-args".to_string());
+    }
+    rpc_launch_op(ctx, "launch_ask_force_uninstall", args)
+}
+
+/// The `launch_ask_force_uninstall` `rustInvoke` arm (88.2-20, D-26, D-19): `askForceUninstall`, the deleted-folder prompt. It
+/// answers the index of the button the user clicked (`0` No, `1` Yes) or `null` for a dismissal, and removes the game through the
+/// manager hook only after a Yes. It waits on the user and then on the sidecar, on the dispatcher's worker thread for this one
+/// request (never the reply thread), so the sidecar lists the channel as unbounded (`UNBOUNDED_RUST_CHANNELS`) and the shutdown
+/// token and the hook calls' EOF handling end it.
+pub(crate) fn rpc_launch_ask_force_uninstall(args: &[Value]) -> Result<Value, String> {
+    ask_force_uninstall_over(launch_ctx(), args)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2665,6 +2686,49 @@ mod tests {
         );
         for (_, line) in &lines {
             assert!(!line.contains("some-app"), "{line}");
+        }
+    }
+
+    #[test]
+    fn the_ask_force_uninstall_arm_is_not_ready_before_the_install_and_rejects_a_wrong_call_the_same_way_after(
+    ) {
+        let home = FakeHome::new("launch-shell-");
+        let ctx = ctx_over(&home);
+        let secret = "/Users/someone/secret-profile-path";
+        assert_eq!(
+            ask_force_uninstall_over(None, &[json!({"runner": "legendary", "appName": "a"})]),
+            Err("launch_ask_force_uninstall:not-ready".to_string())
+        );
+        let wrong: Vec<Vec<Value>> = vec![
+            vec![],
+            vec![json!(secret)],
+            vec![json!({"runner": "legendary"})],
+            vec![json!({"appName": secret})],
+            vec![json!({"runner": "epic", "appName": secret})],
+            vec![json!({"runner": 1, "appName": secret})],
+            vec![json!({"runner": "gog", "appName": secret}), json!(secret)],
+        ];
+        for args in &wrong {
+            for ctx in [None, Some(&ctx)] {
+                let err = ask_force_uninstall_over(ctx, args).unwrap_err();
+                assert_eq!(err, "launch_ask_force_uninstall:bad-args", "{args:?}");
+                assert!(!err.contains(secret), "{args:?}");
+            }
+        }
+        // An unknown key passes the generated decode and is the crate's to refuse, which needs the context: the same literal.
+        let err = ask_force_uninstall_over(
+            Some(&ctx),
+            &[json!({"runner": "gog", "appName": secret, "extra": 1})],
+        )
+        .unwrap_err();
+        assert_eq!(err, "launch_ask_force_uninstall:bad-args");
+        assert!(!err.contains(secret));
+        // An app name the crate refuses (empty, or longer than its bound) is the same literal, after the install.
+        for name in [String::new(), "a".repeat(257)] {
+            let err =
+                ask_force_uninstall_over(Some(&ctx), &[json!({"runner": "gog", "appName": name})])
+                    .unwrap_err();
+            assert_eq!(err, "launch_ask_force_uninstall:bad-args");
         }
     }
 }

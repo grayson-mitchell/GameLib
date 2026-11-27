@@ -82,7 +82,8 @@ describe('rustInvokeArgs', () => {
     // Phase 88.2 plan 15: 207 -> 210, launch_runner_call, launch_runner_kill and launch_runner_abort.
     // Phase 88.2 plan 17: 210 -> 213, launch_wine_command, launch_wine_path and launch_script_run.
     // Phase 88.2 plan 17 task 2: 213 -> 217, launch_spawn_async, launch_tracked_kill, launch_tracked_kill_all and launch_games_running.
-    expect(RUST_INVOKE_CHANNELS).toHaveLength(217)
+    // Phase 88.2 plan 20: 217 -> 218, launch_ask_force_uninstall.
+    expect(RUST_INVOKE_CHANNELS).toHaveLength(218)
   })
 
   it('parses the store-embed wire fixtures', () => {

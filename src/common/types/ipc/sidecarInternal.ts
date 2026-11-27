@@ -253,6 +253,25 @@ const runnerSpawnedFrame = z.strictObject({
   pid: z.number().int().positive().max(0xffffffff)
 })
 
+// Phase 88.2 (88.2-20, D-26): the shell's ManagerHooks call into the TS managers. `[op, { runner, appName }]`: the op names the
+// manager action (`game_title`, the title to show a person; `force_uninstall`, remove a game whose folder is gone from the
+// installed list) and the payload the game. The runner is one of the five names and the app name is bounded as the crate bounds
+// it (non-empty, 256), so a forged call is refused at the boundary. Never renderer-reachable.
+const managerHookOps = ['game_title', 'force_uninstall'] as const
+const managerHookRunner = z.enum([
+  'gog',
+  'legendary',
+  'nile',
+  'sideload',
+  'steam'
+])
+const managerHookGame = z.strictObject({
+  runner: managerHookRunner,
+  appName: nonEmptyString(256)
+})
+/** The op names a `launchManagerCall` carries, in the order the shell sends them. */
+export const LAUNCH_MANAGER_OPS = managerHookOps
+
 const noArgs = z.tuple([])
 
 export const sidecarInternalInvokeArgs = {
@@ -266,7 +285,9 @@ export const sidecarInternalInvokeArgs = {
   depotCdnToken: z.tuple([depotCdnTokenRequest]),
   depotManifestRequestCode: z.tuple([depotManifestRequestCodeRequest]),
   // Shell-originated: the Rust steam poll tells Node about sidecar-owned state changes (D-02).
-  steamPollStateEvent: z.tuple([steamPollStateEvent])
+  steamPollStateEvent: z.tuple([steamPollStateEvent]),
+  // Shell-originated: the Rust launch crate asks a TS manager for a game's title or to remove a game (88.2-18, 88.2-20, D-26).
+  launchManagerCall: z.tuple([z.enum(managerHookOps), managerHookGame])
 }
 
 export const sidecarInternalSendArgs = {
@@ -295,6 +316,7 @@ export const sidecarInternalCallers = {
   depotJobEvent: 'shell',
   storeMirrorEvent: 'shell',
   steamPollStateEvent: 'shell',
+  launchManagerCall: 'shell',
   engineSelectionChanged: 'shell',
   engineDeadlineFired: 'shell',
   runnerOutput: 'shell',
@@ -303,6 +325,11 @@ export const sidecarInternalCallers = {
 
 /** One Rust steampoll state event, as validated off the wire. */
 export type SteamPollStateEvent = z.infer<typeof steamPollStateEvent>
+
+/** The op of one `launchManagerCall`. */
+export type LaunchManagerOp = (typeof managerHookOps)[number]
+/** The game one `launchManagerCall` names. */
+export type LaunchManagerGame = z.infer<typeof managerHookGame>
 
 /** One `runnerOutput` frame, as validated off the wire. */
 export type RunnerOutputFrame = z.infer<typeof runnerOutputFrame>

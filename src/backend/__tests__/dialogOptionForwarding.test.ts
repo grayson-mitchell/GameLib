@@ -290,7 +290,11 @@ describe('sidecarRpc UNBOUNDED_RUST_CHANNELS covers every human-gated dialog cha
     // Phase 88.2 plan 17: launch_spawn_async runs one program (an installer, an archive move) to its end, as long as it takes (the TS
     // spawnAsync it replaces had no timeout unless the caller passed one); ended by the stream-id kill or the shutdown. The three registry
     // channels (launch_tracked_kill, launch_tracked_kill_all, launch_games_running) are bounded and are not listed.
-    'RUST_LAUNCH_SPAWN_ASYNC'
+    'RUST_LAUNCH_SPAWN_ASYNC',
+    // Phase 88.2 plan 20: launch_ask_force_uninstall asks the user through a native dialog (a human answers, no limit) whether to
+    // remove a game whose folder is gone, and on Yes waits on the manager hooks; the shutdown ends it. Not a dialog-open channel of
+    // its own.
+    'RUST_LAUNCH_ASK_FORCE_UNINSTALL'
   ]
 
   test('contains exactly the dialog, depot, Rust CM, safety remove, wine runtime download and wine manager channels', () => {

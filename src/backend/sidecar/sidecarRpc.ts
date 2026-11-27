@@ -86,6 +86,7 @@ import {
   RUST_LAUNCH_WINE_PATH,
   RUST_LAUNCH_SCRIPT_RUN,
   RUST_LAUNCH_SPAWN_ASYNC,
+  RUST_LAUNCH_ASK_FORCE_UNINSTALL,
   RUST_LAUNCH_VERIFY_WINE_PREFIX,
   RUST_DIALOG_MESSAGE,
   RUST_DIALOG_OPEN,
@@ -266,6 +267,11 @@ const RUST_INVOKE_TIMEOUT_MS = 60_000
  * long as it takes, as the TS `spawnAsync` it replaces did; the stream-id kill, the caller's timeout when it passes one and the
  * app shutdown end it. `launch_tracked_kill`, `launch_tracked_kill_all` and `launch_games_running` are registry lookups and
  * signals bounded by the child grace and stay bounded.
+ *
+ * Twenty-sixth (Phase 88.2, 88.2-20): `launch_ask_force_uninstall` asks the user whether to remove a game whose folder is gone from
+ * the installed list, through a native dialog a person answers with no limit, and on Yes waits on the manager hooks over
+ * `launchManagerCall` (the TS `askForceUninstall` it replaces waited on the same dialog). The shutdown token ends it, as it ends
+ * the dialog channels.
  */
 const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_DIALOG_OPEN,
@@ -318,7 +324,8 @@ const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_LAUNCH_WINE_COMMAND,
   RUST_LAUNCH_WINE_PATH,
   RUST_LAUNCH_SCRIPT_RUN,
-  RUST_LAUNCH_SPAWN_ASYNC
+  RUST_LAUNCH_SPAWN_ASYNC,
+  RUST_LAUNCH_ASK_FORCE_UNINSTALL
 ]
 
 /**

@@ -93,6 +93,7 @@ import { registerRunnerAuthFlows } from './runnerAuthFlowRegistration'
 import { registerEngineWineResolvers } from './engineWineResolvers'
 import { registerEngineDeadlineFired } from 'backend/enginewine/deadline'
 import { registerEngineSelectionView } from 'backend/enginewine/selectionView'
+import { registerLaunchManagerHooks } from 'backend/launchrust/runner'
 import { registerShortcutsResolvers } from './shortcutsResolvers'
 import { registerRunnerMiscFlows } from './runnerMiscFlowRegistration'
 import { registerEosOverlayFlows } from './eosOverlayFlowRegistration'
@@ -410,6 +411,11 @@ export function registerHandlers(deps: {
   registerEngineSelectionView(ipc)
   // A Steam bridge launch's deadline fired in Rust (87-54, D-17): the callback the bridge stored when it armed runs.
   registerEngineDeadlineFired(ipc)
+  // The Rust launch crate's ManagerHooks (88.2-20, D-26): it asks a manager for a game's title and to remove a game whose
+  // folder is gone, over `launchManagerCall`. Leaves with the managers in 92.
+  registerLaunchManagerHooks(ipc, {
+    libraryManagers: deps.services.managers.library
+  })
   // Phase 94 (94-22, 86 D-24): the renderer's shortcut handles are answered by Rust; each resolver gathers the
   // game's and the settings' TypeScript-only inputs. The ctrl+q/k/j/l hotkey channel moved unchanged to the app shell
   // (D-27) and goes with the quit path in Phase 98.
