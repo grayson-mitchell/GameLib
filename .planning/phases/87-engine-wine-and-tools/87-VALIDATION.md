@@ -2,10 +2,11 @@
 phase: "87"
 slug: "engine-wine-and-tools"
 # status lifecycle: draft (seeded by plan-phase) → validated (set by validate-phase §6)
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: validated
+nyquist_compliant: true
+wave_0_complete: true
 created: "2026-11-23"
+validated: "2026-11-27"
 ---
 
 # Phase 87 — Validation Strategy
@@ -43,15 +44,23 @@ created: "2026-11-23"
 | SVC-02 / SC1 | decision matrix, CrossOver-first, fallback to pin | Rust golden replay | `cargo test -p gamelib-engine --test golden_decision` | ✅ | ✅ green (87-58: local proof at 1e586bf8d, three-OS CI at f9f1cce2e) |
 | SVC-02 / SC1 | launch step, deadline, process watch | Rust unit + golden | `cargo test -p gamelib-engine --test golden_launch` | ✅ | ✅ green (87-58: local proof at 1e586bf8d, three-OS CI at f9f1cce2e) |
 | SVC-02 / SC1 | fallback download/verify/extract + events | Rust replay | `cargo test -p gamelib-engine --test golden_fallback` | ✅ | ✅ green (87-58: local proof at 1e586bf8d, three-OS CI at f9f1cce2e) |
-| SVC-02 / SC1 | live healthy/fallback/adopt, expired trial | live gate (operator, signed build) | `87-HUMAN-UAT.md` items 1–2 | ❌ W0 (authored before coding) | ⬜ pending (live gate, 87-59) |
+| SVC-02 / SC1 | live healthy/fallback/adopt, expired trial | live gate (operator, signed build) | `87-HUMAN-UAT.md` items 1–2 | ✅ | ✅ live pass (87-59; re-runs 87-69, 87-79 on signed 0.13.1 / 0.13.2) — manual-only by nature |
 | SVC-02 / SC2 | bottle create/reuse/remove, sibling-safe, markers byte-equal, newer marker kept | Rust golden + safety table | `cargo test -p gamelib-engine --test golden_bottles` | ✅ | ✅ green (87-58: local proof at 1e586bf8d, three-OS CI at f9f1cce2e) |
 | SVC-02 / SC2 | TS pure-helper twin == Rust vectors (D-24) | Jest + Rust shared JSON | `pnpm jest src/backend/enginewine/__tests__/twinVectors.test.ts` | ✅ | ✅ green (87-58: local proof at 1e586bf8d, three-OS CI at f9f1cce2e) |
 | SVC-02 / SC3 | wine core, discovery, wine-manager, runtimes, winetricks, DXVK/DXMT/vkd3d goldens | Rust golden replay | `cargo test -p gamelib-wine` | ✅ | ✅ green (87-58: local proof at 1e586bf8d, three-OS CI at f9f1cce2e) |
-| SVC-02 / SC3 | live tools and downloads | live gate item 4 | `87-HUMAN-UAT.md` | ❌ W0 | ⬜ pending (live gate, 87-59) |
+| SVC-02 / SC3 | live tools and downloads | live gate item 4 | `87-HUMAN-UAT.md` | ✅ | ✅ live pass (87-59 item 4; re-run 1 item 6) — manual-only by nature |
 | SVC-02 / SC4 | TS and registrations deleted; only scheduled shims/resolvers/twin remain | Jest gate | `pnpm jest src/backend/__tests__/engineWinePortComplete.test.ts src/backend/__tests__/engineWineShimSchedule.test.ts` | ✅ | ✅ green (87-58: local proof at 1e586bf8d, three-OS CI at f9f1cce2e) |
 | FND-04 | no orphan winetricks/tar/wine helper after quit | `gamelib-proc` orphan harness arm | `cargo test -p gamelib-proc` | ✅ | ✅ green (87-58: local proof at 1e586bf8d, three-OS CI at f9f1cce2e) |
 | FND-06 | markers/notices/wine-downloader-info round trip, newer never overwritten, corrupt kept | Rust golden | `cargo test -p gamelib-engine --test roundtrip_state` | ✅ | ✅ green (87-58: local proof at 1e586bf8d, three-OS CI at f9f1cce2e) |
 | D-14 | channel parity (OPS == constants == arms), IPC snapshot | Jest + gen | `pnpm check:ipc-contract` | ✅ | ✅ green (87-58: local proof at 1e586bf8d, three-OS CI at f9f1cce2e) |
+| Gap T5 (87-61) | engine log lines reach gamelib.log, redacted | Rust unit + Jest | `cargo test --bin gamelib-shell engine_log` ; `pnpm exec jest shellLogCategoryOnly` | ✅ | ✅ green (27 / suite pass, 2026-11-27) |
+| Gap T6–T7 (87-63, 87-73, 87-76) | offline refusal: engine dialog only, launch ends, Play latch clears; generic warning still shows when the engine would launch | Rust golden + Jest | `cargo test -p gamelib-engine --features testing --test offline_refusal --test offline_state_verdict --test golden_state` ; `pnpm exec jest launcher.engineStep launchDialogsSettle playClickedLatch launchOptionPicker offlineWarningEngineVerdict launcher_launchSingleFlight createStoreManagers` | ✅ | ✅ green (17 / 6 / 9; suites pass, 2026-11-27) |
+| Gap T8 (87-72, 87-77) | CrossOver launches keep running (launch shape, env) | Rust + Jest | `cargo test -p gamelib-engine --features testing --test crossover_launch_shape` ; `pnpm exec jest launcher.crossoverEnv` | ✅ | ✅ green (10; suite pass, 2026-11-27) |
+| Gap T9 (87-65) | Stop ends a non-Steam game on a CrossOver bottle | Jest | `pnpm exec jest utilsRunner engineWineShimSchedule` | ✅ | ✅ green (2026-11-27) |
+| Gap T10 (87-66, 87-67, 87-70, 87-74, 87-75) | per-game bottle removal, never the shared default prefix; uninstall Cancel changes nothing; worded refusals | Rust + Jest | `cargo test -p gamelib-engine --features testing --test bottle_removal` ; `pnpm exec jest uninstaller.test safetyWireParity bottleToggle disabledContrast uninstallCancelKeepsSteamShortcut closeChangesNothing dialogCloseClock RemovalRefusedNotice` | ✅ | ✅ green (26; suites pass, 2026-11-27) |
+| Gap T11 (87-62) | wine manager installs never-installed entries; list follows install/remove | Rust golden + Jest | `cargo test -p gamelib-wine --features testing --test golden_wine_manager` ; `pnpm exec jest tauriTransport` | ✅ | ✅ green (10; suite pass, 2026-11-27) |
+| Gap (87-64) | wine tools target the game's CrossOver bottle; Winetricks failure shown | Rust + Jest | `cargo test -p gamelib-wine --features testing --test tool_bottle_target` ; `pnpm exec jest failedRun groups.test rowStates` | ✅ | ✅ green (13; suites pass, 2026-11-27) |
+| Gap T12 (D-11) | 180 s no-match notice notifies, never raises the window | Rust golden + unit | `cargo test -p gamelib-engine --features testing --test golden_launch` ; `cargo test -p gamelib-engine --lib -- launch::deadline launch::dialogs` | ✅ | ✅ green (8; automated proof accepted by operator override, 2026-11-26) |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -59,12 +68,12 @@ created: "2026-11-23"
 
 ## Wave 0 Requirements
 
-- [ ] `src/backend/__tests__/engineWinePortComplete.test.ts`, `engineWineShimSchedule.test.ts` (copy `infoPortComplete` / `infoShimSchedule`, with planted-fixture detector self-tests and walk floors)
-- [ ] TS golden harness: spawn-trace and tree recorders, `MANIFEST.json` floors, `assertAtOrAboveFloor` (82 D-05 vacuous-pass guards)
-- [ ] `tests/fixtures/{recorded,golden,state}/<slice>/` in both crates, with a redaction test
-- [ ] `ProcSpec` runner (env, cwd, stdin, abort, streaming) in `gamelib-core` / `gamelib-proc`, with its orphan arm
-- [ ] cross-language vector file for the bottle-path twin (D-24)
-- [ ] `87-HUMAN-UAT.md` (inline `expected:`, `result:` opens with a status word) with the Structural Reachability table
+- [x] `src/backend/__tests__/engineWinePortComplete.test.ts`, `engineWineShimSchedule.test.ts` (copy `infoPortComplete` / `infoShimSchedule`, with planted-fixture detector self-tests and walk floors)
+- [x] TS golden harness: spawn-trace and tree recorders, `MANIFEST.json` floors, `assertAtOrAboveFloor` (82 D-05 vacuous-pass guards)
+- [x] `tests/fixtures/{recorded,golden,state}/<slice>/` in both crates, with a redaction test
+- [x] `ProcSpec` runner (env, cwd, stdin, abort, streaming) in `gamelib-core` / `gamelib-proc`, with its orphan arm
+- [x] cross-language vector file for the bottle-path twin (D-24)
+- [x] `87-HUMAN-UAT.md` (inline `expected:`, `result:` opens with a status word) with the Structural Reachability table
 
 ---
 
@@ -76,19 +85,21 @@ created: "2026-11-23"
 | Expired trial routes to Staging; ≤7-day notice | SVC-02 / SC1 | trial licence read from the real HOME | `87-HUMAN-UAT.md` item 2 (`nolicence.sb`, `backdate.py`, operator approval) |
 | Bottle reuse and sibling-safe removal on real bottles | SVC-02 / SC2 | real bottles written by a signed 86 build | `87-HUMAN-UAT.md` item 3 |
 | Winetricks verb, DXVK/DXMT install/remove, wine-manager download with progress | SVC-02 / SC3 | real network, real winetricks | `87-HUMAN-UAT.md` item 4 |
+| Offline refusal, Stop, CrossOver run duration, uninstall Cancel / bottle removal on real bottles | Gap T6–T10 | real CrossOver, real network state, real Steam shortcuts | `87-RERUN-2-HUMAN-UAT.md` items 1–4, 6 (all pass) |
+| Real macOS notification delivery does not activate the app (D-11 item 5) | Gap T12 | OS notification behaviour; no operator title reaches the 180 s unmatched state | live row unscored in three gates; automated no-raise proof accepted by operator override (87-VERIFICATION.md `overrides`) |
 
 ---
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 300s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 300s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved 2026-11-27 (validate-phase audit: 0 automated gaps; every requirement and gap-cycle truth has a green automated command, live-only behaviour is listed under Manual-Only and was scored by the three live gates)
 
 
 ---
@@ -680,3 +691,11 @@ Exactly one dispatch was made: `gh workflow run release-tauri.yml --ref release/
 The identities match, so the gate is `pending`: the live re-run 2 (87-79) is owed.
 
 Gate (gap build 2): pending (identities match: signed Phase 87 gap build 2 v0.13.2, run 45791635064, `release/v0.13.2` at c5d19ab53 = main 06e4d2844 + the version bump, same Identifier, Developer ID leaf, TeamIdentifier S7U223QWXJ and designated requirement sha256 68d712d0... as 0.13.1, 0.13.0 and Phase 86; notarized and stapled)
+
+## Validation Audit 2026-11-27
+
+| Metric | Count |
+|---|---|
+| Gaps found | 0 |
+| Resolved | 0 |
+| Escalated | 0 |
