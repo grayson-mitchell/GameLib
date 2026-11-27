@@ -36,6 +36,11 @@
 //! entry titled like the game reporting the `LaunchOptions` the port itself writes, where the TS's recorded
 //! success and apply-failure answers stay pinned for GameLib's own entry (each recorded apply gaining only the
 //! `launchOptions` the removal now names). No golden file is edited.
+//!
+//! `add-launch-options-hostile-app-name` replays against its `deltas.json` entry too (quick 261128-4j2),
+//! through one substitution in the TS's own `LaunchOptions` bytes: Add to Steam now percent-encodes the app
+//! name and runner inside the quoted launch URL. The TS oracle that recorded the steam goldens was deleted in
+//! 94-24, so the case is never re-recorded and the delta is its record.
 
 use std::collections::BTreeMap;
 use std::fs;
@@ -51,6 +56,7 @@ use gamelib_shortcuts::ctx::{
 };
 use gamelib_shortcuts::game::{ShortcutGame, ShortcutSettings};
 use gamelib_shortcuts::http::{HttpError, Replay, Response};
+use gamelib_shortcuts::launch_url::launch_url;
 use gamelib_shortcuts::steam::ids::{generate_app_id, generate_short_app_id, generate_shortcut_id};
 use gamelib_shortcuts::steam::{steam_add, steam_id_of, steam_is_added, steam_remove};
 use gamelib_shortcuts::testing::RecordingUi;
@@ -144,6 +150,55 @@ fn cases() -> BTreeMap<String, Value> {
 fn deltas() -> BTreeMap<String, String> {
     let text = fs::read_to_string(golden_dir().join("deltas.json")).expect("deltas.json");
     serde_json::from_str(&text).expect("deltas.json is an object of strings")
+}
+
+/// The case the Rust is expected to reproduce: the golden itself, unless `id` is an add case with a recorded
+/// delta. A delta is exactly one substitution in the TS's own bytes: the double-quoted raw launch URL in the
+/// `LaunchOptions` field becomes the double-quoted percent-encoded one. It panics when the delta does not
+/// apply (empty reason, both URLs equal, the raw URL not in a `LaunchOptions` value exactly once, or not
+/// exactly one field changed).
+fn with_launch_options_delta(id: &str, golden: &Value) -> Value {
+    if !id.starts_with("add-") {
+        return golden.clone();
+    }
+    let Some(reason) = deltas().remove(id) else {
+        return golden.clone();
+    };
+    assert!(!reason.trim().is_empty(), "{id}: the delta has no reason");
+    let input = &golden["input"];
+    let app_name = input["appName"].as_str().expect("appName");
+    let runner = input["runner"].as_str().expect("runner");
+    let raw = format!("\"{}\"", launch_url(app_name, runner, false));
+    let encoded = format!("\"{}\"", launch_url(app_name, runner, true));
+    assert_ne!(
+        raw, encoded,
+        "{id}: the delta is unused, the URL encodes to itself"
+    );
+    let mut out = golden.clone();
+    let mut changed = 0;
+    for call in out["steamfiles"].as_array_mut().expect("steamfiles calls") {
+        if call["channel"] != "steamfiles_shortcuts_apply" {
+            continue;
+        }
+        let Some(fields) = call["args"]["mutation"]["entry"].as_array_mut() else {
+            continue;
+        };
+        for field in fields.iter_mut().filter(|f| f["key"] == "LaunchOptions") {
+            let value = field["value"]
+                .as_str()
+                .expect("LaunchOptions value")
+                .to_string();
+            assert_eq!(
+                value.matches(&raw).count(),
+                1,
+                "{id}: the TS's quoted URL is not in LaunchOptions exactly once: {value}"
+            );
+            field["value"] = Value::String(value.replacen(&raw, &encoded, 1));
+            changed += 1;
+        }
+    }
+    assert_eq!(changed, 1, "{id}: the delta must change exactly one field");
+    out
 }
 
 fn family<'a>(cases: &'a BTreeMap<String, Value>, prefix: &str) -> Vec<(&'a String, &'a Value)> {
@@ -808,6 +863,7 @@ async fn replay_case(id: &str, golden: &Value) {
 }
 
 async fn replay_arm(id: &str, golden: &Value, arm: Arm) {
+    let golden = &with_launch_options_delta(id, golden);
     let run = build_with(golden, arm == Arm::Proven);
     let steam_before = tree_of(&run.profile.steam());
     let op = golden["input"]["op"].as_str().expect("op");
@@ -1058,7 +1114,8 @@ async fn every_remove_from_steam_golden_replays() {
             replay_case(id, golden).await;
         }
     }
-    assert_eq!(against, deltas.len(), "every recorded delta replayed");
+    let remove_deltas = deltas.keys().filter(|id| id.starts_with("remove-")).count();
+    assert_eq!(against, remove_deltas, "every recorded delta replayed");
     println!(
         "steam remove: {} replayed, {against} against a recorded delta (refused, then proven)",
         removals.len()
@@ -1106,10 +1163,82 @@ fn the_families_cover_the_whole_manifest() {
     }
     for id in deltas().keys() {
         assert!(
-            id.starts_with("remove-") && cases.contains_key(id),
-            "deltas.json names no removal case: {id}"
+            (id.starts_with("remove-") || id.starts_with("add-")) && cases.contains_key(id),
+            "deltas.json names no removal or add case: {id}"
         );
     }
+}
+
+/// Every `LaunchOptions` value an add case recorded in its `shortcuts.vdf` apply calls.
+fn recorded_launch_options(golden: &Value) -> Vec<String> {
+    golden["steamfiles"]
+        .as_array()
+        .expect("steamfiles calls")
+        .iter()
+        .filter(|call| call["channel"] == "steamfiles_shortcuts_apply")
+        .filter_map(|call| call["args"]["mutation"]["entry"].as_array())
+        .flatten()
+        .filter(|field| field["key"] == "LaunchOptions")
+        .map(|field| field["value"].as_str().expect("a string").to_string())
+        .collect()
+}
+
+/// The add-delta set is the add cases whose names encode and nothing else, computed from the cases' own
+/// inputs: a delta that goes unused, or an add case that needs one and has none, fails here.
+#[test]
+fn the_launch_options_deltas_are_exactly_the_add_cases_whose_names_encode() {
+    let cases = cases();
+    let deltas = deltas();
+    let encodes = |golden: &Value| {
+        let input = &golden["input"];
+        let app_name = input["appName"].as_str().expect("appName");
+        let runner = input["runner"].as_str().expect("runner");
+        launch_url(app_name, runner, true) != launch_url(app_name, runner, false)
+    };
+    let mut fields = 0;
+    let mut want = std::collections::BTreeSet::new();
+    for (id, golden) in family(&cases, "add-") {
+        let options = recorded_launch_options(golden);
+        fields += options.len();
+        if !options.is_empty() && encodes(golden) {
+            want.insert(id.clone());
+        }
+    }
+    let got: std::collections::BTreeSet<String> = deltas
+        .keys()
+        .filter(|id| id.starts_with("add-"))
+        .cloned()
+        .collect();
+    assert!(!got.is_empty(), "no add deltas are recorded");
+    assert_eq!(
+        got, want,
+        "deltas.json does not list exactly the add cases whose names encode"
+    );
+    for id in &got {
+        assert!(!deltas[id].trim().is_empty(), "{id}: an empty reason");
+        let golden = &cases[id];
+        let quotes = |golden: &Value| {
+            recorded_launch_options(golden)
+                .iter()
+                .map(|options| options.matches('"').count())
+                .collect::<Vec<_>>()
+        };
+        assert!(
+            quotes(golden).iter().all(|&n| n > 2),
+            "{id}: the TS LaunchOptions hold {:?} quotes, a delta is unused",
+            quotes(golden)
+        );
+        assert!(
+            quotes(&with_launch_options_delta(id, golden))
+                .iter()
+                .all(|&n| n == 2),
+            "{id}: the delta-applied LaunchOptions must hold only the URL's pair"
+        );
+    }
+    println!(
+        "steam add LaunchOptions: {fields} recorded, {} against a delta",
+        got.len()
+    );
 }
 
 // ------------------------------------------- what the goldens cannot record

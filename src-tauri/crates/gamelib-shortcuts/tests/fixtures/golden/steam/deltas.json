@@ -1,4 +1,5 @@
 {
+  "add-launch-options-hostile-app-name": "quick 261128-4j2: LaunchOptions percent-encodes appName and runner inside its double-quoted launch URL (launch_url with encode, as the Windows .lnk does), so a double quote in either no longer ends the quoted argument; every other byte, the appid and the grid ids included, is the TS's",
   "remove-apply-not-written-read-error": "261125-uzz: Rust refuses and reports not removed (the upstream entry titled like the game carries no GameLib launch URL for its appName, so GameLib cannot prove it wrote it): no apply, its grid art stays, the corrupt notice instead of the TS's",
   "remove-apply-not-written-silent": "261125-uzz: Rust refuses and reports not removed (the upstream entry titled like the game carries no GameLib launch URL for its appName, so GameLib cannot prove it wrote it): no apply, its grid art stays, the corrupt notice instead of the TS's",
   "remove-apply-throws": "261125-uzz: Rust refuses and reports not removed (the upstream entry titled like the game carries no GameLib launch URL for its appName, so GameLib cannot prove it wrote it): no apply, its grid art stays, the corrupt notice instead of the TS's",
