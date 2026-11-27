@@ -139,7 +139,7 @@
     "react-router-dom": "^7.18.5",
     "recharts": "^2.15.3",
     "rehype-raw": "^6.1.1",
-    "sanitize-html": "^2.18.0",
+    "sanitize-html": "^2.18.1",
     "semver": "^7.7.1",
     "shlex": "^2.1.2",
     "short-uuid": "^4.2.2",
