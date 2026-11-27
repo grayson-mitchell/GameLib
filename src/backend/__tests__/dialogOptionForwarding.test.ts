@@ -297,7 +297,11 @@ describe('sidecarRpc UNBOUNDED_RUST_CHANNELS covers every human-gated dialog cha
     'RUST_LAUNCH_ASK_FORCE_UNINSTALL',
     // Phase 88.3 plan 06: launch_run is one whole Play through the Rust launch funnel; it answers when the game's process is over, which
     // can be hours (the TS launch it replaces had no timeout). The funnel's registrant and the shutdown end it. Not a dialog channel.
-    'RUST_LAUNCH_RUN'
+    'RUST_LAUNCH_RUN',
+    // Phase 88.3 plan 11: launch_flight_wait is the joiner half of the one Rust single-flight table; it waits for the whole dispatch of the
+    // leader it joined (a game session can be hours), and ends on the leader's settle, on the release at sidecar EOF or on the shutdown.
+    // launch_flight_begin and launch_flight_end are lookups under one lock and stay bounded. Not dialog channels.
+    'RUST_LAUNCH_FLIGHT_WAIT'
   ]
 
   test('contains exactly the dialog, depot, Rust CM, safety remove, wine runtime download and wine manager channels', () => {

@@ -529,7 +529,8 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     // Phase 88.2 plan 17 task 2: 213 -> 217, launch_spawn_async, launch_tracked_kill, launch_tracked_kill_all and launch_games_running.
     // Phase 88.2 plan 20: 217 -> 218, launch_ask_force_uninstall.
     // Phase 88.3 plan 06: 218 -> 219, launch_run.
-    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(219)
+    // Phase 88.3 plan 11: 219 -> 222, launch_flight_begin, launch_flight_wait and launch_flight_end.
+    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(222)
     expect(router).not.toContain('_ =>')
   })
 
@@ -1131,6 +1132,12 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       // Phase 88.3 plan 06: one Play through the Rust launch funnel (`launch_run`, `RUST_LAUNCH_RUN`). PROVEN: `launch_dispatch::tests` drives the arm's decode, not-ready, the fixed bad-args and a full
       // run (native game, scripted manager hooks) that answers `{ status: 'done' }` after `launch_facts` and `launch`; `gamelib-launch`'s `funnel.rs` replays golden/funnel against the crate.
       'launch_run',
+      // Phase 88.3 plan 11: a leader outside the funnel leads, joins and ends a flight in the one Rust single-flight table (`launchFlightBegin`, `launchFlightWait` and
+      // `launchFlightEnd` shims arrive with 88.3-18). PROVEN: `launch_dispatch::tests` drives each arm's decode, not-ready and the fixed bad-args, a begin then end that
+      // releases the key, a joiner answered the leader's value and one answered `abandoned` after the sidecar-EOF release; `gamelib-launch`'s `single_flight.rs` drives the crate.
+      'launch_flight_begin',
+      'launch_flight_wait',
+      'launch_flight_end',
       // Phase 94 plan 11: the shortcut exists check (`shortcutsResolvers.ts` resolver). PROVEN: `shortcuts_dispatch::tests`
       // drives the arm's decode, not-ready and a real exists answer on a FakeHome; `golden_paths.rs` replays the TS goldens.
       'shortcuts_exist',

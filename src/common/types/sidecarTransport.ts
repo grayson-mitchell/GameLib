@@ -1657,6 +1657,28 @@ export const RUST_LAUNCH_ASK_FORCE_UNINSTALL =
  * fallback (D-19): before the shell is ready it answers `launch_run:not-ready`.
  */
 export const RUST_LAUNCH_RUN = 'launch_run' as const
+/**
+ * Phase 88.3 (SVC-03, 88.3-11, D-04, D-19): a leader outside the Rust launch funnel (the TS Steam dispatch until 90.2) leads or joins
+ * the one single-flight table. `launch_flight_begin` takes `[{ runner, appName }]` and answers `{ lead: <flightId> }` when the caller
+ * now leads the key and must end it, or `{ join: true }` when a launch of the key is already in flight (decided under the table's one
+ * lock, so two callers never both lead). The flight id is an opaque value Rust minted; it is not a key. A lookup, so the channel stays
+ * inside the 60 s bound.
+ */
+export const RUST_LAUNCH_FLIGHT_BEGIN = 'launch_flight_begin' as const
+/**
+ * Phase 88.3 (SVC-03, 88.3-11, D-04, D-19): the joiner half. `launch_flight_wait` takes `[{ runner, appName }]` and waits for the
+ * leader of that key, whoever it is (a Rust funnel launch or a sidecar leader), answering the leader's settled value, or the word
+ * `abandoned` when the leader ended without one, was released because the sidecar went away, or is no longer in flight (its value is
+ * gone). The app shutdown rejects it with `launch_flight_wait:shutdown`. A joiner waits for the whole dispatch, which can take as
+ * long as a launch does, so the channel is unbounded (`UNBOUNDED_RUST_CHANNELS`).
+ */
+export const RUST_LAUNCH_FLIGHT_WAIT = 'launch_flight_wait' as const
+/**
+ * Phase 88.3 (SVC-03, 88.3-11, D-04, D-19): `launch_flight_end` takes `[{ flightId, result }]`, settles the flight the id leads (every
+ * joiner receives `result`) and releases the key, answering `true`; an id Rust does not hold (forged, already ended, released at
+ * sidecar EOF) releases nothing and answers `false`. A lookup, so the channel stays inside the 60 s bound.
+ */
+export const RUST_LAUNCH_FLIGHT_END = 'launch_flight_end' as const
 export const RUST_ENGINE_STATE_RECORD_DECISION =
   'engine_state_record_decision' as const
 export const RUST_ENGINE_STATE_PUBLISH_OVERLAY_NOTICE =
@@ -2115,6 +2137,9 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_LAUNCH_GAMES_RUNNING,
   RUST_LAUNCH_ASK_FORCE_UNINSTALL,
   RUST_LAUNCH_RUN,
+  RUST_LAUNCH_FLIGHT_BEGIN,
+  RUST_LAUNCH_FLIGHT_WAIT,
+  RUST_LAUNCH_FLIGHT_END,
   RUST_SHORTCUTS_EXIST,
   RUST_SHORTCUTS_ADD,
   RUST_SHORTCUTS_REMOVE,

@@ -175,6 +175,9 @@ import {
   RUST_LAUNCH_GAMES_RUNNING,
   RUST_LAUNCH_ASK_FORCE_UNINSTALL,
   RUST_LAUNCH_RUN,
+  RUST_LAUNCH_FLIGHT_BEGIN,
+  RUST_LAUNCH_FLIGHT_END,
+  RUST_LAUNCH_FLIGHT_WAIT,
   RUST_LAUNCH_SETUP_ENV_VARS,
   RUST_LAUNCH_SETUP_WINE_ENV_VARS,
   RUST_LAUNCH_SETUP_WRAPPER_ENV_VARS,
@@ -1504,6 +1507,24 @@ export const rustInvokeArgs = {
           .optional(),
         skipVersionCheck: z.boolean().optional(),
         args: z.array(z.string().meta({ title: 'arg' })).optional()
+      })
+      .strict()
+  ]),
+  // Phase 88.3 (SVC-03, 88.3-11, D-04, D-19): a leader outside the funnel leads, joins and ends flights in the one Rust single-flight
+  // table. `launch_flight_begin` and `launch_flight_wait` take `[{ runner, appName }]`, one strict object: the key is two plain
+  // strings the crate bounds (it is a runner name or `steam`, never a path); `launch_flight_end` takes `[{ flightId, result }]`, the
+  // opaque id Rust minted and the value every joiner receives (opaque to the generated decode, `x-rust-value`).
+  [RUST_LAUNCH_FLIGHT_BEGIN]: z.tuple([
+    z.object({ runner: z.string(), appName: z.string() }).strict()
+  ]),
+  [RUST_LAUNCH_FLIGHT_WAIT]: z.tuple([
+    z.object({ runner: z.string(), appName: z.string() }).strict()
+  ]),
+  [RUST_LAUNCH_FLIGHT_END]: z.tuple([
+    z
+      .object({
+        flightId: z.string(),
+        result: z.unknown().meta({ title: 'result', 'x-rust-value': true })
       })
       .strict()
   ])

@@ -88,6 +88,7 @@ import {
   RUST_LAUNCH_SPAWN_ASYNC,
   RUST_LAUNCH_ASK_FORCE_UNINSTALL,
   RUST_LAUNCH_RUN,
+  RUST_LAUNCH_FLIGHT_WAIT,
   RUST_LAUNCH_VERIFY_WINE_PREFIX,
   RUST_DIALOG_MESSAGE,
   RUST_DIALOG_OPEN,
@@ -278,6 +279,11 @@ const RUST_INVOKE_TIMEOUT_MS = 60_000
  * process is over (the funnel waits on the TS `launch` hook over `launchManagerCall` for the session), which can be hours, so no
  * wall-clock value is right for it. The funnel holds its own registrant and the shutdown token ends it, so no entry can outlive
  * the sidecar; a second Play of the same game joins the first rather than starting another.
+ *
+ * Twenty-eighth (Phase 88.3, 88.3-11): `launch_flight_wait` is the joiner half of the one Rust single-flight table. A joiner waits for
+ * the whole dispatch of the leader it joined (a Steam launch or a game session), which can be hours. It ends when the leader settles,
+ * when the leader's flight is released because the sidecar went away (the shell answers `abandoned` to every joiner at sidecar EOF)
+ * and on the shutdown token. `launch_flight_begin` and `launch_flight_end` are lookups under one lock and stay bounded.
  */
 const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_DIALOG_OPEN,
@@ -332,7 +338,8 @@ const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_LAUNCH_SCRIPT_RUN,
   RUST_LAUNCH_SPAWN_ASYNC,
   RUST_LAUNCH_ASK_FORCE_UNINSTALL,
-  RUST_LAUNCH_RUN
+  RUST_LAUNCH_RUN,
+  RUST_LAUNCH_FLIGHT_WAIT
 ]
 
 /**

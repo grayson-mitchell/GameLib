@@ -236,6 +236,9 @@ pub(crate) enum RustInvokeChannel {
     LaunchGamesRunning,
     LaunchAskForceUninstall,
     LaunchRun,
+    LaunchFlightBegin,
+    LaunchFlightWait,
+    LaunchFlightEnd,
     ShortcutsExist,
     ShortcutsAdd,
     ShortcutsRemove,
@@ -459,6 +462,9 @@ impl RustInvokeChannel {
         RustInvokeChannel::LaunchGamesRunning,
         RustInvokeChannel::LaunchAskForceUninstall,
         RustInvokeChannel::LaunchRun,
+        RustInvokeChannel::LaunchFlightBegin,
+        RustInvokeChannel::LaunchFlightWait,
+        RustInvokeChannel::LaunchFlightEnd,
         RustInvokeChannel::ShortcutsExist,
         RustInvokeChannel::ShortcutsAdd,
         RustInvokeChannel::ShortcutsRemove,
@@ -682,6 +688,9 @@ impl RustInvokeChannel {
             "launch_games_running" => Some(RustInvokeChannel::LaunchGamesRunning),
             "launch_ask_force_uninstall" => Some(RustInvokeChannel::LaunchAskForceUninstall),
             "launch_run" => Some(RustInvokeChannel::LaunchRun),
+            "launch_flight_begin" => Some(RustInvokeChannel::LaunchFlightBegin),
+            "launch_flight_wait" => Some(RustInvokeChannel::LaunchFlightWait),
+            "launch_flight_end" => Some(RustInvokeChannel::LaunchFlightEnd),
             "shortcuts_exist" => Some(RustInvokeChannel::ShortcutsExist),
             "shortcuts_add" => Some(RustInvokeChannel::ShortcutsAdd),
             "shortcuts_remove" => Some(RustInvokeChannel::ShortcutsRemove),
@@ -907,6 +916,9 @@ impl RustInvokeChannel {
             RustInvokeChannel::LaunchGamesRunning => "launch_games_running",
             RustInvokeChannel::LaunchAskForceUninstall => "launch_ask_force_uninstall",
             RustInvokeChannel::LaunchRun => "launch_run",
+            RustInvokeChannel::LaunchFlightBegin => "launch_flight_begin",
+            RustInvokeChannel::LaunchFlightWait => "launch_flight_wait",
+            RustInvokeChannel::LaunchFlightEnd => "launch_flight_end",
             RustInvokeChannel::ShortcutsExist => "shortcuts_exist",
             RustInvokeChannel::ShortcutsAdd => "shortcuts_add",
             RustInvokeChannel::ShortcutsRemove => "shortcuts_remove",
@@ -5021,6 +5033,48 @@ impl LaunchRunArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let first = args.first().ok_or_else(|| "launch_run:bad-args".to_string())?;
         serde_json::from_value(first.clone()).map_err(|_| "launch_run:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct LaunchFlightBeginArgs {
+    pub(crate) runner: String,
+    #[serde(rename = "appName")]
+    pub(crate) app_name: String,
+}
+
+impl LaunchFlightBeginArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "launch_flight_begin:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "launch_flight_begin:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct LaunchFlightWaitArgs {
+    pub(crate) runner: String,
+    #[serde(rename = "appName")]
+    pub(crate) app_name: String,
+}
+
+impl LaunchFlightWaitArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "launch_flight_wait:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "launch_flight_wait:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct LaunchFlightEndArgs {
+    #[serde(rename = "flightId")]
+    pub(crate) flight_id: String,
+    pub(crate) result: Value,
+}
+
+impl LaunchFlightEndArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "launch_flight_end:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "launch_flight_end:bad-args".to_string())
     }
 }
 

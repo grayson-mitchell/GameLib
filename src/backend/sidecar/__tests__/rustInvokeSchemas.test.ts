@@ -15,6 +15,9 @@ import {
   RUST_INFO_WIKI_CACHE_CLEAR,
   RUST_INFO_WIKI_GET,
   RUST_INVOKE_CHANNELS,
+  RUST_LAUNCH_FLIGHT_BEGIN,
+  RUST_LAUNCH_FLIGHT_END,
+  RUST_LAUNCH_FLIGHT_WAIT,
   RUST_LAUNCH_RUN,
   RUST_SHORTCUTS_ADD,
   RUST_SHORTCUTS_EXIST,
@@ -85,7 +88,8 @@ describe('rustInvokeArgs', () => {
     // Phase 88.2 plan 17 task 2: 213 -> 217, launch_spawn_async, launch_tracked_kill, launch_tracked_kill_all and launch_games_running.
     // Phase 88.2 plan 20: 217 -> 218, launch_ask_force_uninstall.
     // Phase 88.3 plan 06: 218 -> 219, launch_run.
-    expect(RUST_INVOKE_CHANNELS).toHaveLength(219)
+    // Phase 88.3 plan 11: 219 -> 222, launch_flight_begin, launch_flight_wait and launch_flight_end.
+    expect(RUST_INVOKE_CHANNELS).toHaveLength(222)
   })
 
   it('parses the store-embed wire fixtures', () => {
@@ -178,6 +182,50 @@ describe('rustInvokeArgs', () => {
       [{ sessionId: 'a', x: 1 }]
     ]) {
       expect(close.safeParse(bad).success).toBe(false)
+    }
+  })
+
+  it('accepts the launch_flight_* keys and end message and rejects drift (Phase 88.3 plan 11)', () => {
+    const key = { runner: 'steam', appName: '480' }
+    for (const channel of [
+      RUST_LAUNCH_FLIGHT_BEGIN,
+      RUST_LAUNCH_FLIGHT_WAIT
+    ] as const) {
+      const schema = rustInvokeArgs[channel]
+      expect(schema.safeParse([key]).success).toBe(true)
+      expect(
+        schema.safeParse([{ runner: 'legendary', appName: 'alpha' }]).success
+      ).toBe(true)
+      for (const bad of [
+        [],
+        [{}],
+        [{ runner: 'steam' }],
+        [{ appName: '480' }],
+        [{ ...key, runner: 7 }],
+        [{ ...key, appName: 480 }],
+        [{ ...key, extra: 1 }],
+        ['steam:480'],
+        [key, {}]
+      ]) {
+        expect(schema.safeParse(bad).success).toBe(false)
+      }
+    }
+    const end = rustInvokeArgs[RUST_LAUNCH_FLIGHT_END]
+    const flightId = 'a'.repeat(32)
+    for (const result of [true, false, null, 'done', { status: 'done' }, 3]) {
+      expect(end.safeParse([{ flightId, result }]).success).toBe(true)
+    }
+    for (const bad of [
+      [],
+      [{}],
+      [{ flightId }],
+      [{ result: true }],
+      [{ flightId: 7, result: true }],
+      [{ flightId, result: true, extra: 1 }],
+      [flightId],
+      [{ flightId, result: true }, {}]
+    ]) {
+      expect(end.safeParse(bad).success).toBe(false)
     }
   })
 

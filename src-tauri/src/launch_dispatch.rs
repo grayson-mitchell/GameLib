@@ -1021,6 +1021,82 @@ pub(crate) fn rpc_launch_run(args: &[Value]) -> Result<Value, String> {
     launch_run_over(launch_ctx(), args, funnel_host)
 }
 
+/// The body of the `launch_flight_begin` arm over a given context: the generated decode (`[{ runner, appName }]`) and an arity
+/// check first, so a bad call is rejected the same fixed `<op>:bad-args` literal before and after the install and never echoes the
+/// sidecar's value, then the crate, which decodes the object strictly again, bounds both names and decides lead or join under the
+/// flight table's one lock.
+fn flight_begin_over(ctx: Option<&Arc<LaunchCtx>>, args: &[Value]) -> Result<Value, String> {
+    LaunchFlightBeginArgs::from_args(args)?;
+    if args.len() != 1 {
+        return Err("launch_flight_begin:bad-args".to_string());
+    }
+    rpc_launch_op(ctx, "launch_flight_begin", args)
+}
+
+/// The `launch_flight_begin` `rustInvoke` arm (88.3-11, D-04, D-19): a leader outside the Rust funnel (the TS Steam dispatch until
+/// 90.2) asks to lead `<runner>:<appName>` in the one single-flight table. It answers `{ lead: <flightId> }` or `{ join: true }`. A
+/// lookup under one lock, so the sidecar keeps it inside the 60 s `RUST_INVOKE_TIMEOUT_MS`. There is no sidecar fallback: before
+/// [`install`] the answer is `launch_flight_begin:not-ready`.
+pub(crate) fn rpc_launch_flight_begin(args: &[Value]) -> Result<Value, String> {
+    flight_begin_over(launch_ctx(), args)
+}
+
+/// The body of the `launch_flight_wait` arm over a given context: the generated decode and an arity check first (the fixed
+/// `<op>:bad-args` literal), then the crate, which waits for the leader of the key on the context's shutdown token (the shell's own).
+fn flight_wait_over(ctx: Option<&Arc<LaunchCtx>>, args: &[Value]) -> Result<Value, String> {
+    LaunchFlightWaitArgs::from_args(args)?;
+    if args.len() != 1 {
+        return Err("launch_flight_wait:bad-args".to_string());
+    }
+    rpc_launch_op(ctx, "launch_flight_wait", args)
+}
+
+/// The `launch_flight_wait` `rustInvoke` arm (88.3-11, D-04, D-19): the joiner half. It waits for the leader of the key, a Rust
+/// funnel launch or a sidecar leader, and answers the leader's settled value, or the word `abandoned` when the leader ended without
+/// one or was released at sidecar EOF. It waits on the dispatcher's worker thread for this one request (never the reply thread)
+/// for the whole dispatch of the leader, so the sidecar lists the channel as unbounded (`UNBOUNDED_RUST_CHANNELS`); the crate's
+/// `guarded` registrant, the leader's settle, [`release_sidecar_flights`] and the shutdown token end it.
+pub(crate) fn rpc_launch_flight_wait(args: &[Value]) -> Result<Value, String> {
+    flight_wait_over(launch_ctx(), args)
+}
+
+/// The body of the `launch_flight_end` arm over a given context: the generated decode (`[{ flightId, result }]`) and an arity check
+/// first (the fixed `<op>:bad-args` literal), then the crate, which refuses a flight id of the wrong shape and releases nothing for
+/// one it did not mint.
+fn flight_end_over(ctx: Option<&Arc<LaunchCtx>>, args: &[Value]) -> Result<Value, String> {
+    LaunchFlightEndArgs::from_args(args)?;
+    if args.len() != 1 {
+        return Err("launch_flight_end:bad-args".to_string());
+    }
+    rpc_launch_op(ctx, "launch_flight_end", args)
+}
+
+/// The `launch_flight_end` `rustInvoke` arm (88.3-11, D-04, D-19): the leader settles the flight its id names; every joiner receives
+/// `result` and the key is free again. Answers whether the id was held (`false` for a forged, stale or released one, which releases
+/// nothing). A lookup under one lock, so the sidecar keeps it inside the 60 s `RUST_INVOKE_TIMEOUT_MS`.
+pub(crate) fn rpc_launch_flight_end(args: &[Value]) -> Result<Value, String> {
+    flight_end_over(launch_ctx(), args)
+}
+
+/// [`release_sidecar_flights`] over a given context. Answers how many flights it released; the flight ids and keys are never logged,
+/// only the count.
+fn release_sidecar_flights_over(ctx: Option<&Arc<LaunchCtx>>) -> usize {
+    let released = ctx.map_or(0, |ctx| ctx.flights.release_owned_by_sidecar());
+    if released > 0 {
+        shell_log(&format!(
+            "released {released} launch flight(s) led from the sidecar"
+        ));
+    }
+    released
+}
+
+/// Releases every launch flight a leader in the sidecar holds (88.3-11, Pitfall 8, T-88.3-26). The sidecar-EOF path calls it next
+/// to `drain_pending_invokes`: a leader that is gone can never end its flight, so each key is given back and each joiner answers
+/// `abandoned` instead of waiting for ever. A flight the Rust funnel leads is not touched. A no-op before [`install`].
+pub(crate) fn release_sidecar_flights() {
+    release_sidecar_flights_over(launch_ctx());
+}
+
 /// The body of the `launch_runner_kill` arm over a given context: the generated decode (`[streamId]`) and an arity
 /// check first, then the crate, which bounds the id (a name with no path separator or control character) and ends the
 /// run of the call that watches that stream. The crate answers how many runs it ended; the sidecar is told whether one
@@ -3436,5 +3512,225 @@ mod tests {
         }
         // A failed hide or wake lock is a fixed line and never an error of the launch.
         assert_eq!(shell.matches("shell_log(\"launch funnel: ").count(), 3);
+    }
+
+    type FlightOver = fn(Option<&Arc<LaunchCtx>>, &[Value]) -> Result<Value, String>;
+
+    fn flight_key() -> Value {
+        json!({ "runner": "steam", "appName": "480" })
+    }
+
+    #[test]
+    fn flight_begin_then_end_releases() {
+        let home = FakeHome::new("launch-shell-");
+        let ctx = ctx_over(&home);
+        let led = flight_begin_over(Some(&ctx), &[flight_key()]).unwrap();
+        let id = led["lead"]
+            .as_str()
+            .expect("the first caller leads")
+            .to_string();
+        assert_eq!(id.len(), 32);
+        assert_eq!(ctx.flights.len(), 1);
+        // A second caller of the same key joins; a different key leads on its own.
+        assert_eq!(
+            flight_begin_over(Some(&ctx), &[flight_key()]).unwrap(),
+            json!({ "join": true })
+        );
+        let other = flight_begin_over(
+            Some(&ctx),
+            &[json!({ "runner": "legendary", "appName": "480" })],
+        )
+        .unwrap();
+        assert!(other["lead"].is_string());
+        assert_eq!(ctx.flights.len(), 2);
+
+        // An id nobody minted releases nothing; the real id settles and releases its key only.
+        let forged = json!({ "flightId": "0".repeat(32), "result": true });
+        assert_eq!(
+            flight_end_over(Some(&ctx), &[forged]).unwrap(),
+            json!(false)
+        );
+        assert_eq!(ctx.flights.len(), 2);
+        let end = json!({ "flightId": id, "result": true });
+        assert_eq!(
+            flight_end_over(Some(&ctx), std::slice::from_ref(&end)).unwrap(),
+            json!(true)
+        );
+        assert_eq!(ctx.flights.len(), 1);
+        assert_eq!(
+            flight_end_over(Some(&ctx), &[end]).unwrap(),
+            json!(false),
+            "ended once"
+        );
+        // The key is free: the next caller leads again.
+        let again = flight_begin_over(Some(&ctx), &[flight_key()]).unwrap();
+        assert!(again["lead"].is_string());
+    }
+
+    #[test]
+    fn a_wait_answers_the_leaders_value() {
+        let home = FakeHome::new("launch-shell-");
+        let ctx = ctx_over(&home);
+        let led = flight_begin_over(Some(&ctx), &[flight_key()]).unwrap();
+        let id = led["lead"].as_str().unwrap().to_string();
+        let (answered, answer) = std::sync::mpsc::channel();
+        let waiter = {
+            let ctx = Arc::clone(&ctx);
+            thread::spawn(move || {
+                let _ = answered.send(flight_wait_over(Some(&ctx), &[flight_key()]));
+            })
+        };
+        assert!(
+            answer.recv_timeout(Duration::from_millis(150)).is_err(),
+            "a joiner waits while the leader is in flight"
+        );
+        flight_end_over(
+            Some(&ctx),
+            &[json!({ "flightId": id, "result": { "ok": 1 } })],
+        )
+        .unwrap();
+        let got = answer
+            .recv_timeout(Duration::from_secs(5))
+            .expect("the joiner answers");
+        assert_eq!(got, Ok(json!({ "ok": 1 })));
+        waiter.join().unwrap();
+    }
+
+    #[test]
+    fn a_wait_on_a_sidecar_flight_answers_abandoned_after_sidecar_eof() {
+        let home = FakeHome::new("launch-shell-");
+        let ctx = ctx_over(&home);
+        flight_begin_over(Some(&ctx), &[flight_key()]).unwrap();
+        let (answered, answer) = std::sync::mpsc::channel();
+        let waiter = {
+            let ctx = Arc::clone(&ctx);
+            thread::spawn(move || {
+                let _ = answered.send(flight_wait_over(Some(&ctx), &[flight_key()]));
+            })
+        };
+        assert!(
+            answer.recv_timeout(Duration::from_millis(150)).is_err(),
+            "the joiner is waiting on a leader that has not ended"
+        );
+        // The reader thread's EOF handling: the sidecar-led flights are released.
+        assert_eq!(release_sidecar_flights_over(Some(&ctx)), 1);
+        let got = answer
+            .recv_timeout(Duration::from_secs(5))
+            .expect("the joiner must answer at the release, not wait for ever");
+        assert_eq!(got, Ok(json!("abandoned")));
+        waiter.join().unwrap();
+        assert!(ctx.flights.is_empty(), "the key is given back");
+        // Nothing left to release, and no context is a no-op.
+        assert_eq!(release_sidecar_flights_over(Some(&ctx)), 0);
+        assert_eq!(release_sidecar_flights_over(None), 0);
+    }
+
+    #[test]
+    fn the_sidecar_eof_path_releases_the_flights_right_after_failing_the_pending_invokes() {
+        // The reader thread is a closure over a live child no unit test has, so the order is pinned as source.
+        let source = include_str!("sidecar.rs");
+        let drain = source
+            .find("drain_pending_invokes(&state.pending, &state.abandoned)")
+            .expect("the EOF path drains the pending invokes");
+        let release = source
+            .find("launch_dispatch::release_sidecar_flights()")
+            .expect("the EOF path releases the sidecar-led launch flights");
+        assert!(
+            drain < release,
+            "released after the pending invokes are failed"
+        );
+        let cancel_jobs = source.find("on_sidecar_eof_cancel_jobs();").unwrap();
+        assert!(release < cancel_jobs, "released before the slow teardown");
+    }
+
+    #[test]
+    fn the_flight_arms_are_not_ready_before_the_install_and_reject_a_wrong_call_the_same_way_after()
+    {
+        let home = FakeHome::new("launch-shell-");
+        let ctx = ctx_over(&home);
+        let secret = "SECRET-FLIGHT-KEY";
+        assert_eq!(
+            flight_begin_over(None, &[flight_key()]),
+            Err("launch_flight_begin:not-ready".to_string())
+        );
+        assert_eq!(
+            flight_wait_over(None, &[flight_key()]),
+            Err("launch_flight_wait:not-ready".to_string())
+        );
+        assert_eq!(
+            flight_end_over(
+                None,
+                &[json!({ "flightId": "a".repeat(32), "result": true })]
+            ),
+            Err("launch_flight_end:not-ready".to_string())
+        );
+
+        let wrong_key: Vec<Vec<Value>> = vec![
+            vec![],
+            vec![json!(secret)],
+            vec![json!({})],
+            vec![json!({ "runner": secret })],
+            vec![json!({ "appName": secret })],
+            vec![json!({ "runner": 1, "appName": secret })],
+            vec![flight_key(), json!(secret)],
+        ];
+        for args in &wrong_key {
+            for ctx in [None, Some(&ctx)] {
+                for (op, over) in [
+                    ("launch_flight_begin", flight_begin_over as FlightOver),
+                    ("launch_flight_wait", flight_wait_over as FlightOver),
+                ] {
+                    let err = over(ctx, args).unwrap_err();
+                    assert_eq!(err, format!("{op}:bad-args"), "{args:?}");
+                    assert!(!err.contains(secret), "{args:?}");
+                }
+            }
+        }
+        // An unknown key and a name the crate bounds (empty, a path separator) are the crate's to refuse, which needs the context.
+        for bad in [
+            json!({ "runner": "steam", "appName": "1", "extra": secret }),
+            json!({ "runner": "steam", "appName": "" }),
+            json!({ "runner": "a/b", "appName": secret }),
+        ] {
+            for (op, over) in [
+                ("launch_flight_begin", flight_begin_over as FlightOver),
+                ("launch_flight_wait", flight_wait_over as FlightOver),
+            ] {
+                let err = over(Some(&ctx), std::slice::from_ref(&bad)).unwrap_err();
+                assert_eq!(err, format!("{op}:bad-args"));
+                assert!(!err.contains(secret));
+            }
+        }
+        assert!(ctx.flights.is_empty(), "no refused call led a flight");
+
+        let wrong_end: Vec<Vec<Value>> = vec![
+            vec![],
+            vec![json!(secret)],
+            vec![json!({})],
+            vec![json!({ "flightId": "a".repeat(32) })],
+            vec![json!({ "result": true })],
+            vec![json!({ "flightId": 7, "result": true })],
+            vec![
+                json!({ "flightId": "a".repeat(32), "result": true }),
+                json!(secret),
+            ],
+        ];
+        for args in &wrong_end {
+            for ctx in [None, Some(&ctx)] {
+                let err = flight_end_over(ctx, args).unwrap_err();
+                assert_eq!(err, "launch_flight_end:bad-args", "{args:?}");
+                assert!(!err.contains(secret), "{args:?}");
+            }
+        }
+        // A flight id of the wrong shape, an unknown key and an uppercase id are the crate's to refuse.
+        for bad in [
+            json!({ "flightId": secret, "result": true }),
+            json!({ "flightId": "A".repeat(32), "result": true }),
+            json!({ "flightId": "a".repeat(32), "result": true, "extra": secret }),
+        ] {
+            let err = flight_end_over(Some(&ctx), &[bad]).unwrap_err();
+            assert_eq!(err, "launch_flight_end:bad-args");
+            assert!(!err.contains(secret));
+        }
     }
 }
