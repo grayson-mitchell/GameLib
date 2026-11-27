@@ -134,10 +134,10 @@ fn cache_name(name: &str) -> bool {
             .all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-')
 }
 
-/// The table row a store key names: a listed row with a file name, `settings/global`,
-/// `GamesConfig/<app>` (the `settings/game` pattern row) or a runtime `store_cache/<name>`. Anything
-/// else (an unknown directory, a path escape, the pattern row's own key) is `None`.
-fn row_for_store_key(key: &str) -> Option<TableRow> {
+/// The table's answer alone for a store key: a listed row with a file name, `settings/global`, or
+/// `GamesConfig/<app>` (the `settings/game` pattern row). Anything else, including a runtime
+/// `store_cache/<name>` the table does not list, is `None`. Ownership uses this.
+fn table_row_for_store_key(key: &str) -> Option<TableRow> {
     if let Some(app) = key.strip_prefix("GamesConfig/") {
         return if plain_name(app) {
             row_for_key("settings/game").cloned()
@@ -145,50 +145,33 @@ fn row_for_store_key(key: &str) -> Option<TableRow> {
             None
         };
     }
-    if let Some(row) = row_for_key(key) {
-        return row.name.is_some().then(|| row.clone());
+    let row = row_for_key(key)?;
+    row.name.is_some().then(|| row.clone())
+}
+
+/// The table row a store key names: a listed row with a file name, `settings/global`,
+/// `GamesConfig/<app>` (the `settings/game` pattern row) or a runtime `store_cache/<name>`. Anything
+/// else (an unknown directory, a path escape, the pattern row's own key) is `None`. The runtime
+/// branch is a shape check (the frame parser and the shared vectors), not ownership: see
+/// [`owned_row`].
+fn row_for_store_key(key: &str) -> Option<TableRow> {
+    if key.starts_with("GamesConfig/") || row_for_key(key).is_some() {
+        return table_row_for_store_key(key);
     }
     let name = key.strip_prefix("store_cache/")?;
     cache_name(name).then(|| runtime_cache_row(key.to_string(), "store_cache", name))
 }
 
-/// The runtime `store_cache/<name>` names the shell will own: `RECOGNIZED_CACHE_STORE_NAMES` of
-/// `storePolicy.ts` (the boot-set library caches, then the denied one). A runtime cache name is
-/// only ever one the sidecar's `storeNew` would construct, so a frame for any other name is refused
-/// `not-owned` and never creates a file (T-85-30). A test asserts this list equals
-/// `recognizedCacheStoreNames` in `storeChannels.json` (the one policy file `storePolicy.ts` and
-/// `store_policy.rs` read, 85-16), so the two cannot drift.
-///
-/// Every name here is also a table row (`user-state`), and a listed row follows its own family, so
-/// today the runtime branch owns nothing the table does not already name: the list is the gate a
-/// future runtime cache must pass, kept on both sides so the two refuse the same names.
-pub(crate) const RUNTIME_CACHE_NAMES: [&str; 5] = [
-    "legendary_library",
-    "gog_library",
-    "nile_library",
-    "steam_library",
-    "humble_library",
-];
-
-/// Whether a `store_cache/<name>` key is one the shell may open: a table row decides for itself, a
-/// runtime name must be in `recognised`. Any other key (not under `store_cache/`) is not a runtime
-/// cache and passes.
-fn runtime_cache_recognised(key: &str, recognised: &[&str]) -> bool {
-    let Some(name) = key.strip_prefix("store_cache/") else {
-        return true;
-    };
-    row_for_key(key).is_some() || recognised.contains(&name)
-}
-
-/// The row of a store this shell owns, or `None`: the key names no store, the store cannot be
-/// opened by a frame (`native` and `excluded` rows), or it is a runtime cache name outside
-/// `recognised`.
-fn owned_row(key: &str, recognised: &[&str]) -> Option<TableRow> {
-    let row = row_for_store_key(key)?;
-    (row.store_kind().is_some()
-        && runtime_cache_recognised(key, recognised)
-        && store_boot::is_rust_owned(&row))
-    .then_some(row)
+/// The row of a store this shell owns, or `None`: the key names no store the table lists, or the
+/// store cannot be opened by a frame (`native` and `excluded` rows). The store table alone decides
+/// ownership. A `store_cache/<name>` the table does not list is shape-valid (it parses, as the
+/// shared vectors require) but is refused `not-owned` and never gets a file (T-85-30). Every
+/// recognised cache name in `storeChannels.json` is a table row (a test pins it), which is also
+/// what the native storeNew path in `store_native.rs` relies on; a future runtime cache is added as
+/// a table row.
+fn owned_row(key: &str) -> Option<TableRow> {
+    let row = table_row_for_store_key(key)?;
+    (row.store_kind().is_some() && store_boot::is_rust_owned(&row)).then_some(row)
 }
 
 /// Whether a store key names a settings document (`settings/global`, `GamesConfig/<app>`), which
@@ -538,7 +521,7 @@ impl Dispatcher {
             self.reply(&store, 0, "refused", seq, Some("evicted"));
             return;
         }
-        let target = owned_row(&store, &RUNTIME_CACHE_NAMES);
+        let target = owned_row(&store);
         let Some(row) = target else {
             self.reply(&store, 0, "refused", seq, Some("not-owned"));
             return;
@@ -1426,27 +1409,31 @@ mod tests {
     }
 
     #[test]
-    fn store_frame_runtime_cache_names_equal_the_recognised_names_of_the_policy_file() {
-        // 85-16: storePolicy.ts reads its lists from storeChannels.json, which store_policy.rs
-        // parses; the shell's runtime list must be that list, in its order.
+    fn store_frame_every_recognised_cache_name_is_an_owned_table_row() {
+        // The policy file's recognised cache names are all store-table rows, which is why the shell
+        // needs no list of its own; a new recognised name must arrive as a table row.
         let recognised = crate::store_policy::policy().recognized_cache_store_names();
         assert!(!recognised.is_empty());
-        assert_eq!(
-            RUNTIME_CACHE_NAMES.map(str::to_string).to_vec(),
-            recognised.to_vec(),
-            "RUNTIME_CACHE_NAMES drifted from storeChannels.json"
-        );
-        // The name pattern this shell checks is the one the sidecar checks.
-        for name in RUNTIME_CACHE_NAMES {
+        for name in recognised {
+            // The name pattern this shell checks is the one the sidecar checks.
             assert!(crate::store_policy::is_plausible_cache_name(name), "{name}");
+            let key = format!("store_cache/{name}");
+            assert!(
+                row_for_key(&key).is_some(),
+                "{key} is recognised in storeChannels.json but is not a store-table row: add it as one"
+            );
+            assert!(
+                owned_row(&key).is_some(),
+                "{key} is recognised in storeChannels.json but the shell does not own it: add it as a store-table row"
+            );
         }
     }
 
     #[test]
-    fn store_frame_owned_row_takes_every_openable_row_and_refuses_unrecognised_runtime_names() {
-        let recognised = ["fresh_runtime_cache"];
-        let owned = |key: &str| owned_row(key, &recognised);
-        // A table row is Rust's whatever the recognised list says, in every family (85-21).
+    fn store_frame_owned_row_takes_every_openable_row_and_refuses_every_runtime_name_the_table_does_not_list(
+    ) {
+        let owned = owned_row;
+        // A table row is Rust's, in every family (85-21).
         for key in [
             "store_cache/steam_metadata",
             "store/wine-downloader-info",
@@ -1458,15 +1445,18 @@ mod tests {
         ] {
             assert!(owned(key).is_some(), "{key}");
         }
-        // A recognised runtime name is a cache-family store and opens as a cache.
-        let row = owned("store_cache/fresh_runtime_cache").unwrap();
-        assert_eq!(row.family, gamelib_store::table::Family::Cache);
-        assert_eq!(row.dir, "store_cache");
+        // A runtime name the table does not list is shape-valid (it parses, as the shared vectors
+        // need) but is not owned: the split between parsing and ownership.
+        let shape = row_for_store_key("store_cache/fresh_runtime_cache").unwrap();
+        assert_eq!(shape.family, gamelib_store::table::Family::Cache);
+        assert_eq!(shape.dir, "store_cache");
         // The native and excluded rows open by no frame.
         assert!(owned("store/uploadedLogs").is_none());
         assert!(owned("store/migrations").is_none());
-        // An unrecognised name, or one that fails the pattern, is not owned.
+        // A name the table does not list, or one that fails the pattern, is not owned.
         for key in [
+            "store_cache/fresh_runtime_cache",
+            "store_cache/custom_cache",
             "store_cache/brand_new_cache",
             "store_cache/a.b",
             "store_cache/../../etc",
@@ -1476,23 +1466,6 @@ mod tests {
         ] {
             assert!(owned(key).is_none(), "{key}");
         }
-        // The shipped list admits exactly the recognised names that are not table rows.
-        for name in RUNTIME_CACHE_NAMES {
-            let key = format!("store_cache/{name}");
-            assert!(
-                runtime_cache_recognised(&key, &RUNTIME_CACHE_NAMES),
-                "{key}"
-            );
-            assert!(row_for_key(&key).is_some(), "{key} is a table row");
-        }
-        assert!(!runtime_cache_recognised(
-            "store_cache/brand_new_cache",
-            &RUNTIME_CACHE_NAMES
-        ));
-        assert!(runtime_cache_recognised(
-            "GamesConfig/480",
-            &RUNTIME_CACHE_NAMES
-        ));
     }
 
     #[test]
@@ -1506,8 +1479,8 @@ mod tests {
             &rig,
             frame(2, "store/wine-downloader-info", "set", Some("b"), Some("2")),
         );
-        // A runtime name outside the recognised list: shape-valid (the shared vector says so), but
-        // not owned, and no file appears.
+        // A runtime name the table does not list: shape-valid (the shared vector says so), but not
+        // owned, and no file appears.
         send(
             &rig,
             frame(3, "store_cache/custom_cache", "set", Some("c"), Some("3")),
