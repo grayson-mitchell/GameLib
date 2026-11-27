@@ -22,7 +22,6 @@ import type { LibraryManager } from 'common/types/game_manager'
 import type LogWriter from 'backend/logger/targetWriter'
 
 // launcher.ts reaches store-specific code only through this module (D-13).
-export type { LegendaryCommand } from 'backend/storeManagers/legendary/commands'
 
 /**
  * Store-specific launch work that launcher.ts used to branch on by runner.

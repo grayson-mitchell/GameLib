@@ -39,11 +39,6 @@ import type LogWriter from 'backend/logger/targetWriter'
  * one redacted command line), and there is no TypeScript fallback (D-19), so a call Rust could not make rejects the caller.
  */
 
-/** The names Rust knows a log sanitizer by (`logSanitizer` of the call). */
-export type RunnerLogSanitizerName = NonNullable<
-  CallRunnerOptions['logSanitizer']
->
-
 /** What the adapter takes from the rest of the backend, all of it passed in at boot (88.2-21). */
 export interface RunnerAdapterDeps extends RustInvokeDeps {
   /** The table `registerRunnerOutputListener` feeds, built with `createRunnerStreams({ kill })`. */
@@ -64,7 +59,7 @@ export type RunnerAdapterCallOptions = CallRunnerOptions & {
  * The options of a wine command: the TS ones, and the spawn class Rust runs the child as (`game` for the sideload wine launch,
  * a child that outlives GameLib; `helper`, the default, for everything else).
  */
-export type RunnerAdapterWineOptions = CallRunnerOptions & {
+type RunnerAdapterWineOptions = CallRunnerOptions & {
   spawnClass?: 'helper' | 'game'
 }
 
@@ -84,7 +79,7 @@ export interface WineCommandResult {
 }
 
 /** `WineCommandArgs` with the adapter's wine options. A `WineCommandArgs` is assignable to it. */
-export type RunnerAdapterWineCommandArgs = Omit<WineCommandArgs, 'options'> & {
+type RunnerAdapterWineCommandArgs = Omit<WineCommandArgs, 'options'> & {
   options?: RunnerAdapterWineOptions
 }
 

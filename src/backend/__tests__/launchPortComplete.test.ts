@@ -780,6 +780,219 @@ describe('commandRunnerPortComplete', () => {
   })
 })
 
+/** The one file 88.2 leaves as scheduled shims: the runner, the wine command, the script, the spawnAsync and the tracked-kill transport calls. */
+const RUNNER_SURVIVOR_FILES = ['src/backend/launchrust/runner.ts'] as const
+
+/**
+ * The interim glue 88.2 leaves, a named table with the phase that deletes each name (88.2-24, D-25, ROADMAP 88.2 SC4).
+ * These are not schedule rows: they are adapters and a stream table around the shims, not shims themselves.
+ * `runnerAdapter.ts` gives every manager the old `commandRunner` shape over the runner transport (`createRunnerAdapter`, the
+ * two reply settlers, and the types `RunnerProps`, `WineCommandResult`, `RunnerAdapter` and the call-option types), and
+ * leaves with the launchers' Steam bridge in 97; `runnerStream.ts` (`createRunnerStreams` and the stream types)
+ * holds the callbacks a caller of `callRunner` or `runWineCommand` watches its output through, and `spawnAsync.ts`
+ * (`createSpawnAsync` and the `SpawnAsync` type) is the `spawnAsync` adapter over `launch_spawn_async`; both leave with the
+ * managers' own phase (98). A type export is no value, so the walk behind `survivorDiff` does not list it.
+ */
+const RUNNER_INTERIM_GLUE: readonly SurvivorRow[] = [
+  {
+    file: 'src/backend/runnerAdapter.ts',
+    name: 'createRunnerAdapter',
+    deletedBy: 97
+  },
+  {
+    file: 'src/backend/runnerAdapter.ts',
+    name: 'settleExecResult',
+    deletedBy: 97
+  },
+  {
+    file: 'src/backend/runnerAdapter.ts',
+    name: 'settleWineCommandResult',
+    deletedBy: 97
+  },
+  {
+    file: 'src/backend/runnerStream.ts',
+    name: 'createRunnerStreams',
+    deletedBy: 98
+  },
+  { file: 'src/backend/spawnAsync.ts', name: 'createSpawnAsync', deletedBy: 98 }
+]
+
+/** The three files the runner interim glue table covers. */
+const RUNNER_INTERIM_GLUE_FILES = [
+  'src/backend/runnerAdapter.ts',
+  'src/backend/runnerStream.ts',
+  'src/backend/spawnAsync.ts'
+] as const
+
+/** The phases that may delete a runner interim glue name: the Steam bridge (97) and the managers (98). */
+const RUNNER_INTERIM_GLUE_DELETED_BY: readonly number[] = [97, 98]
+
+/**
+ * The schedule's rows for `files` plus one row per `register*` helper those rows name in `wiring`. A helper only installs
+ * its row's listeners, so it is covered by being named there (the schedule's own rule), and `survivorDiff` can then compare
+ * every export of the file both ways.
+ */
+function rowsWithWiring(
+  schedule: readonly (SurvivorRow & { wiring?: readonly string[] })[],
+  files: readonly string[]
+): SurvivorRow[] {
+  const rows = schedule.filter((r) => files.includes(r.file))
+  return [
+    ...rows,
+    ...rows.flatMap((r) =>
+      (r.wiring ?? []).map((name) => ({
+        file: r.file,
+        name,
+        deletedBy: r.deletedBy
+      }))
+    )
+  ]
+}
+
+/**
+ * 88.2-24, D-25 and ROADMAP 88.2 SC4: with the TS runner deleted, what is left of 88.2 is a named survivor. Every export of
+ * `launchrust/runner.ts` is a schedule row (or a `register*` wiring helper a row names) and every row's export exists; every
+ * export of `runnerAdapter.ts`, `runnerStream.ts` and `spawnAsync.ts` is in the interim glue table and every table row's
+ * export exists (both ways each); nothing is due in 88.2.
+ */
+describe('commandRunnerSurvivors', () => {
+  const shimRows = SCHEDULE.filter((r) =>
+    (RUNNER_SURVIVOR_FILES as readonly string[]).includes(r.file)
+  )
+
+  it('anti-vacuity: the runner shim file is read and 11 rows are scheduled, and the glue table names 5 survivors in 3 files', () => {
+    // 11 rows (runnerCall, runnerKill, runnerAbort, wineCommandRun, winePathGet, scriptRun, spawnAsyncRun, trackedKill,
+    // trackedKillAll, gamesRunning, askForceUninstall) and two wiring helpers, measured on 2026-11-27.
+    assertAtOrAboveFloor('runner shim rows', shimRows.length, 11)
+    for (const file of RUNNER_SURVIVOR_FILES) {
+      expect(tsWalk.files.some((f) => f.path === file)).toBe(true)
+      expect(shimRows.some((r) => r.file === file)).toBe(true)
+    }
+    assertAtOrAboveFloor(
+      'runner interim glue rows',
+      RUNNER_INTERIM_GLUE.length,
+      5
+    )
+    for (const file of RUNNER_INTERIM_GLUE_FILES) {
+      expect(tsWalk.files.some((f) => f.path === file)).toBe(true)
+      expect(RUNNER_INTERIM_GLUE.some((r) => r.file === file)).toBe(true)
+    }
+  })
+
+  it('every export of launchrust/runner.ts is a schedule row or a wiring helper a row names, and every row is exported', () => {
+    expect(
+      survivorDiff(
+        tsWalk.files,
+        rowsWithWiring(SCHEDULE, RUNNER_SURVIVOR_FILES),
+        RUNNER_SURVIVOR_FILES
+      )
+    ).toEqual({ unscheduled: [], orphaned: [] })
+  })
+
+  it('every export of runnerAdapter.ts, runnerStream.ts and spawnAsync.ts is in the interim glue table, and every table row is exported', () => {
+    expect(
+      survivorDiff(tsWalk.files, RUNNER_INTERIM_GLUE, RUNNER_INTERIM_GLUE_FILES)
+    ).toEqual({ unscheduled: [], orphaned: [] })
+  })
+
+  it('every runner glue row names a deletion phase of 97 or 98, and none is also a schedule row', () => {
+    expect(
+      RUNNER_INTERIM_GLUE.filter(
+        (r) => !RUNNER_INTERIM_GLUE_DELETED_BY.includes(r.deletedBy)
+      ).map((r) => `${r.file}#${r.name}: ${String(r.deletedBy)}`)
+    ).toEqual([])
+    expect(
+      SCHEDULE.filter((r) =>
+        (RUNNER_INTERIM_GLUE_FILES as readonly string[]).includes(r.file)
+      ).map((r) => `${r.file}#${r.name}`)
+    ).toEqual([])
+  })
+
+  it('no row is due in 88.2 (nothing the sub-phase ports leaves a survivor due inside it)', () => {
+    expect(rowsDueIn(SCHEDULE, 88.2)).toEqual([])
+  })
+
+  describe('planted violations', () => {
+    const planted = (path: string, code: string): StrippedFile => ({
+      path,
+      raw: code,
+      code
+    })
+    const [shims] = RUNNER_SURVIVOR_FILES
+    const [adapter, stream, spawn] = RUNNER_INTERIM_GLUE_FILES
+    const glue = (file: string, name: string, deletedBy = 97): SurvivorRow => ({
+      file,
+      name,
+      deletedBy
+    })
+
+    it('self-test: an export of a runner glue file that is not in the table is reported unscheduled', () => {
+      const files = [
+        planted(adapter, 'export function a() {}\nexport const stray = 1'),
+        planted(stream, 'export function b() {}'),
+        planted(spawn, 'export function c() {}')
+      ]
+      expect(
+        survivorDiff(
+          files,
+          [glue(adapter, 'a'), glue(stream, 'b', 98), glue(spawn, 'c', 98)],
+          RUNNER_INTERIM_GLUE_FILES
+        )
+      ).toEqual({ unscheduled: [`${adapter}#stray`], orphaned: [] })
+    })
+
+    it('self-test: a glue table row naming something the file does not export is reported orphaned', () => {
+      const files = [
+        planted(adapter, 'export function a() {}'),
+        planted(stream, 'export function b() {}'),
+        planted(spawn, 'export function c() {}')
+      ]
+      expect(
+        survivorDiff(
+          files,
+          [
+            glue(adapter, 'a'),
+            glue(stream, 'b', 98),
+            glue(spawn, 'c', 98),
+            glue(spawn, 'gone', 98)
+          ],
+          RUNNER_INTERIM_GLUE_FILES
+        )
+      ).toEqual({ unscheduled: [], orphaned: [`${spawn}#gone`] })
+    })
+
+    it('self-test: an unscheduled export of the shim file and an orphaned shim row are each found, and a wiring helper is covered only when a row names it', () => {
+      const code =
+        'export function a() {}\nexport function registerA() {}\nexport function stray() {}'
+      const files = [planted(shims, code)]
+      const rows = [{ ...glue(shims, 'a'), wiring: ['registerA'] }]
+      expect(
+        survivorDiff(files, rowsWithWiring(rows, [shims]), [shims])
+      ).toEqual({ unscheduled: [`${shims}#stray`], orphaned: [] })
+      expect(
+        survivorDiff(
+          [planted(shims, 'export function a() {}')],
+          rowsWithWiring(
+            [{ ...glue(shims, 'a'), wiring: ['registerGone'] }],
+            [shims]
+          ),
+          [shims]
+        )
+      ).toEqual({ unscheduled: [], orphaned: [`${shims}#registerGone`] })
+    })
+
+    it('self-test: a planted row due in 88.2 is found, and a glue phase outside 97 and 98 is found', () => {
+      const due = [glue(adapter, 'a', 88.2), glue(stream, 'b', 98)]
+      expect(rowsDueIn(due, 88.2).map((r) => r.name)).toEqual(['a'])
+      expect(
+        [glue(adapter, 'a', 93), glue(stream, 'b', 98)]
+          .filter((r) => !RUNNER_INTERIM_GLUE_DELETED_BY.includes(r.deletedBy))
+          .map((r) => r.name)
+      ).toEqual(['a'])
+    })
+  })
+})
+
 describe('noRollbackFlag', () => {
   it('anti-vacuity: the walks read real trees', () => {
     assertAtOrAboveFloor(

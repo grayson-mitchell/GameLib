@@ -52,7 +52,6 @@ export default class SideloadGame implements Game {
       | 'launcher'
       | 'commandRunner'
       | 'spawnAsync'
-      | 'runner'
       | 'config'
       | 'gameConfigs'
       | 'paths'

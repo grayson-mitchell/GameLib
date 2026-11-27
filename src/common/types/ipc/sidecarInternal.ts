@@ -326,11 +326,6 @@ export const sidecarInternalCallers = {
 /** One Rust steampoll state event, as validated off the wire. */
 export type SteamPollStateEvent = z.infer<typeof steamPollStateEvent>
 
-/** The op of one `launchManagerCall`. */
-export type LaunchManagerOp = (typeof managerHookOps)[number]
-/** The game one `launchManagerCall` names. */
-export type LaunchManagerGame = z.infer<typeof managerHookGame>
-
 /** One `runnerOutput` frame, as validated off the wire. */
 export type RunnerOutputFrame = z.infer<typeof runnerOutputFrame>
 /** One `runnerSpawned` frame, as validated off the wire. */

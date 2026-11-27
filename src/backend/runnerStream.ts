@@ -19,7 +19,7 @@ import type {
  */
 
 /** How many frames behind a gap a stream holds before it delivers past the gap. */
-export const MAX_PENDING = 256
+const MAX_PENDING = 256
 
 /**
  * The handle a stream's callbacks get for the run's child: structurally the runner's `ChildHandle`. `pid` is undefined
@@ -34,7 +34,7 @@ export interface RunnerChildHandle {
 }
 
 /** What the caller of a runner call wants to hear, in the TS callers' own shape. */
-export interface RunnerStreamCallbacks {
+interface RunnerStreamCallbacks {
   /** One chunk of the child's output, with the run's handle. */
   onOutput?: (chunk: string, child: RunnerChildHandle) => void
   /** The child started; called once, with the handle every later `onOutput` carries. */
