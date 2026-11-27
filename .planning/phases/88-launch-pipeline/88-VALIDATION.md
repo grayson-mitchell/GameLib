@@ -46,12 +46,12 @@ Filled in by the planner/executor per task. Requirement-level map; the Sub-phase
 
 | Req / SC | Sub-phase | Behavior | Test Type | Automated Command | File Exists | Status |
 |----------|-----------|----------|-----------|-------------------|-------------|--------|
-| SVC-03 / SC1 | 88.1 | builders match TS vectors (env, wrappers, gamescope, known-fix env, prepare ops) | Rust replay of TS vectors | `cargo test -p gamelib-launch --test golden_builders` | ✅ | ✅ green at P `c25d9ca19` with 124 cases (88.1-21..24; re-recorded from `21a57af08`; was P `ab7876c01` at 113, 88.1-20; three-OS CI pending the push) |
+| SVC-03 / SC1 | 88.1 | builders match TS vectors (env, wrappers, gamescope, known-fix env, prepare ops) | Rust replay of TS vectors | `cargo test -p gamelib-launch --test golden_builders` | ✅ | ✅ green at P `0e8778606` with 124 cases (88.1-21..24; re-recorded from `21a57af08`; was P `ab7876c01` at 113, 88.1-20; three-OS CI pending the push) |
 | SVC-03 / SC1 | 88.1 | spawn traces: native, Wine/Proton/CrossOver, gamescope/mangohud, overlay, pre/post (argv, full env, cwd, class, order) | Rust replay of TS traces | `cargo test -p gamelib-launch --test golden_launch` | ✅ | ✅ green (P `ab7876c01`, 88.1-20; three-OS CI pending the push) |
 | SVC-03 / SC1 | 88 | known-fix reader, layering, registry, overlay archive/install, fetch | replay + ported incident tests | `cargo test -p gamelib-knownfix` | ✅ | ✅ green (P `68979200f`, 88-17; three-OS CI green at P' `c5ae345ae`) |
 | SVC-03 / SC1 | 88.2 | runner command argv/env, redacted log line, streamed line sequence | replay | `cargo test -p gamelib-launch --test golden_runner` | ✅ | ✅ green at P `6a2265258` (golden_runner 93 of 93, redaction 88, wine_launch 41 plus 16 wine_command, wine_path 16, script 18, spawn_async 33, error_handler 108; three-OS CI green at P' `25bc3b526`: rust-test.yml run 45959503130, all three legs, see `## CI proof (88.2)`) |
 | SVC-03 / SC2 | 88.3 | funnel order, status events, single-flight join, release on failure | funnel oracle replay | `cargo test -p gamelib-launch --test funnel` | ❌ W0 | ⬜ pending |
-| SVC-03 / SC2 | 88.2 | stub game: start, quit-kill, survives parent SIGKILL (three OS) | CI smoke + orphan harness | `cargo test -p gamelib-proc` ; `cargo test -p gamelib-launch --test stub_game` | ✅ | ✅ green at P `6a2265258` on macOS (gamelib-proc 60 passed; stub_game 5 passed) and on three-OS CI at P' `25bc3b526` (rust-test.yml run 45959503130: stub_game 5 passed on each leg; gamelib-proc orphans 9 on windows-latest including the A5 arm, 13 on macos-latest and ubuntu-latest); green at P `c25d9ca19` after the 88.2 gap closure (macOS clean-worktree proof, re-recorded from `9001fbbe8` after the macOS clippy ratchet went green again; three-OS CI of the gap closure pending the push) |
+| SVC-03 / SC2 | 88.2 | stub game: start, quit-kill, survives parent SIGKILL (three OS) | CI smoke + orphan harness | `cargo test -p gamelib-proc` ; `cargo test -p gamelib-launch --test stub_game` | ✅ | ✅ green at P `6a2265258` on macOS (gamelib-proc 60 passed; stub_game 5 passed) and on three-OS CI at P' `25bc3b526` (rust-test.yml run 45959503130: stub_game 5 passed on each leg; gamelib-proc orphans 9 on windows-latest including the A5 arm, 13 on macos-latest and ubuntu-latest); green at P `0e8778606` after the 88.2 gap closure (macOS clean-worktree proof, re-recorded from `9001fbbe8` after the macOS clippy ratchet went green again; three-OS CI of the gap closure pending the push) |
 | SVC-03 / SC2 | 88.3 | stub game: single-flight join through the funnel (three OS, D-04, D-16) | CI smoke | `cargo test -p gamelib-launch --test stub_game` | ❌ W0 | ⬜ pending |
 | SVC-03 / SC2 | 88.2 | Windows quoting against a real exe | Windows-leg cross-check | `cargo test -p gamelib-launch --test windows_quoting` | ✅ | ✅ green on windows-latest at P' `25bc3b526` (2 passed, rust-test.yml run 45959503130); the binary runs 0 tests on macOS and Linux by design, so Windows CI is the only evidence |
 | SVC-03 / SC2 | 88.3 | live: launches, single flight + quit (D-27 game-running prompt), Force Quit survival + re-adopt, known fix + scripts | operator, signed build | `88-HUMAN-UAT.md` | ✅ authored by 88-01 (not yet run) | ⬜ pending |
@@ -403,14 +403,14 @@ on Linux (1 passed) and the Windows sysinfo code now compiles and passes its tes
 
 ## Gap closure proof (88.1-21..24)
 
-Measured by plan 88.1-24 Task 1, first at `21a57af08` (2026-11-27, main working tree) and **re-recorded 2026-11-28 at the head below**, because the push had to wait for the 88.2
+Measured by plan 88.1-24 Task 1, first at `21a57af08` (2026-11-27, main working tree) and **re-recorded 2026-11-28 at the head below** (twice: at `c25d9ca19`, then again at `0e8778606` after the first push's CI found two test races, see the 88.2 section), because the push had to wait for the 88.2
 gap closure and the head moved on: `git diff --name-only 21a57af08 d22791b32` lists Rust and frontend files of other sessions and of 88.2 (`gamelib-launch`, `gamelib-proc`, `gamelib-info`, TypeScript quit and
 runner files), so the old P no longer satisfies the push-time "nothing outside `.planning/`" check. The re-measurement ran in the same clean `git worktree add --detach` checkout of P
 that 88.2-31 uses (under the session scratchpad, removed afterwards; its own `pnpm install --frozen-lockfile`, `pnpm exec vite build`, `pnpm build:sidecar-sea`, `.build-tools/zig` copied in), macOS arm64
 only (Windows and Linux are proven by CI, D-30, in the next section). `git status --porcelain --untracked-files=no -- src-tauri src meta` was empty in the main tree before the checkout and
-`git diff --name-only P HEAD` lists nothing outside `.planning/` (P is main's HEAD, `c25d9ca19`, which includes the macOS clippy fix `d22791b32` for `gamelib-info`).
+`git diff --name-only P HEAD` lists nothing outside `.planning/` (P is main's HEAD, `0e8778606`, which includes the macOS clippy fix `d22791b32` for `gamelib-info`, 88.2-31's test-race fix `0e8778606` and another session's `quick-261128-9fj` `gamelib-shortcuts` commits). Every step number below is identical to the re-measurement at `c25d9ca19`.
 
-P: c25d9ca19f533bf662d1f8ea879902dcd998b51f
+P: 0e8778606c5ed05af3e7563b5e1952450ba48089
 
 Ancestry: the SUMMARYs 88.1-21, 88.1-22 and 88.1-23 exist and every commit they list is an ancestor of P (`git merge-base --is-ancestor`, 0 exceptions): 88.1-21 `24864a245`,
 `f9768d7c8`, `5e08206b0`; 88.1-22 `c03fe9af0`, `0b0b7258c`, `216206ebc`; 88.1-23 `978f256be`, `02269203f`. All eight, and 88.1-24's own Task 1 commit `3b721a03c`, are already on origin/main
@@ -651,14 +651,14 @@ would have held it), which is the cost of the fallback and is recorded here, not
 
 ## Gap closure proof (88.2-26..31)
 
-Measured by plan 88.2-31 Task 1, first at `9001fbbe8` (2026-11-27) and **re-recorded 2026-11-28 at the head below**: the first measurement's macOS clippy ratchet (step 7) was red on another
+Measured by plan 88.2-31 Task 1, first at `9001fbbe8` (2026-11-27) and **re-recorded 2026-11-28 at the head below** (at `c25d9ca19`, then again at `0e8778606` after the first push's CI found two test races in 88.2 test files, fixed in `0e8778606`; every step number is identical at both heads): the first measurement's macOS clippy ratchet (step 7) was red on another
 session's file and held the push; `d22791b32` (`fix(info)`, the `gamelib-info` test copies its log lines instead of holding a `MutexGuard` across an await) cleared it, so every step was re-run. Measured
 from a clean `git worktree add --detach` checkout of P (under the session scratchpad, removed afterwards) with its own
 `pnpm install --frozen-lockfile`, `pnpm exec vite build` and `pnpm build:sidecar-sea` (and `.build-tools/zig` copied in from the main tree, as 88.2-25 did), macOS arm64
-only (Windows and Linux are proven by CI, D-30). P is main's HEAD at the re-measurement, and `git diff --name-only d22791b32 P` lists nothing outside `.planning/`. `git status --porcelain --untracked-files=no -- src-tauri src meta` was empty in the
+only (Windows and Linux are proven by CI, D-30). P is main's HEAD at the re-measurement. Between `d22791b32` and P the non-`.planning/` changes are 88.2-31's own test fix (`gamelib-launch` `tests/stub_game.rs` and `tests/spawn_async_real.rs`, the two arms observed in step 5 `... ok`) and another session's `quick-261128-9fj` commits in `gamelib-shortcuts` (the clean worktree's steps 5 to 8 run over them). `git status --porcelain --untracked-files=no -- src-tauri src meta` was empty in the
 main tree before the checkout.
 
-P: c25d9ca19f533bf662d1f8ea879902dcd998b51f
+P: 0e8778606c5ed05af3e7563b5e1952450ba48089
 
 Ancestry: the SUMMARYs 88.2-26, 88.2-27, 88.2-28, 88.2-29 and 88.2-30 exist and every commit they list (and every `plan_head_before` and `plan_head_after` in their
 frontmatter) is an ancestor of P (`git merge-base --is-ancestor`, 0 exceptions). P includes the two orchestrator fix commits `bf4356048` (88.2-28's `STUBBORN_GROUP` test race)
@@ -722,10 +722,10 @@ not here.
 The operator chose `push` in the orchestrator session before Task 3 ran ("Push now; allow follow-up fix commits for CI-only failures in files 88.2-26..30 wrote, without
 asking again"), and authorised the executor, while the operator slept, to fix a CI failure in another session's file too if that session is idle (no commits to those files in the
 last two hours and no uncommitted changes to them), and otherwise to record it as not claimed green and continue. What they saw: `git log origin/main..main` was 42 commits ahead, by subject scope 88.2-26 x7, 88.2 x7, 88.2-27 x5, 88.2-28 x3, 88.2-25 x2, quick-261127-upb x4,
-quick-261127-u6h x4, quick-261127-vbq x3, quick-261127-vna x1, todo x3, info x2, 93 x1, and that the push also publishes other sessions' commits. At P the list is 63 commits
-(origin/main `25bc3b526` is an ancestor of P): 88.2-26 x7, 88.2-27 x5, 88.2-28 x4, 88.2-29 x3, 88.2-30 x6 (25 of them this gap closure's) and 88.2-31 x1 (the first proof record), 88.2-25 x2 and 88.2 x7
+quick-261127-u6h x4, quick-261127-vbq x3, quick-261127-vna x1, todo x3, info x2, 93 x1, and that the push also publishes other sessions' commits. At the first push (head `0f3d39f16`, which is `c25d9ca19` plus the re-recorded proofs) the list was 64 commits
+(origin/main `25bc3b526` was an ancestor of it; 63 of them are counted here at `c25d9ca19`): 88.2-26 x7, 88.2-27 x5, 88.2-28 x4, 88.2-29 x3, 88.2-30 x6 (25 of them this gap closure's) and 88.2-31 x1 (the first proof record), 88.2-25 x2 and 88.2 x7
 (88.2 review, UAT and plans), and 28 others: quick-261127-vy3 x4, upb x4, u6h x4, w77 x3, vbq x3, vna x1, todo x5, info x3 and phase 93 x1 (other sessions'). The complete list is in `88.2-31-SUMMARY.md`.
-The push that was held at `9001fbbe8` (step 7 red on another session's file) is released: step 7 is green at P.
+The push that was held at `9001fbbe8` (step 7 red on another session's file) was released once step 7 went green (`d22791b32`). The first push went out as `25bc3b526..0f3d39f16`; the second, after the CI fix, is described in the CI proof section.
 
 The three-OS CI proof of these cases is the next section, written after the push.
 
