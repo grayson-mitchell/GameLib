@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: "88.2"
 current_phase_name: Command runner and game processes
 status: executing
-stopped_at: Completed 88.2-19-PLAN.md
-last_updated: "2026-11-27T00:26:44.517Z"
+stopped_at: Completed 88.2-20-PLAN.md
+last_updated: "2026-11-27T00:42:16.334Z"
 last_activity: 2026-11-26
 last_activity_desc: Phase 88.2 execution started
-state_head: 9aabc8212978c3efc97d15bd3db06d7495b59eec
+state_head: ea457f65ed545c8d396f2a1c1b5ceebefdc3717c
 progress:
   total_phases: 25
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-25)
 ## Current Position
 
 Phase: 88.2 (Command runner and game processes) — EXECUTING
-Plan: 20 of 25
+Plan: 21 of 25
 Status: Ready to execute
 Last activity: 2026-11-26 — Phase 88.2 execution started
 Progress: [████████████████░░░░] 204/257 plans ([█████████░] 92%)
@@ -566,6 +566,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 88.2 P17 | 15 min | 2 tasks | 14 files |
 | Phase 88.2 P18 | 35 min | 2 tasks | 3 files |
 | Phase 88.2 P19 | 12 min | 2 tasks | 6 files |
+| Phase 88.2 P20 | 12 min | 2 tasks | 16 files |
 
 ## Accumulated Context
 
@@ -1278,6 +1279,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 88.2]: 88.2-17: runScriptForGame hands the game log writer off (claiming its rotation) only when verbose logs are on; a wine command's options cross as only env, wrappers and trackKey; spawnAsync carries timeoutMs as number or null
 - [Phase 88.2]: 88.2-18: ManagerHooks reach the TS managers over one long-running channel launchManagerCall ([op, {runner, appName}]); hooks look the sidecar up per call because the launch context is built before the sidecar spawns; every failure is HookError("sidecar") with no payload
 - [Phase 88.2]: 88.2-19: the quit dialog also opens for a running game read from the Rust registry (a failed read asks) and Yes ends it through trackedKillAll between killAllTracked and abortAll (D-27); leader death left unchanged and recorded: a game whose leader exits while a grandchild lives reads as not running
+- [Phase 88.2]: 88.2-20: registerLaunchManagerHooks validates launchManagerCall a second time and refuses naming at most a sanitised op, never the runner or app name; launch_ask_force_uninstall is unbounded like the dialog channels (T-88.2-27, T-88.2-48)
 
 ### Pending Todos
 
@@ -1564,8 +1566,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-27T00:26:41.280Z
-Stopped at: Completed 88.2-19-PLAN.md
+Last session: 2026-11-27T00:41:56.072Z
+Stopped at: Completed 88.2-20-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
