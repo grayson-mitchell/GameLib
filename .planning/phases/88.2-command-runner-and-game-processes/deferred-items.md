@@ -7,3 +7,12 @@
   `regular file`. Not investigated further: `valveClient.ts` imports nothing 88.2-24 touched (no runner, utils or
   launcher), and the machine's `/usr/bin/unzip` is Apple's Info-ZIP 6.00 build, so it looks environmental. Out of scope;
   left alone.
+
+## From 88.2-29
+
+- `children::tests::terminate_all_sigkills_a_tokio_helpers_member_that_ignores_sigterm` (added in 88.2-28) failed once
+  in about five runs of `cargo test -p gamelib-proc` on macOS, while the host was also compiling (`hard` was empty). Likely
+  cause, not confirmed: `STUBBORN_GROUP` prints the member's pid (`echo $!`) before the subshell's `trap '' TERM` is in
+  place, so under load SIGTERM can reach the member first and the group empties without a hard kill. Passes on every
+  quiet re-run (3 of 3). A readiness line after the trap would remove the race. Not touched by 88.2-29 (no change to
+  `terminate_all`); left alone.

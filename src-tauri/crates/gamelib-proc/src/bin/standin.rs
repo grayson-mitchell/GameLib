@@ -46,6 +46,11 @@
 //! `grandchildren`. `--stubborn-tree` (unix) adds two `stubborn-tree` helpers, one through
 //! `spawn_helper_with_pipes` (an owned entry) and one through `SpecProcRunner` (a tokio-registered
 //! entry), each with a SIGTERM-ignoring grandchild, so both are in `helpers` and `grandchildren`.
+//! `--spec-detach` runs one `detach` child through `SpecProcRunner` and waits (bounded) until that
+//! run has returned before printing the manifest, so the child has ended on its own and the runner has
+//! dropped its guard; its grandchild's pid goes in the manifest's `detached` array (always present,
+//! empty without the flag), not in `helpers` or `grandchildren`, because it is meant to outlive the
+//! run and the quit (WR-03).
 //! `--no-reaper` skips starting the reaper (the negative control: a SIGKILL of the
 //! parent must then leave its helpers alive). `--leak-pipe` (unix) adds a fourth helper holding a
 //! duplicate of the reaper pipe's write end as its stdin, so EOF never reaches the reaper.
@@ -279,6 +284,38 @@ fn run_spec_tree(mode: &'static str, label: &'static str) -> (u32, u32) {
     (child, grandchild)
 }
 
+/// Runs one `detach` child through `SpecProcRunner` on a background runtime thread and returns its
+/// grandchild's pid once the run itself has returned (the child exited, the runner released it).
+fn run_spec_detach() -> u32 {
+    let (pid_tx, pid_rx) = std::sync::mpsc::channel::<u32>();
+    let (done_tx, done_rx) = std::sync::mpsc::channel::<Option<i32>>();
+    let exe = std::env::current_exe().expect("current_exe");
+    std::thread::spawn(move || {
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("build runtime");
+        let mut spec = ProcSpec::new("standin-spec-detach", exe.to_string_lossy());
+        spec.argv = vec!["detach".into()];
+        spec.stdin = Some("go\n".into());
+        let on_line = Box::new(move |l: &str| {
+            if let Ok(pid) = l.trim().parse::<u32>() {
+                let _ = pid_tx.send(pid);
+            }
+        });
+        let out = rt.block_on(SpecProcRunner.run(spec, Some(on_line)));
+        eprintln!("[standin] detach run ended: code {:?}", out.code);
+        let _ = done_tx.send(out.code);
+    });
+    let wait = Duration::from_secs(15);
+    let grandchild = pid_rx.recv_timeout(wait).expect("detach grandchild pid");
+    let code = done_rx
+        .recv_timeout(wait)
+        .expect("the detach run to return");
+    assert_eq!(code, Some(0), "the detach child exits cleanly");
+    grandchild
+}
+
 // The child is deliberately never waited for: it idles until something kills it.
 #[allow(clippy::zombie_processes)]
 fn game(args: &[String]) -> ! {
@@ -430,6 +467,13 @@ fn parent(args: &[String]) {
         helpers.push(child);
         grandchildren.push(grandchild);
     }
+    // The spec-detach grandchild is meant to outlive the run and the quit, so it is in neither list
+    // the shared assertion expects dead.
+    let detached: Vec<u32> = if has_flag(args, "--spec-detach") {
+        vec![run_spec_detach()]
+    } else {
+        Vec::new()
+    };
     // Held until exit so the node sidecar's stdin stays open, as the shell's would.
     let _node_stdin = if has_flag(args, "--node-sidecar") {
         let (node, kids, stdin) = node_sidecar(&flag(args, "--node-sidecar"));
@@ -453,9 +497,10 @@ fn parent(args: &[String]) {
             .join(",")
     };
     let (helpers_json, grandchildren_json) = (join(&helpers), join(&grandchildren));
+    let detached_json = join(&detached);
     let reaper_json = reaper_pid.map_or("null".to_string(), |p| p.to_string());
     let manifest = format!(
-        r#"{{"helpers":[{helpers_json}],"grandchildren":[{grandchildren_json}],"games":[{game_pid},{game_child}],"reaper":{reaper_json}}}"#
+        r#"{{"helpers":[{helpers_json}],"grandchildren":[{grandchildren_json}],"games":[{game_pid},{game_child}],"detached":[{detached_json}],"reaper":{reaper_json}}}"#
     );
     let mut out = std::io::stdout();
     writeln!(out, "{manifest}").expect("write manifest");

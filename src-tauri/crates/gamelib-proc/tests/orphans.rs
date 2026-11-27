@@ -607,6 +607,48 @@ fn graceful_quit_sigkills_helper_grandchildren_that_ignore_sigterm() {
     assert_helpers_die_and_game_survives(&run, &paths);
 }
 
+/// WR-03: a `SpecProcRunner` child that ends on its own leaves what it started running, across the
+/// run's return and a graceful quit. The stand-in's `--spec-detach` flag runs a `detach` child (it
+/// starts one `idle` grandchild and exits 0) and prints the manifest only after that run has
+/// returned; the grandchild's pid is the manifest's `detached`. On Windows HEAD (before the fix) the
+/// guard drop closes the kill-on-close Job and kills it before the manifest is printed; on unix the
+/// reaper and `terminate_all` never knew the entry after its clean exit, so it passes there.
+#[test]
+fn a_spec_childs_background_process_survives_its_clean_exit_and_the_quit() {
+    let home = FakeHome::new("gamelib-proc-orphans");
+    let paths = Paths::new(&home);
+    let mut run = Run::start_with(&home, &paths, &["--spec-detach"]);
+    let detached = run.pids("detached");
+    assert_eq!(detached.len(), 1, "one detached grandchild");
+    let _strays = Strays(
+        run.pids("games")
+            .into_iter()
+            .chain(run.pids("helpers"))
+            .chain(run.pids("grandchildren"))
+            .chain(detached.iter().copied())
+            .collect(),
+    );
+    assert!(
+        is_alive(detached[0]),
+        "the detached grandchild is alive after its parent's clean exit"
+    );
+
+    run.quit();
+    run.wait_for_parent_exit();
+    // A bounded observation window (polled, never one sleep deciding a result): the quit drained
+    // every helper, and the detached process must still be here after all of it.
+    let until = Instant::now() + Duration::from_millis(2500);
+    while Instant::now() < until {
+        assert!(
+            is_alive(detached[0]),
+            "the detached grandchild {} died with the quit",
+            detached[0]
+        );
+        std::thread::sleep(POLL);
+    }
+    assert_helpers_die_and_game_survives(&run, &paths);
+}
+
 /// The game's `<pid> <stamp>` record the stand-in wrote for `--game-stamp`.
 fn read_game_stamp(paths: &Paths) -> (u32, u64) {
     let text = std::fs::read_to_string(&paths.game_stamp).expect("the stand-in wrote a game stamp");
