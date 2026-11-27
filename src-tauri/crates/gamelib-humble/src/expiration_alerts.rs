@@ -194,7 +194,7 @@ pub fn detect_and_notify_expiration_transitions(
         }
         newly_expiring.push(Transition {
             title: key.title.clone(),
-            date: en_us_date(ctx, current),
+            date: digest_date(ctx, current),
         });
     }
     outcome.newly_expiring = newly_expiring.len();
@@ -299,12 +299,14 @@ fn record(ctx: &HumbleCtx, store: &Store, key: &str, value: Json) -> io::Result<
     )
 }
 
-/// `new Date(expiration).toLocaleDateString()` pinned to en-US: `M/D/YYYY` with no padding, read in the
-/// host zone. An empty string is the TypeScript's `''` and an unparsable one its `Invalid Date`.
+/// `new Date(expiration).toLocaleDateString(<language>)`: the date in the layout of the UI language (see
+/// [`date_layout`]), read in the host zone. An empty string is the TypeScript's `''` and an unparsable
+/// one its `Invalid Date`.
 ///
-/// A date with no zone is read in the offset in force now (the fixed-offset rule of the crate's date
-/// parser); the calendar day is then read in the offset in force at that instant.
-pub fn en_us_date(ctx: &HumbleCtx, expiration: &str) -> String {
+/// The language is the one `ctx.catalog` resolved, the catalog the digest text renders through; with no
+/// catalog it is `en`. A date with no zone is read in the offset in force now (the fixed-offset rule of
+/// the crate's date parser); the calendar day is then read in the offset in force at that instant.
+pub fn digest_date(ctx: &HumbleCtx, expiration: &str) -> String {
     if expiration.is_empty() {
         return String::new();
     }
@@ -314,7 +316,75 @@ pub fn en_us_date(ctx: &HumbleCtx, expiration: &str) -> String {
     };
     let east_ms = i64::from(ctx.zone.offset_east_secs_at(instant)) * 1000;
     let (year, month, day) = civil_from_days((instant + east_ms).div_euclid(MS_PER_DAY));
-    format!("{month}/{day}/{year}")
+    let language = ctx.catalog.as_deref().map_or("en", |c| c.language());
+    date_layout(language).render(year, month, day)
+}
+
+/// The order of the three date fields.
+#[derive(Debug, Clone, Copy)]
+enum FieldOrder {
+    MonthDayYear,
+    DayMonthYear,
+}
+
+/// How one language writes a calendar day: a field order, one separator between the fields, whether the
+/// day and the month are zero-padded (decided separately), and a trailing suffix. The year is never padded.
+#[derive(Debug, Clone, Copy)]
+struct DateLayout {
+    order: FieldOrder,
+    separator: &'static str,
+    pad_day: bool,
+    pad_month: bool,
+    suffix: &'static str,
+}
+
+impl DateLayout {
+    fn render(&self, year: i64, month: i64, day: i64) -> String {
+        let day = if self.pad_day {
+            format!("{day:02}")
+        } else {
+            day.to_string()
+        };
+        let month = if self.pad_month {
+            format!("{month:02}")
+        } else {
+            month.to_string()
+        };
+        let year = year.to_string();
+        let fields = match self.order {
+            FieldOrder::MonthDayYear => [&month, &day, &year],
+            FieldOrder::DayMonthYear => [&day, &month, &year],
+        };
+        format!(
+            "{}{sep}{}{sep}{}{}",
+            fields[0],
+            fields[1],
+            fields[2],
+            self.suffix,
+            sep = self.separator
+        )
+    }
+}
+
+/// The layout for a shipped language directory name. Anything else, `en` included, is the en-US
+/// `M/D/YYYY`, so an unknown language can never select an undefined layout.
+fn date_layout(language: &str) -> DateLayout {
+    match language {
+        "de" => DateLayout {
+            order: FieldOrder::DayMonthYear,
+            separator: ".",
+            pad_day: false,
+            pad_month: false,
+            suffix: "",
+        },
+        _ => DateLayout {
+            order: FieldOrder::MonthDayYear,
+            separator: "/",
+            pad_day: false,
+            pad_month: false,
+            suffix: "",
+        },
+    }
 }
 
 /// The proleptic Gregorian date of a day count since 1970-01-01 (Howard Hinnant's `civil_from_days`).
@@ -719,8 +789,28 @@ mod tests {
             ("", ""),
             ("not a date", "Invalid Date"),
         ] {
-            assert_eq!(en_us_date(&f.ctx, raw), want, "{raw}");
+            assert_eq!(digest_date(&f.ctx, raw), want, "{raw}");
         }
+    }
+
+    #[test]
+    fn a_de_catalog_renders_the_digest_date_in_the_german_layout() {
+        let locales =
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../public/locales");
+        let f = fixture();
+        let ctx = f.ctx.with_catalog(Arc::new(Catalog::load(&locales, "de")));
+        let k = some_key("sometitle_steam", "Some Title", "2027-01-02T00:00:00.000Z");
+        let out = detect_and_notify_expiration_transitions(&ctx, &[k], &ON);
+        // `de` has no humble.notification keys, so the text is the English template with a German date.
+        assert_eq!(
+            f.ui.shown(),
+            vec![(
+                "Humble key expiring".to_string(),
+                "Some Title's Humble key now expires on 2.1.2027".to_string()
+            )]
+        );
+        let digest = out.notification.expect("a digest was raised");
+        assert_eq!(digest.calls[1].params["date"], "2.1.2027");
     }
 
     /// +13:00 all year, so a UTC evening is already the next local day.
@@ -736,8 +826,8 @@ mod tests {
     fn the_calendar_day_is_read_in_the_host_zone() {
         let f = fixture();
         let ctx = fixture().ctx.with_zone(Arc::new(Auckland));
-        assert_eq!(en_us_date(&f.ctx, "2027-01-02T20:00:00.000Z"), "1/2/2027");
-        assert_eq!(en_us_date(&ctx, "2027-01-02T20:00:00.000Z"), "1/3/2027");
+        assert_eq!(digest_date(&f.ctx, "2027-01-02T20:00:00.000Z"), "1/2/2027");
+        assert_eq!(digest_date(&ctx, "2027-01-02T20:00:00.000Z"), "1/3/2027");
     }
 
     #[test]

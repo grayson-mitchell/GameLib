@@ -51,10 +51,21 @@ fn resolve_language(language: &str) -> &'static str {
 type Namespaces = HashMap<&'static str, Value>;
 
 /// A loaded set of catalogs: the resolved language and the `en` fallback.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct Catalog {
     /// Lookup order, resolved language first; `en` only once when they coincide.
     chain: Vec<Namespaces>,
+    /// The shipped directory name the catalog resolved to (`en` when the language is not shipped).
+    language: &'static str,
+}
+
+impl Default for Catalog {
+    fn default() -> Self {
+        Catalog {
+            chain: Vec::new(),
+            language: FALLBACK,
+        }
+    }
 }
 
 fn load_language(locales_dir: &Path, language: &str) -> Namespaces {
@@ -80,7 +91,17 @@ impl Catalog {
         if resolved != FALLBACK {
             chain.push(load_language(locales_dir, FALLBACK));
         }
-        Catalog { chain }
+        Catalog {
+            chain,
+            language: resolved,
+        }
+    }
+
+    /// The resolved shipped directory name (`nb_NO` for `nb-NO`): `en` for an unshipped language and
+    /// for the default catalog. What a caller formats locale-dependent text by, such as the Humble
+    /// digest date.
+    pub fn language(&self) -> &'static str {
+        self.language
     }
 
     fn lookup(&self, namespace: &str, path: &str) -> Option<&str> {
@@ -219,6 +240,15 @@ mod tests {
         assert_eq!(resolve_language("nb-NO"), "nb_NO");
         assert_eq!(resolve_language("xx"), "en");
         assert_eq!(resolve_language(""), "en");
+    }
+
+    #[test]
+    fn the_catalog_reports_its_resolved_language() {
+        let none = std::env::temp_dir().join("gamelib-i18n-no-locales");
+        assert_eq!(Catalog::load(&none, "de").language(), "de");
+        assert_eq!(Catalog::load(&none, "nb-NO").language(), "nb_NO");
+        assert_eq!(Catalog::load(&none, "xx").language(), "en");
+        assert_eq!(Catalog::default().language(), "en");
     }
 
     #[test]
