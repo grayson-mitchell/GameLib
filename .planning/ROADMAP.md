@@ -665,7 +665,7 @@ Plans:
   3. Wine, CrossOver and Staging downloads, Winetricks and DXVK/DXMT/vkd3d tools install and report progress as before
   4. `wine/`, `tools/` and engine TypeScript and their sidecar registrations are deleted in this phase, except scheduled resolvers listed in the schedule test (D-23)
 
-**Plans:** 81/82 plans executed in 41 waves; planned 2026-11-23, revised the same day so every plan fits the 100k smart-zone budget (executes after Phase 86 closes); 87-56a/b/c added 2026-11-24 for the 87-56 remainder; 87-60..87-70 added 2026-11-24 as gap closure for the 87-59 live gate (F1-F5 and the engine-log gap) in 8 gap waves; 87-71..87-79 added 2026-11-25 as gap closure cycle 2 for the 87-69 re-run findings (RF1-RF6) in 6 gap waves
+**Plans:** 82/82 plans complete in 41 waves; planned 2026-11-23, revised the same day so every plan fits the 100k smart-zone budget (executes after Phase 86 closes); 87-56a/b/c added 2026-11-24 for the 87-56 remainder; 87-60..87-70 added 2026-11-24 as gap closure for the 87-59 live gate (F1-F5 and the engine-log gap) in 8 gap waves; 87-71..87-79 added 2026-11-25 as gap closure cycle 2 for the 87-69 re-run findings (RF1-RF6) in 6 gap waves
 
 Plans:
 **Wave 1**
@@ -872,7 +872,7 @@ Plans:
 - [x] 87-78-PLAN.md — Clean-worktree proof, push checkpoint, three-OS CI and the signed 0.13.2 gap build 2 (D-12, D-13)
 
 **Gap wave 6** *(blocked on 87-71, 87-78)*
-- [ ] 87-79-PLAN.md — Run the live macOS re-run 2 gate on the signed gap build 2 (not its author, D-E); close RF1's todo if item 3 passes
+- [x] 87-79-PLAN.md — Run the live macOS re-run 2 gate on the signed gap build 2 (not its author, D-E); close RF1's todo if item 3 passes
 
 **Cross-cutting constraints:**
 - Memory-note shape: any offline step turns the network off only for the action (off, act, on, report); dev launch is `pnpm tauri:dev`, never `tauri:dev:run`
