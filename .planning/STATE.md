@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: "88.3"
 current_phase_name: Launch funnel, re-adoption and the live gate
 status: executing
-stopped_at: Completed 88.3-14-PLAN.md
-last_updated: "2026-11-27T22:37:10.841Z"
+stopped_at: Completed 88.3-08-PLAN.md
+last_updated: "2026-11-27T23:00:50.000Z"
 last_activity: 2026-11-27
 last_activity_desc: Phase 88.3 execution started
-state_head: cdc6a0135cf4b4d4d8864ee16d066e9d280e739f
+state_head: 9b366b8b933e20b81080cdeae07fc189ff301cfd
 progress:
   total_phases: 26
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-25)
 ## Current Position
 
 Phase: 88.3 (Launch funnel, re-adoption and the live gate) — EXECUTING
-Plan: 10 of 22
+Plan: 11 of 22
 Status: Ready to execute
 Last activity: 2026-11-27 — Phase 88.3 execution started
 Progress: [████████████████░░░░] 204/257 plans ([█████████░] 88%)
@@ -586,6 +586,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 88.3 P06 | 50min | 2 tasks | 12 files |
 | Phase 88.3 P07 | 35min | 3 tasks | 17 files |
 | Phase 88.3 P14 | 12min | 2 tasks | 9 files |
+| Phase 88.3 P08 | 50 min | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -1326,6 +1327,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 88.3]: 88.3-06: funnel hook payloads fixed (launch_facts, launch, sync_saves, set_presence, clear_presence, persist_bottle_wine_version, update_gog_playtime, wine_settings_write); false = store defines none (presence, bottle) or sync threw
 - [Phase 88.3]: 88.3-07: the quit-kill bookkeeping runs under the killed game's own handle lock so the funnel tail cannot start before it finishes; the record is removed only by SessionGuard::finish, never by drop
 - [Phase 88.3]: 88.3-14: a launchOracle harness file is deleted only when git grep at HEAD shows no importer beyond the retired drivers; baseEnv, probes, pairwise and census stay
+- [Phase 88.3]: 88.3-08: launchManagerCall boundary schema is a tuple [op, unknown] refined by a per-op union (the channel table takes tuples); the launch hand-off must name the call's own game and the launch log type
 
 ### Pending Todos
 
@@ -1619,8 +1621,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-27T22:37:06.869Z
-Stopped at: Completed 88.3-14-PLAN.md
+Last session: 2026-11-27T23:00:44.673Z
+Stopped at: Completed 88.3-08-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
