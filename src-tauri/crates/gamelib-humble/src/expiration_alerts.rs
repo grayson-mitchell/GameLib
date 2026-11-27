@@ -16,10 +16,12 @@
 //!   record, so lifting a gate later does not re-fire a date already seen.
 //! - **Text.** Title and body come from `humble.notification.*` through [`Catalog::t`], the same keys,
 //!   defaults and params as the i18next calls, so the escaping is i18next's too (see below).
-//! - **The date** is the en-US `M/D/YYYY` the sidecar renders today (Pitfall 8). The TypeScript calls
-//!   `toLocaleDateString()` with no locale, which is the host's; the Rust copy pins en-US and the
-//!   divergence for another process locale is a filed todo
-//!   (`2026-11-24-humble-digest-date-is-en-us-only`).
+//! - **The date** follows the UI language: the resolved language of `ctx.catalog`, the same catalog the
+//!   text renders through, which the shell loads from the profile language. A per-language layout
+//!   measured from CLDR through Intl is picked by it ([`digest_date`]). `en`, an unshipped language and
+//!   a catalog-less context keep the en-US `M/D/YYYY` the TypeScript goldens pin. The calendar day is
+//!   still read in the host zone. The TypeScript this was ported from renders the host's locale
+//!   instead; the divergence ends when that TypeScript is deleted (94-30).
 //!
 //! The body is built with the escaping [`Catalog::t`], exactly as i18next does, so a title or date is
 //! HTML-escaped in the notification text today (`1&#x2F;2&#x2F;2027`). That is parity with the TypeScript
@@ -116,7 +118,7 @@ impl DigestCall {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Transition {
     pub title: String,
-    /// The expiration as the en-US `M/D/YYYY` text, already rendered.
+    /// The expiration as the digest date text, already rendered (see [`digest_date`]).
     pub date: String,
 }
 
@@ -325,6 +327,7 @@ pub fn digest_date(ctx: &HumbleCtx, expiration: &str) -> String {
 enum FieldOrder {
     MonthDayYear,
     DayMonthYear,
+    YearMonthDay,
 }
 
 /// How one language writes a calendar day: a field order, one separator between the fields, whether the
@@ -354,6 +357,7 @@ impl DateLayout {
         let fields = match self.order {
             FieldOrder::MonthDayYear => [&month, &day, &year],
             FieldOrder::DayMonthYear => [&day, &month, &year],
+            FieldOrder::YearMonthDay => [&year, &month, &day],
         };
         format!(
             "{}{sep}{}{sep}{}{}",
@@ -366,15 +370,123 @@ impl DateLayout {
     }
 }
 
-/// The layout for a shipped language directory name. Anything else, `en` included, is the en-US
-/// `M/D/YYYY`, so an unknown language can never select an undefined layout.
+/// The layout for a shipped language directory name, measured from CLDR through Intl (see the table in
+/// the tests). `en` has no arm: it is the fallback, so `en` and an unknown language cannot drift apart
+/// and both give the en-US `M/D/YYYY`.
 fn date_layout(language: &str) -> DateLayout {
     match language {
-        "de" => DateLayout {
+        "be" | "de" | "et" | "fi" | "he" | "nb_NO" => DateLayout {
             order: FieldOrder::DayMonthYear,
             separator: ".",
             pad_day: false,
             pad_month: false,
+            suffix: "",
+        },
+        "az" | "ro" | "ru" | "tr" | "uk" => DateLayout {
+            order: FieldOrder::DayMonthYear,
+            separator: ".",
+            pad_day: true,
+            pad_month: true,
+            suffix: "",
+        },
+        "pl" => DateLayout {
+            order: FieldOrder::DayMonthYear,
+            separator: ".",
+            pad_day: false,
+            pad_month: true,
+            suffix: "",
+        },
+        "bg" => DateLayout {
+            order: FieldOrder::DayMonthYear,
+            separator: ".",
+            pad_day: false,
+            pad_month: true,
+            suffix: " г.",
+        },
+        "ca" | "el" | "es" | "gl" | "id" | "ml" | "ta" | "vi" => DateLayout {
+            order: FieldOrder::DayMonthYear,
+            separator: "/",
+            pad_day: false,
+            pad_month: false,
+            suffix: "",
+        },
+        "fr" | "ga" | "it" | "pt" | "pt_BR" => DateLayout {
+            order: FieldOrder::DayMonthYear,
+            separator: "/",
+            pad_day: true,
+            pad_month: true,
+            suffix: "",
+        },
+        "nl" => DateLayout {
+            order: FieldOrder::DayMonthYear,
+            separator: "-",
+            pad_day: false,
+            pad_month: false,
+            suffix: "",
+        },
+        "bs" | "sr" => DateLayout {
+            order: FieldOrder::DayMonthYear,
+            separator: ". ",
+            pad_day: false,
+            pad_month: false,
+            suffix: ".",
+        },
+        "hr" => DateLayout {
+            order: FieldOrder::DayMonthYear,
+            separator: ". ",
+            pad_day: true,
+            pad_month: true,
+            suffix: ".",
+        },
+        "cs" | "sk" => DateLayout {
+            order: FieldOrder::DayMonthYear,
+            separator: ". ",
+            pad_day: false,
+            pad_month: false,
+            suffix: "",
+        },
+        // U+200F after the day and the month, as CLDR writes it.
+        "ar" => DateLayout {
+            order: FieldOrder::DayMonthYear,
+            separator: "\u{200F}/",
+            pad_day: false,
+            pad_month: false,
+            suffix: "",
+        },
+        // Gregorian with Latin digits (CLDR's `fa-u-ca-gregory-nu-latn`); the crate converts no calendars.
+        "fa" => DateLayout {
+            order: FieldOrder::YearMonthDay,
+            separator: "/",
+            pad_day: false,
+            pad_month: false,
+            suffix: "",
+        },
+        "eu" | "ja" | "zh_Hans" | "zh_Hant" => DateLayout {
+            order: FieldOrder::YearMonthDay,
+            separator: "/",
+            pad_day: false,
+            pad_month: false,
+            suffix: "",
+        },
+        "hu" => DateLayout {
+            order: FieldOrder::YearMonthDay,
+            separator: ". ",
+            pad_day: true,
+            pad_month: true,
+            suffix: ".",
+        },
+        "ko" => DateLayout {
+            order: FieldOrder::YearMonthDay,
+            separator: ". ",
+            pad_day: false,
+            pad_month: false,
+            suffix: ".",
+        },
+        "lt" | "sv" => DateLayout {
+            order: FieldOrder::YearMonthDay,
+            separator: "-",
+            pad_day: true,
+            pad_month: true,
             suffix: "",
         },
         _ => DateLayout {
@@ -680,7 +792,7 @@ mod tests {
     #[test]
     fn pitfall_5_the_digest_copy_is_built_only_from_the_title_and_the_date() {
         // `AlertKey` has no field for a key value or index, so none can leak; the body is exactly the
-        // template over the title and the en-US date (escaped, as i18next does).
+        // template over the title and the date (escaped, as i18next does).
         let f = fixture();
         let k = some_key("sometitle_steam", "Safe Title", "2026-08-01T00:00:00.000Z");
         detect_and_notify_expiration_transitions(&f.ctx, &[k], &ON);
@@ -779,7 +891,7 @@ mod tests {
     }
 
     #[test]
-    fn the_date_is_the_en_us_month_day_year_with_no_padding() {
+    fn without_a_catalog_the_date_is_the_en_us_month_day_year_with_no_padding() {
         let f = fixture();
         for (raw, want) in [
             ("2027-01-02T00:00:00.000Z", "1/2/2027"),
@@ -828,6 +940,128 @@ mod tests {
         let ctx = fixture().ctx.with_zone(Arc::new(Auckland));
         assert_eq!(digest_date(&f.ctx, "2027-01-02T20:00:00.000Z"), "1/2/2027");
         assert_eq!(digest_date(&ctx, "2027-01-02T20:00:00.000Z"), "1/3/2027");
+    }
+
+    #[test]
+    fn every_shipped_language_renders_the_measured_layout() {
+        // Measured with Node v22.23.4, ICU 78.3, CLDR 48.0: `new Date(Date.UTC(2027, 0, 2))` and
+        // `Date.UTC(2027, 11, 31)` through `toLocaleDateString(<tag>, { timeZone: 'UTC' })`, the `_` of a
+        // directory name read as `-`. `fa` is measured as `fa-u-ca-gregory-nu-latn`: the plain tag renders
+        // the Persian calendar in Persian digits, which a layout over the Gregorian day cannot express.
+        let measured: &[(&str, &str, &str)] = &[
+            (
+                "ar",
+                "2\u{200F}/1\u{200F}/2027",
+                "31\u{200F}/12\u{200F}/2027",
+            ),
+            ("az", "02.01.2027", "31.12.2027"),
+            ("be", "2.1.2027", "31.12.2027"),
+            ("bg", "2.01.2027 г.", "31.12.2027 г."),
+            ("bs", "2. 1. 2027.", "31. 12. 2027."),
+            ("ca", "2/1/2027", "31/12/2027"),
+            ("cs", "2. 1. 2027", "31. 12. 2027"),
+            ("de", "2.1.2027", "31.12.2027"),
+            ("el", "2/1/2027", "31/12/2027"),
+            ("en", "1/2/2027", "12/31/2027"),
+            ("es", "2/1/2027", "31/12/2027"),
+            ("et", "2.1.2027", "31.12.2027"),
+            ("eu", "2027/1/2", "2027/12/31"),
+            ("fa", "2027/1/2", "2027/12/31"),
+            ("fi", "2.1.2027", "31.12.2027"),
+            ("fr", "02/01/2027", "31/12/2027"),
+            ("ga", "02/01/2027", "31/12/2027"),
+            ("gl", "2/1/2027", "31/12/2027"),
+            ("he", "2.1.2027", "31.12.2027"),
+            ("hr", "02. 01. 2027.", "31. 12. 2027."),
+            ("hu", "2027. 01. 02.", "2027. 12. 31."),
+            ("ja", "2027/1/2", "2027/12/31"),
+            ("ko", "2027. 1. 2.", "2027. 12. 31."),
+            ("id", "2/1/2027", "31/12/2027"),
+            ("it", "02/01/2027", "31/12/2027"),
+            ("lt", "2027-01-02", "2027-12-31"),
+            ("ml", "2/1/2027", "31/12/2027"),
+            ("nb_NO", "2.1.2027", "31.12.2027"),
+            ("nl", "2-1-2027", "31-12-2027"),
+            ("pl", "2.01.2027", "31.12.2027"),
+            ("pt", "02/01/2027", "31/12/2027"),
+            ("pt_BR", "02/01/2027", "31/12/2027"),
+            ("ro", "02.01.2027", "31.12.2027"),
+            ("ru", "02.01.2027", "31.12.2027"),
+            ("sr", "2. 1. 2027.", "31. 12. 2027."),
+            ("sk", "2. 1. 2027", "31. 12. 2027"),
+            ("sv", "2027-01-02", "2027-12-31"),
+            ("ta", "2/1/2027", "31/12/2027"),
+            ("tr", "02.01.2027", "31.12.2027"),
+            ("uk", "02.01.2027", "31.12.2027"),
+            ("vi", "2/1/2027", "31/12/2027"),
+            ("zh_Hans", "2027/1/2", "2027/12/31"),
+            ("zh_Hant", "2027/1/2", "2027/12/31"),
+        ];
+        let mut languages: Vec<&str> = measured.iter().map(|row| row.0).collect();
+        languages.sort_unstable();
+        let mut shipped: Vec<&str> = gamelib_i18n::SHIPPED_LANGUAGES.to_vec();
+        shipped.sort_unstable();
+        assert_eq!(
+            languages, shipped,
+            "the table must hold exactly one row per shipped language"
+        );
+        let none = std::env::temp_dir().join("gamelib-humble-no-locales");
+        for (language, jan, dec) in measured {
+            let ctx = fixture()
+                .ctx
+                .with_catalog(Arc::new(Catalog::load(&none, language)));
+            assert_eq!(
+                digest_date(&ctx, "2027-01-02T00:00:00.000Z"),
+                *jan,
+                "{language} 2027-01-02"
+            );
+            assert_eq!(
+                digest_date(&ctx, "2027-12-31T00:00:00.000Z"),
+                *dec,
+                "{language} 2027-12-31"
+            );
+        }
+    }
+
+    #[test]
+    fn an_unshipped_language_or_no_catalog_keeps_the_en_layout() {
+        let none = std::env::temp_dir().join("gamelib-humble-no-locales");
+        let unshipped = fixture()
+            .ctx
+            .with_catalog(Arc::new(Catalog::load(&none, "xx")));
+        let default = fixture().ctx.with_catalog(Arc::new(Catalog::default()));
+        let bare = fixture().ctx;
+        for ctx in [&unshipped, &default, &bare] {
+            assert_eq!(digest_date(ctx, "2027-01-02T00:00:00.000Z"), "1/2/2027");
+        }
+    }
+
+    #[test]
+    fn a_non_en_layout_reads_the_host_zone_and_keeps_the_empty_and_invalid_rules() {
+        let none = std::env::temp_dir().join("gamelib-humble-no-locales");
+        let with = |language: &str| {
+            fixture()
+                .ctx
+                .with_zone(Arc::new(Auckland))
+                .with_catalog(Arc::new(Catalog::load(&none, language)))
+        };
+        assert_eq!(
+            digest_date(&with("de"), "2027-01-02T20:00:00.000Z"),
+            "3.1.2027"
+        );
+        assert_eq!(
+            digest_date(&with("ja"), "2027-01-02T20:00:00.000Z"),
+            "2027/1/3"
+        );
+        for language in ["de", "hu", "ar"] {
+            let ctx = with(language);
+            assert_eq!(digest_date(&ctx, ""), "", "{language}");
+            assert_eq!(
+                digest_date(&ctx, "not a date"),
+                "Invalid Date",
+                "{language}"
+            );
+        }
     }
 
     #[test]
