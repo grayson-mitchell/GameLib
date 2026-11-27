@@ -630,3 +630,76 @@ async fn an_exit_code_of_259_ends_the_run() {
     }
     assert!(entry.ended.load(std::sync::atomic::Ordering::SeqCst));
 }
+
+/// WR-02: `wait_end` never blocks a tokio worker on the game handle's lock. A registry kill holds that lock
+/// for its whole kill (D-27), so a shutdown that fires meanwhile must still be answered within a poll
+/// period. The game's leader is gone and its child keeps the group (or Job) alive, so `wait_end` sits in the
+/// group poll; a std thread holds the handle's lock for 2 s, as a kill does, and the token fires 300 ms
+/// into the wait. Blocking on the lock would answer only when the holder lets go, about 2 s in.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_cancel_is_answered_while_a_kill_holds_the_handle() {
+    let home = FakeHome::new("stub-game-lockheld-");
+    let mut strays = Strays(Vec::new());
+    let pids_file = home.root().join("lockheld-pids.txt");
+    let pids = pids_file.to_string_lossy().into_owned();
+    let entry = register_stub(
+        &home,
+        &[
+            "game",
+            "--pids",
+            &pids,
+            "--child",
+            "--lines",
+            "0",
+            "--exit-after-ms",
+            "0",
+        ],
+        &mut strays,
+    );
+    wait_async("both pids published and the leader gone", || {
+        recorded_pids(&pids_file, 2).is_some() && !probe::is_alive(entry.pid)
+    })
+    .await;
+    let game = recorded_pids(&pids_file, 2).expect("pids");
+    strays.add(game[1]);
+
+    let (held_tx, held_rx) = std::sync::mpsc::channel();
+    let holder = {
+        let handle = entry.handle.clone();
+        std::thread::spawn(move || {
+            let guard = lock(&handle);
+            held_tx.send(()).expect("report the lock held");
+            std::thread::sleep(Duration::from_secs(2));
+            drop(guard);
+        })
+    };
+    held_rx
+        .recv_timeout(LIMIT)
+        .expect("the holder never took the lock");
+
+    let token = CancellationToken::new();
+    {
+        let token = token.clone();
+        tokio::spawn(async move {
+            tokio::time::sleep(Duration::from_millis(300)).await;
+            token.cancel();
+        });
+    }
+    let started = Instant::now();
+    let ended = wait_end(&entry, GameEnd::Close, &token).await;
+    let elapsed = started.elapsed();
+    assert!(
+        matches!(ended, Ended::Shutdown),
+        "the cancel was not answered as a shutdown: {ended:?}"
+    );
+    assert!(
+        elapsed < Duration::from_secs(1),
+        "the cancel waited for the handle's lock: {elapsed:?}"
+    );
+
+    // Tidy up: the holder lets go, the tree is ended through the handle and the leader reaped.
+    holder.join().expect("the lock holder");
+    let mut handle = lock(&entry.handle);
+    let _ = handle.kill_tree(Duration::from_millis(500));
+    let _ = handle.reap_status();
+}
