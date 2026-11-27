@@ -36,9 +36,13 @@ use serde_json::{json, Value};
 use super::flights::Enter;
 use super::log::LaunchLog;
 use super::playtime::{iso_string, record_play_session, PlayTimes};
+use super::session::{QuitHook, SessionFacts, SessionGuard};
 use super::steps::{CtxFunnelSteps, FunnelSteps};
 use super::{FunnelHost, LaunchParams, LaunchStatus};
 use crate::ctx::LaunchCtx;
+use crate::game::end::GROUP_POLL;
+use crate::game::record;
+use crate::game::registry::EntryId;
 use crate::hooks::{
     HookError, LaunchHookArgs, ManagerHooks, SyncDirection, SyncSavesArgs, WineSettingsWrite,
 };
@@ -207,6 +211,52 @@ fn narrow_engine_step(reply: &SelectReply) -> Result<EngineStep, &'static str> {
     }
 }
 
+/// The arguments of a game's launch script of `stage`, or `None` for a game with no script of that stage. Pure:
+/// it writes nothing, so the launch record can carry the after-script's arguments before the game runs.
+fn launch_script_args(
+    stage: ScriptStage,
+    runner: RunnerName,
+    app_name: &str,
+    title: &str,
+    game_info: &Value,
+    settings: &Value,
+) -> Option<ScriptRunArgs> {
+    let key = match stage {
+        ScriptStage::Before => "beforeLaunchScriptPath",
+        ScriptStage::After => "afterLaunchScriptPath",
+    };
+    let script_path = settings
+        .get(key)
+        .and_then(Value::as_str)
+        .filter(|path| !path.is_empty())?;
+    let verbose = truthy(settings.get("verboseLogs"));
+    let text = |pointer: &str| -> Option<String> {
+        game_info
+            .pointer(pointer)
+            .and_then(Value::as_str)
+            .map(str::to_string)
+    };
+    Some(ScriptRunArgs {
+        script_path: script_path.to_string(),
+        stage,
+        app_name: text("/app_name").unwrap_or_else(|| app_name.to_string()),
+        executable: text("/install/executable"),
+        prefix: settings
+            .get("winePrefix")
+            .and_then(Value::as_str)
+            .map(str::to_string),
+        runner: text("/runner").unwrap_or_else(|| runner.as_str().to_string()),
+        title: text("/title").unwrap_or_else(|| title.to_string()),
+        install_path: text("/install/install_path"),
+        // The TS passed `JSON.stringify` of both, verbatim; the script's environment holds this text.
+        settings_json: settings.to_string(),
+        info_json: game_info.to_string(),
+        verbose,
+        // Filled from the game's log writer by the caller, at the moment the TS read it.
+        log_target: None,
+    })
+}
+
 /// `runBeforeLaunchScript` / `runAfterLaunchScript`: a game with no script of this stage is a no-op; otherwise the
 /// `Running script ...` line goes to the game's log and the script runs through the step. `Err` is a script that
 /// could not be started (the TS rejected the launch with it).
@@ -223,49 +273,20 @@ async fn run_launch_script(
     game_info: &Value,
     settings: &Value,
 ) -> Result<(), ()> {
-    let key = match stage {
-        ScriptStage::Before => "beforeLaunchScriptPath",
-        ScriptStage::After => "afterLaunchScriptPath",
-    };
-    let Some(script_path) = settings
-        .get(key)
-        .and_then(Value::as_str)
-        .filter(|path| !path.is_empty())
+    let Some(mut args) = launch_script_args(stage, runner, app_name, title, game_info, settings)
     else {
         return Ok(());
     };
     log.write_raw(
         &format!(
-            "Running script {} {title} ({script_path})\n",
-            stage.as_str()
+            "Running script {} {title} ({})\n",
+            stage.as_str(),
+            args.script_path
         ),
         false,
     );
-    let verbose = truthy(settings.get("verboseLogs"));
-    let text = |pointer: &str| -> Option<String> {
-        game_info
-            .pointer(pointer)
-            .and_then(Value::as_str)
-            .map(str::to_string)
-    };
-    let args = ScriptRunArgs {
-        script_path: script_path.to_string(),
-        stage,
-        app_name: text("/app_name").unwrap_or_else(|| app_name.to_string()),
-        executable: text("/install/executable"),
-        prefix: settings
-            .get("winePrefix")
-            .and_then(Value::as_str)
-            .map(str::to_string),
-        runner: text("/runner").unwrap_or_else(|| runner.as_str().to_string()),
-        title: text("/title").unwrap_or_else(|| title.to_string()),
-        install_path: text("/install/install_path"),
-        // The TS passed `JSON.stringify` of both, verbatim; the script's environment holds this text.
-        settings_json: settings.to_string(),
-        info_json: game_info.to_string(),
-        verbose,
-        log_target: verbose.then(|| log.hand_off().to_runner_hand_off()),
-    };
+    // After the line above: writing it may have claimed the rotation the hand-off carries.
+    args.log_target = args.verbose.then(|| log.hand_off().to_runner_hand_off());
     steps
         .run_script(ctx, args, &host.runner)
         .await
@@ -575,6 +596,23 @@ async fn lead(
         skip_version_check: params.skip_version_check,
         log: log.hand_off(),
     };
+    // The session the game's spawn finds its record's facts in (88.3-07, D-08): it carries the after-script this
+    // launch owes, and what the quit-kill does when it ends the game (D-31). Dropped when this launch ends.
+    let session = begin_session(
+        ctx,
+        runner,
+        &app_name,
+        start_ms,
+        launched_at_ms,
+        launch_script_args(
+            ScriptStage::After,
+            runner,
+            &app_name,
+            &title,
+            &game_info,
+            &settings,
+        ),
+    );
     // The launch is called first and the presence call second, as the TS did; the game's promise is awaited later.
     let launch_call = hooks.launch(runner, &app_name, hand_off);
     let presence_call = hooks.set_presence(runner, &app_name);
@@ -590,6 +628,9 @@ async fn lead(
             );
         }
     }
+    // Pitfall 1: the sidecar went away while the game ran. The game is Rust's (registered, tailed, waited on), so
+    // it is not a failed launch: the funnel waits for it, then finishes without the hooks that need the sidecar.
+    let mut sidecar_lost = false;
     let launched = match launch_answer {
         Ok(reply) => {
             log.take_back(reply.rotated);
@@ -604,9 +645,45 @@ async fn lead(
                 Level::Error,
                 &format!("The launch hook failed ({})", failure.0),
             );
-            false
+            let game = session
+                .entry()
+                .filter(|id| ctx.registry.entry(*id).is_some());
+            match (failure.0, game) {
+                ("sidecar", Some(game)) => {
+                    ctx.log_sink.general(
+                        Prefix::Backend,
+                        Level::Warning,
+                        &format!("Lost the sidecar while {title} ({app_name}) runs; waiting for the game to end"),
+                    );
+                    wait_for_game_end(ctx, game).await;
+                    sidecar_lost = true;
+                    true
+                }
+                _ => false,
+            }
         }
     };
+
+    // D-31: the quit's kill ended this game. Its play time was recorded at the kill and its record says so; the
+    // after script is owed to the next start, and nothing unbounded (a script, a network call) runs inside the
+    // exit budget. The rest of the tail is what is bounded and local.
+    if session.quit_killed() {
+        ctx.log_sink.general(
+            Prefix::Backend,
+            Level::Info,
+            &format!("{title} ({app_name}) was ended by the quit; its after script is owed to the next start"),
+        );
+        log.close();
+        release_engine(ctx, steps, release_key.as_deref());
+        release_display_sleep(ctx);
+        recent_add(ctx, steps, runner, &app_name, &title);
+        send_status(ctx, &app_name, runner, "done");
+        return Ok(if launched {
+            LaunchStatus::Done
+        } else {
+            LaunchStatus::Error
+        });
+    }
 
     // The `finally` of the launch promise: the after script, then the log's end, then the engine release.
     let after = run_launch_script(
@@ -622,6 +699,8 @@ async fn lead(
         &settings,
     )
     .await;
+    // The game and its after script are over: the record has nothing left to prove (88.3-07).
+    session.finish();
     if after.is_ok() {
         log.close();
     }
@@ -643,7 +722,9 @@ async fn lead(
         );
     }
 
-    escaped(hooks.clear_presence(runner).await, "clear-presence")?;
+    if !sidecar_lost {
+        escaped(hooks.clear_presence(runner).await, "clear-presence")?;
+    }
     // Stop the display sleep blocker.
     release_display_sleep(ctx);
 
@@ -651,7 +732,7 @@ async fn lead(
     let finished_ms = ctx.engine.clock.now_ms();
     play_times.record_session_end(ctx, &app_name, start_ms, finished_ms);
 
-    if runner == RunnerName::Gog {
+    if runner == RunnerName::Gog && !sidecar_lost {
         if facts.global.disable_playtime_sync {
             ctx.log_sink.general(
                 Prefix::Backend,
@@ -667,22 +748,9 @@ async fn lead(
         }
     }
 
-    if let Err(reason) = steps.recent_add(
-        ctx,
-        AddArgs {
-            app_name: app_name.clone(),
-            title: title.clone(),
-            runner: runner.as_str().to_string(),
-        },
-    ) {
-        ctx.log_sink.general(
-            Prefix::Backend,
-            Level::Warning,
-            &format!("Recording recent game failed: {reason}"),
-        );
-    }
+    recent_add(ctx, steps, runner, &app_name, &title);
 
-    if auto_sync_saves && ctx.engine.is_online() {
+    if auto_sync_saves && ctx.engine.is_online() && !sidecar_lost {
         send_status(ctx, &app_name, runner, "done");
         send_status(ctx, &app_name, runner, "syncing-saves");
         ctx.log_sink.general(
@@ -718,6 +786,84 @@ async fn lead(
     } else {
         LaunchStatus::Error
     })
+}
+
+/// `recentGames.add`: the game goes first in the recent list; a failure is a fixed warning.
+fn recent_add(
+    ctx: &LaunchCtx,
+    steps: &dyn FunnelSteps,
+    runner: RunnerName,
+    app_name: &str,
+    title: &str,
+) {
+    if let Err(reason) = steps.recent_add(
+        ctx,
+        AddArgs {
+            app_name: app_name.to_string(),
+            title: title.to_string(),
+            runner: runner.as_str().to_string(),
+        },
+    ) {
+        ctx.log_sink.general(
+            Prefix::Backend,
+            Level::Warning,
+            &format!("Recording recent game failed: {reason}"),
+        );
+    }
+}
+
+/// Begins the launch's session (88.3-07): the facts its record carries, and the quit hook that records the play
+/// time at the kill and rewrites the record as `quitKilled` (D-31).
+fn begin_session(
+    ctx: &LaunchCtx,
+    runner: RunnerName,
+    app_name: &str,
+    launch_started_at_ms: u64,
+    start_playing_at_ms: u64,
+    after_script: Option<ScriptRunArgs>,
+) -> SessionGuard {
+    let on_quit: QuitHook = {
+        let ctx = ctx.clone();
+        let app_name = app_name.to_string();
+        Arc::new(move |id| {
+            let killed_at = ctx.engine.clock.now_ms();
+            // The session's own start time, as the tail would have used it (`startPlayingDate`).
+            PlayTimes::open(&ctx).record_session_end(
+                &ctx,
+                &app_name,
+                launch_started_at_ms,
+                killed_at,
+            );
+            if runner != RunnerName::Steam {
+                let elapsed = killed_at.saturating_sub(start_playing_at_ms);
+                record_play_session(
+                    &ctx,
+                    &app_name,
+                    runner,
+                    i64::try_from(elapsed).unwrap_or(i64::MAX),
+                    ctx.engine.platform,
+                );
+            }
+            record::mark_quit_killed(&ctx, id, killed_at);
+        })
+    };
+    ctx.sessions.begin(SessionFacts {
+        runner,
+        app_name: app_name.to_string(),
+        launch_started_at_ms,
+        start_playing_at_ms,
+        after_script,
+        record_path: record::record_path(&ctx.engine.paths.app_folder, runner, app_name),
+        on_quit: Some(on_quit),
+    })
+}
+
+/// Waits until the game's run has left the registry (its leader and group are over): the exit watch a lost
+/// sidecar hands the game to. The launch task is dropped by the shutdown token, which ends this wait too.
+async fn wait_for_game_end(ctx: &LaunchCtx, game: EntryId) {
+    while ctx.registry.entry(game).is_some() {
+        tokio::time::sleep(GROUP_POLL).await;
+    }
 }
 
 /// The line after a saves sync: the success text, nothing for a TS call that threw (its handler wrote the error

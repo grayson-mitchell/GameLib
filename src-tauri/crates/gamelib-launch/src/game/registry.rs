@@ -35,6 +35,25 @@ const KILL_SLACK: Duration = Duration::from_millis(500);
 /// A game's handle as the registry and the run that owns it share it.
 pub type SharedGame = Arc<Mutex<GameHandle>>;
 
+/// Why a registry kill ran (88.3-07, D-31): the quit's Yes (`launch_tracked_kill_all`) is the only one that
+/// means GameLib is on its way out.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum KillCause {
+    /// `kill_all`: the quit.
+    QuitAll,
+    /// `kill_tracked`: a manager's Stop, or any filter (the TS `killTracked`).
+    Filtered,
+    /// `kill_stream`: the call that watches a stream asked.
+    Stream,
+    /// `abort_game`: the abort id of the run.
+    Abort,
+}
+
+/// Told, once per game a kill ended, why. It runs while the killed game's own handle lock is still held (never
+/// the registry's own lock), so it has finished before the run that owns the game can reap it and carry on, and
+/// it must be bounded: file and store writes, nothing that waits on another process.
+pub type KillObserver = Arc<dyn Fn(KillCause, &RunIds) + Send + Sync>;
+
 /// One registration. Unique per registration within a registry, so two runs under one key (single flight
 /// is the TS's until 88.3) never unregister each other.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -83,14 +102,21 @@ impl GameEntry {
 
     /// Ends the game's tree through its own handle (blocking: it polls the group up to `grace`). `true` when
     /// this call ended it; `false` when the run had already reaped the leader or the tree was already gone.
-    fn kill(&self, grace: Duration) -> bool {
+    fn kill(&self, grace: Duration, observer: Option<(KillCause, &KillObserver)>) -> bool {
         let mut handle = lock(&self.handle);
         if self.ended.load(Ordering::SeqCst) {
             return false;
         }
         let before = self.killed_by_us.swap(true, Ordering::SeqCst);
         match handle.kill_tree(grace) {
-            KillOutcome::Killed => true,
+            KillOutcome::Killed => {
+                // Still under this game's handle lock: the run cannot reap the leader, and so cannot carry on
+                // to the end of its launch, until the observer has finished (D-31).
+                if let Some((cause, observer)) = observer {
+                    observer(cause, &self.ids);
+                }
+                true
+            }
             KillOutcome::Gone | KillOutcome::NotOurs => {
                 self.killed_by_us.store(before, Ordering::SeqCst);
                 false
@@ -129,6 +155,9 @@ struct Inner {
 #[derive(Default)]
 pub struct TrackedRegistry {
     inner: Mutex<Inner>,
+    /// Told of each game a kill ended (88.3-07). Its own lock: it is read before a kill and never held across
+    /// one.
+    observer: Mutex<Option<KillObserver>>,
 }
 
 /// Which registered runs a kill reaches.
@@ -159,6 +188,11 @@ impl Select<'_> {
 impl TrackedRegistry {
     pub fn new() -> TrackedRegistry {
         TrackedRegistry::default()
+    }
+
+    /// Sets who is told of each game a kill ended (the context installs the funnel's quit-kill bookkeeping).
+    pub fn set_kill_observer(&self, observer: KillObserver) {
+        *lock(&self.observer) = Some(observer);
     }
 
     /// Registers a running game; the entry's id is the receipt [`unregister`] takes. `cancel` is the run's
@@ -264,8 +298,13 @@ impl TrackedRegistry {
         runner: Option<&str>,
         key: Option<&str>,
     ) -> usize {
-        self.kill(shutdown, Select::Filter { runner, key }, false)
-            .await
+        self.kill(
+            shutdown,
+            Select::Filter { runner, key },
+            KillCause::Filtered,
+            false,
+        )
+        .await
     }
 
     /// Ends every registered run (`killAllTracked`): the quit's Yes. Holds a shutdown registrant for the kill
@@ -277,6 +316,7 @@ impl TrackedRegistry {
                 runner: None,
                 key: None,
             },
+            KillCause::QuitAll,
             false,
         )
         .await
@@ -284,7 +324,13 @@ impl TrackedRegistry {
 
     /// Ends the runs of the call that watches `stream_id` (`launch_runner_kill`).
     pub async fn kill_stream(&self, shutdown: &Shutdown, stream_id: &str) -> usize {
-        self.kill(shutdown, Select::Stream(stream_id), false).await
+        self.kill(
+            shutdown,
+            Select::Stream(stream_id),
+            KillCause::Stream,
+            false,
+        )
+        .await
     }
 
     /// Ends the run that answers to `abort_id` and cancels its token (the TS `abortController.abort()`),
@@ -297,11 +343,18 @@ impl TrackedRegistry {
         if !found {
             return false;
         }
-        self.kill(shutdown, Select::Abort(abort_id), true).await;
+        self.kill(shutdown, Select::Abort(abort_id), KillCause::Abort, true)
+            .await;
         true
     }
 
-    async fn kill(&self, shutdown: &Shutdown, select: Select<'_>, cancel: bool) -> usize {
+    async fn kill(
+        &self,
+        shutdown: &Shutdown,
+        select: Select<'_>,
+        cause: KillCause,
+        cancel: bool,
+    ) -> usize {
         let (games, helpers): (Vec<GameEntry>, Vec<HelperEntry>) = {
             let inner = lock(&self.inner);
             let games = inner
@@ -326,12 +379,16 @@ impl TrackedRegistry {
         }
         // Held for the kill only: dropped when this function returns, whatever the games do after.
         let _registrant = shutdown.register("game-kill");
+        let observer = lock(&self.observer).clone();
         let mut killers = tokio::task::JoinSet::new();
         for game in games {
             if cancel {
                 game.cancel.cancel();
             }
-            killers.spawn_blocking(move || game.kill(KILL_GRACE));
+            let observer = observer.clone();
+            killers.spawn_blocking(move || {
+                game.kill(KILL_GRACE, observer.as_ref().map(|o| (cause, o)))
+            });
         }
         let drain = async {
             let mut ended = 0;

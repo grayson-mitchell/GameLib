@@ -11,6 +11,8 @@
 //!   recent-games write), through [`steps::FunnelSteps`], whose production implementation calls the functions
 //!   behind the `engine_*`, `launch_*` and `info_*` ops directly.
 //!
+//! [`session`] is the in-memory launch session a spawn finds its record's facts in (88.3-07).
+//!
 //! [`flights`] is the single-flight table, [`log`] the per-game launch log the funnel now owns, and
 //! [`playtime`] the play-time and runs-for-me records, and [`run`] the funnel itself.
 
@@ -18,6 +20,7 @@ pub mod flights;
 pub mod log;
 pub mod playtime;
 pub mod run;
+pub mod session;
 pub mod shell;
 pub mod steps;
 

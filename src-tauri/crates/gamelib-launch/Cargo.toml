@@ -41,6 +41,11 @@ gamelib-store = { path = "../gamelib-store" }
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61", features = ["Win32_System_Environment"], optional = true }
 
+# The launch record's reader checks the effective uid of the process against the file's owner and opens with
+# O_NOFOLLOW (88.3-07, T-88.3-15). libc 0.2.186 is already resolved for gamelib-proc and gamelib-steampoll.
+[target.'cfg(unix)'.dependencies]
+libc = "0.2.186"
+
 [features]
 # Test seams: the known-fix crate's (and through it the engine's and wine's) scripted fakes.
 testing = ["gamelib-knownfix/testing"]

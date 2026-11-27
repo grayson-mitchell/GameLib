@@ -10,9 +10,10 @@ use gamelib_knownfix::ctx::KnownFixCtx;
 use gamelib_wine::ctx::WineCtx;
 
 use crate::funnel::flights::LaunchFlights;
+use crate::funnel::session::LaunchSessions;
 use crate::funnel::shell::{FunnelShell, PowerState};
 use crate::funnel::steps::FunnelSteps;
-use crate::game::registry::TrackedRegistry;
+use crate::game::registry::{KillCause, TrackedRegistry};
 use crate::game::spawn::{GameSpawner, ProcGameSpawner};
 use crate::hooks::ManagerHooks;
 use crate::prepare::deps::WineManagerFacts;
@@ -70,6 +71,9 @@ pub struct LaunchCtx {
     pub steps: Option<Arc<dyn FunnelSteps>>,
     /// The display-sleep blocker this context holds (the TS launcher's per-instance `PowerState`).
     pub power: Arc<PowerState>,
+    /// The funnel launches whose game is about to run or is running (88.3-07): where a spawn finds the facts
+    /// of its record, and where the quit-kill marks a session whose game it ended.
+    pub sessions: Arc<LaunchSessions>,
 }
 
 impl LaunchCtx {
@@ -80,6 +84,18 @@ impl LaunchCtx {
         info: Arc<InfoCtx>,
     ) -> LaunchCtx {
         let log_sink: Arc<dyn LaunchLogSink> = Arc::new(GamelibLogSink::new(engine.clock.clone()));
+        let registry = Arc::new(TrackedRegistry::new());
+        let sessions = Arc::new(LaunchSessions::new());
+        {
+            // The quit's Yes ending a funnel game is D-31: the session is marked and its play time recorded at
+            // the kill. A manager's Stop and the other causes are not the quit.
+            let sessions = Arc::clone(&sessions);
+            registry.set_kill_observer(Arc::new(move |cause, ids| {
+                if cause == KillCause::QuitAll {
+                    sessions.quit_killed(&ids.runner, &ids.key);
+                }
+            }));
+        }
         LaunchCtx {
             engine,
             knownfix,
@@ -91,12 +107,13 @@ impl LaunchCtx {
             runner: Arc::new(RunnerTables::new()),
             errors: None,
             hooks: None,
-            registry: Arc::new(TrackedRegistry::new()),
+            registry,
             game_spawner: Arc::new(ProcGameSpawner),
             flights: Arc::new(LaunchFlights::new()),
             shell: None,
             steps: None,
             power: Arc::new(PowerState::new()),
+            sessions,
         }
     }
 

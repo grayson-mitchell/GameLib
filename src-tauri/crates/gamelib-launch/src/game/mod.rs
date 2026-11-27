@@ -6,6 +6,8 @@
 //! - [`capture`]: the capture file's name and mode, and the tailer that turns its growth into chunks.
 //! - [`end`]: when a game run is over (`close`: leader and its whole group; `exit`: the leader plus the
 //!   TS drain grace).
+//! - [`record`]: the per-launch record a funnel launch leaves on disk for a later start to re-adopt the game
+//!   from (88.3-07).
 //! - [`registry`]: the tracked registry: register and unregister of a run, the running-game read and the
 //!   kills (88.2-11).
 //! - [`spawn`]: the seam a game is spawned through.
@@ -15,5 +17,6 @@
 
 pub mod capture;
 pub mod end;
+pub mod record;
 pub mod registry;
 pub mod spawn;

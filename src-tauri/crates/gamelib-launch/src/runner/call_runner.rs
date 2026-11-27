@@ -39,6 +39,7 @@ use super::{lock, Flight, Registered, RunnerEvent, RunnerName, RunnerTables};
 use crate::ctx::LaunchCtx;
 use crate::game::capture;
 use crate::game::end::{self, Ended, GameEnd};
+use crate::game::record;
 use crate::game::registry::{GameGuard, RunIds};
 use crate::game::spawn::GameSpawn;
 
@@ -596,13 +597,21 @@ impl Run {
         let Some(entry) = self.ctx.registry.entry(id) else {
             return failed_to_run(&self.safe_command, "the game's run was not registered");
         };
+        // A funnel launch leaves its record before this run waits on anything (88.3-07, D-08).
+        let session = record::record_game_spawn(&self.ctx, &entry);
 
         let (done, finished) = watch::channel(false);
         let mut chunk = self.chunk_sink();
         let tail = capture::tail(&path, 0, move |text| chunk(Pipe::Stdout, text), finished);
         let token = self.ctx.engine.shutdown.token();
         let wait = async {
-            let ended = end::wait_end(&entry, end, &token).await;
+            // The leader gone with the group alive: the members are kept in the record (Pitfall 10).
+            let mut keep_members = || {
+                if let Some(session) = session {
+                    record::refresh_members(&self.ctx, session, &entry);
+                }
+            };
+            let ended = end::wait_end_observed(&entry, end, &token, &mut keep_members).await;
             // The final drain of the capture file runs after this.
             let _ = done.send(true);
             ended
