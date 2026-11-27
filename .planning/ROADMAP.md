@@ -1029,7 +1029,7 @@ Plans:
   3. The quit dialog gains a "game running" condition (D-27, a recorded behaviour change) read from the Rust running-game registry
   4. `commandRunner.ts` is deleted; closes on goldens, three-OS CI and a stub-game smoke (launch, quit-kill, survival of parent SIGKILL)
 
-**Plans:** 20/25 plans executed in 18 waves; planned 2026-11-26, re-sliced the same day so every plan fits the 100k smart-zone budget and stays below 15 files (goldens are recorded from the TS before each Rust slice, D-25; the quit prompt lands before games become Game-class)
+**Plans:** 21/25 plans executed in 18 waves; planned 2026-11-26, re-sliced the same day so every plan fits the 100k smart-zone budget and stays below 15 files (goldens are recorded from the TS before each Rust slice, D-25; the quit prompt lands before games become Game-class)
 
 Plans:
 **Wave 1**
@@ -1081,7 +1081,7 @@ Plans:
 - [x] 88.2-20-PLAN.md — ManagerHooks transport, TS half: the `launchManagerCall` handler and the askForceUninstall channel
 
 **Wave 15** *(blocked on Wave 14 completion)*
-- [ ] 88.2-21-PLAN.md — Boot wiring of the runner and spawnAsync adapters; the five game launches spawn as Game class
+- [x] 88.2-21-PLAN.md — Boot wiring of the runner and spawnAsync adapters; the five game launches spawn as Game class
 
 **Wave 16** *(blocked on Wave 15 completion)*
 - [ ] 88.2-22-PLAN.md — Sanitizers by name, the managers' Stop through the Rust registry, the folder-missing prompt through the shim
