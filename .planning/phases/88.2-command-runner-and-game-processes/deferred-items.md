@@ -16,3 +16,5 @@
   place, so under load SIGTERM can reach the member first and the group empties without a hard kill. Passes on every
   quiet re-run (3 of 3). A readiness line after the trap would remove the race. Not touched by 88.2-29 (no change to
   `terminate_all`); left alone.
+- Resolved by the orchestrator before the 88.2-31 push: the member now prints its own pid (`echo $$`) after its
+  `trap` and then `exec`s, so the line cannot arrive before SIGTERM is ignored. 6 of 6 runs green.

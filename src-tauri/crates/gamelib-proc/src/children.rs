@@ -407,7 +407,9 @@ mod tests {
     use std::time::Instant;
 
     /// A helper whose group holds one member that ignores SIGTERM; the leader execs a plain sleep.
-    const STUBBORN_GROUP: &str = "(trap '' TERM; exec sleep 60) & echo $!; exec sleep 60";
+    /// The member prints its own pid only after its `trap` is in place (an ignored signal stays
+    /// ignored across `exec`), so a test that reads the line cannot signal it before the trap.
+    const STUBBORN_GROUP: &str = "sh -c 'trap \"\" TERM; echo $$; exec sleep 60' & exec sleep 60";
     /// A helper whose whole group ends on SIGTERM.
     const COOPERATIVE_GROUP: &str = "sleep 60 & echo $!; wait";
 
