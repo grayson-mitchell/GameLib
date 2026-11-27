@@ -87,6 +87,7 @@ import {
   RUST_LAUNCH_SCRIPT_RUN,
   RUST_LAUNCH_SPAWN_ASYNC,
   RUST_LAUNCH_ASK_FORCE_UNINSTALL,
+  RUST_LAUNCH_RUN,
   RUST_LAUNCH_VERIFY_WINE_PREFIX,
   RUST_DIALOG_MESSAGE,
   RUST_DIALOG_OPEN,
@@ -272,6 +273,11 @@ const RUST_INVOKE_TIMEOUT_MS = 60_000
  * the installed list, through a native dialog a person answers with no limit, and on Yes waits on the manager hooks over
  * `launchManagerCall` (the TS `askForceUninstall` it replaces waited on the same dialog). The shutdown token ends it, as it ends
  * the dialog channels.
+ *
+ * Twenty-seventh (Phase 88.3, 88.3-06): `launch_run` is one whole Play through the Rust launch funnel. It answers when the game's
+ * process is over (the funnel waits on the TS `launch` hook over `launchManagerCall` for the session), which can be hours, so no
+ * wall-clock value is right for it. The funnel holds its own registrant and the shutdown token ends it, so no entry can outlive
+ * the sidecar; a second Play of the same game joins the first rather than starting another.
  */
 const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_DIALOG_OPEN,
@@ -325,7 +331,8 @@ const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_LAUNCH_WINE_PATH,
   RUST_LAUNCH_SCRIPT_RUN,
   RUST_LAUNCH_SPAWN_ASYNC,
-  RUST_LAUNCH_ASK_FORCE_UNINSTALL
+  RUST_LAUNCH_ASK_FORCE_UNINSTALL,
+  RUST_LAUNCH_RUN
 ]
 
 /**

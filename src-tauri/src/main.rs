@@ -344,9 +344,11 @@ const LONG_RUNNING_CHANNELS: &[&str] = &[
     "steamRemoveAllCopies",
     // Phase 88.2 plan 18 (D-26): the Rust-to-sidecar channel the Rust launch services ask the TS library
     // managers through (`launch_dispatch::SidecarManagerHooks`). 88.2 sends `game_title` and
-    // `force_uninstall`, both quick; 88.3 adds the funnel's `launch` hook to this same channel, and that one
-    // spans a whole play session, so no wall-clock value is correct for the channel (the `launch` shape
-    // above). Added on that shape, not timed. A hook pending when the sidecar closes fails through
+    // `force_uninstall`, both quick; the funnel's `launch` hook (88.3-06) now spans a whole play session on this
+    // same channel, so no wall-clock value is correct for the channel (the `launch` shape above). The funnel's
+    // other seven ops (`launch_facts`, `sync_saves`, the presence pair, `persist_bottle_wine_version`,
+    // `update_gog_playtime`, `wine_settings_write`) are quick, but they share the channel's one entry. Added on
+    // that shape, not timed. A hook pending when the sidecar closes fails through
     // `drain_pending_invokes`, and each call waits on a thread of its own, never the shared blocking pool.
     "launchManagerCall",
 ];

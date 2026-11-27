@@ -294,7 +294,10 @@ describe('sidecarRpc UNBOUNDED_RUST_CHANNELS covers every human-gated dialog cha
     // Phase 88.2 plan 20: launch_ask_force_uninstall asks the user through a native dialog (a human answers, no limit) whether to
     // remove a game whose folder is gone, and on Yes waits on the manager hooks; the shutdown ends it. Not a dialog-open channel of
     // its own.
-    'RUST_LAUNCH_ASK_FORCE_UNINSTALL'
+    'RUST_LAUNCH_ASK_FORCE_UNINSTALL',
+    // Phase 88.3 plan 06: launch_run is one whole Play through the Rust launch funnel; it answers when the game's process is over, which
+    // can be hours (the TS launch it replaces had no timeout). The funnel's registrant and the shutdown end it. Not a dialog channel.
+    'RUST_LAUNCH_RUN'
   ]
 
   test('contains exactly the dialog, depot, Rust CM, safety remove, wine runtime download and wine manager channels', () => {
