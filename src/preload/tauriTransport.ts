@@ -43,35 +43,6 @@ import {
 import { isAllowedStoreField, isSafeKeyPath, isWritableStoreField } from 'common/types/storePolicy'
 
 /**
- * Whether the running shell registers the `imagecache://` custom URL scheme
- * (34.4.1 gap cycle 2, plan 27, Task 2).
- *
- * SINGLE SOURCE OF TRUTH: `src/backend/images_cache.ts`'s
- * `protocol.handle('imagecache', ...)` registration, which runs from an
- * Electron-only `whenReady()` init. The sidecar does NOT run Electron
- * `whenReady()` inits (project memory `phase-33-complete`), so under Tauri
- * -- the only shell that exists (Phase 35 electron cutover) -- that
- * registration never happens, and any `imagecache://...` request WKWebView
- * issues fails with `unsupported URL` -- measured at ~150 failed requests
- * per library render (one per http-sourced game tile), each recovered by
- * `CachedImage`'s `onError` retry at the cost of a doubled request and a
- * visible load flash.
- *
- * Phase 35 plan 17: this predicate used to compute the negation of a
- * runtime Tauri-context check, back when Electron and Tauri could both be
- * running. Now that Tauri is the only shell, that check is always true, so
- * the negation is always false -- hardcoded here rather than computed. If a
- * Tauri-side `imagecache://` handler is ever added, THIS is the one line
- * that changes -- every consumer (starting with `CachedImage`) follows
- * without touching a single call site. Consumers must call this predicate
- * rather than inlining their own scheme-availability check, so the scheme
- * decision lives in exactly one named place.
- */
-export function imageCacheSchemeAvailable(): boolean {
-  return false
-}
-
-/**
  * Mirrors `makeHandlerInvoker`'s req/resp shape: `invoke(channel, args) -> Promise<Ret>`.
  * Relayed by the Rust shell's `sidecar_invoke` command to the sidecar's stdio JSON-RPC loop.
  */
