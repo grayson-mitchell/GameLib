@@ -58,6 +58,7 @@ use super::{lock, RunnerEvent};
 use crate::ctx::LaunchCtx;
 use crate::game::capture;
 use crate::game::end::{self, Ended, GameEnd, EXIT_DRAIN_GRACE};
+use crate::game::record;
 use crate::game::registry::{GameGuard, RunIds};
 use crate::game::spawn::GameSpawn;
 
@@ -479,6 +480,8 @@ async fn run_game(
     let Some(entry) = ctx.registry.entry(id) else {
         return Ran::SpawnFailed("the game's run was not registered".to_string());
     };
+    // A funnel launch leaves its record before this run waits on anything (88.3-07, D-08).
+    let session = record::record_game_spawn(ctx, &entry);
 
     let (done, finished) = watch::channel(false);
     // Both of a game's streams share the capture file: every chunk read from it is stdout.
@@ -486,7 +489,19 @@ async fn run_game(
     let tail = capture::tail(&path, 0, move |text| chunk(Pipe::Stdout, text), finished);
     let token = ctx.engine.shutdown.token();
     let wait = async {
-        let ended = end::wait_end(&entry, game_end_of(resolve_on_exit), &token).await;
+        // The leader gone with the group alive: the members are kept in the record (Pitfall 10).
+        let mut keep_members = || {
+            if let Some(session) = session {
+                record::refresh_members(ctx, session, &entry);
+            }
+        };
+        let ended = end::wait_end_observed(
+            &entry,
+            game_end_of(resolve_on_exit),
+            &token,
+            &mut keep_members,
+        )
+        .await;
         // The final drain of the capture file runs after this.
         let _ = done.send(true);
         ended
@@ -499,6 +514,36 @@ async fn run_game(
             code: status.and_then(|s| s.code()),
             stopped: entry.was_killed() || abort.is_cancelled(),
         },
+    }
+}
+
+/// The game arm of a launch-variant wine command over a command that is already prepared, for a test that has
+/// no Wine to prepare one with (88.3-07: the sideload Wine launch registers under the runner `wine` and the key
+/// `trackKey`, and finds its funnel session from that). Answers the leader's exit code, `None` when the run
+/// was dropped by the shutdown token or could not start.
+#[cfg(feature = "testing")]
+pub async fn run_prepared_game_for_test(
+    ctx: &LaunchCtx,
+    prepared: &PreparedWine,
+    key: &str,
+) -> Option<i32> {
+    let shared = Arc::new(Shared {
+        log: Arc::clone(&ctx.log_sink),
+        targets: Mutex::new(LogTargets::resolve(Vec::new())),
+        header: Mutex::new(None),
+        output: Arc::new(super::stream::NullSink),
+        stdout: Mutex::new(ChunkWindow::new()),
+        stderr: Mutex::new(ChunkWindow::new()),
+    });
+    let ids = RunIds {
+        runner: WINE_RUNNER.to_string(),
+        key: key.to_string(),
+        abort_id: format!("wine-{}", ctx.runner.next_serial()),
+        stream_id: String::new(),
+    };
+    match run_game(ctx, prepared, key, ids, false, &shared).await {
+        Ran::Ended { code, .. } => code,
+        Ran::Shutdown | Ran::SpawnFailed(_) => None,
     }
 }
 
