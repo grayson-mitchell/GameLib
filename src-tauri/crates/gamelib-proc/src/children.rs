@@ -86,9 +86,10 @@ impl ChildSet {
 
     /// Terminates every registered helper tree and empties the set.
     ///
-    /// Unix: SIGTERM to each helper's group, wait up to `grace` for every leader, SIGKILL the
-    /// groups whose leader is still alive, then reap the children this set owns. Returns the
-    /// labels that needed the hard kill. Only groups this crate created with `process_group(0)`
+    /// Unix: SIGTERM to each helper's group, wait up to `grace` for every group to be empty (the
+    /// group, not the leader: a member that ignores SIGTERM keeps its helper pending), SIGKILL the
+    /// groups still alive, then reap the children this set owns. Returns the labels whose group
+    /// needed the hard kill. Only groups this crate created with `process_group(0)`
     /// are ever signalled, never by name and never `pgid <= 1`.
     ///
     /// Windows: there is no graceful signal reachable from here, so each helper is terminated
@@ -150,24 +151,30 @@ fn still_ours(pid: u32, e: &Entry) -> bool {
         return true;
     }
     match e.start {
-        Some(s) => crate::probe::start_time(pid) == Some(s),
+        Some(s) => match crate::probe::start_time(pid) {
+            Some(now) => now == s,
+            // The leader's stamp cannot be read: it is gone and reaped (a tokio task owns and
+            // awaits it). A process group id still in use is never handed to a new process, so a
+            // live group under this id can only be the helper's own members. A leader that is
+            // there but carries a different stamp (above) is a recycled pid and is refused.
+            None => crate::probe::group_alive(pid),
+        },
         None => crate::probe::is_alive(pid),
     }
 }
 
+/// `true` once the helper's whole process group is empty. The group, not the leader, decides: a
+/// member that ignores SIGTERM outlives a leader that left. An owned leader is reaped here as soon
+/// as it exits (its zombie would otherwise keep counting), which is safe because the group id
+/// cannot be reused while any member remains.
 #[cfg(unix)]
 fn exited(pid: u32, e: &mut Entry) -> bool {
-    match e.owned.as_mut() {
-        Some(child) => match child.try_wait() {
-            Ok(Some(_)) => true,
-            Ok(None) => false,
-            Err(err) => {
-                diag(&format!("try_wait failed for helper '{}': {err}", e.label));
-                true
-            }
-        },
-        None => !crate::probe::is_alive(pid),
+    if let Some(child) = e.owned.as_mut() {
+        if let Err(err) = child.try_wait() {
+            diag(&format!("try_wait failed for helper '{}': {err}", e.label));
+        }
     }
+    !crate::probe::group_alive(pid)
 }
 
 #[cfg(unix)]
@@ -175,10 +182,14 @@ fn terminate_entries(mut entries: Vec<(u32, Entry)>, grace: Duration) -> Vec<&'s
     use crate::kill_tree::signal_group;
     use std::time::Instant;
 
-    for (pid, e) in &entries {
+    // Ownership is decided once, before any signal: an entry that is not ours is never signalled,
+    // so polling its group would only burn the grace.
+    let mut pending: Vec<usize> = Vec::new();
+    for (i, (pid, e)) in entries.iter().enumerate() {
         if !still_ours(*pid, e) {
             continue;
         }
+        pending.push(i);
         if let Ok(pgid) = i32::try_from(*pid) {
             if let Err(err) = signal_group(pgid, libc::SIGTERM) {
                 if err.raw_os_error() != Some(libc::ESRCH) {
@@ -189,7 +200,6 @@ fn terminate_entries(mut entries: Vec<(u32, Entry)>, grace: Duration) -> Vec<&'s
     }
 
     let deadline = Instant::now() + grace;
-    let mut pending: Vec<usize> = (0..entries.len()).collect();
     loop {
         pending.retain(|&i| {
             let (pid, e) = &mut entries[i];
@@ -204,10 +214,12 @@ fn terminate_entries(mut entries: Vec<(u32, Entry)>, grace: Duration) -> Vec<&'s
     let mut hard_killed: Vec<&'static str> = Vec::new();
     for &i in &pending {
         let (pid, e) = &entries[i];
-        hard_killed.push(e.label);
-        if !still_ours(*pid, e) {
+        // Re-checked at the deadline: still ours and still alive, so a group that emptied since
+        // the last poll (and may now be a recycled id) is never signalled.
+        if !still_ours(*pid, e) || !crate::probe::group_alive(*pid) {
             continue;
         }
+        hard_killed.push(e.label);
         if let Ok(pgid) = i32::try_from(*pid) {
             if let Err(err) = signal_group(pgid, libc::SIGKILL) {
                 if err.raw_os_error() != Some(libc::ESRCH) {
@@ -339,5 +351,158 @@ impl HelperGuard {
 impl Drop for HelperGuard {
     fn drop(&mut self) {
         global().unregister(self.pid);
+    }
+}
+
+// `JobSlot` is `()` on unix, so a registration call passes a unit value (clippy::unit_arg).
+#[cfg(all(test, unix))]
+#[allow(clippy::unit_arg)]
+mod tests {
+    use super::*;
+    use gamelib_testutil::FakeHome;
+    use std::io::{BufRead, BufReader};
+    use std::os::unix::process::CommandExt;
+    use std::process::{Command, Stdio};
+    use std::time::Instant;
+
+    /// A helper whose group holds one member that ignores SIGTERM; the leader execs a plain sleep.
+    const STUBBORN_GROUP: &str = "(trap '' TERM; exec sleep 60) & echo $!; exec sleep 60";
+    /// A helper whose whole group ends on SIGTERM.
+    const COOPERATIVE_GROUP: &str = "sleep 60 & echo $!; wait";
+
+    /// SIGKILLs a helper's group and its member when dropped, so a red assertion leaves no
+    /// SIGTERM-ignoring sleeper behind.
+    struct Sweep {
+        pgid: i32,
+        member: i32,
+    }
+
+    impl Drop for Sweep {
+        fn drop(&mut self) {
+            // SAFETY: plain SIGKILLs to a group this test created and to its member; the pgid is
+            // a real, positive helper pid (> 1), never 0 or -1.
+            unsafe {
+                libc::kill(-self.pgid, libc::SIGKILL);
+                libc::kill(self.member, libc::SIGKILL);
+            }
+        }
+    }
+
+    fn command(home: &FakeHome, script: &str) -> Command {
+        let mut cmd = Command::new("/bin/sh");
+        cmd.args(["-c", script])
+            .env_clear()
+            .env("PATH", "/bin:/usr/bin")
+            .process_group(0)
+            .stdin(Stdio::null())
+            .stderr(Stdio::null())
+            .stdout(Stdio::piped());
+        home.apply(&mut cmd);
+        cmd
+    }
+
+    fn wait_dead(pid: u32, within: Duration) -> bool {
+        let deadline = Instant::now() + within;
+        loop {
+            if !crate::probe::is_alive(pid) {
+                return true;
+            }
+            if Instant::now() >= deadline {
+                return false;
+            }
+            std::thread::sleep(Duration::from_millis(50));
+        }
+    }
+
+    fn read_member(stdout: std::process::ChildStdout) -> i32 {
+        let mut line = String::new();
+        BufReader::new(stdout)
+            .read_line(&mut line)
+            .expect("read member pid");
+        line.trim().parse().expect("member pid")
+    }
+
+    #[test]
+    fn terminate_all_sigkills_an_owned_helpers_member_that_ignores_sigterm() {
+        let home = FakeHome::new("gamelib-proc-children-");
+        let mut child = command(&home, STUBBORN_GROUP)
+            .spawn()
+            .expect("spawn /bin/sh");
+        let pgid = child.id() as i32;
+        let member = read_member(child.stdout.take().expect("piped stdout"));
+        let _sweep = Sweep { pgid, member };
+
+        let set = ChildSet::new();
+        set.register_owned("stubborn-owned", child, Default::default());
+        let hard = set.terminate_all(Duration::from_millis(1500));
+
+        assert_eq!(hard, vec!["stubborn-owned"], "the group needed SIGKILL");
+        assert!(
+            wait_dead(member as u32, Duration::from_secs(5)),
+            "the SIGTERM-ignoring member must not outlive terminate_all"
+        );
+    }
+
+    #[test]
+    fn terminate_all_sigkills_a_tokio_helpers_member_that_ignores_sigterm() {
+        let home = FakeHome::new("gamelib-proc-children-");
+        let rt = tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(1)
+            .enable_all()
+            .build()
+            .expect("runtime");
+        // The SpecProcRunner shape: a task owns, awaits and so reaps the child; the set only holds
+        // the pid.
+        let (pgid, member) = rt.block_on(async {
+            use tokio::io::AsyncBufReadExt;
+            let mut cmd = tokio::process::Command::from(command(&home, STUBBORN_GROUP));
+            let mut child = cmd.spawn().expect("spawn /bin/sh");
+            let pid = child.id().expect("pid");
+            let mut lines =
+                tokio::io::BufReader::new(child.stdout.take().expect("piped stdout")).lines();
+            let line = lines.next_line().await.expect("read").expect("member line");
+            let member: i32 = line.trim().parse().expect("member pid");
+            let set_pid = pid;
+            // Registered below by the caller; the task reaps the leader the moment it exits.
+            tokio::spawn(async move {
+                let _ = child.wait().await;
+            });
+            (set_pid as i32, member)
+        });
+        let _sweep = Sweep { pgid, member };
+
+        let set = ChildSet::new();
+        set.register_pid("stubborn-tokio", pgid as u32, Default::default());
+        let hard = set.terminate_all(Duration::from_millis(1500));
+
+        assert_eq!(hard, vec!["stubborn-tokio"], "the group needed SIGKILL");
+        assert!(
+            wait_dead(member as u32, Duration::from_secs(5)),
+            "the SIGTERM-ignoring member must not outlive terminate_all"
+        );
+        drop(rt);
+    }
+
+    #[test]
+    fn a_cooperative_group_ends_inside_the_grace_with_no_hard_kill() {
+        let home = FakeHome::new("gamelib-proc-children-");
+        let mut child = command(&home, COOPERATIVE_GROUP)
+            .spawn()
+            .expect("spawn /bin/sh");
+        let pgid = child.id() as i32;
+        let member = read_member(child.stdout.take().expect("piped stdout"));
+        let _sweep = Sweep { pgid, member };
+
+        let set = ChildSet::new();
+        set.register_owned("cooperative", child, Default::default());
+        let started = Instant::now();
+        let hard = set.terminate_all(Duration::from_secs(5));
+
+        assert!(
+            started.elapsed() < Duration::from_secs(3),
+            "a group that ends on SIGTERM must not burn the grace"
+        );
+        assert!(hard.is_empty(), "nothing was hard-killed: {hard:?}");
+        assert!(wait_dead(member as u32, Duration::from_secs(5)));
     }
 }
