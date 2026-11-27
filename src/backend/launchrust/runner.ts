@@ -15,7 +15,6 @@ import type { RustInvokeArgsOf } from 'common/types/ipc/rustInvoke'
 import {
   LAUNCH_MANAGER_OPS,
   launchManagerCallUnion,
-  sidecarInternalInvokeArgs,
   sidecarInternalSendArgs
 } from 'common/types/ipc/sidecarInternal'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'

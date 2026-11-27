@@ -1261,6 +1261,27 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     callers: RUNNER_SHIM_IMPORTERS,
     deletedBy: 92
   },
+  // 88.3-08 (D-26, D-29): the TS side of the Rust launch funnel's eight manager hook ops. `answerFunnelHook` answers each
+  // `launchManagerCall` op as the TS funnel (`runLaunchEventCallback`) made the same call, `hookRefusal` is the one refusal text
+  // that names only the op; `registerLaunchManagerHooks` (the `askForceUninstall` row's wiring) hands every funnel op to it. They
+  // are pinned by `managerHooks.test.ts`, which drives each op's answer and refusal against scripted managers. Both leave with
+  // the managers in 91 and 92, which implement the hooks in Rust.
+  {
+    name: 'answerFunnelHook',
+    file: 'src/backend/launchrust/funnelHooks.ts',
+    shape: 'twin',
+    vectors: 'src/backend/launchrust/__tests__/managerHooks.test.ts',
+    callers: ['src/backend/launchrust/runner.ts'],
+    deletedBy: 92
+  },
+  {
+    name: 'hookRefusal',
+    file: 'src/backend/launchrust/funnelHooks.ts',
+    shape: 'twin',
+    vectors: 'src/backend/launchrust/__tests__/managerHooks.test.ts',
+    callers: ['src/backend/launchrust/runner.ts'],
+    deletedBy: 92
+  },
   // 88-13 (87 D-24): the synchronous known-fix twins, for callers 88 cannot make async. The launcher's `installFixes`
   // and `getKnownFixesEnvVariables` read the tier-1 fix inline until 88.1-17 deleted them; the Steam bridge keeps its own
   // reads until 97. `withKnownFixEnv` builds the settings storeManagerCommon launches with, which the sideload and

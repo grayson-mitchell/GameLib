@@ -132,14 +132,18 @@ export async function answerFunnelHook(
       const game = deps.libraryManagers[runner].getGame(appName)
       try {
         // The TS passed the stored `savesPath` as it was, undefined for a game with none.
-        await game.syncSaves(direction, savesPath as string, gogSaves)
+        await game.syncSaves(
+          direction,
+          (savesPath ?? undefined) as string,
+          gogSaves
+        )
         return true
       } catch (error) {
         const { title } = game.getGameInfo()
         logError(
           direction === '--skip-upload'
-            ? `Error while downloading saves for ${title}. ${error}`
-            : `Error uploading saves for ${title}. Error: ${error}`,
+            ? `Error while downloading saves for ${title}. ${String(error)}`
+            : `Error uploading saves for ${title}. Error: ${String(error)}`,
           LogPrefix.Backend
         )
         return false
