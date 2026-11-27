@@ -1,0 +1,38 @@
+[
+  {
+    "event": "step",
+    "op": "begin",
+    "caller": "a",
+    "runner": "steam",
+    "app": "1",
+    "body": {
+      "resolves": 1
+    }
+  },
+  {
+    "event": "run",
+    "caller": "a",
+    "key": "steam:1"
+  },
+  {
+    "event": "received",
+    "caller": "a",
+    "value": 1
+  },
+  {
+    "event": "step",
+    "op": "probe",
+    "caller": "later",
+    "runner": "steam",
+    "app": "1"
+  },
+  {
+    "event": "released",
+    "key": "steam:1"
+  },
+  {
+    "event": "received",
+    "caller": "later",
+    "value": "probe"
+  }
+]

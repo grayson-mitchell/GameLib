@@ -1,0 +1,47 @@
+[
+  {
+    "event": "step",
+    "op": "begin",
+    "caller": "owner-a",
+    "runner": "gog",
+    "app": "g1",
+    "table": "a"
+  },
+  {
+    "event": "run",
+    "caller": "owner-a",
+    "key": "gog:g1"
+  },
+  {
+    "event": "step",
+    "op": "begin",
+    "caller": "other-b",
+    "runner": "gog",
+    "app": "g1",
+    "table": "b",
+    "body": {
+      "resolves": null
+    }
+  },
+  {
+    "event": "run",
+    "caller": "other-b",
+    "key": "gog:g1"
+  },
+  {
+    "event": "received",
+    "caller": "other-b",
+    "value": null
+  },
+  {
+    "event": "step",
+    "op": "settle",
+    "caller": "owner-a",
+    "value": null
+  },
+  {
+    "event": "received",
+    "caller": "owner-a",
+    "value": null
+  }
+]

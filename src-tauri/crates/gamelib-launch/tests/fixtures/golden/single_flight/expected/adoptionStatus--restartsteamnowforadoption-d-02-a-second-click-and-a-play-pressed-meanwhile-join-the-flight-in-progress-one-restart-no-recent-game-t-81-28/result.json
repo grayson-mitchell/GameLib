@@ -1,0 +1,14 @@
+{
+  "received": {
+    "restart": {
+      "value": false
+    },
+    "second-click": {
+      "value": false
+    },
+    "play": {
+      "value": false
+    }
+  },
+  "pending": []
+}

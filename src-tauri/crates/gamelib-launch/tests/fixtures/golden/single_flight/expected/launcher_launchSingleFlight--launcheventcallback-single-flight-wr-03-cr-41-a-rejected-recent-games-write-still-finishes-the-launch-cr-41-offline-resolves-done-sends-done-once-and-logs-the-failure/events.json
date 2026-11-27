@@ -1,0 +1,198 @@
+[
+  {
+    "event": "step",
+    "op": "call",
+    "caller": "a",
+    "app": "Quail"
+  },
+  {
+    "event": "log",
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Launching Quail (Quail)"
+  },
+  {
+    "event": "frontend",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "Quail",
+        "runner": "legendary",
+        "status": "launching"
+      }
+    ]
+  },
+  {
+    "event": "bus",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "Quail",
+        "runner": "legendary",
+        "status": "launching"
+      }
+    ]
+  },
+  {
+    "event": "log",
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Preventing display from sleep"
+  },
+  {
+    "event": "appState",
+    "member": "wakeLock.start"
+  },
+  {
+    "event": "openGameLog",
+    "args": [
+      "Quail",
+      "legendary",
+      "launch",
+      {
+        "disableLogs": false,
+        "verboseLogs": true
+      }
+    ]
+  },
+  {
+    "event": "rust",
+    "channel": "engine_launch_select",
+    "args": [
+      {
+        "runner": "legendary",
+        "appName": "Quail",
+        "title": "Quail",
+        "isNative": true,
+        "settings": {
+          "verboseLogs": true
+        },
+        "offline": true
+      }
+    ],
+    "reply": {
+      "kind": "skip"
+    }
+  },
+  {
+    "event": "frontend",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "Quail",
+        "runner": "legendary",
+        "status": "launching"
+      }
+    ]
+  },
+  {
+    "event": "bus",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "Quail",
+        "runner": "legendary",
+        "status": "launching"
+      }
+    ]
+  },
+  {
+    "event": "launch",
+    "app": "Quail",
+    "args": [
+      null,
+      null,
+      null
+    ]
+  },
+  {
+    "event": "step",
+    "op": "finish",
+    "launch": 0,
+    "value": true
+  },
+  {
+    "event": "gameLog",
+    "target": {
+      "kind": "game",
+      "appName": "Quail",
+      "runner": "legendary",
+      "type": "launch"
+    },
+    "rotate": true,
+    "raw": "============= End of log ============="
+  },
+  {
+    "event": "log",
+    "level": "info",
+    "prefix": "Backend",
+    "text": "Stopping Display Power Saver Blocker"
+  },
+  {
+    "event": "appState",
+    "member": "wakeLock.stop"
+  },
+  {
+    "event": "tsStore",
+    "key": "Quail.lastPlayed",
+    "value": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "event": "tsStore",
+    "key": "Quail.totalPlayed",
+    "value": 0
+  },
+  {
+    "event": "rust",
+    "channel": "info_recent_add",
+    "args": [
+      {
+        "appName": "Quail",
+        "title": "Quail",
+        "runner": "legendary"
+      }
+    ],
+    "rejected": "info_recent_add:write-failed"
+  },
+  {
+    "event": "log",
+    "level": "warning",
+    "prefix": "Backend",
+    "text": [
+      "Recording recent game failed:",
+      "Error: info_recent_add:write-failed"
+    ]
+  },
+  {
+    "event": "frontend",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "Quail",
+        "runner": "legendary",
+        "status": "done"
+      }
+    ]
+  },
+  {
+    "event": "bus",
+    "channel": "gameStatusUpdate",
+    "args": [
+      {
+        "appName": "Quail",
+        "runner": "legendary",
+        "status": "done"
+      }
+    ]
+  },
+  {
+    "event": "received",
+    "caller": "a",
+    "status": "done"
+  },
+  {
+    "event": "step",
+    "op": "await",
+    "caller": "a"
+  }
+]

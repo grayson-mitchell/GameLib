@@ -1,0 +1,75 @@
+[
+  {
+    "event": "step",
+    "op": "begin",
+    "caller": "restart",
+    "runner": "steam",
+    "app": "112100",
+    "onJoin": "notify"
+  },
+  {
+    "event": "run",
+    "caller": "restart",
+    "key": "steam:112100"
+  },
+  {
+    "event": "step",
+    "op": "begin",
+    "caller": "second-click",
+    "runner": "steam",
+    "app": "112100",
+    "onJoin": "notify"
+  },
+  {
+    "event": "joined",
+    "caller": "second-click",
+    "key": "steam:112100",
+    "samePromiseAsOwner": true
+  },
+  {
+    "event": "onJoin",
+    "caller": "second-click",
+    "key": "steam:112100"
+  },
+  {
+    "event": "step",
+    "op": "begin",
+    "caller": "play",
+    "runner": "steam",
+    "app": "112100",
+    "onJoin": "notify-steam"
+  },
+  {
+    "event": "joined",
+    "caller": "play",
+    "key": "steam:112100",
+    "samePromiseAsOwner": true
+  },
+  {
+    "event": "onJoin",
+    "caller": "play",
+    "key": "steam:112100",
+    "notice": "already starting"
+  },
+  {
+    "event": "step",
+    "op": "settle",
+    "caller": "restart",
+    "value": false
+  },
+  {
+    "event": "received",
+    "caller": "restart",
+    "value": false
+  },
+  {
+    "event": "received",
+    "caller": "second-click",
+    "value": false
+  },
+  {
+    "event": "received",
+    "caller": "play",
+    "value": false
+  }
+]

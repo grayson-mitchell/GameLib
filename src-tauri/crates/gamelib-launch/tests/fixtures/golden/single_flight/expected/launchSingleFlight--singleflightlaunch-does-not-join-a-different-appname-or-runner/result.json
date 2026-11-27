@@ -1,0 +1,14 @@
+{
+  "received": {
+    "hold": {
+      "value": true
+    },
+    "other-app": {
+      "value": true
+    },
+    "other-runner": {
+      "value": true
+    }
+  },
+  "pending": []
+}

@@ -1,0 +1,9 @@
+{
+  "received": {},
+  "pending": [
+    "leader",
+    "joiner-1",
+    "joiner-2",
+    "late"
+  ]
+}

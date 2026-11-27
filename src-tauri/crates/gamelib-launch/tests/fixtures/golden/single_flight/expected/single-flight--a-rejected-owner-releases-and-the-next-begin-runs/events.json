@@ -1,0 +1,42 @@
+[
+  {
+    "event": "step",
+    "op": "begin",
+    "caller": "a",
+    "runner": "steam",
+    "app": "1",
+    "body": {
+      "rejects": "boom"
+    }
+  },
+  {
+    "event": "run",
+    "caller": "a",
+    "key": "steam:1"
+  },
+  {
+    "event": "received",
+    "caller": "a",
+    "rejected": "boom"
+  },
+  {
+    "event": "step",
+    "op": "begin",
+    "caller": "b",
+    "runner": "steam",
+    "app": "1",
+    "body": {
+      "resolves": "fresh"
+    }
+  },
+  {
+    "event": "run",
+    "caller": "b",
+    "key": "steam:1"
+  },
+  {
+    "event": "received",
+    "caller": "b",
+    "value": "fresh"
+  }
+]

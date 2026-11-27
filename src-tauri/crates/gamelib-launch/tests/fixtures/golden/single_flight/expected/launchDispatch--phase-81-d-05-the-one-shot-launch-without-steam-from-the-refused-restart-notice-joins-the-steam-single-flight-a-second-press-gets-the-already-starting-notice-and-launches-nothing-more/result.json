@@ -1,0 +1,11 @@
+{
+  "received": {
+    "a": {
+      "value": true
+    },
+    "b": {
+      "value": true
+    }
+  },
+  "pending": []
+}
