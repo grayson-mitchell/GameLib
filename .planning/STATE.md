@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: "88.2"
 current_phase_name: Command runner and game processes
 status: executing
-stopped_at: Completed 88.2-29-PLAN.md
-last_updated: "2026-11-27T10:33:10.286Z"
+stopped_at: Completed 88.2-30-PLAN.md
+last_updated: "2026-11-27T10:34:41.423Z"
 last_activity: 2026-11-27
 last_activity_desc: Phase 88.2 execution started
-state_head: 37ffc693ace20e4c0fd82abab86220f46e6f31e3
+state_head: 1772aae6839081eb160a73e972058b2a013df570
 progress:
   total_phases: 26
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-25)
 ## Current Position
 
 Phase: 88.2 (Command runner and game processes) — EXECUTING
-Plan: 30 of 31
+Plan: 31 of 31
 Status: Ready to execute
 Last activity: 2026-11-27 — Phase 88.2 execution started
 Progress: [████████████████░░░░] 204/257 plans ([█████████░] 88%)
@@ -576,6 +576,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 88.2 P27 | 25min | 2 tasks | 6 files |
 | Phase 88.2 P28 | 30min | 2 tasks | 4 files |
 | Phase 88.2 P29 | 25min | 2 tasks | 8 files |
+| Phase 88.2 P30 | 10 min | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -1304,6 +1305,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 88.2]: 88.2-27: the Windows stamped walk acts only through a held, verified Leader; Game Job arm answers Killed only when the held leader is signalled, else falls back to the walk (CR-01, WR-04, IN-05)
 - [Phase 88.2]: 88.2-28: terminate_all completion is the empty process group; still_ours answers group_alive when a reaped leader's stamp cannot be read (WR-01)
 - [Phase 88.2]: 88.2-29: a clean SpecProcRunner exit releases the helper's Windows kill-on-close Job (unix parity, WR-03); timeout, cancel, shutdown and SIGKILL keep close=kill
+- [Phase 88.2]: 88.2-30: bestEffortTrackedKill lives in storeManagerCommon, not launchrust, because the shim schedule requires every launchrust export to be a one-call shim
+- [Phase 88.2]: 88.2-30: the spawnAsync abort retries with a 25 ms to 500 ms doubling backoff until the call settles; the unref'd timer is cleared in finally
 
 ### Pending Todos
 
@@ -1596,8 +1599,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-27T10:21:54.864Z
-Stopped at: Completed 88.2-29-PLAN.md
+Last session: 2026-11-27T10:34:37.455Z
+Stopped at: Completed 88.2-30-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.

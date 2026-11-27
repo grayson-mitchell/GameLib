@@ -1030,7 +1030,7 @@ Plans:
   3. The quit dialog gains a "game running" condition (D-27, a recorded behaviour change) read from the Rust running-game registry
   4. `commandRunner.ts` is deleted; closes on goldens, three-OS CI and a stub-game smoke (launch, quit-kill, survival of parent SIGKILL)
 
-**Plans:** 29/31 plans executed: 25/25 executed in 18 waves; planned 2026-11-26, re-sliced the same day so every plan fits the 100k smart-zone budget and stays below 15 files (goldens are recorded from the TS before each Rust slice, D-25; the quit prompt lands before games become Game-class). Gap closure 88.2-26..31 planned 2026-11-27 from 88.2-UAT.md (G-88.2-1, G-88.2-2), six plans in six sequential waves (each sets its findings to fixed in the one 88.2-REVIEW-DISPOSITION.md)
+**Plans:** 30/31 plans executed: 25/25 executed in 18 waves; planned 2026-11-26, re-sliced the same day so every plan fits the 100k smart-zone budget and stays below 15 files (goldens are recorded from the TS before each Rust slice, D-25; the quit prompt lands before games become Game-class). Gap closure 88.2-26..31 planned 2026-11-27 from 88.2-UAT.md (G-88.2-1, G-88.2-2), six plans in six sequential waves (each sets its findings to fixed in the one 88.2-REVIEW-DISPOSITION.md)
 
 Plans:
 **Wave 1**
@@ -1099,7 +1099,7 @@ Plans:
 - [x] 88.2-27-PLAN.md — CR-01, WR-04, IN-05: the Windows stamped kill holds the verified leader for the whole walk, rechecks child parentage, falls back from a Job that did not end the leader
 - [x] 88.2-28-PLAN.md — WR-01: terminate_all waits for each helper's group and SIGKILLs members that ignore SIGTERM (owned and tokio helpers)
 - [x] 88.2-29-PLAN.md — WR-03 (option A): a clean SpecProcRunner exit releases the helper's kill-on-close Job; timeout, cancel, shutdown and SIGKILL still kill
-- [ ] 88.2-30-PLAN.md — WR-05, WR-08, WR-09: best-effort tracked kill in stop(), the quit handler logs a failed kill, the spawnAsync abort retried until the call settles
+- [x] 88.2-30-PLAN.md — WR-05, WR-08, WR-09: best-effort tracked kill in stop(), the quit handler logs a failed kill, the spawnAsync abort retried until the call settles
 - [ ] 88.2-31-PLAN.md — Gap-closure proof at a clean-worktree candidate head, push checkpoint, three-OS CI with every new arm observed on its leg (D-30)
 
 **Cross-cutting constraints:** <!-- gsd:generated -->

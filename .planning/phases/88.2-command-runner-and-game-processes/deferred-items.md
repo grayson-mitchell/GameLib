@@ -18,3 +18,11 @@
   `terminate_all`); left alone.
 - Resolved by the orchestrator before the 88.2-31 push: the member now prints its own pid (`echo $$`) after its
   `trap` and then `exec`s, so the line cannot arrive before SIGTERM is ignored. 6 of 6 runs green.
+
+## From 88.2-30
+
+- `src/backend/__tests__/quitTeardownWiring.test.ts` "C4b: gamelib-proc terminate_group is SIGTERM to the negated pgid ->
+  bounded try_wait -> SIGKILL -> wait()" fails at HEAD, independent of 88.2-30 (that plan touches none of it).
+  `loadKillTreeRsCode()` cuts `kill_tree.rs` at its first `    #[cfg(test)]`; 88.2-27 (`4ad3be901`) put one at line 429,
+  before `pub fn terminate_group(` (line 509), so `extractBracedBlock` finds no marker. The pin should cut at the last
+  `    #[cfg(test)]`. Not fixed here (scope boundary).
