@@ -8,6 +8,8 @@
 //!   TS drain grace).
 //! - [`record`]: the per-launch record a funnel launch leaves on disk for a later start to re-adopt the game
 //!   from (88.3-07).
+//! - [`readopt`]: the boot scan of those records, the proof of each game it finds and the exit watch that finishes
+//!   its session (88.3-09).
 //! - [`registry`]: the tracked registry: register and unregister of a run, the running-game read and the
 //!   kills (88.2-11).
 //! - [`spawn`]: the seam a game is spawned through.
@@ -17,6 +19,7 @@
 
 pub mod capture;
 pub mod end;
+pub mod readopt;
 pub mod record;
 pub mod registry;
 pub mod spawn;

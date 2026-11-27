@@ -2,6 +2,7 @@
 //! information context the launch builders and the prepare step read. The crate reads no environment
 //! variable and no profile path of its own.
 
+use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 
 use gamelib_engine::ctx::EngineCtx;
@@ -74,6 +75,10 @@ pub struct LaunchCtx {
     /// The funnel launches whose game is about to run or is running (88.3-07): where a spawn finds the facts
     /// of its record, and where the quit-kill marks a session whose game it ended.
     pub sessions: Arc<LaunchSessions>,
+    /// Whether the renderer is listening for `gameStatusUpdate` (88.3-09, Pitfall 9): set by
+    /// `game::readopt::announce`. A game re-adopted after it is announced at once; one adopted before it waits
+    /// for the announcement.
+    pub frontend_ready: Arc<AtomicBool>,
 }
 
 impl LaunchCtx {
@@ -114,6 +119,7 @@ impl LaunchCtx {
             steps: None,
             power: Arc::new(PowerState::new()),
             sessions,
+            frontend_ready: Arc::new(AtomicBool::new(false)),
         }
     }
 

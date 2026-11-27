@@ -636,6 +636,14 @@ fn runtime() -> Result<&'static Runtime, String> {
         .map_err(Clone::clone)
 }
 
+/// Where a task that outlives its caller runs (88.3-09's exit watches): the caller's runtime when it is inside
+/// one, otherwise the crate's own. `None` when neither is available.
+pub(crate) fn task_handle() -> Option<Handle> {
+    Handle::try_current()
+        .ok()
+        .or_else(|| runtime().ok().map(|runtime| runtime.handle().clone()))
+}
+
 /// [`dispatch`] for a plain thread: blocks on the crate's own runtime. Called from inside a tokio
 /// runtime it answers `<op>:wrong-thread` instead of panicking in `block_on`.
 pub fn dispatch_sync(op: &str, args: &[Value], ctx: &LaunchCtx) -> Result<Value, String> {

@@ -253,6 +253,28 @@ pub fn read_record(path: &Path) -> Result<LaunchRecord, RecordError> {
     serde_json::from_value(value).map_err(|_| RecordError::Decode)
 }
 
+/// Whether `path` is a regular file (never followed through a symlink) that the current user owns: the only kind
+/// of file a boot scan removes when it cannot read it as a record (88.3-09). Off unix there is no owner to read,
+/// so a regular file is enough.
+pub fn is_ours_regular_file(path: &Path) -> bool {
+    let Ok(meta) = std::fs::symlink_metadata(path) else {
+        return false;
+    };
+    if !meta.file_type().is_file() {
+        return false;
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::MetadataExt;
+        // SAFETY: `geteuid` takes no arguments, touches no memory and cannot fail.
+        meta.uid() == unsafe { libc::geteuid() }
+    }
+    #[cfg(not(unix))]
+    {
+        true
+    }
+}
+
 /// Deletes the record: a regular file only, the one computed path, nothing recursive. A record that is already
 /// gone is fine.
 pub fn remove_record(path: &Path) -> Result<(), RecordError> {

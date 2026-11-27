@@ -121,6 +121,8 @@ struct Recorded {
     general: Mutex<Vec<String>>,
     chunks: Mutex<Vec<(Pipe, String)>>,
     pids: Mutex<Vec<u32>>,
+    /// The structured lines the per-game log was given, each with whether its batch carried the rotation.
+    lines: Mutex<Vec<(String, bool)>>,
 }
 
 impl LaunchLogSink for Recorded {
@@ -130,8 +132,9 @@ impl LaunchLogSink for Recorded {
     fn submit(&self, batches: Vec<TargetBatch>) {
         for batch in batches {
             for entry in batch.entries {
-                if let Entry::Raw(text) = entry {
-                    lock(&self.raw).push(text);
+                match entry {
+                    Entry::Raw(text) => lock(&self.raw).push(text),
+                    Entry::Line { msg, .. } => lock(&self.lines).push((msg, batch.rotate)),
                 }
             }
         }
@@ -1327,4 +1330,219 @@ async fn a_lost_sidecar_hands_the_game_to_the_exit_watch() {
         "a hook that needs the sidecar was called"
     );
     assert!(ctx.flights.is_empty() && ctx.sessions.is_empty());
+}
+
+// ---------------------------------------------------------------------------------------------
+// 88.3-09, Force Quit survival and re-adoption (D-08, D-31)
+// ---------------------------------------------------------------------------------------------
+
+/// A context over the layout the stand-in shell's funnel mode builds (`app_folder` and `user_data` are the same
+/// folder), so a record the stand-in wrote is where this context's boot scan reads.
+fn ctx_in(user_data: &Path, log: Arc<Recorded>) -> LaunchCtx {
+    let engine = Arc::new(
+        EngineCtx::new(
+            Arc::new(StoreHost::new()),
+            Arc::new(SystemClock),
+            host_platform(),
+            EnginePaths {
+                app_folder: user_data.to_path_buf(),
+                tools_path: user_data.join("tools"),
+                user_home: user_data.join("home"),
+                temp: user_data.join("temp"),
+                user_data: user_data.to_path_buf(),
+            },
+            Shutdown::new(),
+        )
+        .with_proc(Arc::new(gamelib_proc::SpecProcRunner)),
+    );
+    let knownfix = Arc::new(KnownFixCtx::new(
+        engine.clone(),
+        None,
+        "https://relay.test",
+        "0.0.0",
+    ));
+    let wine = Arc::new(WineCtx::new(engine.clone(), user_data.join("tools")));
+    let info = Arc::new(InfoCtx::new(
+        Arc::new(StoreHost::new()),
+        Arc::new(SystemClock),
+        info_platform(),
+        InfoPaths {
+            app_folder: user_data.to_path_buf(),
+            user_data: user_data.to_path_buf(),
+            temp: user_data.join("temp"),
+            public_dir: None,
+        },
+        "0.0.0".to_string(),
+        Shutdown::new(),
+        Arc::new(ReqwestHttp::new()),
+    ));
+    LaunchCtx::new(engine, knownfix, wine, info)
+        .with_log_sink(log)
+        .with_errors(Arc::new(QuietErrors))
+}
+
+/// The after-script of the arms below: a program that writes `marker` and nothing else. It runs with an empty
+/// environment on unix (the shell builtin needs none); on Windows it gets the three variables `cmd` wants.
+fn marker_script(dir: &Path, marker: &Path) -> std::path::PathBuf {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let script = dir.join("after.sh");
+        std::fs::write(&script, format!("#!/bin/sh\n: > '{}'\n", marker.display()))
+            .expect("script");
+        std::fs::set_permissions(&script, std::fs::Permissions::from_mode(0o755)).expect("mode");
+        script
+    }
+    #[cfg(windows)]
+    {
+        let script = dir.join("after.bat");
+        std::fs::write(
+            &script,
+            format!("@echo off\r\necho done> \"{}\"\r\n", marker.display()),
+        )
+        .expect("script");
+        script
+    }
+}
+
+/// What the script's environment is: nothing on unix, the three variables a batch file needs on Windows.
+fn script_host() -> RunnerHost {
+    let env = if cfg!(windows) {
+        ["SystemRoot", "ComSpec", "PATH"]
+            .iter()
+            .filter_map(|name| std::env::var(name).ok().map(|v| ((*name).to_string(), v)))
+            .collect()
+    } else {
+        BTreeMap::new()
+    };
+    RunnerHost {
+        env,
+        path: String::new(),
+    }
+}
+
+/// The stand-in shell running one funnel launch of the stub game (`shell --funnel`), with the fake profile
+/// applied. Its stderr goes to a file, so a leftover process can never hold a pipe the test waits on.
+fn funnel_shell(
+    home: &FakeHome,
+    user_data: &Path,
+    game_args: &[&str],
+    after_script: &Path,
+) -> std::process::Child {
+    let mut cmd = std::process::Command::new(STUB);
+    cmd.arg("shell")
+        .arg("--user-data")
+        .arg(user_data)
+        .arg("--funnel")
+        .arg(r#"{"appName":"stubapp","runner":"sideload"}"#)
+        .arg("--game")
+        .arg(serde_json::json!(game_args).to_string())
+        .arg("--after-script")
+        .arg(after_script)
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::from(
+            std::fs::File::create(home.root().join("funnel-shell.err")).expect("stderr file"),
+        ));
+    home.apply(&mut cmd);
+    cmd.spawn().expect("spawn the stand-in shell")
+}
+
+/// What the timestamp store holds for `stubapp` under `key` (`lastPlayed`, `totalPlayed`).
+fn stored_play_time(user_data: &Path, key: &str) -> Option<serde_json::Value> {
+    let text = std::fs::read_to_string(user_data.join("store").join("timestamp.json")).ok()?;
+    let value: serde_json::Value = serde_json::from_str(&text).ok()?;
+    value.pointer(&format!("/stubapp/{key}")).cloned()
+}
+
+/// The tracer (88.3-09): the stand-in shell runs a funnel launch and is killed (SIGKILL; TerminateProcess on
+/// Windows) while the game runs. The game lives. A context over the same folder re-adopts it from its record,
+/// shows it as running, writes the re-adopted line to its log, and when the game ends records play time, runs
+/// the after script and removes the record.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn force_quit_survival_then_re_adopt() {
+    let home = FakeHome::new("stub-game-readopt-");
+    let user_data = home.root().join("gamelib-data");
+    let pids_file = home.root().join("pids.txt");
+    let marker = home.root().join("after-ran.txt");
+    let script = marker_script(home.root(), &marker);
+    let mut strays = Strays(Vec::new());
+    let path = record_path(&user_data, RunnerName::Sideload, "stubapp");
+
+    let pids = pids_file.to_string_lossy().into_owned();
+    let mut shell = funnel_shell(
+        &home,
+        &user_data,
+        &["game", "--pids", &pids, "--exit-after-ms", "5000"],
+        &script,
+    );
+    let record = wait_for_record(&path);
+    wait_until("the game to publish its pid", || {
+        recorded_pids(&pids_file, 1).is_some()
+    });
+    let game = recorded_pids(&pids_file, 1).expect("pids")[0];
+    strays.add(game);
+    assert_eq!(record.pid, game, "the record names the stub game");
+    assert!(record.after_script.is_some(), "the record owes the script");
+
+    // The process that ran the funnel dies without any chance to clean up.
+    shell.kill().expect("kill the stand-in shell");
+    shell.wait().expect("reap the stand-in shell");
+    assert!(
+        probe::is_alive(game),
+        "the game died with the stand-in shell"
+    );
+    assert!(path.exists(), "the record outlives the shell");
+
+    // The next start.
+    let recorded = Arc::new(Recorded::default());
+    let ctx = ctx_in(&user_data, recorded.clone());
+    let report = gamelib_launch::game::readopt::start_with_host(&ctx, &script_host());
+    assert_eq!(report.adopted, 1, "{report:?}");
+    assert_eq!(
+        (report.removed, report.owed_scripts, report.skipped),
+        (0, 0, 0)
+    );
+    assert!(
+        ctx.registry.games_running(),
+        "the adopted game counts as running"
+    );
+    assert!(ctx.registry.contains("sideload", "stubapp"));
+    let summary = ctx.registry.games();
+    assert_eq!(summary.len(), 1);
+    assert_eq!(
+        (summary[0].pid, summary[0].stamp),
+        (game, Some(record.stamp))
+    );
+    // One fixed line in the game's own log, appended with no rotation; the capture file is not tailed.
+    let lines = lock(&recorded.lines).clone();
+    assert_eq!(
+        lines,
+        vec![(
+            gamelib_launch::game::readopt::RE_ADOPTED_LINE.to_string(),
+            false
+        )]
+    );
+    assert!(
+        lock(&recorded.chunks).is_empty(),
+        "the capture file was tailed"
+    );
+    assert!(!marker.exists(), "the after script ran at adoption");
+
+    // The game ends by itself: play time, the after script, the record and the registry entry.
+    wait_until("the game to end", || !probe::is_alive(game));
+    wait_until("the session to finish", || {
+        !ctx.registry.games_running() && !path.exists()
+    });
+    assert!(stored_play_time(&user_data, "lastPlayed").is_some());
+    assert!(
+        stored_play_time(&user_data, "totalPlayed").is_some_and(|v| v.is_number()),
+        "totalPlayed is written"
+    );
+    wait_until("the after script's marker", || marker.exists());
+    assert!(ctx.sessions.is_empty());
+    assert!(
+        lock(&recorded.lines).iter().all(|(_, rotate)| !rotate),
+        "no line claimed a rotation"
+    );
 }

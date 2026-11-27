@@ -11,6 +11,12 @@
 //! never once the run has reaped it (the pid and its group id could be anyone's by then). A helper is ended
 //! through its run's cancel token, which the spec runner answers by ending the child's group through the
 //! child it owns. A run ended by a kill reads as a cancellation (`killed_by_us`, the TS `killedByUs`).
+//!
+//! **Adopted games (88.3-09, D-08).** A game that outlived a GameLib crash has no handle any more: the next start
+//! proves it again from its launch record (`game::readopt`) and registers an [`AdoptedEntry`] that holds the proof.
+//! It counts for `games_running`, `games` and `contains`, so the quit dialog asks about it, and the kills reach it
+//! only through `gamelib_proc::kill_tree::kill_adopted_tree` over that proof, which proves the tree again before
+//! it signals (prohibition 5). An adopted game is never signalled by pid alone.
 
 use std::collections::BTreeMap;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -18,6 +24,8 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Duration;
 
 use gamelib_core::shutdown::{ExitBudget, Shutdown};
+use gamelib_proc::adopt::AdoptProof;
+use gamelib_proc::kill_tree::kill_adopted_tree;
 use gamelib_proc::{GameHandle, KillOutcome};
 use tokio_util::sync::CancellationToken;
 
@@ -133,6 +141,61 @@ pub struct HelperEntry {
     pub cancel: CancellationToken,
 }
 
+/// A registered re-adopted game (88.3-09): the proof the next start made of a game GameLib no longer holds a
+/// handle for.
+#[derive(Clone)]
+pub struct AdoptedEntry {
+    pub id: EntryId,
+    pub ids: RunIds,
+    /// What `adopt::identify` was run over and what `kill_adopted_tree` proves again before it signals.
+    pub proof: AdoptProof,
+    /// When the game was adopted, in the context clock's milliseconds.
+    pub started_at: u64,
+    /// Held for a whole kill and its observer, and taken by the exit watch before it finishes the session, so the
+    /// watch cannot start its tail between the kill and the quit-kill bookkeeping (the handle lock's job for a
+    /// live game).
+    gate: Arc<Mutex<()>>,
+    /// Set (under the gate) by the exit watch once it has decided the game is over: nothing is signalled after.
+    ended: Arc<AtomicBool>,
+}
+
+impl AdoptedEntry {
+    /// Ends the adopted tree through its proof (blocking: it polls up to `grace`). `true` when this call ended
+    /// it; `false` when the proof no longer held (the game was gone or the pid is someone else's) or the watch
+    /// had already finished the session.
+    fn kill(&self, grace: Duration, observer: Option<(KillCause, &KillObserver)>) -> bool {
+        let _gate = lock(&self.gate);
+        if self.ended.load(Ordering::SeqCst) {
+            return false;
+        }
+        match kill_adopted_tree(&self.proof, grace) {
+            KillOutcome::Killed => {
+                if let Some((cause, observer)) = observer {
+                    observer(cause, &self.ids);
+                }
+                true
+            }
+            KillOutcome::Gone | KillOutcome::NotOurs => false,
+        }
+    }
+
+    /// The exit watch's side of the gate: waits (without blocking a worker) until no kill is in progress, then
+    /// marks the entry ended so no later kill signals anything. `false` when `shutdown` fired first.
+    pub async fn finish_session(&self, shutdown: &CancellationToken, poll: Duration) -> bool {
+        loop {
+            if let Ok(_gate) = self.gate.try_lock() {
+                self.ended.store(true, Ordering::SeqCst);
+                return true;
+            }
+            tokio::select! {
+                biased;
+                _ = shutdown.cancelled() => return false,
+                _ = tokio::time::sleep(poll) => {}
+            }
+        }
+    }
+}
+
 /// What 88.3 shows of a running game.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GameSummary {
@@ -149,6 +212,7 @@ struct Inner {
     next: u64,
     games: BTreeMap<u64, GameEntry>,
     helpers: BTreeMap<u64, HelperEntry>,
+    adopted: BTreeMap<u64, AdoptedEntry>,
 }
 
 /// What a context keeps of the runs that spawned a process it must be able to find again.
@@ -237,6 +301,43 @@ impl TrackedRegistry {
         id
     }
 
+    /// Registers a re-adopted game (88.3-09) under `ids`, proved by `proof`. The entry's id is the receipt
+    /// [`unregister_adopted`] takes.
+    ///
+    /// [`unregister_adopted`]: TrackedRegistry::unregister_adopted
+    pub fn register_adopted(&self, ids: RunIds, started_at: u64, proof: AdoptProof) -> EntryId {
+        let mut inner = lock(&self.inner);
+        let id = EntryId(inner.next);
+        inner.next += 1;
+        inner.adopted.insert(
+            id.0,
+            AdoptedEntry {
+                id,
+                ids,
+                proof,
+                started_at,
+                gate: Arc::new(Mutex::new(())),
+                ended: Arc::new(AtomicBool::new(false)),
+            },
+        );
+        id
+    }
+
+    /// Removes the adopted entry, answering it; `None` when it was already removed.
+    pub fn unregister_adopted(&self, id: EntryId) -> Option<AdoptedEntry> {
+        lock(&self.inner).adopted.remove(&id.0)
+    }
+
+    /// The registered adopted entry, if it is still there.
+    pub fn adopted_entry(&self, id: EntryId) -> Option<AdoptedEntry> {
+        lock(&self.inner).adopted.get(&id.0).cloned()
+    }
+
+    /// The adopted games, oldest first: what the announcement walks.
+    pub fn adopted(&self) -> Vec<AdoptedEntry> {
+        lock(&self.inner).adopted.values().cloned().collect()
+    }
+
     /// Removes the game entry, answering it; `None` when it was already removed.
     pub fn unregister(&self, id: EntryId) -> Option<GameEntry> {
         lock(&self.inner).games.remove(&id.0)
@@ -252,17 +353,23 @@ impl TrackedRegistry {
         lock(&self.inner).games.get(&id.0).cloned()
     }
 
-    /// Whether a game run is registered under `{ runner, key }`.
+    /// Whether a game run (live or re-adopted) is registered under `{ runner, key }`.
     pub fn contains(&self, runner: &str, key: &str) -> bool {
-        lock(&self.inner)
+        let inner = lock(&self.inner);
+        inner
             .games
             .values()
             .any(|e| e.ids.runner == runner && e.ids.key == key)
+            || inner
+                .adopted
+                .values()
+                .any(|e| e.ids.runner == runner && e.ids.key == key)
     }
 
-    /// How many game runs are registered.
+    /// How many game runs (live and re-adopted) are registered.
     pub fn len(&self) -> usize {
-        lock(&self.inner).games.len()
+        let inner = lock(&self.inner);
+        inner.games.len() + inner.adopted.len()
     }
 
     pub fn is_empty(&self) -> bool {
@@ -274,20 +381,26 @@ impl TrackedRegistry {
         !self.is_empty()
     }
 
-    /// The running games, oldest registration first, for 88.3.
+    /// The running games, oldest registration first, for 88.3: the live runs, then the re-adopted games.
     pub fn games(&self) -> Vec<GameSummary> {
-        lock(&self.inner)
-            .games
-            .values()
-            .map(|e| GameSummary {
-                runner: e.ids.runner.clone(),
-                key: e.ids.key.clone(),
-                abort_id: e.ids.abort_id.clone(),
-                pid: e.pid,
-                stamp: e.stamp,
-                started_at: e.started_at,
-            })
-            .collect()
+        let inner = lock(&self.inner);
+        let live = inner.games.values().map(|e| GameSummary {
+            runner: e.ids.runner.clone(),
+            key: e.ids.key.clone(),
+            abort_id: e.ids.abort_id.clone(),
+            pid: e.pid,
+            stamp: e.stamp,
+            started_at: e.started_at,
+        });
+        let adopted = inner.adopted.values().map(|e| GameSummary {
+            runner: e.ids.runner.clone(),
+            key: e.ids.key.clone(),
+            abort_id: e.ids.abort_id.clone(),
+            pid: e.proof.leader_pid,
+            stamp: Some(e.proof.leader_stamp),
+            started_at: e.started_at,
+        });
+        live.chain(adopted).collect()
     }
 
     /// Ends the runs the TS filter selects (`killTracked`): `None` for a field matches every run. Answers how
@@ -336,10 +449,17 @@ impl TrackedRegistry {
     /// Ends the run that answers to `abort_id` and cancels its token (the TS `abortController.abort()`),
     /// for a game run (helper runs have their abort table). `true` when a run was found.
     pub async fn abort_game(&self, shutdown: &Shutdown, abort_id: &str) -> bool {
-        let found = lock(&self.inner)
-            .games
-            .values()
-            .any(|e| Select::Abort(abort_id).matches(&e.ids));
+        let found = {
+            let inner = lock(&self.inner);
+            inner
+                .games
+                .values()
+                .any(|e| Select::Abort(abort_id).matches(&e.ids))
+                || inner
+                    .adopted
+                    .values()
+                    .any(|e| Select::Abort(abort_id).matches(&e.ids))
+        };
         if !found {
             return false;
         }
@@ -355,10 +475,15 @@ impl TrackedRegistry {
         cause: KillCause,
         cancel: bool,
     ) -> usize {
-        let (games, helpers): (Vec<GameEntry>, Vec<HelperEntry>) = {
+        let (games, adopted, helpers): (Vec<GameEntry>, Vec<AdoptedEntry>, Vec<HelperEntry>) = {
             let inner = lock(&self.inner);
             let games = inner
                 .games
+                .values()
+                .filter(|e| select.matches(&e.ids))
+                .cloned();
+            let adopted = inner
+                .adopted
                 .values()
                 .filter(|e| select.matches(&e.ids))
                 .cloned();
@@ -367,14 +492,14 @@ impl TrackedRegistry {
                 .values()
                 .filter(|e| !matches!(select, Select::Abort(_)) && select.matches(&e.ids))
                 .cloned();
-            (games.collect(), helpers.collect())
+            (games.collect(), adopted.collect(), helpers.collect())
         };
         let mut killed = 0;
         for helper in &helpers {
             helper.cancel.cancel();
             killed += 1;
         }
-        if games.is_empty() {
+        if games.is_empty() && adopted.is_empty() {
             return killed;
         }
         // Held for the kill only: dropped when this function returns, whatever the games do after.
@@ -385,6 +510,13 @@ impl TrackedRegistry {
             if cancel {
                 game.cancel.cancel();
             }
+            let observer = observer.clone();
+            killers.spawn_blocking(move || {
+                game.kill(KILL_GRACE, observer.as_ref().map(|o| (cause, o)))
+            });
+        }
+        for game in adopted {
+            // An adopted game is ended only through its proof, which `kill_adopted_tree` proves again.
             let observer = observer.clone();
             killers.spawn_blocking(move || {
                 game.kill(KILL_GRACE, observer.as_ref().map(|o| (cause, o)))

@@ -35,7 +35,7 @@ use serde_json::{json, Value};
 
 use super::flights::Enter;
 use super::log::LaunchLog;
-use super::playtime::{iso_string, record_play_session, PlayTimes};
+use super::playtime::{iso_string, record_play_session, record_session_playtime, PlayTimes};
 use super::session::{QuitHook, SessionFacts, SessionGuard};
 use super::steps::{CtxFunnelSteps, FunnelSteps};
 use super::{FunnelHost, LaunchParams, LaunchStatus};
@@ -814,7 +814,7 @@ fn recent_add(
 
 /// Begins the launch's session (88.3-07): the facts its record carries, and the quit hook that records the play
 /// time at the kill and rewrites the record as `quitKilled` (D-31).
-fn begin_session(
+pub(crate) fn begin_session(
     ctx: &LaunchCtx,
     runner: RunnerName,
     app_name: &str,
@@ -828,22 +828,14 @@ fn begin_session(
         Arc::new(move |id| {
             let killed_at = ctx.engine.clock.now_ms();
             // The session's own start time, as the tail would have used it (`startPlayingDate`).
-            PlayTimes::open(&ctx).record_session_end(
+            record_session_playtime(
                 &ctx,
+                runner,
                 &app_name,
                 launch_started_at_ms,
+                start_playing_at_ms,
                 killed_at,
             );
-            if runner != RunnerName::Steam {
-                let elapsed = killed_at.saturating_sub(start_playing_at_ms);
-                record_play_session(
-                    &ctx,
-                    &app_name,
-                    runner,
-                    i64::try_from(elapsed).unwrap_or(i64::MAX),
-                    ctx.engine.platform,
-                );
-            }
             record::mark_quit_killed(&ctx, id, killed_at);
         })
     };

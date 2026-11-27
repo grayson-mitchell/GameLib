@@ -126,6 +126,19 @@ impl LaunchLog {
         }
     }
 
+    /// The writer of a game's launch log that is only ever appended to (88.3-09, D-09): a re-adopted game's
+    /// session continues the log the crashed GameLib was writing, so nothing owes a rotation and nothing here
+    /// ever claims one. Never disabled: the lines written through it are the funnel's own notes.
+    pub fn open_appending(
+        sink: Arc<dyn LaunchLogSink>,
+        app_name: &str,
+        runner: RunnerName,
+    ) -> LaunchLog {
+        let mut log = LaunchLog::open(sink, app_name, runner, false, true);
+        log.rotate_owed = false;
+        log
+    }
+
     /// The rotation for the entry being accepted now: true exactly once.
     fn claim_rotate(&mut self) -> bool {
         std::mem::take(&mut self.rotate_owed)

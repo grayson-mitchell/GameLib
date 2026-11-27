@@ -132,6 +132,31 @@ impl PlayTimes {
     }
 }
 
+/// What a session that ended outside the funnel's own tail records (88.3-07's quit-kill, 88.3-09's re-adopted
+/// game): `lastPlayed` and `totalPlayed` from the launch's own start, as the funnel's tail writes them, then, but
+/// for Steam (its launch promise tracks a hand-off, not the game), the macOS runs-for-me record from the time the
+/// game ran.
+pub fn record_session_playtime(
+    ctx: &LaunchCtx,
+    runner: RunnerName,
+    app_name: &str,
+    launch_started_at_ms: u64,
+    start_playing_at_ms: u64,
+    ended_ms: u64,
+) {
+    PlayTimes::open(ctx).record_session_end(ctx, app_name, launch_started_at_ms, ended_ms);
+    if runner != RunnerName::Steam {
+        let elapsed = ended_ms.saturating_sub(start_playing_at_ms);
+        record_play_session(
+            ctx,
+            app_name,
+            runner,
+            i64::try_from(elapsed).unwrap_or(i64::MAX),
+            ctx.engine.platform,
+        );
+    }
+}
+
 /// The three states of a game's override (`RunsForMeState`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RunsForMeState {
