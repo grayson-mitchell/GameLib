@@ -113,4 +113,78 @@ describe('createQuitHandler', () => {
       'exit'
     ])
   })
+
+  test('No with a running game kills nothing and does not exit', async () => {
+    const { calls, deps } = setup({ isGameRunning: async () => true }, 0)
+    await createQuitHandler(deps).handleExit()
+    expect(calls).toEqual(['dialog'])
+  })
+
+  test('a dismissal (the cancelId answer) with a running game kills nothing', async () => {
+    let cancelId: number | undefined
+    const { calls, deps } = setup({
+      isGameRunning: async () => true,
+      showMessageBox: async (opts) => {
+        cancelId = opts.cancelId
+        calls.push('dialog')
+        return { response: opts.cancelId }
+      }
+    })
+    await createQuitHandler(deps).handleExit()
+    expect(cancelId).toBe(0)
+    expect(calls).toEqual(['dialog'])
+  })
+
+  test('a rejected registry read is treated as a running game: the dialog still asks', async () => {
+    const { calls, dialogs, deps } = setup(
+      { isGameRunning: async () => Promise.reject(new Error('transport')) },
+      0
+    )
+    await createQuitHandler(deps).handleExit()
+    expect(dialogs).toHaveLength(1)
+    expect(calls).toEqual(['dialog'])
+  })
+
+  test('a running game together with a lock shows the generic message', async () => {
+    const { dialogs, deps } = setup(
+      { isGameRunning: async () => true, isLocked: () => true },
+      0
+    )
+    await createQuitHandler(deps).handleExit()
+    expect(String(dialogs[0]!.message)).toMatch(/pending operations/)
+  })
+
+  test('a running game together with bridge hosting shows the generic message', async () => {
+    const { dialogs, deps } = setup(
+      { isGameRunning: async () => true, isBridgeHosting: () => true },
+      0
+    )
+    await createQuitHandler(deps).handleExit()
+    expect(String(dialogs[0]!.message)).toMatch(/pending operations/)
+  })
+
+  test('no game and no other condition: no dialog, no kill, and the quit exits as before', async () => {
+    const { calls, dialogs, deps } = setup({ isGameRunning: async () => false })
+    await createQuitHandler(deps).handleExit()
+    expect(dialogs).toHaveLength(0)
+    expect(calls).toEqual([
+      'releaseSteam',
+      'presence',
+      'runner.teardown',
+      'exit'
+    ])
+  })
+
+  test('a failed Rust kill on Yes does not strand the quit: abortAll and exit still run', async () => {
+    const { calls, deps } = setup(
+      {
+        isGameRunning: async () => true,
+        killTrackedRust: async () => Promise.reject(new Error('shell gone'))
+      },
+      1
+    )
+    await createQuitHandler(deps).handleExit()
+    expect(calls).toContain('abort')
+    expect(calls[calls.length - 1]).toBe('exit')
+  })
 })

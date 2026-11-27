@@ -285,6 +285,16 @@ golden sysinfo: compared 94 floor 94
   sysinfo read no longer rejects prepare (88.1-11); `clearCache` no longer clears the pci.ids caches (88.1-18); the DiscordRPC toggle is inert and
   a todo is filed (88.1-19).
 
+### Behaviour changes (88.2)
+
+- The pending-operations quit dialog now also opens when the Rust running-game registry reports a running game, and Yes ends that game's
+  tree through gamelib-proc, after the teardowns and `killAllTracked` and before `abortAll` (D-27, amending D-06; scored by 88-HUMAN-UAT.md
+  item 2 in 88.3). A failed registry read asks. Leader death is unchanged: a run is registered until its leader is reaped, so a
+  launcher-style game whose leader exits while a grandchild lives reads as no longer running and is not asked about or killed here, the
+  same as the TS-tracked child it replaces.
+- Not in 88.2: recording playtime at the kill and running the after-launch script at the next boot (D-31, 88.3); a quit-killed game's TS
+  funnel tail does not finish before the sidecar exits.
+
 ### Per-task map: 88.1 rows
 
 The three 88.1 rows of the Per-Task Verification Map above are set to green at P (`golden_builders`, `golden_launch`, `utils_pieces`); the D-19
