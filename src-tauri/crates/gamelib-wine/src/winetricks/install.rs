@@ -225,7 +225,8 @@ fn build_env(
     let host_path = session.host.env.get("PATH");
     let winepath = js_dirname(&wine.bin);
     if ctx.engine.platform == Platform::Mac {
-        // FIXME of the TS kept: the builders see the settings as stored, not the unpacked wine.
+        // TS-parity quirk, kept on purpose (tools/index.ts:1017): the builders see the settings as
+        // stored, not the unpacked wine.
         env.extend(session.launcher.setup_env_vars(ctx, settings));
         env.extend(
             session
