@@ -1546,3 +1546,76 @@ async fn force_quit_survival_then_re_adopt() {
         "no line claimed a rotation"
     );
 }
+
+/// Pitfall 10: a Wine launch's loader leaves and the game lives on in the group. The stub game's leader exits
+/// first while its child lives; the record keeps the child as a member; after the stand-in is killed the next
+/// start adopts the game through that member's proof, and the child's exit ends the session.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn force_quit_of_a_wine_shaped_game_re_adopts_by_its_member() {
+    let home = FakeHome::new("stub-game-readopt-wine-");
+    let user_data = home.root().join("gamelib-data");
+    let pids_file = home.root().join("pids.txt");
+    let marker = home.root().join("after-ran.txt");
+    let script = marker_script(home.root(), &marker);
+    let mut strays = Strays(Vec::new());
+    let path = record_path(&user_data, RunnerName::Sideload, "stubapp");
+
+    // The leader exits after 1.5 s; its child (the part of the game that matters) lives for 6 s.
+    let pids = pids_file.to_string_lossy().into_owned();
+    let mut shell = funnel_shell(
+        &home,
+        &user_data,
+        &[
+            "game",
+            "--pids",
+            &pids,
+            "--child",
+            "--child-exit-ms",
+            "6000",
+            "--exit-after-ms",
+            "1500",
+        ],
+        &script,
+    );
+    wait_until("the game to publish both pids", || {
+        recorded_pids(&pids_file, 2).is_some()
+    });
+    let game = recorded_pids(&pids_file, 2).expect("pids");
+    let (leader, child) = (game[0], game[1]);
+    strays.add(leader);
+    strays.add(child);
+    let child_stamp = probe::start_time(child).expect("the child's stamp");
+    wait_until("the leader to exit", || !probe::is_alive(leader));
+    wait_until("the record to name the child as a member", || {
+        read_record(&path).is_ok_and(|record| {
+            record.pid == leader
+                && record
+                    .members
+                    .iter()
+                    .any(|m| m.pid == child && m.stamp == child_stamp)
+        })
+    });
+
+    shell.kill().expect("kill the stand-in shell");
+    shell.wait().expect("reap the stand-in shell");
+    assert!(
+        !probe::is_alive(leader),
+        "the leader is gone: the member is the only proof"
+    );
+    assert!(probe::is_alive(child), "the child died with the shell");
+
+    let recorded = Arc::new(Recorded::default());
+    let ctx = ctx_in(&user_data, recorded.clone());
+    let report = gamelib_launch::game::readopt::start_with_host(&ctx, &script_host());
+    assert_eq!(report.adopted, 1, "{report:?}");
+    assert!(ctx.registry.games_running());
+    assert_eq!(lock(&recorded.lines).len(), 1, "the re-adopted line");
+    assert!(!marker.exists());
+
+    wait_until("the child to end", || !probe::is_alive(child));
+    wait_until("the session to finish", || {
+        !ctx.registry.games_running() && !path.exists()
+    });
+    assert!(stored_play_time(&user_data, "lastPlayed").is_some());
+    wait_until("the after script's marker", || marker.exists());
+}
