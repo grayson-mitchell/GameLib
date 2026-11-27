@@ -13,7 +13,7 @@ import { join } from 'path'
 
 import * as logger from 'backend/logger'
 import { LogPrefix } from 'backend/logger'
-import { createLauncher } from 'backend/launcher'
+import { createTsLaunchFunnel } from 'backend/launcher'
 import { createTestToolsSlices } from 'backend/testUtils/testServices'
 import GOGGame from 'backend/storeManagers/gog/games'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
@@ -259,7 +259,7 @@ describe('the folder-missing prompt is asked in Rust through askForceUninstall (
     const order: string[] = []
     const invokes: Invoke[] = []
     const base = createTestToolsSlices()
-    const launcher = createLauncher({
+    const launch = createTsLaunchFunnel({
       ...base,
       requestRustInvoke: ((channel: string, args: unknown[]) => {
         invokes.push({ channel, args })
@@ -287,7 +287,7 @@ describe('the folder-missing prompt is asked in Rust through askForceUninstall (
       stores: {} as never
     })
 
-    const result = await launcher.launchEventCallback({
+    const result = await launch({
       appName: 'gog-1',
       runner: 'gog'
     })

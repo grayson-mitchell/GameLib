@@ -33,7 +33,7 @@ jest.mock('backend/runsForMe', () => ({ recordPlaySession: jest.fn() }))
 
 import { createTestToolsSlices } from 'backend/testUtils/testServices'
 import { createTestOnlineMonitor } from 'backend/testUtils/testOnlineMonitor'
-import { createLauncher } from 'backend/launcher'
+import { createTsLaunchFunnel } from 'backend/launcher'
 import { createGameLogWriter, logWarning } from 'backend/logger'
 import { addRecentGame } from 'backend/info/recentGames'
 import { defined } from './helpers/defined'
@@ -55,7 +55,7 @@ const tsStore = {
   set: jest.fn()
 }
 const buildLauncher = ({ online = false }: { online?: boolean } = {}) =>
-  createLauncher({
+  createTsLaunchFunnel({
     ...createTestToolsSlices(),
     onlineMonitor: createTestOnlineMonitor({ online }),
     libraryManagers: {
@@ -67,7 +67,7 @@ const buildLauncher = ({ online = false }: { online?: boolean } = {}) =>
     spawnAsync: (() => Promise.reject(new Error('unscripted spawn'))) as never,
     stores: { kvs: { tsStore }, wineManager: {}, runsForMe: {} } as never
   })
-let launchEventCallback: ReturnType<typeof buildLauncher>['launchEventCallback']
+let launchEventCallback: ReturnType<typeof buildLauncher>
 
 describe('launchEventCallback single-flight (WR-03)', () => {
   let resolvers: Array<(v: boolean) => void>
@@ -75,7 +75,7 @@ describe('launchEventCallback single-flight (WR-03)', () => {
 
   beforeEach(() => {
     // A fresh launcher (and so a fresh single-flight table) per test, as one per boot in production.
-    launchEventCallback = buildLauncher().launchEventCallback
+    launchEventCallback = buildLauncher()
     resolvers = []
     sendGameStatusUpdateMock.mockClear()
     getSettingsMock.mockReturnValue({
@@ -189,7 +189,7 @@ describe('launchEventCallback single-flight (WR-03)', () => {
         launch: launchMock,
         syncSaves
       }))
-      const onlineCallback = buildLauncher({ online: true }).launchEventCallback
+      const onlineCallback = buildLauncher({ online: true })
       ;(addRecentGame as jest.Mock).mockRejectedValueOnce(writeFailed)
 
       const result = onlineCallback({ appName: 'Quail', runner: 'legendary' })

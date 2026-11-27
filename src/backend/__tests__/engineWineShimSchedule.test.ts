@@ -1282,6 +1282,20 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     callers: ['src/backend/launchrust/runner.ts'],
     deletedBy: 92
   },
+  // 88.3-10 (D-01, D-04, D-25): one Play of a non-Steam game, through the Rust launch funnel. `launchRun` is the one typed
+  // `RUST_LAUNCH_RUN` call, reached through the Launcher's `launchEventCallback` member from its two entry points: the sidecar
+  // `launch` handler's non-Steam arm (`steamFlowRegistration.ts`) and the `gamelib://launch` deep link (`protocol.ts`). Both go
+  // through `deps.launcher`, so `launcher.ts` is the one importer. The `launch` channel's own move into Rust is 90.2; the deep
+  // link moves in 98, which is the phase that deletes the shim. Its settle helper, `settleLaunchStatus`, lives in
+  // `launchBuilderReply.ts` with the other narrowing helpers, outside the discovery scope.
+  {
+    name: 'launchRun',
+    file: 'src/backend/launchrust/funnel.ts',
+    shape: 'shim',
+    channel: 'RUST_LAUNCH_RUN',
+    callers: ['src/backend/launcher.ts'],
+    deletedBy: 98
+  },
   // 88-13 (87 D-24): the synchronous known-fix twins, for callers 88 cannot make async. The launcher's `installFixes`
   // and `getKnownFixesEnvVariables` read the tier-1 fix inline until 88.1-17 deleted them; the Steam bridge keeps its own
   // reads until 97. `withKnownFixEnv` builds the settings storeManagerCommon launches with, which the sideload and

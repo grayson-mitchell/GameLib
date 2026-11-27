@@ -48,7 +48,7 @@ import { createTestToolsSlices } from 'backend/testUtils/testServices'
 import { createTestOnlineMonitor } from 'backend/testUtils/testOnlineMonitor'
 import { readFileSync } from 'fs'
 import { join } from 'path'
-import { createLauncher } from 'backend/launcher'
+import { createTsLaunchFunnel } from 'backend/launcher'
 import { sendGameStatusUpdate } from 'backend/utils'
 import { createGameLogWriter, logInfo } from 'backend/logger'
 import {
@@ -110,7 +110,7 @@ beforeEach(() => {
   nextWakeLockId = 100
   wakeLock.start.mockImplementation(() => ++nextWakeLockId)
   // A fresh launcher (and so a fresh single-flight table) per test, as one per boot in production.
-  launchEventCallback = buildLauncher().launchEventCallback
+  launchEventCallback = buildLauncher()
   globalSettingsMock.mockReturnValue({
     minimizeOnLaunch: false,
     noTrayIcon: true,
@@ -156,7 +156,7 @@ const buildLauncher = (
     typeof createTestOnlineMonitor
   > = createTestOnlineMonitor({ online: false })
 ) =>
-  createLauncher({
+  createTsLaunchFunnel({
     ...slices,
     appState: { ...slices.appState, wakeLock },
     requestRustInvoke,
@@ -170,7 +170,7 @@ const buildLauncher = (
     spawnAsync: (() => Promise.reject(new Error('unscripted spawn'))) as never,
     stores: { kvs: { tsStore }, wineManager: {}, runsForMe: {} } as never
   })
-let launchEventCallback: ReturnType<typeof buildLauncher>['launchEventCallback']
+let launchEventCallback: ReturnType<typeof buildLauncher>
 
 const run = () => launchEventCallback({ appName: 'Quail', runner: 'legendary' })
 
@@ -388,7 +388,7 @@ describe('launcher engine step request: the offline flag (87-63, F1)', () => {
     async (status, offline) => {
       const monitor = createTestOnlineMonitor()
       monitor.setStatus(status)
-      const { launchEventCallback: play } = buildLauncher(monitor)
+      const play = buildLauncher(monitor)
       await play({ appName: 'Quail', runner: 'legendary' })
       expect(callsOn(RUST_ENGINE_LAUNCH_SELECT)).toHaveLength(1)
       expect(sentOffline()).toBe(offline)
@@ -415,14 +415,14 @@ describe('launcher engine step request: the offline flag (87-63, F1)', () => {
       isNative: () => false,
       launch: launchMock
     }))
-    const { launchEventCallback: play } = buildLauncher(monitor)
+    const play = buildLauncher(monitor)
     await play({ appName: 'Quail', runner: 'legendary' })
     expect(sentOffline()).toBe(true)
   })
 
   it('a second Play after the network comes back says online again (the flag is never latched)', async () => {
     const monitor = createTestOnlineMonitor({ online: false })
-    const { launchEventCallback: play } = buildLauncher(monitor)
+    const play = buildLauncher(monitor)
     await play({ appName: 'Quail', runner: 'legendary' })
     monitor.setOnline(true)
     await play({ appName: 'Quail', runner: 'legendary' })
