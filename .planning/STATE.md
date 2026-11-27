@@ -1386,6 +1386,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261125-uzz | Remove from Steam proves the shortcut is GameLib's before deleting it and its grid art | 2026-11-25 | f0709db9d | — | [261125-uzz-remove-from-steam-proves-the-shortcut-is](./quick/261125-uzz-remove-from-steam-proves-the-shortcut-is/) |
 | 261127-upb | Remove dead imagecache:// branch in the renderer (no backend serves the scheme after D-22) | 2026-11-27 | 386d7bb25 | — | [261127-upb-remove-dead-imagecache-scheme-branch-in-](./quick/261127-upb-remove-dead-imagecache-scheme-branch-in-/) |
 | 261127-u6h | Keep profile paths and env values out of the wine_command and Running command gamelib.log lines | 2026-11-27 | 685d02372 | — | [261127-u6h-keep-profile-paths-and-env-values-out-of](./quick/261127-u6h-keep-profile-paths-and-env-values-out-of/) |
+| 261127-vbq | Runtime-cache allow-list RUNTIME_CACHE_NAMES owns nothing the store table does not already own (Phase 85 review B-WR-10) | 2026-11-27 | 8327bc074 | — | [261127-vbq-runtime-cache-allow-list-runtime-cache-n](./quick/261127-vbq-runtime-cache-allow-list-runtime-cache-n/) |
 
 ## Deferred Items
 
