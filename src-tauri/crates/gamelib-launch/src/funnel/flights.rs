@@ -14,11 +14,17 @@
 //!   (Pitfall 8), and a joiner also ends when the shutdown token fires. A joiner that is dropped changes nothing
 //!   for the leader.
 //! - **Not only the funnel.** `enter` is public and keyed by a plain runner string, so the Steam launch dispatch
-//!   (88.3-11) can lead `steam:<appId>` through the same table.
+//!   can lead `steam:<appId>` through the same table. A leader outside Rust (the TS Steam dispatch until 90.2)
+//!   does it through [`LaunchFlights::begin_owned`], [`LaunchFlights::wait`] and [`LaunchFlights::end`] (88.3-11):
+//!   the guard lives in a side table under an opaque [`FlightId`] the crate minted, and
+//!   [`LaunchFlights::release_owned_by_sidecar`] drops every one of them when the sidecar goes away, so their
+//!   joiners answer `abandoned` and nothing waits forever (Pitfall 8).
 //!
 //! The table holds a value, not a status: what a leader settles is up to its caller.
 
+use std::collections::hash_map::RandomState;
 use std::collections::HashMap;
+use std::hash::{BuildHasher, Hasher};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
 
@@ -68,6 +74,57 @@ impl Inner {
 #[derive(Clone, Default)]
 pub struct LaunchFlights {
     inner: Arc<Inner>,
+    /// The guards of flights a leader outside Rust holds, by flight id. Kept beside `Inner` (not in it): a guard
+    /// holds an `Arc<Inner>`, so a guard inside `Inner` would be a reference cycle.
+    owned: Arc<Mutex<HashMap<String, FlightGuard>>>,
+    /// Feeds the flight ids.
+    minted: Arc<AtomicU64>,
+}
+
+/// The opaque handle of a flight a leader outside Rust holds: 32 lowercase hex digits the crate minted, never
+/// derived from the key. A caller can only end the flights it was handed the id of.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FlightId(String);
+
+impl FlightId {
+    /// Whether `text` has the shape of a minted id. A wrong shape is refused at the edge; a right shape that was
+    /// never minted (or was already ended) releases nothing.
+    pub fn parse(text: &str) -> Option<FlightId> {
+        let shaped =
+            text.len() == 32 && text.bytes().all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f'));
+        shaped.then(|| FlightId(text.to_string()))
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+
+    /// Two hashes under the process's random hasher keys, mixed with a counter, the clock and the pid. Opaque and
+    /// unrepeated, which is all an id here needs to be (the peer is the sidecar the shell spawned).
+    fn mint(counter: u64) -> FlightId {
+        let nanos = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |d| d.as_nanos());
+        let mut text = String::with_capacity(32);
+        for round in 0..2u64 {
+            let mut hasher = RandomState::new().build_hasher();
+            hasher.write_u64(counter);
+            hasher.write_u64(round);
+            hasher.write_u128(nanos);
+            hasher.write_u32(std::process::id());
+            text.push_str(&format!("{:016x}", hasher.finish()));
+        }
+        FlightId(text)
+    }
+}
+
+/// What [`LaunchFlights::begin_owned`] decided.
+#[derive(Debug, PartialEq, Eq)]
+pub enum Begin {
+    /// Nothing was in flight for the key: the caller leads, and ends the flight with this id.
+    Lead(FlightId),
+    /// A launch is in flight: the caller waits for its result.
+    Join,
 }
 
 /// What [`LaunchFlights::enter`] decided.
@@ -112,6 +169,69 @@ impl LaunchFlights {
             serial,
             sender: Some(sender),
         })
+    }
+
+    /// [`LaunchFlights::enter`] for a leader outside Rust (88.3-11, D-04): decides under the same one lock, and a
+    /// leader's guard goes into the side table under a fresh [`FlightId`]. Plain synchronous.
+    pub fn begin_owned(&self, runner: &str, app_name: &str) -> Begin {
+        match self.enter(runner, app_name) {
+            Enter::Join(_) => Begin::Join,
+            Enter::Lead(guard) => {
+                let id = FlightId::mint(self.minted.fetch_add(1, Ordering::SeqCst));
+                lock(&self.owned).insert(id.as_str().to_string(), guard);
+                Begin::Lead(id)
+            }
+        }
+    }
+
+    /// The joiner half for a key led by anyone (the funnel or a leader outside Rust): the leader's value,
+    /// [`ABANDONED`] when it ended without one or when nothing is in flight (the leader had already ended, so its
+    /// value is gone), or [`SHUTDOWN`].
+    ///
+    /// The lookup runs when this is called, not when the future is first polled: a caller that calls it and awaits
+    /// later still joins the flight that was in flight at the call.
+    pub fn wait<'a>(
+        &self,
+        runner: &str,
+        app_name: &str,
+        shutdown: &'a Shutdown,
+    ) -> impl std::future::Future<Output = Result<Value, &'static str>> + 'a {
+        let key = LaunchFlights::key_of(runner, app_name);
+        let join = lock(&self.inner.entries)
+            .get(&key)
+            .map(|existing| FlightJoin {
+                result: existing.result.clone(),
+            });
+        async move {
+            match join {
+                Some(join) => join.wait(shutdown).await,
+                None => Err(ABANDONED),
+            }
+        }
+    }
+
+    /// Settles the flight `flight_id` leads and releases its key. `false` for an id this table does not hold (a
+    /// forged one, one already ended, one released at sidecar EOF): nothing is settled or released then.
+    pub fn end(&self, flight_id: &FlightId, result: Value) -> bool {
+        let guard = lock(&self.owned).remove(flight_id.as_str());
+        match guard {
+            Some(guard) => {
+                guard.settle(result);
+                true
+            }
+            None => false,
+        }
+    }
+
+    /// Drops every flight a leader outside Rust holds, so each key is free again and each joiner answers
+    /// [`ABANDONED`]. Called when the sidecar goes away. Answers how many were released.
+    pub fn release_owned_by_sidecar(&self) -> usize {
+        let released: Vec<FlightGuard> =
+            lock(&self.owned).drain().map(|(_, guard)| guard).collect();
+        // Dropped outside the lock: a guard's drop takes the table's lock.
+        let count = released.len();
+        drop(released);
+        count
     }
 
     /// How many launches are in flight.
@@ -237,6 +357,38 @@ mod tests {
         assert_eq!(flights.len(), 1, "the newer leader's entry is still held");
         newer.settle(Value::Null);
         assert!(flights.is_empty());
+    }
+
+    #[tokio::test]
+    async fn a_sidecar_flight_ends_with_its_id_only() {
+        let flights = LaunchFlights::new();
+        let shutdown = Shutdown::new();
+        let Begin::Lead(id) = flights.begin_owned("steam", "480") else {
+            panic!("expected to lead");
+        };
+        assert!(FlightId::parse(id.as_str()).is_some());
+        assert_eq!(flights.begin_owned("steam", "480"), Begin::Join);
+        let waiter = flights.wait("steam", "480", &shutdown);
+        assert!(flights.end(&id, json!(true)));
+        assert_eq!(waiter.await, Ok(json!(true)));
+        assert!(!flights.end(&id, json!(false)), "ended once");
+        assert!(flights.is_empty());
+    }
+
+    #[test]
+    fn minted_ids_differ_and_have_the_shape_parse_accepts() {
+        let flights = LaunchFlights::new();
+        let mut seen = std::collections::HashSet::new();
+        for n in 0..64 {
+            let Begin::Lead(id) = flights.begin_owned("steam", &n.to_string()) else {
+                panic!("a fresh key leads");
+            };
+            assert!(FlightId::parse(id.as_str()).is_some());
+            assert!(seen.insert(id.as_str().to_string()));
+        }
+        for bad in ["", "abc", &"G".repeat(32), &"A".repeat(32), &"a".repeat(33)] {
+            assert!(FlightId::parse(bad).is_none(), "{bad}");
+        }
     }
 
     #[test]

@@ -25,6 +25,7 @@ pub use tokio_util::sync::CancellationToken;
 
 use builders::{env, known_fix_env, wrappers};
 use ctx::LaunchCtx;
+use funnel::flights::{self, Begin, FlightId};
 use gamelib_knownfix::types::Runner;
 use gamelib_wine::tools::ToolsHost;
 use gamelib_wine::wine_cmd::env::{GameSettingsView, SetupEnvView};
@@ -55,6 +56,9 @@ pub const OPS: &[&str] = &[
     "launch_ask_force_uninstall",
     "launch_check_wine_before_launch",
     "launch_epic_service_offline",
+    "launch_flight_begin",
+    "launch_flight_end",
+    "launch_flight_wait",
     "launch_games_running",
     "launch_known_fix_env",
     "launch_prepare",
@@ -127,6 +131,51 @@ async fn route(op: &str, args: &[Value], ctx: &LaunchCtx) -> Result<Value, Strin
             Ok(epic::offline_reply(
                 epic::epic_service_offline(ctx, service).await,
             ))
+        }
+        // A leader outside the funnel (the TS Steam dispatch until 90.2) leads or joins the one single-flight table
+        // (88.3-11, D-04). Arguments `[{ runner, appName }]`. Answers `{ lead: <flightId> }` when the caller now
+        // leads the key and must end it, or `{ join: true }` when a launch of the key is already in flight. One
+        // lock decides, so two calls never both lead.
+        "launch_flight_begin" => {
+            let [call @ Value::Object(_)] = args else {
+                return Err(bad());
+            };
+            let call = flight_key_arg(call).ok_or_else(bad)?;
+            Ok(
+                match ctx.flights.begin_owned(&call.runner, &call.app_name) {
+                    Begin::Lead(id) => serde_json::json!({ "lead": id.as_str() }),
+                    Begin::Join => serde_json::json!({ "join": true }),
+                },
+            )
+        }
+        // Settles the flight the id leads and releases its key. Arguments `[{ flightId, result }]`. Answers whether
+        // the id was one this table holds (a forged, stale or already-ended id releases nothing and answers false).
+        "launch_flight_end" => {
+            let [call @ Value::Object(_)] = args else {
+                return Err(bad());
+            };
+            let call: FlightEndArgs = serde_json::from_value(call.clone()).map_err(|_| bad())?;
+            let id = FlightId::parse(&call.flight_id).ok_or_else(bad)?;
+            Ok(Value::Bool(ctx.flights.end(&id, call.result)))
+        }
+        // The joiner half. Arguments `[{ runner, appName }]`. Waits for the whole of the leader's dispatch (so its
+        // shim lists the channel as unbounded) and answers the leader's settled value, or the word `abandoned` when
+        // the leader ended without one, was released at sidecar EOF or is no longer in flight. The app shutdown
+        // answers `launch_flight_wait:shutdown`.
+        "launch_flight_wait" => {
+            let [call @ Value::Object(_)] = args else {
+                return Err(bad());
+            };
+            let call = flight_key_arg(call).ok_or_else(bad)?;
+            match ctx
+                .flights
+                .wait(&call.runner, &call.app_name, &ctx.engine.shutdown)
+                .await
+            {
+                Ok(value) => Ok(value),
+                Err(flights::SHUTDOWN) => Err(format!("{op}:shutdown")),
+                Err(word) => Ok(Value::String(word.to_string())),
+            }
         }
         // `prepareLaunch`. Arguments `[args, host]`: the game and the TS-only facts (`PrepareLaunchArgs`) and
         // the process facts the shell read (`PrepareHost`). Answers the TS reply plus its per-game `log`
@@ -505,6 +554,29 @@ fn run_id(id: &str) -> bool {
     bounded_name(id) && !id.chars().any(|c| c == '/' || c == '\\' || c.is_control())
 }
 
+/// The object argument of `launch_flight_begin` and `launch_flight_wait`.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct FlightKeyArgs {
+    runner: String,
+    app_name: String,
+}
+
+/// The key of a flight call: a runner and an app name that pass the id check the kill ops hold ids to. A key is
+/// text the table joins with a colon, never a path.
+fn flight_key_arg(call: &Value) -> Option<FlightKeyArgs> {
+    let call: FlightKeyArgs = serde_json::from_value(call.clone()).ok()?;
+    (run_id(&call.runner) && run_id(&call.app_name)).then_some(call)
+}
+
+/// The object argument of `launch_flight_end`.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct FlightEndArgs {
+    flight_id: String,
+    result: Value,
+}
+
 /// The object argument of `launch_tracked_kill`.
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -804,7 +876,7 @@ mod tests {
 
     #[test]
     fn the_twenty_one_launch_ops_are_in_the_table() {
-        assert_eq!(OPS.len(), 23);
+        assert_eq!(OPS.len(), 26);
         assert!(OPS.iter().all(|op| op.starts_with("launch_")));
         assert!(
             OPS.windows(2).all(|pair| pair[0] < pair[1]),

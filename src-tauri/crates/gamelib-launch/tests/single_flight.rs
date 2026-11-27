@@ -39,7 +39,7 @@ use gamelib_core::process::BoxFuture;
 use gamelib_core::shutdown::Shutdown;
 use gamelib_engine::ctx::Platform;
 use gamelib_launch::ctx::LaunchCtx;
-use gamelib_launch::funnel::flights::{Enter, FlightGuard, LaunchFlights};
+use gamelib_launch::funnel::flights::{Begin, Enter, FlightGuard, FlightId, LaunchFlights};
 use gamelib_launch::funnel::shell::testing::RecordingShell;
 use gamelib_launch::funnel::steps::testing::RecordingSteps;
 use gamelib_launch::funnel::testing::Tape;
@@ -883,5 +883,348 @@ fn two_keys_never_join() {
         assert_eq!(answers[1], Ok(LaunchStatus::Done));
         assert_eq!(answers[2], Ok(LaunchStatus::Done));
         assert!(ctx.flights.is_empty());
+    });
+}
+
+// ---- sidecar-led flights (88.3-11, D-04): a leader outside the funnel in the same table ----
+
+fn sidecar_lead(ctx: &LaunchCtx, runner: &str, app: &str) -> FlightId {
+    match ctx.flights.begin_owned(runner, app) {
+        Begin::Lead(id) => id,
+        Begin::Join => panic!("expected to lead {runner}:{app}"),
+    }
+}
+
+#[test]
+fn a_sidecar_leader_is_joined_by_a_funnel_play_and_both_get_its_result() {
+    let rig = FunnelRig::new();
+    let hooks = Arc::new(GateHooks::new(facts_json(), None));
+    let ctx = ctx_over(&rig, hooks.clone());
+    runtime().block_on(async {
+        let id = sidecar_lead(&ctx, "legendary", "alpha");
+        assert_eq!(ctx.flights.len(), 1);
+
+        // A funnel Play of the same key joins the flight the sidecar leads: no second launch starts.
+        let play = tokio::spawn({
+            let ctx = ctx.clone();
+            async move {
+                run_launch(
+                    &ctx,
+                    params(RunnerName::Legendary, "alpha"),
+                    &FunnelHost::default(),
+                )
+                .await
+            }
+        });
+        // And a sidecar joiner waits for the same flight.
+        let waiter = tokio::spawn({
+            let ctx = ctx.clone();
+            async move {
+                ctx.flights
+                    .wait("legendary", "alpha", &ctx.engine.shutdown)
+                    .await
+            }
+        });
+        settle_tasks().await;
+        assert_eq!(
+            hooks.launches.load(Ordering::SeqCst),
+            0,
+            "the funnel joined"
+        );
+        assert!(!play.is_finished() && !waiter.is_finished());
+
+        assert!(ctx.flights.end(&id, LaunchStatus::Done.to_value()));
+        assert_eq!(play.await.unwrap(), Ok(LaunchStatus::Done));
+        assert_eq!(
+            waiter.await.unwrap(),
+            Ok(json!({ "status": "done" })),
+            "the sidecar joiner gets the value the leader ended with"
+        );
+        assert!(ctx.flights.is_empty());
+    });
+}
+
+#[test]
+fn a_funnel_leader_is_joined_by_a_sidecar_wait() {
+    let rig = FunnelRig::new();
+    let hooks = Arc::new(GateHooks::new(facts_json(), None));
+    let ctx = ctx_over(&rig, hooks.clone());
+    runtime().block_on(async {
+        let leader = tokio::spawn({
+            let ctx = ctx.clone();
+            async move {
+                run_launch(
+                    &ctx,
+                    params(RunnerName::Legendary, "alpha"),
+                    &FunnelHost::default(),
+                )
+                .await
+            }
+        });
+        settle_tasks().await;
+        assert_eq!(ctx.flights.len(), 1);
+        // A sidecar begin of the funnel's key joins; it does not lead a second launch.
+        assert_eq!(ctx.flights.begin_owned("legendary", "alpha"), Begin::Join);
+        let waiter = tokio::spawn({
+            let ctx = ctx.clone();
+            async move {
+                ctx.flights
+                    .wait("legendary", "alpha", &ctx.engine.shutdown)
+                    .await
+            }
+        });
+        settle_tasks().await;
+        hooks.finish(0, true);
+        assert_eq!(leader.await.unwrap(), Ok(LaunchStatus::Done));
+        assert_eq!(waiter.await.unwrap(), Ok(json!({ "status": "done" })));
+        assert!(ctx.flights.is_empty());
+    });
+}
+
+#[test]
+fn a_forged_flight_id_releases_nothing() {
+    let rig = FunnelRig::new();
+    let ctx = ctx_over(&rig, Arc::new(GateHooks::new(facts_json(), None)));
+    runtime().block_on(async {
+        let real = sidecar_lead(&ctx, "steam", "480");
+        // A shape the table would accept that it never minted, a made-up one, and a wrong-shaped one.
+        let forged = FlightId::parse(&"0".repeat(32)).expect("the shape is valid");
+        assert_ne!(forged, real);
+        assert!(!ctx.flights.end(&forged, json!(true)));
+        assert!(FlightId::parse("steam:480").is_none());
+        assert_eq!(ctx.flights.len(), 1, "the real flight is still held");
+        assert_eq!(ctx.flights.begin_owned("steam", "480"), Begin::Join);
+
+        // Ending it once releases it; the id is then stale and releases nothing, a successor's flight included.
+        assert!(ctx.flights.end(&real, json!(true)));
+        let successor = sidecar_lead(&ctx, "steam", "480");
+        assert!(!ctx.flights.end(&real, json!(false)), "a stale id");
+        assert_eq!(ctx.flights.len(), 1, "the successor is untouched");
+        assert!(ctx.flights.end(&successor, json!(true)));
+    });
+}
+
+#[test]
+fn releasing_sidecar_flights_answers_their_joiners_abandoned() {
+    let rig = FunnelRig::new();
+    let ctx = ctx_over(&rig, Arc::new(GateHooks::new(facts_json(), None)));
+    runtime().block_on(async {
+        let first = sidecar_lead(&ctx, "steam", "480");
+        let second = sidecar_lead(&ctx, "steam", "570");
+        // A flight the funnel's table holds that no sidecar leads is not the sidecar's to release.
+        let funnel_led = match ctx.flights.enter("legendary", "alpha") {
+            Enter::Lead(guard) => guard,
+            Enter::Join(_) => panic!("expected to lead"),
+        };
+        let waiters: Vec<_> = ["480", "570", "480"]
+            .into_iter()
+            .map(|app| {
+                let ctx = ctx.clone();
+                tokio::spawn(
+                    async move { ctx.flights.wait("steam", app, &ctx.engine.shutdown).await },
+                )
+            })
+            .collect();
+        let other = tokio::spawn({
+            let ctx = ctx.clone();
+            async move {
+                ctx.flights
+                    .wait("legendary", "alpha", &ctx.engine.shutdown)
+                    .await
+            }
+        });
+        settle_tasks().await;
+
+        assert_eq!(ctx.flights.release_owned_by_sidecar(), 2);
+        for waiter in waiters {
+            assert_eq!(waiter.await.unwrap(), Err("abandoned"));
+        }
+        assert_eq!(ctx.flights.len(), 1, "only the funnel-led key is left");
+        // A flight id of a released flight settles nothing, and its key is free to lead again.
+        assert!(!ctx.flights.end(&first, json!(true)));
+        assert!(!ctx.flights.end(&second, json!(true)));
+        let _again = sidecar_lead(&ctx, "steam", "480");
+        // Releasing again finds nothing but the one just taken.
+        assert_eq!(ctx.flights.release_owned_by_sidecar(), 1);
+        assert_eq!(ctx.flights.release_owned_by_sidecar(), 0);
+
+        assert!(
+            !other.is_finished(),
+            "the funnel's own flight is still waited on"
+        );
+        funnel_led.settle(json!({ "status": "done" }));
+        assert_eq!(other.await.unwrap(), Ok(json!({ "status": "done" })));
+    });
+}
+
+#[test]
+fn steam_and_runner_keys_never_join() {
+    let rig = FunnelRig::new();
+    let hooks = Arc::new(GateHooks::new(facts_json(), None));
+    let ctx = ctx_over(&rig, hooks.clone());
+    runtime().block_on(async {
+        // `steam:480` and `legendary:480` are two keys: a sidecar leader of one never absorbs the other.
+        let steam = sidecar_lead(&ctx, "steam", "480");
+        let other = sidecar_lead(&ctx, "legendary", "480");
+        assert_eq!(ctx.flights.len(), 2);
+        assert_eq!(ctx.flights.begin_owned("steam", "480"), Begin::Join);
+        assert!(ctx.flights.end(&other, json!(1)));
+        assert_eq!(ctx.flights.len(), 1, "ending one key leaves the other");
+        assert!(ctx.flights.end(&steam, json!(2)));
+
+        // A sidecar-led `legendary:alpha` is not joined by a funnel Play of `gog:alpha`.
+        let held = sidecar_lead(&ctx, "legendary", "alpha");
+        let play = tokio::spawn({
+            let ctx = ctx.clone();
+            async move {
+                run_launch(
+                    &ctx,
+                    params(RunnerName::Gog, "alpha"),
+                    &FunnelHost::default(),
+                )
+                .await
+            }
+        });
+        settle_tasks().await;
+        assert_eq!(
+            hooks.launches.load(Ordering::SeqCst),
+            1,
+            "gog:alpha led its own launch"
+        );
+        hooks.finish(0, true);
+        assert_eq!(play.await.unwrap(), Ok(LaunchStatus::Done));
+        assert_eq!(
+            ctx.flights.len(),
+            1,
+            "legendary:alpha is still the sidecar's"
+        );
+        assert!(ctx.flights.end(&held, json!(null)));
+    });
+}
+
+#[test]
+fn the_flight_ops_drive_the_same_table_with_fixed_replies() {
+    let rig = FunnelRig::new();
+    let ctx = ctx_over(&rig, Arc::new(GateHooks::new(facts_json(), None)));
+    runtime().block_on(async {
+        let key = json!({ "runner": "steam", "appName": "480" });
+        let led = gamelib_launch::dispatch("launch_flight_begin", std::slice::from_ref(&key), &ctx)
+            .await
+            .unwrap();
+        let id = led["lead"]
+            .as_str()
+            .expect("a leader gets an id")
+            .to_string();
+        assert_eq!(id.len(), 32);
+        assert_eq!(
+            gamelib_launch::dispatch("launch_flight_begin", std::slice::from_ref(&key), &ctx)
+                .await
+                .unwrap(),
+            json!({ "join": true })
+        );
+        let waiter = tokio::spawn({
+            let ctx = ctx.clone();
+            let key = key.clone();
+            async move { gamelib_launch::dispatch("launch_flight_wait", &[key], &ctx).await }
+        });
+        settle_tasks().await;
+        let ended = gamelib_launch::dispatch(
+            "launch_flight_end",
+            &[json!({ "flightId": id, "result": true })],
+            &ctx,
+        )
+        .await
+        .unwrap();
+        assert_eq!(ended, json!(true));
+        assert_eq!(waiter.await.unwrap().unwrap(), json!(true));
+
+        // Nothing in flight: a wait answers the fixed word, an end of the same id answers false.
+        assert_eq!(
+            gamelib_launch::dispatch("launch_flight_wait", std::slice::from_ref(&key), &ctx)
+                .await
+                .unwrap(),
+            json!("abandoned")
+        );
+        assert_eq!(
+            gamelib_launch::dispatch(
+                "launch_flight_end",
+                &[json!({ "flightId": id, "result": true })],
+                &ctx
+            )
+            .await
+            .unwrap(),
+            json!(false)
+        );
+
+        // A flight left held is released with the sidecar, and its waiter answers the fixed word.
+        gamelib_launch::dispatch("launch_flight_begin", std::slice::from_ref(&key), &ctx)
+            .await
+            .unwrap();
+        let waiter = tokio::spawn({
+            let ctx = ctx.clone();
+            async move { gamelib_launch::dispatch("launch_flight_wait", &[key], &ctx).await }
+        });
+        settle_tasks().await;
+        assert_eq!(ctx.flights.release_owned_by_sidecar(), 1);
+        assert_eq!(waiter.await.unwrap().unwrap(), json!("abandoned"));
+
+        // Bad shapes are refused with the fixed word and never echo what was sent.
+        for (op, args) in [
+            (
+                "launch_flight_begin",
+                json!({ "runner": "a/b", "appName": "x" }),
+            ),
+            (
+                "launch_flight_begin",
+                json!({ "runner": "steam", "appName": "" }),
+            ),
+            ("launch_flight_wait", json!({ "runner": "steam" })),
+            (
+                "launch_flight_wait",
+                json!({ "runner": "steam", "appName": "1", "extra": 1 }),
+            ),
+            (
+                "launch_flight_end",
+                json!({ "flightId": "short", "result": true }),
+            ),
+            (
+                "launch_flight_end",
+                json!({ "flightId": "A".repeat(32), "result": true }),
+            ),
+            ("launch_flight_end", json!({ "flightId": "a".repeat(32) })),
+        ] {
+            assert_eq!(
+                gamelib_launch::dispatch(op, &[args], &ctx)
+                    .await
+                    .unwrap_err(),
+                format!("{op}:bad-args")
+            );
+        }
+    });
+}
+
+#[test]
+fn a_sidecar_wait_ends_on_the_shutdown_token() {
+    let rig = FunnelRig::new();
+    let ctx = ctx_over(&rig, Arc::new(GateHooks::new(facts_json(), None)));
+    runtime().block_on(async {
+        let _id = sidecar_lead(&ctx, "steam", "480");
+        let waiter = tokio::spawn({
+            let ctx = ctx.clone();
+            async move {
+                gamelib_launch::dispatch(
+                    "launch_flight_wait",
+                    &[json!({ "runner": "steam", "appName": "480" })],
+                    &ctx,
+                )
+                .await
+            }
+        });
+        settle_tasks().await;
+        ctx.engine.shutdown.token().cancel();
+        assert_eq!(
+            waiter.await.unwrap().unwrap_err(),
+            "launch_flight_wait:shutdown"
+        );
     });
 }
