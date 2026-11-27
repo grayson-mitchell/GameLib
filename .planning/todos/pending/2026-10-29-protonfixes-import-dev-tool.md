@@ -4,7 +4,7 @@ title: "Offline dev tool to import umu-protonfixes as candidate local fixes"
 area: known-fixes
 severity: minor
 platform: any
-ready: code
+ready: blocked
 source: "quick 261029-8ws external fix-format research, 2026-10-29"
 related_seed: SEED-001
 files:
@@ -31,3 +31,13 @@ What stays in GameLib: the two key-schema dependencies (`dllOverrides`, `launchA
 ## Next
 
 Write an offline script under `meta/` or `scripts/` that translates the declarative subset of gamefixes-steam into candidate local fix files for Mac testing: protontricks to `winetricks`, set_environment to `envVariables`, winedll_override to `dllOverrides`, regedit_add to `registry`, append_argument/replace_command to `launchArgs`/`exeOverride`. Skip esync/fsync/nvapi. Keep the BSD-2-Clause attribution in every generated file. Not a runtime feature. A tested candidate is promoted through the Phase 57 PR flow (`.planning/ROADMAP.md` Phase 57) or a bundled-fix PR. If the script spawns child processes, it falls under the fake-HOME isolation convention (`createFakeHomeProfile()`).
+
+## Progress (2026-11-27, quick 261127-vy3)
+
+The standalone importer is built: `meta/importProtonfixes.ts`, run as `pnpm import-protonfixes --source <checkout> --out <dir>`, with `--only <appIds>` for re-runs on changed files and `--overwrite` to replace its own earlier output. It is offline and data-only (it reads the Python as text, never runs it), every emitted file keeps the BSD-2-Clause attribution, and a jest suite plus a drift test against `gamelib-knownfix/src/types.rs` pin the output to GameLib's accept rules.
+
+First real run, umu-protonfixes `d4912aee4bc2f98dab47d8cdf843a6ca9e85978c` (`gamefixes-steam/`, 319 entries): 184 translated, 35 partial, 100 skipped. It wrote 213 tier-1 files and 7 tier-2 profiles to `scratchpad/protonfixes-candidates/` (gitignored). The skip reasons were nothing-mapped 72, no-main 13, only-not-applicable 10, empty-main 3 and not-an-appid-file 2.
+
+`dllOverrides` needs a hand-supplied exe when upstream gives none: protonfixes overrides are bottle-wide and GameLib's key is per-exe only, so 34 overrides in 27 files were left out as `dll-override-exe-unknown` and are listed in each candidate's `protonfixes-unmapped` note.
+
+What remains: the GameLib-Dashboard integration (repo watch, re-run on changed files, candidate PR) and where the importer finally lives (SEED-001 open question). `ready:` moved to `blocked` for that reason.
