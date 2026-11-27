@@ -687,6 +687,50 @@ describe('systemInfoPortComplete', () => {
   })
 })
 
+/**
+ * 88.2-23, D-11, D-18 and D-25 (runner half): the TS drivers that recorded 88.2's runner goldens are deleted now that
+ * every golden has its Rust replay (`gamelib-launch/tests/golden_*.rs`, `gamelib-wine`'s `golden_wine_core`): the runner
+ * oracle (slices `runner` and `redaction`), the wine-command oracle (`wine_launch`, `wine_path`, `script`), the error
+ * handler oracle and `runnerTrace.ts`, the trace harness all three drive, with its self-test.
+ * `spawnAsync.oracle.test.ts` went with the spawnAsync adapter in 88.2-21 (`git rm`); it is named here to hold it deleted.
+ * Every golden slice those drivers recorded stays, because the Rust replays read them.
+ *
+ * `launcher.crossoverEnv.test.ts` is added to `deleted` in the same plan, after its three RF1 invariants port to
+ * `gamelib-wine/tests/crossover_env.rs` (D-15). `commandRunner.ts`, its test, the twin's vectors test and
+ * `envBuildersFixture.ts` stay for 88.2-24, whose own gate deletes them.
+ *
+ * `forbiddenIdentifiers` is `createRunnerTrace` and `recordStream`, the only exports of `runnerTrace.ts` that something
+ * else could name; each was checked with `git grep -w` on 2026-11-27: only the three drivers and the trace's own
+ * self-test named them, all deleted here.
+ */
+const RUNNER_ORACLE: SliceSpec = {
+  deleted: [
+    'src/backend/__tests__/oracle/runner.oracle.test.ts',
+    'src/backend/__tests__/oracle/runnerWine.oracle.test.ts',
+    'src/backend/__tests__/oracle/errorHandler.oracle.test.ts',
+    'src/backend/__tests__/oracle/spawnAsync.oracle.test.ts',
+    'src/backend/testUtils/launchOracle/runnerTrace.ts',
+    'src/backend/testUtils/launchOracle/__tests__/runnerTrace.test.ts'
+  ],
+  kept: [
+    'src-tauri/crates/gamelib-launch/tests/fixtures/golden/runner',
+    'src-tauri/crates/gamelib-launch/tests/fixtures/golden/redaction',
+    'src-tauri/crates/gamelib-launch/tests/fixtures/golden/wine_launch',
+    'src-tauri/crates/gamelib-launch/tests/fixtures/golden/wine_path',
+    'src-tauri/crates/gamelib-launch/tests/fixtures/golden/script',
+    'src-tauri/crates/gamelib-launch/tests/fixtures/golden/spawn_async',
+    'src-tauri/crates/gamelib-launch/tests/fixtures/golden/error_handler',
+    'src-tauri/crates/gamelib-launch/tests/fixtures/golden/classes.json'
+  ],
+  forbiddenIdentifiers: ['createRunnerTrace', 'recordStream'],
+  identifierRoot: 'src/backend',
+  flag: 'GAMELIB_LAUNCH'
+}
+
+describe('runnerOraclePortComplete', () => {
+  runSlice(RUNNER_ORACLE)
+})
+
 describe('noRollbackFlag', () => {
   it('anti-vacuity: the walks read real trees', () => {
     assertAtOrAboveFloor(

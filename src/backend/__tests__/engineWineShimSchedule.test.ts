@@ -311,9 +311,8 @@ const RUNNER_SHIM_IMPORTERS: readonly string[] = [
 const COMMAND_RUNNER_IMPORTERS: readonly string[] = [
   // 88.2-16: the adapter keeps `RunnerProps` (a type import) so its `callRunner` has the twin's signature; it replaces the twin.
   'src/backend/runnerAdapter.ts',
-  'src/backend/storeManagers/steam/bridge/bottleDllOverrides.ts',
-  // 88.2-01: the launch oracle's runner trace drives the real runner (a type import of its deps); it goes with the twin.
-  'src/backend/testUtils/launchOracle/runnerTrace.ts'
+  'src/backend/storeManagers/steam/bridge/bottleDllOverrides.ts'
+  // 88.2-23: the launch oracle's runner trace (a type import of the runner's deps) is deleted with the oracle drivers.
 ]
 
 /**
