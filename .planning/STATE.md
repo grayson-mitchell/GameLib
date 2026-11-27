@@ -2,14 +2,14 @@
 gsd_state_version: "1.0"
 milestone: v0.11
 milestone_name: Node Sidecar Retirement
-current_phase: "88.2"
-current_phase_name: Command runner and game processes
+current_phase: "88.3"
+current_phase_name: Launch funnel, re-adoption and the live gate
 status: executing
-stopped_at: Completed 88.2-30-PLAN.md
-last_updated: "2026-11-27T10:34:41.423Z"
+stopped_at: Completed 88.3-01-PLAN.md
+last_updated: "2026-11-27T19:44:58.465Z"
 last_activity: 2026-11-27
-last_activity_desc: Phase 88.2 execution started
-state_head: 1772aae6839081eb160a73e972058b2a013df570
+last_activity_desc: Phase 88.3 execution started
+state_head: e9b76f111c2c2db4e51aceb6e478851909c80575
 progress:
   total_phases: 26
   completed_phases: 23
@@ -25,7 +25,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-25)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 88.2 — Command runner and game processes
+**Current focus:** Phase 88.3 — Launch funnel, re-adoption and the live gate
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -76,10 +76,10 @@ See: .planning/PROJECT.md (updated 2026-11-25)
 
 ## Current Position
 
-Phase: 88.2 (Command runner and game processes) — EXECUTING
-Plan: 31 of 31
+Phase: 88.3 (Launch funnel, re-adoption and the live gate) — EXECUTING
+Plan: 2 of 22
 Status: Ready to execute
-Last activity: 2026-11-27 — Phase 88.2 execution started
+Last activity: 2026-11-27 — Phase 88.3 execution started
 Progress: [████████████████░░░░] 204/257 plans ([█████████░] 88%)
 
 ## Native-Install Arc Phase Map (21–25)
@@ -577,6 +577,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 88.2 P28 | 30min | 2 tasks | 4 files |
 | Phase 88.2 P29 | 25min | 2 tasks | 8 files |
 | Phase 88.2 P30 | 10 min | 3 tasks | 11 files |
+| Phase 88.3 P01 | 1h | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -1307,6 +1308,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 88.2]: 88.2-29: a clean SpecProcRunner exit releases the helper's Windows kill-on-close Job (unix parity, WR-03); timeout, cancel, shutdown and SIGKILL keep close=kill
 - [Phase 88.2]: 88.2-30: bestEffortTrackedKill lives in storeManagerCommon, not launchrust, because the shim schedule requires every launchrust export to be a one-call shim
 - [Phase 88.2]: 88.2-30: the spawnAsync abort retries with a 25 ms to 500 ms doubling backoff until the call settles; the unref'd timer is cleared in finally
+- [Phase 88.3]: 88.3-01: golden/funnel is recorded from the real TS funnel only (59 cases); the launch hook's writer state is derived from earlier frames, never handOff(); six D-20 candidates listed in the SUMMARY for 88.3-05 to file
 
 ### Pending Todos
 
@@ -1401,6 +1403,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261127-vna | Treat a PCGamingWiki cargoquery error body as no GOG id and fall through to title search | 2026-11-27 | 41f920566 | — | [261127-vna-treat-a-pcgamingwiki-cargoquery-error-bo](./quick/261127-vna-treat-a-pcgamingwiki-cargoquery-error-bo/) |
 | 261127-vy3 | Offline dev tool to import umu-protonfixes as candidate local fixes | 2026-11-27 | 1c80bc9c2 | — | [261127-vy3-offline-dev-tool-to-import-umu-protonfix](./quick/261127-vy3-offline-dev-tool-to-import-umu-protonfix/) |
 | 261127-w77 | Humble expiry digest: the date layout follows the UI language instead of always en-US M/D/YYYY | 2026-11-27 | b784475dc | — | [261127-w77-humble-expiry-digest-date-layout-follows](./quick/261127-w77-humble-expiry-digest-date-layout-follows/) |
+| 261128-9fj | macOS run.sh escapes apostrophe in launch URL | 2026-11-28 | 5bc0831be | — | [261128-9fj-macos-run-sh-escapes-apostrophe-in-launc](./quick/261128-9fj-macos-run-sh-escapes-apostrophe-in-launc/) |
 
 ## Deferred Items
 
@@ -1599,8 +1602,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-27T10:34:37.455Z
-Stopped at: Completed 88.2-30-PLAN.md
+Last session: 2026-11-27T19:44:54.635Z
+Stopped at: Completed 88.3-01-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.

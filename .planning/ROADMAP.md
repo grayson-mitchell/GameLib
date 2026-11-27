@@ -1121,11 +1121,11 @@ Plans:
   3. A game launched from the UI starts and runs on macOS (live, signed 88.3 build over the signed 87 gap build) and on Windows and Linux (CI plus Phase 99)
   4. `launcher.ts` and every remaining ported TS and registration are deleted, leaving only scheduled shims
 
-**Plans:** 22 plans in 16 waves; planned 2026-11-27 (goldens are recorded from the TS before each Rust slice, D-25; every plan fits the 100k budget and stays below 15 files; no 88.3 commit outside .planning/ lands before the 88.1-24 and 88.2-25 pushes)
+**Plans:** 1/22 plans executed in 16 waves; planned 2026-11-27 (goldens are recorded from the TS before each Rust slice, D-25; every plan fits the 100k budget and stays below 15 files; no 88.3 commit outside .planning/ lands before the 88.1-24 and 88.2-25 pushes)
 
 Plans:
 **Wave 1**
-- [ ] 88.3-01-PLAN.md — Goldens: golden/funnel recorded through the real TS launchEventCallback (pairwise, every launcher.engineStep title, named incidents)
+- [x] 88.3-01-PLAN.md — Goldens: golden/funnel recorded through the real TS launchEventCallback (pairwise, every launcher.engineStep title, named incidents)
 - [ ] 88.3-02-PLAN.md — Goldens: golden/single_flight (every flight title, the Steam joins), golden/runs_for_me (kept as the live TS pin), golden/window_raise
 - [ ] 88.3-03-PLAN.md — gamelib-proc: the adopted-game proof (leader stamp, member stamp and pgid, the Windows Game Job) and kill_adopted_tree, with orphan arms
 - [ ] 88.3-15-PLAN.md — The stale `backend/launcher` stubs leave nine Steam and GOG tests, ceilings lowered
