@@ -36,7 +36,7 @@ use crate::ids::AUTOMATIC;
 use crate::jsutil::js_to_string;
 use crate::key::{engine_key_for, uses_bottle_runtime};
 use crate::launch::step::offline_gate_verdict;
-use crate::state::notices::NO_CROSSOVER_KEY;
+use crate::state::notices::{is_trial_notice_dismissed, trial_end_day, NO_CROSSOVER_KEY};
 use crate::state::publish::emit_engine_state;
 
 /// D-13: show the trial notice at this many days remaining or fewer.
@@ -296,6 +296,7 @@ fn compute(
     engine_label: Option<String>,
     store: &dyn NoticeStore,
     launch_notice: Option<LaunchNotice>,
+    now_ms: u64,
 ) -> EngineState {
     let mut engine: Option<&'static str> = None;
     let mut reason: Option<&'static str> = None;
@@ -360,7 +361,11 @@ fn compute(
             EffectiveEngine::Override { .. } => engine_label,
         },
         trial_days_remaining,
-        show_trial_notice: trial_days_remaining.is_some_and(|days| days <= TRIAL_NOTICE_DAYS),
+        // A trial the user dismissed stays hidden until a later trial (a different estimated end day).
+        show_trial_notice: trial_days_remaining.is_some_and(|days| {
+            days <= TRIAL_NOTICE_DAYS
+                && !is_trial_notice_dismissed(store, trial_end_day(now_ms, days))
+        }),
         crossover_installed,
         show_no_crossover_note: !crossover_installed && !note_dismissed,
         untested_crossover_build: build
@@ -458,6 +463,7 @@ pub async fn get_engine_state(
             label,
             store,
             None,
+            ctx.clock.now_ms(),
         )
     });
     // RF5: the read path alone carries the verdict. A Legacy engine skips the step before its gate.
@@ -651,6 +657,7 @@ pub fn record_launch_decision(
             Some(label),
             store,
             launch_notice,
+            ctx.clock.now_ms(),
         )
     });
     ctx.engine_state
@@ -908,5 +915,121 @@ mod tests {
     fn the_trial_notice_starts_at_seven_days() {
         assert_eq!(TRIAL_NOTICE_DAYS, 7);
         assert_eq!(ENGINE_PREFLIGHT_UNHEALTHY_TTL_MS, 60_000);
+    }
+
+    /// A probe that answers a Healthy pre-flight with the trial days it was built with.
+    struct TrialProbe {
+        days: u64,
+    }
+
+    impl StateProbes for TrialProbe {
+        fn resolve_bin_dir<'a>(&'a self, _ctx: &'a EngineCtx) -> ProbeFuture<'a, Option<String>> {
+            Box::pin(async { Some("/cx/bin".to_string()) })
+        }
+
+        fn is_bottle_ready(&self, _ctx: &EngineCtx, _bottle: &str) -> bool {
+            true
+        }
+
+        fn preflight<'a>(
+            &'a self,
+            _ctx: &'a EngineCtx,
+            _bottle: &'a str,
+        ) -> ProbeFuture<'a, Result<CrossoverPreflight, String>> {
+            let days = self.days;
+            Box::pin(async move {
+                Ok(CrossoverPreflight::Healthy {
+                    bin_dir: "/cx/bin".to_string(),
+                    build: Some("26.3.0.39832".to_string()),
+                    trial_days_remaining: Some(days),
+                })
+            })
+        }
+    }
+
+    #[tokio::test]
+    async fn a_dismissed_trial_stays_hidden_until_a_later_trial_and_logs_once() {
+        use crate::state::notices::dismiss;
+        use crate::testing::RecordingLog;
+        const START: u64 = 1_795_435_200_000;
+        const DAY: u64 = 86_400_000;
+        let home = FakeHome::new("engine-state-trial-dismiss-");
+        let root = home.root().to_path_buf();
+        let clock = Arc::new(FixedClock::new(START));
+        let log = Arc::new(RecordingLog::new());
+        let ctx = EngineCtx::new(
+            Arc::new(StoreHost::new()),
+            clock.clone(),
+            Platform::Mac,
+            EnginePaths {
+                app_folder: root.clone(),
+                user_data: root.join("userData"),
+                tools_path: root.join("tools"),
+                user_home: root.clone(),
+                temp: root.join("tmp"),
+            },
+            Shutdown::new(),
+        )
+        .with_emitter(Arc::new(RecordingEmitter::new()))
+        .with_log(log.clone());
+        let identity = json!({"runner": "legendary", "appName": "game-a"});
+        // The Healthy pre-flight is cached per bottle, so each read names its own bottle.
+        let read = |bottle: &str, days: u64| {
+            let mut facts = facts();
+            facts.bottle = Some(bottle.to_string());
+            let probes = TrialProbe { days };
+            let ctx = &ctx;
+            let identity = identity.clone();
+            async move {
+                get_engine_state(ctx, &identity, &facts, &probes)
+                    .await
+                    .unwrap()
+                    .unwrap()
+            }
+        };
+
+        let first = read("b1", 5).await;
+        assert!(first.show_trial_notice);
+        assert!(dismiss(
+            &ctx,
+            &json!({"kind": "crossover-trial", "daysRemaining": 5})
+        ));
+        let lines = log.lines();
+        assert_eq!(lines.len(), 1, "{lines:?}");
+        assert!(
+            lines[0].1.starts_with(
+                "Engine: CrossOver trial notice dismissed daysRemaining=5 trialEndDay=20785 ok=true"
+            ),
+            "{lines:?}"
+        );
+        let after = read("b1", 5).await;
+        assert!(!after.show_trial_notice);
+        assert_eq!(
+            after.trial_days_remaining,
+            Some(5),
+            "the count itself stays"
+        );
+        // Two days later another bottle answers 3 days: the same end day, still dismissed.
+        clock.set(START + 2 * DAY);
+        assert!(!read("b2", 3).await.show_trial_notice);
+        // Ten days later a bottle answers 7 days: a new trial, shown again.
+        clock.set(START + 10 * DAY);
+        assert!(read("b3", 7).await.show_trial_notice);
+        // A count above the notice window is refused and writes nothing.
+        assert!(!dismiss(
+            &ctx,
+            &json!({"kind": "crossover-trial", "daysRemaining": 8})
+        ));
+        assert!(read("b4", 7).await.show_trial_notice);
+        // The refusal is logged once; the other kinds write no log line.
+        assert!(dismiss(&ctx, &json!({"kind": "no-crossover"})));
+        let lines = log.lines();
+        assert_eq!(lines.len(), 2, "{lines:?}");
+        assert!(
+            lines[1]
+                .1
+                .ends_with("daysRemaining=8 trialEndDay=20798 ok=false"),
+            "{lines:?}"
+        );
     }
 }

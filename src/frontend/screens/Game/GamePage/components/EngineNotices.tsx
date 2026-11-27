@@ -11,8 +11,9 @@ const CROSSOVER_URL = 'https://www.codeweavers.com/crossover'
 
 /**
  * Phase 59 (D-13, D-04, D-15): inline, non-modal engine notices on the game
- * page -- CrossOver trial countdown (last 7 days), the dismissible
- * no-CrossOver recommendation, and the one-time untested-build note.
+ * page -- CrossOver trial countdown (last 7 days, dismissible for the rest of
+ * that trial), the dismissible no-CrossOver recommendation, and the one-time
+ * untested-build note.
  */
 const EngineNotices = ({ state }: Props) => {
   const { t } = useTranslation('gamelib')
@@ -50,6 +51,26 @@ const EngineNotices = ({ state }: Props) => {
             onClick={openCrossover}
           >
             {t('steam.engine.trial.buy', 'Buy CrossOver')}
+          </button>
+          <button
+            type="button"
+            className="button is-text"
+            onClick={async () => {
+              const days = state.trialDaysRemaining
+              if (days === null) return
+              await window.api.dismissEngineNotice({
+                kind: 'crossover-trial',
+                daysRemaining: days
+              })
+              useEngineState
+                .getState()
+                .hideNotice(
+                  engineStateKey(state.runner, state.appName),
+                  'trial'
+                )
+            }}
+          >
+            {dismissLabel}
           </button>
         </div>
       )}

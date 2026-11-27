@@ -210,8 +210,9 @@ export interface NativeAsync {
     engineSource: 'stored' | 'derived'
     legacyLabel: string | null
   }>
-  // Phase 87 (87-49, D-14): records that the user dismissed an engine notice (the "no CrossOver" note, or the
-  // untested-CrossOver-build notice for one build), answered by `engine_notice_dismiss`. The notices store is
+  // Phase 87 (87-49, D-14): records that the user dismissed an engine notice (the "no CrossOver" note, the
+  // untested-CrossOver-build notice for one build, or the CrossOver trial notice for one trial, keyed by the
+  // trial's estimated end day), answered by `engine_notice_dismiss`. The notices store is
   // read and written only through the StoreHost, and a notices file that is not valid JSON is kept as it is, so
   // such a dismissal answers `{ ok: false }`. It takes exactly one strict dismissal.
   dismissEngineNotice: (

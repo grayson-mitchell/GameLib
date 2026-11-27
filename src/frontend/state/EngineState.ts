@@ -2,7 +2,7 @@ import type { IpcRendererEvent } from 'common/types/hostTypes'
 import { create } from 'zustand'
 import type { EngineState } from 'common/types/engine'
 
-type EngineNotice = 'no-crossover' | 'untested'
+type EngineNotice = 'no-crossover' | 'untested' | 'trial'
 
 interface EngineStore {
   byGame: Record<string, EngineState>
@@ -44,7 +44,9 @@ export const useEngineState = create<EngineStore>()((set) => ({
       const next =
         notice === 'no-crossover'
           ? { ...current, showNoCrossoverNote: false }
-          : { ...current, untestedCrossoverBuild: null }
+          : notice === 'trial'
+            ? { ...current, showTrialNotice: false }
+            : { ...current, untestedCrossoverBuild: null }
       return { byGame: { ...s.byGame, [key]: next } }
     })
 }))

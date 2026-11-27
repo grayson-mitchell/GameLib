@@ -459,7 +459,8 @@ async fn route(op: &str, args: &[Value], ctx: &EngineCtx) -> Result<Value, Strin
                 ctx, pin,
             )))
         }
-        // `dismissEngineNotice` (D-14): `{kind: 'no-crossover'}` or `{kind: 'untested-crossover', build}`. The
+        // `dismissEngineNotice` (D-14): `{kind: 'no-crossover'}`, `{kind: 'untested-crossover', build}` or
+        // `{kind: 'crossover-trial', daysRemaining}` (a count above 7 is refused). The
         // answer is `{ok}`; any other shape, a build that is not four dotted numbers and a write the store
         // refused (a corrupt notices file is kept, FND-06) are `{ok: false}` and write nothing more.
         "engine_notice_dismiss" => {

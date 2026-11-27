@@ -18,7 +18,7 @@ export const engineAsyncArgs = {
   // (`nativeChannels.json`); the Rust decode accepts a game identity or `{ appName: 'default' }`, strict.
   // Phase 87 (87-28, D-14): `getPerGameBottleName` is a native `engine` channel (`nativeChannels.json`);
   // the strict identity decode lives in the Rust `parse_game_identity`.
-  // Phase 87 (87-49, D-14): `dismissEngineNotice` is a native `engine` channel too; its strict two-arm
+  // Phase 87 (87-49, D-14): `dismissEngineNotice` is a native `engine` channel too; its strict three-arm
   // decode lives in the Rust `parse_dismissal_args` and its vectors in `nativeChannels.json`.
 }
 

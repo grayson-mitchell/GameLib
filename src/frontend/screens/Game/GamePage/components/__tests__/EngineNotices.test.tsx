@@ -55,11 +55,13 @@ const button = (els: El[], label: string) =>
 
 const openExternalUrl = jest.fn()
 const dismiss = jest.fn().mockResolvedValue(undefined)
+const logInfo = jest.fn()
 beforeEach(() => {
   openExternalUrl.mockClear()
+  logInfo.mockClear()
   dismiss.mockClear()
   ;(globalThis as unknown as { window: unknown }).window = {
-    api: { openExternalUrl, dismissEngineNotice: dismiss }
+    api: { openExternalUrl, dismissEngineNotice: dismiss, logInfo }
   }
   useEngineState.setState({ byGame: {} })
 })
@@ -78,6 +80,20 @@ describe('EngineNotices', () => {
     button(els, 'Buy CrossOver')?.props.onClick?.()
     expect(openExternalUrl).toHaveBeenCalledWith(
       'https://www.codeweavers.com/crossover'
+    )
+  })
+
+  it('trial notice dismiss persists the trial and hides it immediately', async () => {
+    const trial = make({ showTrialNotice: true, trialDaysRemaining: 5 })
+    useEngineState.getState().set(trial)
+    const els = render(trial)
+    await button(els, 'Dismiss')?.props.onClick?.()
+    expect(dismiss).toHaveBeenCalledWith({
+      kind: 'crossover-trial',
+      daysRemaining: 5
+    })
+    expect(useEngineState.getState().byGame['steam:730']?.showTrialNotice).toBe(
+      false
     )
   })
 

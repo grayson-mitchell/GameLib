@@ -134,6 +134,7 @@ export interface EngineOption {
 export type EngineNoticeDismissal =
   | { kind: 'no-crossover' }
   | { kind: 'untested-crossover'; build: string }
+  | { kind: 'crossover-trial'; daysRemaining: number }
 
 /** One half of the pinned fallback engine: a build fixed by size and sha256 (Phase 59, D-08). */
 export type PinnedArtifact = {

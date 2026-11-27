@@ -666,10 +666,11 @@ pub(crate) fn get_default_engine(_ctx: Arc<NativeCtx>, args: Vec<Value>) -> Nati
     Box::pin(get_default_engine_channel(engine_ctx().cloned(), args))
 }
 
-/// `dismissEngineNotice`'s one argument: `{kind: 'no-crossover'}` or `{kind: 'untested-crossover', build}`,
-/// each strict, the build 1 to 256 units. Anything else is the union's one rejection. A build that is not
-/// four dotted numbers decodes (the zod schema never held that rule) and is refused by the op as
-/// `{ok: false}`.
+/// `dismissEngineNotice`'s one argument: `{kind: 'no-crossover'}`, `{kind: 'untested-crossover', build}` or
+/// `{kind: 'crossover-trial', daysRemaining}`, each strict, the build 1 to 256 units and the count a
+/// non-negative integer. Anything else is the union's one rejection. A build that is not four dotted
+/// numbers, and a count above the notice window (7), decode (the schema never held those rules) and are
+/// refused by the op as `{ok: false}`.
 fn parse_dismissal_args(args: &[Value]) -> Result<Vec<Value>, Rejection> {
     let map = one_object(args)?;
     let kind = map.get("kind").and_then(Value::as_str);
@@ -677,6 +678,9 @@ fn parse_dismissal_args(args: &[Value]) -> Result<Vec<Value>, Rejection> {
         Some("no-crossover") => map.len() == 1,
         Some("untested-crossover") => {
             map.len() == 2 && bounded_string(map.get("build"), 256, "0.build").is_ok()
+        }
+        Some("crossover-trial") => {
+            map.len() == 2 && map.get("daysRemaining").and_then(Value::as_u64).is_some()
         }
         _ => false,
     };
@@ -706,7 +710,7 @@ async fn dismiss_engine_notice_channel(
 }
 
 /// The native `dismissEngineNotice` handler (slice `engine`, D-14): records that the user dismissed an
-/// engine notice in the notices store, through the StoreHost, answering `{ok}`.
+/// engine notice (one of three strict arms) in the notices store, through the StoreHost, answering `{ok}`.
 pub(crate) fn dismiss_engine_notice(_ctx: Arc<NativeCtx>, args: Vec<Value>) -> NativeFuture {
     Box::pin(dismiss_engine_notice_channel(engine_ctx().cloned(), args))
 }
@@ -1653,7 +1657,7 @@ mod tests {
     }
 
     #[test]
-    fn dismiss_engine_notice_decodes_the_two_strict_arms_and_nothing_else() {
+    fn dismiss_engine_notice_decodes_the_three_strict_arms_and_nothing_else() {
         let none = serde_json::json!({"kind": "no-crossover"});
         assert_eq!(
             parse_dismissal_args(std::slice::from_ref(&none)),
@@ -1670,9 +1674,42 @@ mod tests {
             parse_dismissal_args(std::slice::from_ref(&odd)),
             Ok(vec![odd])
         );
+        let trial = serde_json::json!({"kind": "crossover-trial", "daysRemaining": 5});
+        assert_eq!(
+            parse_dismissal_args(std::slice::from_ref(&trial)),
+            Ok(vec![trial])
+        );
+        // A count above the notice window decodes; the op refuses it.
+        let far = serde_json::json!({"kind": "crossover-trial", "daysRemaining": 30});
+        assert_eq!(
+            parse_dismissal_args(std::slice::from_ref(&far)),
+            Ok(vec![far])
+        );
         let long = "9".repeat(257);
         let cases: Vec<(Vec<Value>, Rejection)> = vec![
             (vec![], ("(args)", "too_small")),
+            (
+                vec![serde_json::json!({"kind": "crossover-trial"})],
+                ("0", "invalid_union"),
+            ),
+            (
+                vec![serde_json::json!({"kind": "crossover-trial", "daysRemaining": -1})],
+                ("0", "invalid_union"),
+            ),
+            (
+                vec![serde_json::json!({"kind": "crossover-trial", "daysRemaining": 2.5})],
+                ("0", "invalid_union"),
+            ),
+            (
+                vec![serde_json::json!({"kind": "crossover-trial", "daysRemaining": "5"})],
+                ("0", "invalid_union"),
+            ),
+            (
+                vec![
+                    serde_json::json!({"kind": "crossover-trial", "daysRemaining": 5, "extra": 1}),
+                ],
+                ("0", "invalid_union"),
+            ),
             (vec![Value::Null], ("0", "invalid_type")),
             (
                 vec![serde_json::json!("no-crossover")],
@@ -1771,7 +1808,7 @@ mod tests {
         assert!(text.contains("27.0.0.1"), "{text}");
         assert!(text.contains("__timestamp"), "{text}");
         let none = block(dismiss_engine_notice_channel(
-            Some(engine),
+            Some(Arc::clone(&engine)),
             vec![serde_json::json!({"kind": "no-crossover"})],
         ))
         .unwrap();
@@ -1781,6 +1818,30 @@ mod tests {
         assert!(
             text.contains("27.0.0.1"),
             "the earlier dismissal stays: {text}"
+        );
+        // A trial count above the notice window is refused; one inside it is stored as an end day.
+        let far = block(dismiss_engine_notice_channel(
+            Some(Arc::clone(&engine)),
+            vec![serde_json::json!({"kind": "crossover-trial", "daysRemaining": 8})],
+        ))
+        .unwrap();
+        assert_eq!(far, serde_json::json!({"ok": false}));
+        assert!(
+            !std::fs::read_to_string(&store)
+                .unwrap()
+                .contains("crossoverTrialNoticeDismissedEndDay"),
+            "a refused count wrote nothing"
+        );
+        let trial = block(dismiss_engine_notice_channel(
+            Some(engine),
+            vec![serde_json::json!({"kind": "crossover-trial", "daysRemaining": 5})],
+        ))
+        .unwrap();
+        assert_eq!(trial, serde_json::json!({"ok": true}));
+        let text = std::fs::read_to_string(&store).unwrap();
+        assert!(
+            text.contains("crossoverTrialNoticeDismissedEndDay"),
+            "{text}"
         );
     }
 

@@ -874,7 +874,7 @@
       "args": [
         {
           "name": "dismissal",
-          "type": "{ kind: 'no-crossover' } | { kind: 'untested-crossover', build: string }",
+          "type": "{ kind: 'no-crossover' } | { kind: 'untested-crossover', build: string } | { kind: 'crossover-trial', daysRemaining: number }",
           "strict": true
         }
       ],

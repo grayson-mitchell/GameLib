@@ -2002,7 +2002,7 @@
       "args": [
         {
           "name": "dismissal",
-          "type": "{ kind: 'no-crossover' } | { kind: 'untested-crossover', build: string }",
+          "type": "{ kind: 'no-crossover' } | { kind: 'untested-crossover', build: string } | { kind: 'crossover-trial', daysRemaining: number }",
           "strict": true
         }
       ],
@@ -2010,7 +2010,9 @@
       "valid": [
         [{ "kind": "no-crossover" }],
         [{ "kind": "untested-crossover", "build": "27.0.0.1" }],
-        [{ "kind": "untested-crossover", "build": "1.2.3" }]
+        [{ "kind": "untested-crossover", "build": "1.2.3" }],
+        [{ "kind": "crossover-trial", "daysRemaining": 5 }],
+        [{ "kind": "crossover-trial", "daysRemaining": 30 }]
       ],
       "invalid": [
         [],
@@ -2023,6 +2025,11 @@
         [{ "kind": "untested-crossover", "build": "" }],
         [{ "kind": "untested-crossover", "build": 5 }],
         [{ "kind": "untested-crossover", "build": "27.0.0.1", "extra": 1 }],
+        [{ "kind": "crossover-trial" }],
+        [{ "kind": "crossover-trial", "daysRemaining": -1 }],
+        [{ "kind": "crossover-trial", "daysRemaining": 2.5 }],
+        [{ "kind": "crossover-trial", "daysRemaining": "5" }],
+        [{ "kind": "crossover-trial", "daysRemaining": 5, "extra": 1 }],
         [{ "kind": "no-crossover" }, {}]
       ]
     },

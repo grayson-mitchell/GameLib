@@ -69,13 +69,24 @@ describe('EngineState store', () => {
   })
 
   it('hideNotice clears only the named notice', () => {
-    handleEngineStateChangedSignal(evt, make())
+    handleEngineStateChangedSignal(
+      evt,
+      make({ showTrialNotice: true, trialDaysRemaining: 5 })
+    )
     useEngineState.getState().hideNotice('steam:730', 'no-crossover')
     const s = get('steam:730')
     expect(s.showNoCrossoverNote).toBe(false)
     expect(s.untestedCrossoverBuild).toBe('x')
+    expect(s.showTrialNotice).toBe(true)
     useEngineState.getState().hideNotice('steam:730', 'untested')
     expect(get('steam:730').untestedCrossoverBuild).toBeNull()
+    expect(get('steam:730').showTrialNotice).toBe(true)
+    useEngineState.getState().hideNotice('steam:730', 'trial')
+    const t = get('steam:730')
+    expect(t.showTrialNotice).toBe(false)
+    expect(t.trialDaysRemaining).toBe(5)
+    expect(t.showNoCrossoverNote).toBe(false)
+    expect(t.untestedCrossoverBuild).toBeNull()
   })
 
   it('remove deletes one game and leaves others', () => {
