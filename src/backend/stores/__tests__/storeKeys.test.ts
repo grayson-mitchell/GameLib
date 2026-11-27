@@ -27,18 +27,27 @@ describe('isRustOwnedStoreKey', () => {
     expect(isStoreKey('store/migrations')).toBe(true)
   })
 
-  it('owns a recognised runtime store_cache name the table does not list, and no other (T-85-30)', () => {
-    const recognised = ['fresh_runtime_cache']
-    expect(
-      isRustOwnedStoreKey('store_cache/fresh_runtime_cache', recognised)
-    ).toBe(true)
-    expect(isRustOwnedStoreKey('store_cache/fresh_runtime_cache')).toBe(false)
-    expect(isRustOwnedStoreKey('store_cache/brand_new_cache', [])).toBe(false)
-    // A table row decides for itself: it never needs to be in the recognised list.
-    expect(isRustOwnedStoreKey('store_cache/umu', [])).toBe(true)
+  it('owns no runtime store_cache name the table does not list (T-85-30)', () => {
+    // Shape-valid (the shared vectors need it to parse) but never the shell's.
+    for (const key of [
+      'store_cache/fresh_runtime_cache',
+      'store_cache/brand_new_cache'
+    ]) {
+      expect([key, isStoreKey(key)]).toEqual([key, true])
+      expect([key, isRustOwnedStoreKey(key)]).toEqual([key, false])
+    }
+    // A table row decides for itself, in or out of the recognised list.
+    expect(isRustOwnedStoreKey('store_cache/umu')).toBe(true)
+    // Every recognised name is a table row the shell owns.
+    expect(RECOGNIZED_CACHE_STORE_NAMES.length).toBeGreaterThan(0)
     for (const name of RECOGNIZED_CACHE_STORE_NAMES) {
-      expect(isStoreKey(`store_cache/${name}`)).toBe(true)
-      expect(isRustOwnedStoreKey(`store_cache/${name}`)).toBe(true)
+      const key = `store_cache/${name}`
+      expect([key, tableFile.rows.some((row) => row.key === key)]).toEqual([
+        key,
+        true
+      ])
+      expect(isStoreKey(key)).toBe(true)
+      expect(isRustOwnedStoreKey(key)).toBe(true)
     }
   })
 

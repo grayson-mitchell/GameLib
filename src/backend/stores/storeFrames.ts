@@ -19,17 +19,14 @@
  * file: every row the shell opens is Rust's (`native` rows and every family the phase moved), and
  * only an `excluded` row (`store/migrations`, D-07) is opened by neither side. A runtime
  * `store_cache/<name>` key the table does not list is a cache-family store (the stores `storeNew`
- * builds), Rust's only when `RECOGNIZED_CACHE_STORE_NAMES` names it (85-12, T-85-30): the shell
- * refuses every other runtime name `not-owned` and creates no file.
+ * builds) that the shell never owns: it refuses its frames `not-owned` and creates no file
+ * (T-85-30). Every recognised cache name is a table row, which `storeKeys.test.ts` pins.
  *
  * Pure: no logger and no IPC. The output stream is injected (`createStdoutStoreFrameSink`).
  */
 import tableFile from 'common/types/ipc/storeTable.json'
 import { STORE_FRAME_KIND } from 'common/types/sidecarTransport'
-import {
-  CACHE_STORE_NAME_PATTERN,
-  RECOGNIZED_CACHE_STORE_NAMES
-} from 'common/types/storePolicy'
+import { CACHE_STORE_NAME_PATTERN } from 'common/types/storePolicy'
 
 interface TableRowShape {
   key: string
@@ -99,7 +96,7 @@ export function dotPathsFor(storeKey: string): boolean {
 
 /**
  * Whether a TS mirror may be built over `storeKey`: every resolvable key but the `excluded` row
- * (`store/migrations`, D-07). A runtime cache outside the recognised list resolves too: production
+ * (`store/migrations`, D-07). A runtime cache the table does not list resolves too: production
  * builds none (createStores builds table caches only and the shell refuses an unrecognised
  * `storeNew`), and if one were built the shell would refuse its frames `not-owned`.
  */
@@ -109,20 +106,14 @@ export function isMirrorStoreKey(storeKey: string): boolean {
 }
 
 /**
- * Whether the shell owns the file behind `storeKey`: every resolvable row but an `excluded` one,
- * and a runtime cache only when `recognizedRuntimeCaches` names it (a seam for tests).
+ * Whether the shell owns the file behind `storeKey`: every resolvable row but an `excluded` one. A
+ * runtime `store_cache/<name>` the table does not list is never the shell's (T-85-30), the same
+ * rule as `owned_row` in `src-tauri/src/store_dispatch.rs`.
  */
-export function isRustOwnedStoreKey(
-  storeKey: string,
-  recognizedRuntimeCaches: readonly string[] = RECOGNIZED_CACHE_STORE_NAMES
-): boolean {
+export function isRustOwnedStoreKey(storeKey: string): boolean {
   const row = rowForStoreKey(storeKey)
   if (row === undefined || row.family === 'excluded') return false
-  return (
-    !storeKey.startsWith(CACHE_PREFIX) ||
-    rowByKey(storeKey) !== undefined ||
-    recognizedRuntimeCaches.includes(storeKey.slice(CACHE_PREFIX.length))
-  )
+  return !storeKey.startsWith(CACHE_PREFIX) || rowByKey(storeKey) !== undefined
 }
 
 /**
