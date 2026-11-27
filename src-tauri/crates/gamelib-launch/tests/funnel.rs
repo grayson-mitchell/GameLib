@@ -2,19 +2,32 @@
 //! each case, with recording managers, shell and steps, a recording log sink and a recording frontend emitter,
 //! every one writing to one shared tape, so the order across them is part of what is compared.
 //!
-//! **What 88.3-04 replays:** the tracer, `funnel--native-legendary-plain`. Every other case is in [`NOT_YET`],
-//! which 88.3-05 empties as it ports the branches; the list must name only cases that exist, must not name the
-//! tracer, and together with the replayed cases must cover `cases.json` exactly, so a case cannot be forgotten.
+//! **Every case replays** (88.3-04 replayed the tracer, 88.3-05 the other 58): a case's scenario is the INPUT of
+//! the TS recorder (what each collaborator answered), and here it scripts the Rust doubles the same way; the
+//! golden is whatever the TS did with it, and the Rust funnel has to do the same in the same order.
 //!
-//! **Documented differences** (`deltas.json`, each used by the tracer or the replay fails):
+//! **Documented differences** (`deltas.json`, each used by at least one case or the replay fails, and every
+//! difference the replay applies is documented there):
 //! - `events-bus-emit`: the TS emitted every `gameStatusUpdate` on the backend bus too, which nothing listens to;
 //!   the Rust funnel emits the frontend message only, so the `bus` events are dropped from the golden.
 //! - `reads-folded-into-launch-facts`: the TS recorder listed the play marker and each read of `getSettings`,
 //!   `config.getSettings` and `gameConfigs.get(app).getSettings`; the Rust funnel makes one `launch_facts` call
 //!   for all of them, which is not an event of the golden, so those kinds are dropped from it.
+//! - `rejection-text-is-a-fixed-word`: a launch the TS rejected with the collaborator's message answers
+//!   `launch:<what>:<word>` in Rust (T-88.2-14, T-88.3-09), so a rejected Play compares as "rejected".
+//! - `recent-game-warning-text`: the TS warning printed its two arguments (`Recording recent game failed:`,
+//!   `Error: <reason>`); the Rust line is one string with the fixed reason.
+//! - `warning-prefix-is-an-options-object`: the TS passed the playtime-skip warning's prefix as an options
+//!   object (`{ prefix: 'Backend' }`), which the logger reads as the prefix; the recorder kept the argument.
+//! - `hook-error-lines-are-the-managers`: the TS funnel wrote the error lines around a rejected `syncSaves` and
+//!   `game.launch` itself, with the error text; in Rust the TS handler behind the hook writes them (no error text
+//!   crosses into Rust), so the replay's recording hooks write them to the tape.
+//! - `release-warning-is-a-fixed-word`: the TS warning for an engine release that failed printed
+//!   `String(error)`; the Rust line carries the fixed word of the step (`rejected`).
 //!
-//! The play-time writes (`tsStore`) are compared in order with the rest: the store host's change listener writes
-//! them to the tape, and every other recorder waits for the host's queue to drain before it writes its own event.
+//! The play-time writes (`tsStore`) and the runs-for-me write are compared in order with the rest: the store
+//! host's change listener writes them to the tape, and every other recorder waits for the host's queue to drain
+//! before it writes its own event.
 //!
 //! A count floor lives here next to the replay, so editing the JSON alone cannot lower the bar.
 
@@ -22,10 +35,9 @@ mod common;
 
 use std::collections::BTreeSet;
 use std::sync::atomic::Ordering;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use gamelib_engine::ctx::Platform;
-use gamelib_engine::launch::step::{SelectKind, SelectReply};
 use gamelib_launch::funnel::shell::testing::RecordingShell;
 use gamelib_launch::funnel::steps::testing::RecordingSteps;
 use gamelib_launch::funnel::{run::run_launch, FunnelHost, LaunchParams};
@@ -35,76 +47,13 @@ use gamelib_launch::runner::RunnerName;
 use serde_json::{json, Value};
 
 use common::funnel_rig::{settle_store, FunnelRig};
-use common::{fixtures, read_json};
+use common::{fixtures, lock, read_json};
 
-/// The cases this file replays. A later edit may raise this, never lower it.
-const FUNNEL_FLOOR: usize = 1;
+/// The cases this file replays: every case of `golden/funnel`. A later edit may raise this, never lower it.
+const FUNNEL_FLOOR: usize = 59;
 
 /// The tracer.
 const TRACER: &str = "funnel--native-legendary-plain";
-
-/// The cases `golden/funnel` holds that the funnel does not replay yet. 88.3-05 empties this list as it ports
-/// each branch; every name must be a case of `cases.json`.
-const NOT_YET: &[&str] = &[
-    "funnel--pairwise-01",
-    "funnel--pairwise-02",
-    "funnel--pairwise-03",
-    "funnel--pairwise-04",
-    "funnel--pairwise-05",
-    "funnel--pairwise-06",
-    "funnel--pairwise-07",
-    "funnel--pairwise-08",
-    "funnel--pairwise-09",
-    "funnel--pairwise-10",
-    "funnel--pairwise-11",
-    "funnel--pairwise-12",
-    "funnel--pairwise-13",
-    "funnel--pairwise-14",
-    "funnel--pairwise-15",
-    "funnel--pairwise-16",
-    "funnel--pairwise-17",
-    "funnel--pairwise-18",
-    "funnel--pairwise-19",
-    "funnel--pairwise-20",
-    "funnel--pairwise-21",
-    "funnel--pairwise-22",
-    "funnel--pairwise-23",
-    "funnel--pairwise-24",
-    "launcher.engineStep--launcher-engine-step-61-14-87-52-runs-the-step-once-after-the-log-writer-and-before-the-wine-check-sending-the-launch-facts",
-    "launcher.engineStep--launcher-engine-step-61-14-87-52-use-skips-the-wine-check-runs-on-the-reply-s-settings-writes-its-log-lines-and-releases-after-the-launch",
-    "launcher.engineStep--launcher-engine-step-61-14-87-52-use-releases-the-selection-when-the-launch-throws",
-    "launcher.engineStep--launcher-engine-step-61-14-87-52-s-the-wine-check-runs-as-today-no-overlay-no-release",
-    "launcher.engineStep--launcher-engine-step-61-14-87-52-refused-reports-done-closes-the-log-aborts-and-never-launches",
-    "launcher.engineStep--launcher-engine-step-61-14-87-52-a-reply-the-crate-never-produces-fails-the-launch-instead-of-guessing-an-engine",
-    "launcher.engineStep--the-end-of-a-launch-releases-the-display-sleep-blocker-87-73-rf2-refused-stops-the-blocker-it-started-once-logs-it-once-sends-done-once",
-    "launcher.engineStep--the-end-of-a-launch-releases-the-display-sleep-blocker-87-73-rf2-after-a-refused-launch-the-next-launch-starts-a-fresh-blocker-the-id-was-cleared",
-    "launcher.engineStep--the-end-of-a-launch-releases-the-display-sleep-blocker-87-73-rf2-a-rejected-engine-step-sends-done-stops-and-clears-the-blocker-and-rejects-with-the-original-error",
-    "launcher.engineStep--the-end-of-a-launch-releases-the-display-sleep-blocker-87-73-rf2-a-failed-wine-check-stops-and-clears-the-blocker-and-sends-done-once",
-    "launcher.engineStep--the-end-of-a-launch-releases-the-display-sleep-blocker-87-73-rf2-a-normal-launch-stops-the-blocker-once-at-its-end-and-clears-the-id",
-    "launcher.engineStep--launcher-engine-step-request-the-offline-flag-87-63-f1-with-the-monitor-in-s-the-request-says-offline-s",
-    "launcher.engineStep--launcher-engine-step-request-the-offline-flag-87-63-f1-reads-the-monitor-when-the-request-is-built-not-when-play-was-pressed-the-epic-offline-prompt-path",
-    "launcher.engineStep--launcher-engine-step-request-the-offline-flag-87-63-f1-a-second-play-after-the-network-comes-back-says-online-again-the-flag-is-never-latched",
-    "funnel--folder-missing-asks-and-aborts",
-    "funnel--engine-refused-releases-the-blocker",
-    "funnel--engine-throws-releases-the-blocker-and-rethrows",
-    "funnel--wine-check-fails-releases-the-blocker",
-    "funnel--recent-game-rejects-still-done",
-    "funnel--launch-rejects-writes-the-exception",
-    "funnel--cli-no-gui-exits",
-    "funnel--gog-playtime-posted",
-    "funnel--gog-playtime-sync-disabled",
-    "funnel--gog-playtime-post-rejects",
-    "funnel--saves-download-rejects-logs-and-goes-on",
-    "funnel--persist-bottle-wine-version-hook",
-    "funnel--wine-check-heals-and-persists",
-    "funnel--before-script-rejects-releases-engine",
-    "funnel--after-script-rejects",
-    "funnel--launch-arguments-win-over-last-used",
-    "funnel--engine-skip-wine-check-runs",
-    "funnel--long-session-sets-runs-for-me-on-mac",
-    "funnel--short-session-leaves-runs-for-me-alone",
-    "funnel--steam-playtime-tracked-externally",
-];
 
 fn golden_dir() -> std::path::PathBuf {
     fixtures().join("golden/funnel")
@@ -132,30 +81,45 @@ fn runner_of(name: &str) -> RunnerName {
     }
 }
 
+/// The deltas a replay applied, by name: the test that every documented delta is used reads this.
+type Used = Arc<Mutex<BTreeSet<&'static str>>>;
+
+/// A scripted collaborator answer as the TS recorder read it: `{ resolves }` or `{ rejects }`.
+fn answer_of(scripted: &Value) -> Result<Value, String> {
+    match scripted.get("rejects").and_then(Value::as_str) {
+        Some(message) => Err(message.to_string()),
+        None => Ok(scripted["resolves"].clone()),
+    }
+}
+
+/// A Rust channel's scripted answers: one for every call, or a sequence whose nth entry answers the nth call. A
+/// channel the scenario does not list rejects by name, as the TS recorder's did.
+fn answers_of(rust: &Value, channel: &str) -> Vec<Result<Value, String>> {
+    match rust.get(channel) {
+        None => vec![Err(format!(
+            "funnel trace: unscripted rust channel \"{channel}\""
+        ))],
+        Some(scripted) => match scripted.get("sequence").and_then(Value::as_array) {
+            Some(sequence) => sequence.iter().map(answer_of).collect(),
+            None => vec![answer_of(scripted)],
+        },
+    }
+}
+
 /// The result of one replayed case: what the Plays answered and what the recorders saw, in order.
 struct Replay {
     plays: Vec<Value>,
     events: Vec<Value>,
 }
 
-fn replay(case: &Value) -> Replay {
+fn replay(case: &Value, used: &Used) -> Replay {
     let s = &case["scenario"];
     let runner = runner_of(s["runner"].as_str().unwrap());
     let app_name = s["appName"].as_str().unwrap().to_string();
-    assert_eq!(
-        s["installPath"],
-        "none",
-        "{}: a game folder is not part of the tracer's replay",
-        case_id(case)
-    );
-    assert!(
-        s.get("playAgain").is_none(),
-        "{}: a second Play is not part of the tracer's replay",
-        case_id(case)
-    );
+    let title = s["title"].as_str().unwrap().to_string();
     let platform = match s["platform"].as_str().unwrap() {
-        "darwin" => Platform::Mac,
-        "win32" => Platform::Windows,
+        "mac" => Platform::Mac,
+        "windows" => Platform::Windows,
         _ => Platform::Linux,
     };
 
@@ -165,10 +129,30 @@ fn replay(case: &Value) -> Replay {
     }
     rig.listen_to_play_time();
 
+    // `game.getGameInfo()`: the install folder is named in the fake HOME, present or absent as the scenario says.
+    let mut install = serde_json::Map::new();
+    match s["installPath"].as_str().unwrap() {
+        "none" => {}
+        which => {
+            let folder = rig.home.root().join("Games").join(&app_name);
+            if which == "present" {
+                std::fs::create_dir_all(&folder).unwrap();
+            }
+            install.insert("install_path".into(), json!(folder.to_string_lossy()));
+        }
+    }
+    if let Some(platform) = s.get("installPlatform") {
+        install.insert("platform".into(), platform.clone());
+    }
     // What the managers answer: the TS `getGameInfo`, `getSettings`, `isNative`, the game config's
-    // `verboseLogs`, the global settings, and `game.launch` taking `sessionMs` of wall time.
+    // `verboseLogs`, the global settings.
     let facts: LaunchFacts = serde_json::from_value(json!({
-        "gameInfo": { "title": s["title"], "install": {} },
+        "gameInfo": {
+            "app_name": app_name,
+            "runner": runner.as_str(),
+            "title": title,
+            "install": install,
+        },
         "settings": s["gameSettings"],
         "isNative": s["native"],
         "verboseLogs": s["gameConfigSettings"]["verboseLogs"],
@@ -176,19 +160,14 @@ fn replay(case: &Value) -> Replay {
         "cliNoGui": s["isCLINoGui"],
     }))
     .expect("the scenario reads as launch facts");
-    assert_eq!(
-        s["hooks"]["launch"],
-        json!({ "resolves": true }),
-        "{}: only a launch that resolves is part of the tracer's replay",
-        case_id(case)
-    );
+
+    // `game.launch` takes `sessionMs` of wall time, and answers `true`, `false` or rejects.
     let session_ms = s["sessionMs"].as_u64().unwrap();
-    let hooks = RecordingHooks::new()
+    let mut hooks = RecordingHooks::new()
         .with_launch_facts(Ok(facts))
-        .with_launch(Ok(LaunchHookReply {
-            launched: true,
-            rotated: false,
-        }))
+        .with_line_title(&title)
+        .with_presence(s["hooks"]["presence"].as_bool().unwrap())
+        .with_persist_bottle_wine_version(s["hooks"]["persistBottleWineVersion"].as_bool().unwrap())
         .with_on_launch({
             let clock = Arc::clone(&rig.clock);
             Arc::new(move || {
@@ -196,63 +175,199 @@ fn replay(case: &Value) -> Replay {
             })
         })
         .with_tape(rig.tape.clone());
-    assert_eq!(
-        s["rust"]["engine_launch_select"]["resolves"],
-        json!({ "kind": "skip" }),
-        "{}: only a skipping engine step is part of the tracer's replay",
-        case_id(case)
+    match answer_of(&s["hooks"]["launch"]) {
+        Ok(launched) => {
+            hooks = hooks.with_launch(Ok(LaunchHookReply {
+                launched: launched.as_bool().unwrap(),
+                rotated: false,
+            }));
+        }
+        Err(message) => {
+            used.lock()
+                .unwrap()
+                .insert("hook-error-lines-are-the-managers");
+            hooks = hooks.with_launch_rejection(&message);
+        }
+    }
+    if let Err(message) = answer_of(&s["hooks"]["syncSaves"]) {
+        used.lock()
+            .unwrap()
+            .insert("hook-error-lines-are-the-managers");
+        hooks = hooks.with_sync_saves(Err(message));
+    }
+    if let Err(message) = answer_of(&s["hooks"]["updateGOGPlaytime"]) {
+        hooks = hooks.with_update_gog_playtime(Err(message));
+    }
+
+    // What the Rust channels answer: an unlisted channel rejects by name in the TS, so it does here.
+    let rust = &s["rust"];
+    let unit = |channel: &str| {
+        answers_of(rust, channel)
+            .into_iter()
+            .next()
+            .expect("a channel has an answer")
+            .map(|_| ())
+    };
+    let mut steps = RecordingSteps::new().with_tape(rig.tape.clone());
+    steps = steps
+        .with_select_script(answers_of(rust, "engine_launch_select"))
+        .with_check_wine_script(answers_of(rust, "launch_check_wine_before_launch"))
+        .with_recent_add(unit("info_recent_add"))
+        .with_end_engine(unit("engine_launch_end"));
+    if rust.get("launch_ask_force_uninstall").is_some() {
+        let answer = answers_of(rust, "launch_ask_force_uninstall").remove(0);
+        steps = steps.with_ask(answer.ok().and_then(|v| v.as_u64()).map(|v| v as usize));
+    }
+    steps = steps.with_scripts(
+        answer_of(&s["scripts"]["before"]).map(|v| v.as_bool().unwrap()),
+        answer_of(&s["scripts"]["after"]).map(|v| v.as_bool().unwrap()),
     );
-    let steps = RecordingSteps::new()
-        .with_select(SelectReply {
-            kind: SelectKind::Skip,
-            key: None,
-            selection: None,
-            prefix: None,
-            log_lines: Vec::new(),
-            launch_settings: None,
-        })
-        .with_tape(rig.tape.clone());
     let shell = RecordingShell::new().with_tape(rig.tape.clone());
 
+    let online_first = s["online"].as_bool().unwrap();
     let ctx = rig.ctx(
         platform,
-        s["online"].as_bool().unwrap(),
-        Arc::new(hooks),
+        online_first,
+        Arc::new(RecordingHooks::new()),
         Arc::new(steps),
         Arc::new(shell),
     );
+    // The monitor goes offline while `game.getSettings()` is read: the facts read flips it.
+    if s["goesOfflineDuringGetSettings"].as_bool() == Some(true) {
+        let engine = Arc::clone(&ctx.engine);
+        hooks = hooks.with_on_facts(Arc::new(move || {
+            engine.online.store(false, Ordering::SeqCst);
+        }));
+    }
+    let ctx = ctx.with_hooks(Arc::new(hooks));
+
     let params = LaunchParams {
-        app_name,
+        app_name: app_name.clone(),
         runner,
-        launch_arguments: None,
+        launch_arguments: s["params"].get("launchArguments").cloned(),
         skip_version_check: s["params"]["skipVersionCheck"].as_bool(),
-        args: None,
+        args: s["params"].get("args").map(|args| {
+            args.as_array()
+                .unwrap()
+                .iter()
+                .map(|a| a.as_str().unwrap().to_string())
+                .collect()
+        }),
     };
     let rt = common::runtime();
-    let status = rt
-        .block_on(run_launch(&ctx, params, &FunnelHost::default()))
-        .expect("the tracer's launch answers a status");
-    settle_store(&rig.host);
+    let mut plays = Vec::new();
+    let play_count = if s.get("playAgain").is_some() { 2 } else { 1 };
+    for n in 1..=play_count {
+        if n == 2 {
+            // A second Play on the same launcher, after the monitor is set: the flag is never latched. The TS
+            // recorder's `tsStore.get` answered the scenario's total again.
+            ctx.engine.online.store(
+                s["playAgain"]["online"].as_bool().unwrap(),
+                Ordering::SeqCst,
+            );
+            rig.forget_runs_for_me();
+            if s["tsStore"]["hasApp"].as_bool().unwrap() {
+                rig.reseed_total_played(&app_name, &s["tsStore"]["totalPlayed"]);
+            }
+        }
+        let outcome = rt.block_on(run_launch(&ctx, params.clone(), &FunnelHost::default()));
+        settle_store(&rig.host);
+        plays.push(match outcome {
+            Ok(status) => status.to_value(),
+            Err(text) => {
+                assert!(
+                    text.starts_with("launch:"),
+                    "{}: a rejected Play answers a fixed launch word, not {text}",
+                    case_id(case)
+                );
+                json!({ "rejected": text })
+            }
+        });
+    }
     Replay {
-        plays: vec![status.to_value()],
+        plays,
         events: rig.events(),
     }
 }
 
-/// The golden's events with what the deltas drop taken out.
-fn expected_events(id: &str) -> Vec<Value> {
+/// The golden's events with what the deltas drop or reshape taken out; each delta applied is noted in `used`.
+fn expected_events(id: &str, used: &Used) -> Vec<Value> {
+    let note = |delta: &'static str| {
+        used.lock().unwrap().insert(delta);
+    };
     let events = read_json(&golden_dir().join("expected").join(id).join("events.json"));
     events
         .as_array()
         .expect("events.json is a list")
         .iter()
-        .filter(|event| {
+        .filter_map(|event| {
             let kind = event["kind"].as_str().unwrap_or_default();
-            // `events-bus-emit`, and `reads-folded-into-launch-facts`.
-            !matches!(kind, "bus" | "play" | "config" | "gameConfig")
-                && !(kind == "hook" && event["hook"] == "getSettings")
+            let member = event["member"].as_str().unwrap_or_default();
+            if kind == "bus" {
+                note("events-bus-emit");
+                return None;
+            }
+            if matches!(kind, "play" | "config" | "gameConfig") && member != "setSetting"
+                || (kind == "hook" && event["hook"] == "getSettings")
+            {
+                note("reads-folded-into-launch-facts");
+                return None;
+            }
+            let mut event = event.clone();
+            if kind == "log" {
+                if let Some(parts) = event["text"].as_array() {
+                    note("recent-game-warning-text");
+                    let joined: Vec<&str> = parts.iter().filter_map(Value::as_str).collect();
+                    event["text"] = json!(joined.join(" ").replace("Error: ", ""));
+                }
+                if let Some(text) = event["text"].as_str() {
+                    if let Some((head, _)) = text.split_once(" could not release its launch: ") {
+                        note("release-warning-is-a-fixed-word");
+                        event["text"] =
+                            json!(format!("{head} could not release its launch: rejected"));
+                    }
+                }
+                if let Some(prefix) = event["prefix"].get("prefix").cloned() {
+                    note("warning-prefix-is-an-options-object");
+                    event["prefix"] = prefix;
+                }
+            }
+            Some(event)
         })
-        .cloned()
+        .collect()
+}
+
+/// The golden's result with a rejected Play's message taken out (`rejection-text-is-a-fixed-word`).
+fn expected_plays(id: &str, used: &Used) -> Vec<Value> {
+    let result = read_json(&golden_dir().join("expected").join(id).join("result.json"));
+    result["plays"]
+        .as_array()
+        .expect("result.json lists the plays")
+        .iter()
+        .map(|play| {
+            if play.get("rejected").is_some() {
+                used.lock()
+                    .unwrap()
+                    .insert("rejection-text-is-a-fixed-word");
+                json!({ "rejected": "<a launch word>" })
+            } else {
+                play.clone()
+            }
+        })
+        .collect()
+}
+
+/// What the Rust Plays answered, with a rejection's fixed word taken out the same way.
+fn got_plays(plays: &[Value]) -> Vec<Value> {
+    plays
+        .iter()
+        .map(|play| {
+            if play.get("rejected").is_some() {
+                json!({ "rejected": "<a launch word>" })
+            } else {
+                play.clone()
+            }
+        })
         .collect()
 }
 
@@ -264,18 +379,48 @@ fn pretty(events: &[Value]) -> String {
         .join("\n")
 }
 
-#[test]
-fn the_deltas_the_replay_relies_on_are_documented() {
-    let deltas = read_json(&golden_dir().join("deltas.json"));
-    for key in ["events-bus-emit", "reads-folded-into-launch-facts"] {
-        assert!(
-            deltas
-                .get(key)
-                .and_then(Value::as_str)
-                .is_some_and(|reason| reason.len() > 20),
-            "deltas.json documents {key}"
-        );
+/// The first place two event lists differ, with the events either side of it (a whole transcript is too long to
+/// read in a failure).
+fn first_difference(got: &[Value], want: &[Value]) -> Option<String> {
+    let at = (0..got.len().max(want.len())).find(|&i| got.get(i) != want.get(i))?;
+    let line = |events: &[Value], i: usize| {
+        events.get(i).map_or_else(
+            || "<none>".to_string(),
+            |e| serde_json::to_string(e).unwrap(),
+        )
+    };
+    let before = at.saturating_sub(2);
+    Some(format!(
+        "event {at} differs\n  after: {}\n  got:  {}\n  want: {}",
+        (before..at)
+            .map(|i| line(want, i))
+            .collect::<Vec<_>>()
+            .join("\n         "),
+        line(got, at),
+        line(want, at)
+    ))
+}
+
+/// Replays one case and compares it, events and results.
+fn compare(case: &Value, used: &Used) {
+    let id = case_id(case);
+    let got = replay(case, used);
+    let want = expected_events(&id, used);
+    if let Some(difference) = first_difference(&got.events, &want) {
+        panic!("{id}: {difference}");
     }
+    assert_eq!(
+        got_plays(&got.plays),
+        expected_plays(&id, used),
+        "{id}: plays"
+    );
+}
+
+fn deltas() -> serde_json::Map<String, Value> {
+    read_json(&golden_dir().join("deltas.json"))
+        .as_object()
+        .cloned()
+        .expect("deltas.json is an object")
 }
 
 #[test]
@@ -285,8 +430,9 @@ fn the_tracer_replays_in_the_ts_order() {
         .iter()
         .find(|c| case_id(c) == TRACER)
         .expect("the tracer is a case of cases.json");
-    let got = replay(tracer);
-    let want = expected_events(TRACER);
+    let used: Used = Arc::default();
+    let got = replay(tracer, &used);
+    let want = expected_events(TRACER, &used);
     assert_eq!(
         got.events,
         want,
@@ -313,43 +459,78 @@ fn the_tracer_replays_in_the_ts_order() {
 }
 
 #[test]
-fn golden_funnel_compared_at_its_floor() {
+fn the_cross_branch_case_runs_the_after_script_before_the_engine_release() {
+    // A Windows game under an engine overlay with both scripts and saves on: the scripts, the overlay, the
+    // release and the saves sync all in the TS order.
     let all = cases();
-    let mut compared = 0;
-    for case in &all {
-        let id = case_id(case);
-        if NOT_YET.contains(&id.as_str()) {
-            continue;
-        }
-        let got = replay(case);
-        assert_eq!(got.events, expected_events(&id), "{id}");
-        compared += 1;
-    }
-    println!("golden funnel: compared {compared} floor {FUNNEL_FLOOR}");
+    let case = all
+        .iter()
+        .find(|c| case_id(c) == "funnel--pairwise-17")
+        .expect("pairwise-17 is a case of cases.json");
+    let used: Used = Arc::default();
+    let got = replay(case, &used).events;
+    let at = |kind: &str, key: &str, value: &str| {
+        got.iter()
+            .position(|e| e["kind"] == kind && e[key] == value)
+            .unwrap_or_else(|| panic!("no {kind} event with {key} = {value}"))
+    };
+    let after_script = at("script", "when", "after");
+    let engine_release = at("rust", "channel", "engine_launch_end");
     assert!(
-        compared >= FUNNEL_FLOOR,
-        "golden funnel: compared {compared}, below the floor of {FUNNEL_FLOOR}"
+        after_script < engine_release,
+        "the after script comes before the engine release"
     );
+    assert!(at("script", "when", "before") < at("hook", "hook", "launch"));
 }
 
 #[test]
-fn not_yet_names_only_existing_cases_and_never_the_tracer() {
-    let ids: BTreeSet<String> = cases().iter().map(case_id).collect();
-    for name in NOT_YET {
-        assert!(
-            ids.contains(*name),
-            "NOT_YET names {name}, which is not a case"
-        );
+fn golden_funnel_compared_at_its_floor() {
+    let all = cases();
+    let used: Used = Arc::default();
+    let mut compared = 0;
+    for case in &all {
+        compare(case, &used);
+        compared += 1;
     }
-    assert!(!NOT_YET.contains(&TRACER), "the tracer is replayed");
-    let unique: BTreeSet<&str> = NOT_YET.iter().copied().collect();
-    assert_eq!(unique.len(), NOT_YET.len(), "NOT_YET lists a case twice");
-    // Replayed plus not yet is every case: a case cannot be left out of both.
-    assert_eq!(ids.len(), NOT_YET.len() + FUNNEL_FLOOR);
+    println!("golden funnel: compared {compared} floor {FUNNEL_FLOOR}");
     assert_eq!(
-        ids.len(),
+        compared, FUNNEL_FLOOR,
+        "golden funnel: the replay compared {compared} cases, the floor is {FUNNEL_FLOOR}"
+    );
+    assert_eq!(
+        compared,
         read_json(&golden_dir().join("MANIFEST.json"))["count"]
             .as_u64()
-            .unwrap() as usize
+            .unwrap() as usize,
+        "every case of the manifest is replayed"
     );
+
+    // Every delta the replay applied is documented, and every documented delta was used by a case.
+    let documented: BTreeSet<String> = deltas().keys().cloned().collect();
+    let applied: BTreeSet<String> = lock(&used).iter().map(|d| d.to_string()).collect();
+    assert_eq!(applied, documented, "applied deltas against deltas.json");
+}
+
+#[test]
+fn the_cases_are_exactly_the_manifest() {
+    let ids: BTreeSet<String> = cases().iter().map(case_id).collect();
+    assert_eq!(ids.len(), cases().len(), "a case id is listed twice");
+    assert_eq!(ids.len(), FUNNEL_FLOOR);
+    assert!(ids.contains(TRACER));
+    for id in &ids {
+        assert!(
+            golden_dir().join("expected").join(id).is_dir(),
+            "{id} has no expected folder"
+        );
+    }
+}
+
+#[test]
+fn every_delta_has_a_reason_of_its_own() {
+    for (name, reason) in deltas() {
+        assert!(
+            reason.as_str().is_some_and(|reason| reason.len() > 20),
+            "deltas.json documents {name}"
+        );
+    }
 }

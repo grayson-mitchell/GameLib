@@ -21,12 +21,30 @@ use std::sync::Arc;
 use gamelib_log::frame::{target_of, FrameTarget};
 use gamelib_log::{Entry, Level, Prefix, TargetBatch};
 use serde::Serialize;
+use serde_json::Value;
 
 use crate::runner::stream::LaunchLogSink;
 use crate::runner::RunnerName;
 
 /// The line the TS writer's `close()` writes.
 pub const END_OF_LOG: &str = "============= End of log =============";
+
+/// `stringifyLogValue` for a value that is not a Promise or an `Error`: what a writer's `logInfo(message)` turns
+/// its argument into. A string is itself, an array is its elements joined with a space, a number or boolean its
+/// text, and anything else (`null`, an object) `JSON.stringify(value, null, 2)`.
+pub fn stringify_log_value(value: &Value) -> String {
+    match value {
+        Value::String(text) => text.clone(),
+        Value::Number(number) => number.to_string(),
+        Value::Bool(flag) => flag.to_string(),
+        Value::Array(items) => items
+            .iter()
+            .map(stringify_log_value)
+            .collect::<Vec<_>>()
+            .join(" "),
+        other => serde_json::to_string_pretty(other).unwrap_or_default(),
+    }
+}
 
 /// The `LogFrameTarget` wire shape of a game's launch log: `{ kind: 'game', appName, runner, type: 'launch' }`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -47,6 +65,22 @@ pub struct LogHandOffWire {
     pub target: LogTargetWire,
     pub disabled: bool,
     pub rotate: bool,
+}
+
+impl LogHandOffWire {
+    /// The same hand-off as the runner's typed form (`launch_script_run`'s `logTarget`).
+    pub fn to_runner_hand_off(&self) -> crate::runner::stream::LogHandOff {
+        crate::runner::stream::LogHandOff {
+            target: FrameTarget {
+                kind: self.target.kind.to_string(),
+                app_name: Some(self.target.app_name.clone()),
+                runner: Some(self.target.runner.to_string()),
+                log_type: Some(self.target.log_type.to_string()),
+            },
+            disabled: self.disabled,
+            rotate: self.rotate,
+        }
+    }
 }
 
 /// One game's launch log.
@@ -133,6 +167,21 @@ impl LaunchLog {
             prefix,
             msg: msg.to_string(),
         });
+    }
+
+    /// One entry of a prepare step's log (`writeLaunchLog`): the writer method named by `level`, called with the
+    /// entry's first part, which is the only argument the TS passed on.
+    pub fn write_entry(&mut self, level: &str, parts: &[Value]) {
+        let level = match level {
+            "warning" => Level::Warning,
+            "error" => Level::Error,
+            "debug" => Level::Debug,
+            _ => Level::Info,
+        };
+        let text = parts
+            .first()
+            .map_or_else(|| "undefined".to_string(), stringify_log_value);
+        self.write_line(level, Prefix::General, &text, false);
     }
 
     /// `LogWriter.handOff()` without the claim: what the `launch` hook is told. A writer that is closed or that

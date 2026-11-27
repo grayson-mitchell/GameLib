@@ -8,7 +8,7 @@
 #![allow(dead_code)]
 
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{mpsc, Arc, Mutex};
 use std::time::Duration;
 
@@ -130,6 +130,8 @@ pub struct FunnelRig {
     pub host: Arc<StoreHost>,
     pub tape: Tape,
     pub clock: Arc<FakeClock>,
+    /// While set, the play-time listener writes nothing to the tape (a replay re-seeds a store between Plays).
+    pub muted: Arc<AtomicBool>,
 }
 
 impl FunnelRig {
@@ -139,9 +141,21 @@ impl FunnelRig {
         let tape: Tape = {
             let events = Arc::clone(&events);
             let host = Arc::clone(&host);
-            Arc::new(move |event| {
+            Arc::new(move |mut event| {
                 settle_store(&host);
-                lock(&events).push(event);
+                let mut events = lock(&events);
+                // The TS recorder derived the writer's state from the frames written so far: the rotation is
+                // claimed once an earlier frame of the same target carried it.
+                if let Some(writer) = event.get_mut("writer") {
+                    if writer["rotationClaimed"].is_null() {
+                        let target = writer["target"].clone();
+                        let claimed = events.iter().any(|e| {
+                            e["kind"] == "gameLog" && e["rotate"] == true && e["target"] == target
+                        });
+                        writer["rotationClaimed"] = json!(claimed);
+                    }
+                }
+                events.push(event);
             })
         };
         FunnelRig {
@@ -150,6 +164,7 @@ impl FunnelRig {
             host,
             tape,
             clock: Arc::new(FakeClock(AtomicU64::new(PINNED_NOW_MS))),
+            muted: Arc::new(AtomicBool::new(false)),
         }
     }
 
@@ -196,16 +211,44 @@ impl FunnelRig {
             .unwrap();
     }
 
-    /// Puts every change of the play-time store on the tape, from now on.
+    /// Writes `totalPlayed` of the play-time store without it reaching the tape: the TS recorder's `tsStore.get`
+    /// answered the scenario's constant on every Play, so a replay's second Play starts from it again.
+    pub fn reseed_total_played(&self, app_name: &str, total: &Value) {
+        self.muted.store(true, Ordering::SeqCst);
+        self.seed_total_played(app_name, total);
+        settle_store(&self.host);
+        self.muted.store(false, Ordering::SeqCst);
+    }
+
+    /// Empties the runs-for-me record: the TS recorder's `runsForMeStore.get` answered the fallback on every Play,
+    /// so a replay's second Play starts from an unset game again.
+    pub fn forget_runs_for_me(&self) {
+        let row = gamelib_store::table::row_for_key("store/runs-for-me").unwrap();
+        let store = self
+            .host
+            .open_row(row, self.user_data().join("store").join("runs-for-me.json"))
+            .unwrap();
+        let _ = store.remove("games");
+        settle_store(&self.host);
+    }
+
+    /// Puts every change of the play-time store and of the runs-for-me store on the tape, from now on, in the TS
+    /// recorder's `tsStore` and `runsForMe` events.
     pub fn listen_to_play_time(&self) {
         let events = Arc::clone(&self.events);
+        let muted = Arc::clone(&self.muted);
         self.host.on_any_change(Box::new(move |change| {
-            if change.store != "store/timestamp" {
+            let kind = match change.store.as_str() {
+                "store/timestamp" => "tsStore",
+                "store/runs-for-me" => "runsForMe",
+                _ => return,
+            };
+            if muted.load(Ordering::SeqCst) {
                 return;
             }
             if let (OpSummary::Set { key }, Some(value)) = (&change.op, &change.value) {
                 lock(&events).push(json!({
-                    "kind": "tsStore",
+                    "kind": kind,
                     "op": "set",
                     "key": key,
                     "value": value.to_value(),

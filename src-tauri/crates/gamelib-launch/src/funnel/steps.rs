@@ -29,14 +29,16 @@ pub type Fut<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
 /// The steps of one launch that run in this process.
 pub trait FunnelSteps: Send + Sync {
     /// `engine_launch_select`: selects and prepares the engine for the launch (a skip when it does not apply).
+    /// `Err` is a fixed reason word for a step that could not answer at all (the TS saw a rejected channel).
     fn select_engine<'a>(
         &'a self,
         ctx: &'a LaunchCtx,
         args: &'a SelectArgs,
-    ) -> Fut<'a, SelectReply>;
+    ) -> Fut<'a, Result<SelectReply, &'static str>>;
 
     /// `engine_launch_end`: the launch is over, so the engine's watch, overlay, deadline and ledger entry go.
-    fn end_engine(&self, ctx: &LaunchCtx, key: &str);
+    /// `Err` is a fixed reason word; the funnel logs it and never lets it replace the launch's own result.
+    fn end_engine(&self, ctx: &LaunchCtx, key: &str) -> Result<(), &'static str>;
 
     /// `launch_check_wine_before_launch`. `Err` is a fixed reason word.
     fn check_wine<'a>(
@@ -75,12 +77,13 @@ impl FunnelSteps for CtxFunnelSteps {
         &'a self,
         ctx: &'a LaunchCtx,
         args: &'a SelectArgs,
-    ) -> Fut<'a, SelectReply> {
-        Box::pin(async move { select_engine_for_launch(&ctx.engine, &CtxStepDeps, args).await })
+    ) -> Fut<'a, Result<SelectReply, &'static str>> {
+        Box::pin(async move { Ok(select_engine_for_launch(&ctx.engine, &CtxStepDeps, args).await) })
     }
 
-    fn end_engine(&self, ctx: &LaunchCtx, key: &str) {
+    fn end_engine(&self, ctx: &LaunchCtx, key: &str) -> Result<(), &'static str> {
         end_engine_launch(&ctx.engine, key);
+        Ok(())
     }
 
     fn check_wine<'a>(
@@ -120,13 +123,15 @@ impl FunnelSteps for CtxFunnelSteps {
 
 #[cfg(feature = "testing")]
 pub mod testing {
+    use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Mutex;
 
+    use gamelib_engine::launch::step::SelectKind;
     use serde_json::{json, Value};
 
     use super::*;
     use crate::funnel::testing::Tape;
-    use gamelib_engine::launch::step::SelectKind;
+    use crate::prepare::launch::LogEntry;
 
     /// One call a [`RecordingSteps`] saw.
     #[derive(Debug, Clone, PartialEq)]
@@ -146,35 +151,134 @@ pub mod testing {
         RecentAdd(Value),
     }
 
+    /// What a step answers, the nth call getting the nth entry (the last entry answering every call after it):
+    /// the JSON the TS recorder wrote as the Rust reply, kept verbatim for the tape, and the typed answer the
+    /// funnel reads; or the message the scripted channel rejected with.
+    struct Script<T> {
+        answers: Vec<Result<(Value, T), String>>,
+        calls: AtomicUsize,
+    }
+
+    impl<T: Clone> Script<T> {
+        fn new(answers: Vec<Result<(Value, T), String>>) -> Script<T> {
+            Script {
+                answers,
+                calls: AtomicUsize::new(0),
+            }
+        }
+
+        fn next(&self) -> Result<(Value, T), String> {
+            let call = self.calls.fetch_add(1, Ordering::SeqCst);
+            self.answers[call.min(self.answers.len() - 1)].clone()
+        }
+    }
+
+    fn select_reply_of(json: &Value) -> SelectReply {
+        let kind = match json.get("kind").and_then(Value::as_str) {
+            Some("legacy") => SelectKind::Legacy,
+            Some("refused") => SelectKind::Refused,
+            Some("use") => SelectKind::Use,
+            _ => SelectKind::Skip,
+        };
+        SelectReply {
+            kind,
+            key: json.get("key").and_then(Value::as_str).map(str::to_string),
+            selection: None,
+            prefix: None,
+            log_lines: json
+                .get("logLines")
+                .and_then(Value::as_array)
+                .map(|lines| {
+                    lines
+                        .iter()
+                        .filter_map(|line| line.as_str().map(str::to_string))
+                        .collect()
+                })
+                .unwrap_or_default(),
+            launch_settings: json.get("launchSettings").cloned(),
+        }
+    }
+
+    fn static_level(level: &str) -> &'static str {
+        match level {
+            "warning" => "warning",
+            "error" => "error",
+            "debug" => "debug",
+            _ => "info",
+        }
+    }
+
+    fn check_reply_of(json: &Value) -> CheckWineReply {
+        let wine = |key: &str| {
+            json.get(key)
+                .filter(|value| !value.is_null())
+                .and_then(|value| serde_json::from_value(value.clone()).ok())
+        };
+        CheckWineReply {
+            ok: json.get("ok").and_then(Value::as_bool).unwrap_or(false),
+            wine_version: wine("wineVersion"),
+            persist_game_wine: json.get("persistGameWine") == Some(&Value::Bool(true)),
+            global_wine_version: wine("globalWineVersion"),
+            log: json
+                .get("log")
+                .and_then(Value::as_array)
+                .map(|entries| {
+                    entries
+                        .iter()
+                        .map(|entry| LogEntry {
+                            level: static_level(
+                                entry.get("level").and_then(Value::as_str).unwrap_or("info"),
+                            ),
+                            parts: entry
+                                .get("parts")
+                                .and_then(Value::as_array)
+                                .cloned()
+                                .unwrap_or_default(),
+                        })
+                        .collect()
+                })
+                .unwrap_or_default(),
+        }
+    }
+
     /// Steps that answer from a script (by default: the engine layer skips, the Wine check passes, the dialog
     /// is dismissed, a script runs and the recent-games write succeeds) and record every call, in order.
     ///
-    /// With a tape the select and the recent-games write also appear in the TS recorder's `rust` event shape
-    /// (`{ kind, channel, args, reply }`), with the args as the TS sent them over `rustInvoke`, so a golden case's
-    /// events compare against them.
+    /// With a tape each step also appears in the TS recorder's event shape (`{ kind: 'rust', channel, args, reply }`
+    /// for the Rust channels, `{ kind: 'script', ... }` for a launch script), with the args as the TS sent them,
+    /// so a golden case's events compare against them.
     pub struct RecordingSteps {
-        select: SelectReply,
+        select: Script<SelectReply>,
+        check_wine: Script<CheckWineReply>,
+        end_engine: Result<(), String>,
         recent_add: Result<(), String>,
         ask: Option<usize>,
-        script: Result<bool, String>,
+        script_before: Result<bool, String>,
+        script_after: Result<bool, String>,
         calls: Mutex<Vec<StepCall>>,
         tape: Option<Tape>,
     }
 
     impl Default for RecordingSteps {
         fn default() -> Self {
+            let skip = json!({ "kind": "skip" });
             RecordingSteps {
-                select: SelectReply {
-                    kind: SelectKind::Skip,
-                    key: None,
-                    selection: None,
-                    prefix: None,
-                    log_lines: Vec::new(),
-                    launch_settings: None,
-                },
+                select: Script::new(vec![Ok((skip.clone(), select_reply_of(&skip)))]),
+                check_wine: Script::new(vec![Ok((
+                    json!({ "ok": true, "log": [] }),
+                    CheckWineReply {
+                        ok: true,
+                        wine_version: None,
+                        persist_game_wine: false,
+                        global_wine_version: None,
+                        log: Vec::new(),
+                    },
+                ))]),
+                end_engine: Ok(()),
                 recent_add: Ok(()),
                 ask: None,
-                script: Ok(true),
+                script_before: Ok(true),
+                script_after: Ok(true),
                 calls: Mutex::new(Vec::new()),
                 tape: None,
             }
@@ -186,8 +290,40 @@ pub mod testing {
             RecordingSteps::default()
         }
 
-        pub fn with_select(mut self, reply: SelectReply) -> RecordingSteps {
-            self.select = reply;
+        pub fn with_select(self, reply: SelectReply) -> RecordingSteps {
+            let json = reply.to_value();
+            self.with_select_sequence(vec![Ok((json, reply))])
+        }
+
+        /// The engine step answers each call from the TS recorder's scripted JSON (`Ok`) or rejects with its
+        /// message (`Err`); the last entry answers every call after it.
+        pub fn with_select_script(self, answers: Vec<Result<Value, String>>) -> RecordingSteps {
+            let answers = answers
+                .into_iter()
+                .map(|answer| answer.map(|json| (json.clone(), select_reply_of(&json))))
+                .collect();
+            self.with_select_sequence(answers)
+        }
+
+        fn with_select_sequence(
+            mut self,
+            answers: Vec<Result<(Value, SelectReply), String>>,
+        ) -> RecordingSteps {
+            self.select = Script::new(answers);
+            self
+        }
+
+        /// The Wine check answers each call from the TS recorder's scripted JSON, as `with_select_script` does.
+        pub fn with_check_wine_script(
+            mut self,
+            answers: Vec<Result<Value, String>>,
+        ) -> RecordingSteps {
+            self.check_wine = Script::new(
+                answers
+                    .into_iter()
+                    .map(|answer| answer.map(|json| (json.clone(), check_reply_of(&json))))
+                    .collect(),
+            );
             self
         }
 
@@ -196,13 +332,32 @@ pub mod testing {
             self
         }
 
+        /// The engine release rejects with this message.
+        pub fn with_end_engine(mut self, reply: Result<(), String>) -> RecordingSteps {
+            self.end_engine = reply;
+            self
+        }
+
         pub fn with_ask(mut self, answer: Option<usize>) -> RecordingSteps {
             self.ask = answer;
             self
         }
 
+        /// Both launch scripts answer `answer`.
         pub fn with_script(mut self, answer: Result<bool, String>) -> RecordingSteps {
-            self.script = answer;
+            self.script_before = answer.clone();
+            self.script_after = answer;
+            self
+        }
+
+        /// The before and the after launch script answer separately.
+        pub fn with_scripts(
+            mut self,
+            before: Result<bool, String>,
+            after: Result<bool, String>,
+        ) -> RecordingSteps {
+            self.script_before = before;
+            self.script_after = after;
             self
         }
 
@@ -220,6 +375,19 @@ pub mod testing {
                 .lock()
                 .unwrap_or_else(|e| e.into_inner())
                 .push(call);
+        }
+
+        /// A `rust` event with its reply, or with `rejected` in place of one (the TS recorder's shape).
+        fn rust_event(&self, channel: &str, request: Value, answer: &Result<Value, String>) {
+            let Some(tape) = &self.tape else {
+                return;
+            };
+            let mut event = json!({ "kind": "rust", "channel": channel, "args": [request] });
+            match answer {
+                Ok(reply) => event["reply"] = reply.clone(),
+                Err(message) => event["rejected"] = json!(message),
+            }
+            tape(event);
         }
     }
 
@@ -246,23 +414,24 @@ pub mod testing {
             &'a self,
             _ctx: &'a LaunchCtx,
             args: &'a SelectArgs,
-        ) -> Fut<'a, SelectReply> {
+        ) -> Fut<'a, Result<SelectReply, &'static str>> {
             let request = select_request(args);
             self.note(StepCall::SelectEngine(request.clone()));
-            let reply = self.select.clone();
-            if let Some(tape) = &self.tape {
-                tape(json!({
-                    "kind": "rust",
-                    "channel": "engine_launch_select",
-                    "args": [request],
-                    "reply": reply.to_value(),
-                }));
-            }
-            Box::pin(async move { reply })
+            let answer = self.select.next();
+            self.rust_event(
+                "engine_launch_select",
+                request,
+                &answer.clone().map(|(json, _)| json),
+            );
+            let answer = answer.map(|(_, reply)| reply).map_err(|_| "rejected");
+            Box::pin(async move { answer })
         }
 
-        fn end_engine(&self, _ctx: &LaunchCtx, key: &str) {
+        fn end_engine(&self, _ctx: &LaunchCtx, key: &str) -> Result<(), &'static str> {
             self.note(StepCall::EndEngine(key.to_string()));
+            let answer = self.end_engine.clone().map(|()| Value::Null);
+            self.rust_event("engine_launch_end", json!({ "key": key }), &answer);
+            answer.map(|_| ()).map_err(|_| "rejected")
         }
 
         fn check_wine<'a>(
@@ -272,17 +441,23 @@ pub mod testing {
             _host: &'a WineHost,
         ) -> Fut<'a, Result<CheckWineReply, &'static str>> {
             self.note(StepCall::CheckWine {
-                app_name: args.app_name,
+                app_name: args.app_name.clone(),
             });
-            Box::pin(async {
-                Ok(CheckWineReply {
-                    ok: true,
-                    wine_version: None,
-                    persist_game_wine: false,
-                    global_wine_version: None,
-                    log: Vec::new(),
-                })
-            })
+            let request = json!({
+                "appName": args.app_name,
+                "runner": args.runner.0.as_str(),
+                "wineVersion": args.wine_version,
+                "verboseLogs": args.verbose_logs,
+                "disableLogs": args.disable_logs,
+            });
+            let answer = self.check_wine.next();
+            self.rust_event(
+                "launch_check_wine_before_launch",
+                request,
+                &answer.clone().map(|(json, _)| json),
+            );
+            let answer = answer.map(|(_, reply)| reply).map_err(|_| "rejected");
+            Box::pin(async move { answer })
         }
 
         fn ask_force_uninstall<'a>(
@@ -296,6 +471,11 @@ pub mod testing {
                 app_name: app_name.to_string(),
             });
             let answer = self.ask;
+            self.rust_event(
+                "launch_ask_force_uninstall",
+                json!({ "runner": runner.as_str(), "appName": app_name }),
+                &Ok(answer.map_or(Value::Null, |index| json!(index))),
+            );
             Box::pin(async move { answer })
         }
 
@@ -306,9 +486,40 @@ pub mod testing {
             _host: &'a RunnerHost,
         ) -> Fut<'a, Result<bool, String>> {
             self.note(StepCall::RunScript {
-                script_path: args.script_path,
+                script_path: args.script_path.clone(),
             });
-            let answer = self.script.clone();
+            // The TS recorder wrote the settings the script was handed: the Wine name and both script paths.
+            if let Some(tape) = &self.tape {
+                let settings: Value =
+                    serde_json::from_str(&args.settings_json).unwrap_or(Value::Null);
+                let text = |key: &str| {
+                    settings
+                        .get(key)
+                        .and_then(Value::as_str)
+                        .map_or(Value::Null, |t| json!(t))
+                };
+                tape(json!({
+                    "kind": "script",
+                    "when": args.stage.as_str(),
+                    "appName": args.app_name,
+                    "wine": settings
+                        .pointer("/wineVersion/name")
+                        .and_then(Value::as_str)
+                        .map_or(Value::Null, |name| json!(name)),
+                    "beforeLaunchScriptPath": text("beforeLaunchScriptPath"),
+                    "afterLaunchScriptPath": text("afterLaunchScriptPath"),
+                    "target": {
+                        "kind": "game",
+                        "appName": args.app_name,
+                        "runner": args.runner,
+                        "type": "launch",
+                    },
+                }));
+            }
+            let answer = match args.stage {
+                crate::runner::script::ScriptStage::Before => self.script_before.clone(),
+                crate::runner::script::ScriptStage::After => self.script_after.clone(),
+            };
             Box::pin(async move { answer })
         }
 
@@ -320,19 +531,12 @@ pub mod testing {
             });
             self.note(StepCall::RecentAdd(request.clone()));
             let answer = self.recent_add.clone();
-            if let Some(tape) = &self.tape {
-                // The TS recorder wrote a rejection as `rejected: <message>` in place of `reply`.
-                let mut event = json!({
-                    "kind": "rust",
-                    "channel": "info_recent_add",
-                    "args": [request],
-                });
-                match &answer {
-                    Ok(()) => event["reply"] = Value::Null,
-                    Err(reason) => event["rejected"] = json!(reason),
-                }
-                tape(event);
-            }
+            // The TS recorder wrote a rejection as `rejected: <message>` in place of `reply`.
+            self.rust_event(
+                "info_recent_add",
+                request,
+                &answer.clone().map(|()| Value::Null),
+            );
             answer
         }
     }

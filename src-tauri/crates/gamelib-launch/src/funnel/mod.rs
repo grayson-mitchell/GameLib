@@ -12,10 +12,11 @@
 //!   behind the `engine_*`, `launch_*` and `info_*` ops directly.
 //!
 //! [`flights`] is the single-flight table, [`log`] the per-game launch log the funnel now owns, and
-//! [`run`] the funnel itself.
+//! [`playtime`] the play-time and runs-for-me records, and [`run`] the funnel itself.
 
 pub mod flights;
 pub mod log;
+pub mod playtime;
 pub mod run;
 pub mod shell;
 pub mod steps;

@@ -46,7 +46,7 @@ use gamelib_launch::funnel::testing::Tape;
 use gamelib_launch::funnel::{run::run_launch, FunnelHost, LaunchParams, LaunchStatus};
 use gamelib_launch::hooks::testing::RecordingHooks;
 use gamelib_launch::hooks::{
-    HookError, LaunchFacts, LaunchHookArgs, LaunchHookReply, ManagerHooks,
+    HookError, LaunchFacts, LaunchHookArgs, LaunchHookReply, ManagerHooks, SyncSavesArgs,
 };
 use gamelib_launch::runner::RunnerName;
 use serde_json::{json, Value};
@@ -55,16 +55,9 @@ use tokio::sync::oneshot;
 use common::funnel_rig::FunnelRig;
 use common::{fixtures, lock, read_json};
 
-/// The cases this file compares. The golden holds 24 (its MANIFEST count); the one the funnel cannot run yet
-/// is in [`LAUNCHER_NOT_YET`]. A later edit may raise this, never lower it.
-const SINGLE_FLIGHT_FLOOR: usize = 23;
-
-/// Launcher cases the funnel does not run yet, each with the branch it needs. 88.3-05 empties this list and
-/// raises the floor to the manifest's 24.
-const LAUNCHER_NOT_YET: &[(&str, &str)] = &[(
-    "launcher_launchSingleFlight--launcheventcallback-single-flight-wr-03-cr-41-a-rejected-recent-games-write-still-finishes-the-launch-cr-41-online-with-autosyncsaves-the-save-upload-still-runs",
-    "cloud-saves",
-)];
+/// The cases this file compares: every case of the golden (its MANIFEST count). 88.3-04 compared 23 of the 24
+/// (the CR-41 case with cloud saves needed the branch 88.3-05 ports). A later edit may raise this, never lower it.
+const SINGLE_FLIGHT_FLOOR: usize = 24;
 
 fn golden_dir() -> std::path::PathBuf {
     fixtures().join("golden/single_flight")
@@ -156,6 +149,31 @@ impl ManagerHooks for GateHooks {
         }))
         .expect("scenario settings read as launch facts");
         Box::pin(async move { Ok(facts) })
+    }
+
+    fn update_gog_playtime(
+        &self,
+        _app_name: &str,
+        _start_iso: &str,
+        _end_iso: &str,
+    ) -> BoxFuture<Result<(), HookError>> {
+        Box::pin(async { Ok(()) })
+    }
+
+    fn sync_saves(
+        &self,
+        _runner: RunnerName,
+        app_name: &str,
+        args: SyncSavesArgs,
+    ) -> BoxFuture<Result<(), HookError>> {
+        if let Some(tape) = &self.tape {
+            tape(json!({
+                "event": "syncSaves",
+                "app": app_name,
+                "args": [args.direction.flag(), args.saves_path, args.gog_saves],
+            }));
+        }
+        Box::pin(async { Ok(()) })
     }
 
     fn launch(
@@ -582,13 +600,9 @@ fn replay(case: &Value) -> (Vec<Value>, Value) {
 #[test]
 fn golden_single_flight_compared_at_its_floor() {
     let all = cases();
-    let not_yet: BTreeSet<&str> = LAUNCHER_NOT_YET.iter().map(|(id, _)| *id).collect();
     let mut compared = 0;
     for case in &all {
         let id = case_id(case);
-        if not_yet.contains(id.as_str()) {
-            continue;
-        }
         let (events, result) = replay(case);
         let want = expected_events(&id);
         assert_eq!(
@@ -607,42 +621,12 @@ fn golden_single_flight_compared_at_its_floor() {
         "golden single_flight: compared {compared}, below the floor of {SINGLE_FLIGHT_FLOOR}"
     );
     assert_eq!(
-        compared + LAUNCHER_NOT_YET.len(),
+        compared,
         read_json(&golden_dir().join("MANIFEST.json"))["count"]
             .as_u64()
             .unwrap() as usize,
-        "every case is compared or listed as not yet"
+        "every case of the manifest is compared"
     );
-}
-
-#[test]
-fn launcher_not_yet_names_existing_cases_and_the_branch_ends_before_it_does_anything() {
-    let ids: BTreeSet<String> = cases().iter().map(case_id).collect();
-    for (id, branch) in LAUNCHER_NOT_YET {
-        assert!(ids.contains(*id), "LAUNCHER_NOT_YET names {id}, not a case");
-        let case = cases().into_iter().find(|c| case_id(c) == *id).unwrap();
-        let rig = FunnelRig::new();
-        rig.listen_to_play_time();
-        let side = launcher_side(&rig, &case["scenario"]);
-        let rt = runtime();
-        let answer = rt.block_on(run_launch(
-            &side.ctx,
-            LaunchParams {
-                app_name: "Quail".to_string(),
-                runner: RunnerName::Legendary,
-                launch_arguments: None,
-                skip_version_check: None,
-                args: None,
-            },
-            &FunnelHost::default(),
-        ));
-        assert_eq!(answer, Err(format!("launch:unported:{branch}")));
-        assert!(
-            rig.events().is_empty(),
-            "a branch the funnel cannot run ends before it has done anything"
-        );
-        assert!(side.ctx.flights.is_empty(), "and gives its flight back");
-    }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -882,14 +866,13 @@ fn two_keys_never_join() {
         })
         .collect();
         settle_tasks().await;
-        // gog is not ported yet: it ends at once, never joining the legendary launch of the same name.
         assert_eq!(
             ctx.flights.len(),
-            2,
-            "legendary:alpha and legendary:beta are in flight"
+            3,
+            "legendary:alpha, gog:alpha and legendary:beta are in flight"
         );
-        assert_eq!(hooks.launches.load(Ordering::SeqCst), 2);
-        for launch in 0..2 {
+        assert_eq!(hooks.launches.load(Ordering::SeqCst), 3);
+        for launch in 0..3 {
             hooks.finish(launch, true);
         }
         let mut answers = Vec::new();
@@ -897,7 +880,7 @@ fn two_keys_never_join() {
             answers.push(launch.await.unwrap());
         }
         assert_eq!(answers[0], Ok(LaunchStatus::Done));
-        assert_eq!(answers[1], Err("launch:unported:gog".to_string()));
+        assert_eq!(answers[1], Ok(LaunchStatus::Done));
         assert_eq!(answers[2], Ok(LaunchStatus::Done));
         assert!(ctx.flights.is_empty());
     });

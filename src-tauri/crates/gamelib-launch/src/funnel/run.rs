@@ -6,36 +6,45 @@
 //! `Shutdown` registrant for as long as the launch is in flight and ends with `launch:shutdown` when the app
 //! begins to exit.
 //!
-//! **This skeleton ports the tracer's path** (`funnel--native-legendary-plain` of `golden/funnel`): a native
-//! game, no scripts, saves off, the engine layer skipping, the launch hook answering. The order of what it does
-//! is the TS order, including the second `launching` status after the engine step. The branches 88.3-05 adds
-//! (a missing install folder, cloud saves, scripts, the Wine check, every engine-step answer but a skip, GOG
-//! playtime, the macOS runs-for-me record) are named in [`unported`], and a launch that needs one ends with the
-//! fixed `launch:unported:<branch>` before it has done anything, so nothing is half done. Nothing calls
-//! `run_launch` until 88.3-06 adds the op.
+//! **Every branch of the TS funnel** is here, in the TS order (88.3-04 ported the tracer's path, 88.3-05 the
+//! rest): a missing install folder (the question, `done`, `abort`); the cloud-saves download and upload; the
+//! hide-window rule; the display-sleep blocker, started once per context and stopped on every end that began
+//! after its start (87-73 RF2); the per-game log and its two forced warnings; every answer of the engine step
+//! (a refused, a thrown and a `use` whose overlay replaces the settings for everything after, and whose key is
+//! released after the after-script, a failed release logged and never replacing the result); the Wine check,
+//! only when the game is not native and no engine controls the launch, with its two `wineVersion` writes;
+//! the before and after scripts; the launch hook with the presence calls; the play time, the macOS runs-for-me
+//! record, the GOG playtime post and the recent-game write; and the exit of a launch made without a window.
+//! Nothing calls `run_launch` until 88.3-06 adds the op.
 //!
 //! Every line the funnel writes to `gamelib.log` is the TS's fixed text, with the app name and title the TS line
-//! already carried. A hook failure is a category word (T-88.3-09), never an error text.
+//! already carried. A hook, step or script failure is a category word (T-88.3-09, T-88.2-14), never an error
+//! text: the TS handler behind a hook writes its own error line, and a rejection the TS let escape the launch
+//! (a rejected before or after script, a failed Wine check or GOG playtime post, a failed engine step) answers
+//! `Err("launch:<what>:<word>")`, leaving exactly what the TS left undone undone (D-20: recorded, not fixed).
 
 use std::path::Path;
-use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
 use gamelib_engine::ctx::Platform;
-use gamelib_engine::launch::step::{Purpose, SelectArgs, SelectKind};
+use gamelib_engine::launch::step::{Purpose, SelectArgs, SelectKind, SelectReply};
 use gamelib_info::recent::AddArgs;
+use gamelib_knownfix::types::Runner;
 use gamelib_log::{Level, Prefix};
-use gamelib_store::host::Store;
-use gamelib_store::json::Json;
-use gamelib_store::table::row_for_key;
 use serde_json::{json, Value};
 
 use super::flights::Enter;
 use super::log::LaunchLog;
+use super::playtime::{iso_string, record_play_session, PlayTimes};
 use super::steps::{CtxFunnelSteps, FunnelSteps};
 use super::{FunnelHost, LaunchParams, LaunchStatus};
 use crate::ctx::LaunchCtx;
-use crate::hooks::{LaunchFacts, LaunchHookArgs};
+use crate::hooks::{
+    HookError, LaunchHookArgs, ManagerHooks, SyncDirection, SyncSavesArgs, WineSettingsWrite,
+};
+use crate::prepare::check_wine::CheckWineArgs;
+use crate::prepare::launch::RunnerArg;
+use crate::runner::script::{ScriptRunArgs, ScriptStage};
 use crate::runner::RunnerName;
 
 /// What a launch ends with when it is not a status: a fixed text, never an error message.
@@ -132,59 +141,6 @@ fn steps_of(ctx: &LaunchCtx) -> &dyn FunnelSteps {
     ctx.steps.as_deref().unwrap_or(&PRODUCTION)
 }
 
-/// `Date.prototype.toISOString` for a millisecond instant (UTC, four-digit years).
-fn iso_string(ms: u64) -> String {
-    let days = (ms / 86_400_000) as i64;
-    let in_day = ms % 86_400_000;
-    // Howard Hinnant's civil_from_days over days since 1970-01-01.
-    let z = days + 719_468;
-    let era = z.div_euclid(146_097);
-    let doe = z.rem_euclid(146_097);
-    let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
-    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
-    let mp = (5 * doy + 2) / 153;
-    let day = doy - (153 * mp + 2) / 5 + 1;
-    let month = if mp < 10 { mp + 3 } else { mp - 9 };
-    let year = yoe + era * 400 + i64::from(month <= 2);
-    format!(
-        "{year:04}-{month:02}-{day:02}T{:02}:{:02}:{:02}.{:03}Z",
-        in_day / 3_600_000,
-        in_day / 60_000 % 60,
-        in_day / 1000 % 60,
-        in_day % 1000
-    )
-}
-
-/// The branches 88.3-05 ports. A launch that needs one answers its name instead of doing it half.
-fn unported(ctx: &LaunchCtx, facts: &LaunchFacts, runner: RunnerName) -> Option<&'static str> {
-    let install_path = facts
-        .game_info
-        .pointer("/install/install_path")
-        .and_then(Value::as_str)
-        .filter(|path| !path.is_empty());
-    if install_path.is_some_and(|path| !Path::new(path).exists()) {
-        return Some("folder-missing");
-    }
-    if runner == RunnerName::Gog {
-        return Some("gog");
-    }
-    if !facts.is_native {
-        return Some("wine-check");
-    }
-    if truthy(facts.settings.get("autoSyncSaves")) {
-        return Some("cloud-saves");
-    }
-    if truthy(facts.settings.get("beforeLaunchScriptPath"))
-        || truthy(facts.settings.get("afterLaunchScriptPath"))
-    {
-        return Some("launch-scripts");
-    }
-    if ctx.engine.platform == Platform::Mac && runner != RunnerName::Steam {
-        return Some("runs-for-me");
-    }
-    None
-}
-
 /// Gives the display-sleep blocker back, once (`releaseDisplaySleepBlock`): every end of a launch that began after
 /// the blocker started goes through here.
 fn release_display_sleep(ctx: &LaunchCtx) {
@@ -201,61 +157,173 @@ fn release_display_sleep(ctx: &LaunchCtx) {
     }
 }
 
-/// The `store/timestamp` store (`tsStore`), or `None` when it cannot be opened: play time is then not recorded.
-fn open_timestamps(ctx: &LaunchCtx) -> Option<Arc<Store>> {
-    let row = row_for_key("store/timestamp")?;
-    let path = ctx
-        .engine
-        .paths
-        .user_data
-        .join("store")
-        .join("timestamp.json");
-    ctx.engine.host.open_row(row, path).ok()
-}
-
-/// `tsStore.set(key, value)`. A store that refuses the write is a fixed warning, not a failed launch.
-fn timestamp_set(ctx: &LaunchCtx, store: Option<&Arc<Store>>, key: &str, value: Value) {
-    let Some(store) = store else {
+/// `releaseEngine`: a release that fails (the app is quitting) must not replace the launch's own result or error.
+fn release_engine(ctx: &LaunchCtx, steps: &dyn FunnelSteps, key: Option<&str>) {
+    let Some(key) = key else {
         return;
     };
-    if store.set(key, Json::from(value)).is_err() {
+    if let Err(word) = steps.end_engine(ctx, key) {
         ctx.log_sink.general(
             Prefix::Backend,
             Level::Warning,
-            "Recording play time failed",
+            &format!("Engine: {key} could not release its launch: {word}"),
         );
     }
 }
 
-/// The part of `runLaunchEventCallback` after the single flight, for the tracer's path.
+/// `gameInfo.install.install_path`, when it is a non-empty string (the TS tested it for truthiness).
+fn install_path_of(game_info: &Value) -> Option<&str> {
+    game_info
+        .pointer("/install/install_path")
+        .and_then(Value::as_str)
+        .filter(|path| !path.is_empty())
+}
+
+/// The engine step's answer narrowed as `parseLaunchEngineStep` does: a non-skip answer without an engine key, and
+/// a `use` without an overlay, are answers the crate never produces and fail the launch rather than guess.
+enum EngineStep {
+    Skip,
+    Legacy(String),
+    Refused(String),
+    Use { key: String, launch_settings: Value },
+}
+
+fn narrow_engine_step(reply: &SelectReply) -> Result<EngineStep, &'static str> {
+    if reply.kind == SelectKind::Skip {
+        return Ok(EngineStep::Skip);
+    }
+    let key = reply.key.clone().ok_or("no-engine-key")?;
+    match reply.kind {
+        SelectKind::Skip => Ok(EngineStep::Skip),
+        SelectKind::Legacy => Ok(EngineStep::Legacy(key)),
+        SelectKind::Refused => Ok(EngineStep::Refused(key)),
+        SelectKind::Use => match &reply.launch_settings {
+            Some(settings) if settings.is_object() => Ok(EngineStep::Use {
+                key,
+                launch_settings: settings.clone(),
+            }),
+            _ => Err("unexpected-answer"),
+        },
+    }
+}
+
+/// `runBeforeLaunchScript` / `runAfterLaunchScript`: a game with no script of this stage is a no-op; otherwise the
+/// `Running script ...` line goes to the game's log and the script runs through the step. `Err` is a script that
+/// could not be started (the TS rejected the launch with it).
+#[allow(clippy::too_many_arguments)]
+async fn run_launch_script(
+    ctx: &LaunchCtx,
+    steps: &dyn FunnelSteps,
+    host: &FunnelHost,
+    log: &mut LaunchLog,
+    stage: ScriptStage,
+    runner: RunnerName,
+    app_name: &str,
+    title: &str,
+    game_info: &Value,
+    settings: &Value,
+) -> Result<(), ()> {
+    let key = match stage {
+        ScriptStage::Before => "beforeLaunchScriptPath",
+        ScriptStage::After => "afterLaunchScriptPath",
+    };
+    let Some(script_path) = settings
+        .get(key)
+        .and_then(Value::as_str)
+        .filter(|path| !path.is_empty())
+    else {
+        return Ok(());
+    };
+    log.write_raw(
+        &format!(
+            "Running script {} {title} ({script_path})\n",
+            stage.as_str()
+        ),
+        false,
+    );
+    let verbose = truthy(settings.get("verboseLogs"));
+    let text = |pointer: &str| -> Option<String> {
+        game_info
+            .pointer(pointer)
+            .and_then(Value::as_str)
+            .map(str::to_string)
+    };
+    let args = ScriptRunArgs {
+        script_path: script_path.to_string(),
+        stage,
+        app_name: text("/app_name").unwrap_or_else(|| app_name.to_string()),
+        executable: text("/install/executable"),
+        prefix: settings
+            .get("winePrefix")
+            .and_then(Value::as_str)
+            .map(str::to_string),
+        runner: text("/runner").unwrap_or_else(|| runner.as_str().to_string()),
+        title: text("/title").unwrap_or_else(|| title.to_string()),
+        install_path: text("/install/install_path"),
+        // The TS passed `JSON.stringify` of both, verbatim; the script's environment holds this text.
+        settings_json: settings.to_string(),
+        info_json: game_info.to_string(),
+        verbose,
+        log_target: verbose.then(|| log.hand_off().to_runner_hand_off()),
+    };
+    steps
+        .run_script(ctx, args, &host.runner)
+        .await
+        .map(|_| ())
+        .map_err(|_| ())
+}
+
+/// A hook the TS wrote with `?.` (a store may not define it) or whose rejection the TS let escape the launch:
+/// `unavailable` is a store that defines none, any other word a TS call that threw.
+fn escaped(result: Result<(), HookError>, what: &str) -> Result<(), Failure> {
+    match result {
+        Err(HookError(word)) if word != "unavailable" => Err(format!("launch:{what}:{word}")),
+        _ => Ok(()),
+    }
+}
+
+/// The part of `runLaunchEventCallback` after the single flight.
+#[allow(clippy::too_many_lines)]
 async fn lead(
     ctx: &LaunchCtx,
     params: LaunchParams,
-    _host: &FunnelHost,
+    host: &FunnelHost,
 ) -> Result<LaunchStatus, Failure> {
     let runner = params.runner;
     let app_name = params.app_name.clone();
     let steps = steps_of(ctx);
 
-    let hooks = ctx
+    let hooks: &dyn ManagerHooks = ctx
         .hooks
-        .as_ref()
+        .as_deref()
         .ok_or_else(|| "launch:no-hooks".to_string())?;
     let facts = hooks
         .launch_facts(runner, &app_name)
         .await
         .map_err(|e| format!("launch:facts:{}", e.0))?;
-    if let Some(branch) = unported(ctx, &facts, runner) {
-        return Err(format!("launch:unported:{branch}"));
+    let game_info = facts.game_info.clone();
+
+    // The install folder is gone: ask whether to forget the game, and abort (the answer only matters to the
+    // question's own hook).
+    if install_path_of(&game_info).is_some_and(|path| !Path::new(path).exists()) {
+        let _ = steps.ask_force_uninstall(ctx, runner, &app_name).await;
+        send_status(ctx, &app_name, runner, "done");
+        return Ok(LaunchStatus::Abort);
     }
 
-    let title = facts
-        .game_info
+    let title = game_info
         .get("title")
         .and_then(Value::as_str)
         .unwrap_or(&app_name)
         .to_string();
-    let settings = facts.settings.clone();
+    // The settings as stored; the engine overlay replaces them below, but these three are read once, up front.
+    let mut settings = facts.settings.clone();
+    let auto_sync_saves = truthy(settings.get("autoSyncSaves"));
+    let saves_path = settings.get("savesPath").cloned().unwrap_or(Value::Null);
+    let gog_saves = settings
+        .get("gogSaves")
+        .cloned()
+        .unwrap_or_else(|| json!([]));
     let launch_arguments = params.launch_arguments.clone().or_else(|| {
         settings
             .get("lastUsedLaunchOption")
@@ -265,23 +333,35 @@ async fn lead(
 
     // `startPlayingDate`, taken before any pre-launch work: the session includes it (D-20 candidate).
     let start_ms = ctx.engine.clock.now_ms();
-    let timestamps = open_timestamps(ctx);
-    if let Some(store) = &timestamps {
-        if store.get(&app_name).is_none() {
-            timestamp_set(
-                ctx,
-                Some(store),
-                &format!("{app_name}.firstPlayed"),
-                json!(iso_string(start_ms)),
-            );
-        }
-    }
+    let play_times = PlayTimes::open(ctx);
+    play_times.first_played_if_new(ctx, &app_name, start_ms);
 
     ctx.log_sink.general(
         Prefix::Backend,
         Level::Info,
         &format!("Launching {title} ({app_name})"),
     );
+
+    if auto_sync_saves && ctx.engine.is_online() {
+        send_status(ctx, &app_name, runner, "syncing-saves");
+        ctx.log_sink.general(
+            Prefix::Backend,
+            Level::Info,
+            &format!("Downloading saves for {title}"),
+        );
+        let synced = hooks
+            .sync_saves(
+                runner,
+                &app_name,
+                SyncSavesArgs {
+                    direction: SyncDirection::SkipUpload,
+                    saves_path: saves_path.clone(),
+                    gog_saves: gog_saves.clone(),
+                },
+            )
+            .await;
+        saves_line(ctx, synced, &format!("Saves for {title} downloaded"));
+    }
 
     send_status(ctx, &app_name, runner, "launching");
 
@@ -329,46 +409,188 @@ async fn lead(
         );
     }
 
-    // The engine step (87-52, D-01): in process now. Only a skip is ported here.
+    // The engine step (87-52, D-01): in process now. The request carries the settings as stored.
     let select = SelectArgs {
         runner: runner.as_str().to_string(),
         app_name: app_name.clone(),
         title: title.clone(),
-        install_path: facts
-            .game_info
-            .pointer("/install/install_path")
-            .and_then(Value::as_str)
-            .map(str::to_string),
-        platform: facts
-            .game_info
+        install_path: install_path_of(&game_info).map(str::to_string),
+        platform: game_info
             .pointer("/install/platform")
             .and_then(Value::as_str)
             .map(str::to_string),
         is_native: facts.is_native,
         settings: settings.clone(),
-        offline: !ctx.engine.online.load(Ordering::SeqCst),
+        offline: !ctx.engine.is_online(),
         purpose: Purpose::Launch,
     };
-    let reply = steps.select_engine(ctx, &select).await;
-    if reply.kind != SelectKind::Skip {
-        if let Some(key) = &reply.key {
-            steps.end_engine(ctx, key);
+    let step = match steps.select_engine(ctx, &select).await {
+        Ok(reply) => narrow_engine_step(&reply).map(|step| (step, reply)),
+        Err(word) => Err(word),
+    };
+    let (step, reply) = match step {
+        Ok(answer) => answer,
+        Err(word) => {
+            // A launch whose engine step failed ends here: its status and its blocker end with it (87-73, RF2).
+            release_display_sleep(ctx);
+            send_status(ctx, &app_name, runner, "done");
+            log.close();
+            return Err(format!("launch:engine-step:{word}"));
         }
+    };
+    let engine_key = match &step {
+        EngineStep::Skip => None,
+        EngineStep::Legacy(key) | EngineStep::Refused(key) | EngineStep::Use { key, .. } => {
+            Some(key.as_str())
+        }
+    };
+    if let Some(key) = engine_key {
+        for line in &reply.log_lines {
+            ctx.log_sink.general(
+                Prefix::Backend,
+                Level::Info,
+                &format!("Engine: {key} {line}"),
+            );
+            log.write_line(Level::Info, Prefix::General, line, false);
+        }
+    }
+    if matches!(step, EngineStep::Refused(_)) {
         release_display_sleep(ctx);
         send_status(ctx, &app_name, runner, "done");
         log.close();
-        return Err("launch:unported:engine-step".to_string());
+        return Ok(LaunchStatus::Abort);
+    }
+    // Only a `use` is released after the launch; the key outlives the match.
+    let release_key: Option<String> = match &step {
+        EngineStep::Use { key, .. } => Some(key.clone()),
+        _ => None,
+    };
+    let engine_controlled = release_key.is_some();
+    if let EngineStep::Use {
+        launch_settings, ..
+    } = step
+    {
+        // Everything that follows sees the overlay, never the stored settings.
+        settings = launch_settings;
+    }
+
+    // Check that Wine is valid when the game is not native. An engine-controlled launch skips this: the engine
+    // step already validated its Wine, and the check's self-heal would persist a derived or fallback engine into
+    // `wineVersion` (D-08). A check that fails to answer escapes the launch with nothing released, as in the TS.
+    if !facts.is_native && !engine_controlled {
+        let runner_arg = Runner::parse(runner.as_str()).map(RunnerArg);
+        let args = CheckWineArgs {
+            app_name: app_name.clone(),
+            runner: runner_arg.ok_or_else(|| "launch:wine-check:runner".to_string())?,
+            wine_version: settings.get("wineVersion").cloned().unwrap_or(Value::Null),
+            verbose_logs: truthy(settings.get("verboseLogs")),
+            disable_logs: facts.global.disable_logs,
+        };
+        let check = steps
+            .check_wine(ctx, args, &host.wine)
+            .await
+            .map_err(|word| format!("launch:wine-check:{word}"))?;
+        for entry in &check.log {
+            log.write_entry(entry.level, &entry.parts);
+        }
+        let wine = check
+            .wine_version
+            .as_ref()
+            .and_then(|wine| serde_json::to_value(wine).ok());
+        let global = check
+            .global_wine_version
+            .as_ref()
+            .and_then(|wine| serde_json::to_value(wine).ok());
+        if global.is_some() || wine.is_some() {
+            // The global write came first in the TS: the default wine was set when it was downloaded.
+            let write = WineSettingsWrite {
+                global,
+                game: wine.clone().filter(|_| check.persist_game_wine),
+            };
+            hooks
+                .wine_settings_write(&app_name, write)
+                .await
+                .map_err(|e| format!("launch:wine-settings-write:{}", e.0))?;
+        }
+        if let (Some(wine), Some(object)) = (wine, settings.as_object_mut()) {
+            // The in-place change of `gameSettings.wineVersion` (a recorded quirk), for everything after.
+            object.insert("wineVersion".to_string(), wine);
+        }
+        if !check.ok {
+            let name = settings
+                .pointer("/wineVersion/name")
+                .map_or_else(|| "undefined".to_string(), super::log::stringify_log_value);
+            ctx.log_sink.general(
+                Prefix::Backend,
+                Level::Error,
+                &format!("Was not possible to launch using {name}"),
+            );
+            release_display_sleep(ctx);
+            send_status(ctx, &app_name, runner, "done");
+            log.close();
+            return Ok(LaunchStatus::Error);
+        }
+
+        // A Steam bottle game's own store never reads the game config the self-heal wrote to, so its re-persist is
+        // a hook (`persistBottleWineVersion?.()`); a store that defines none answers `unavailable`.
+        let persisted = hooks
+            .persist_bottle_wine_version(
+                runner,
+                &app_name,
+                settings.get("wineVersion").cloned().unwrap_or(Value::Null),
+            )
+            .await;
+        escaped(persisted, "persist-bottle-wine")?;
+    }
+
+    // The before script, the second `launching`, the launch and the presence call. Anything that fails here
+    // releases the engine selection ("must not outlive a launch that never got going") and escapes.
+    if run_launch_script(
+        ctx,
+        steps,
+        host,
+        &mut log,
+        ScriptStage::Before,
+        runner,
+        &app_name,
+        &title,
+        &game_info,
+        &settings,
+    )
+    .await
+    .is_err()
+    {
+        release_engine(ctx, steps, release_key.as_deref());
+        return Err("launch:script:before-failed".to_string());
     }
 
     send_status(ctx, &app_name, runner, "launching");
 
+    // Quick 261029-mkz: taken right at launch, NOT the start date (which precedes the pre-launch work): the play
+    // signal is the time the game ran.
+    let launched_at_ms = ctx.engine.clock.now_ms();
     let hand_off = LaunchHookArgs {
         launch_arguments,
         args: params.args.clone(),
         skip_version_check: params.skip_version_check,
         log: log.hand_off(),
     };
-    let launched = match hooks.launch(runner, &app_name, hand_off).await {
+    // The launch is called first and the presence call second, as the TS did; the game's promise is awaited later.
+    let launch_call = hooks.launch(runner, &app_name, hand_off);
+    let presence_call = hooks.set_presence(runner, &app_name);
+    let (launch_answer, presence) = tokio::join!(launch_call, presence_call);
+    if let Err(HookError(word)) = presence {
+        if word != "unavailable" {
+            // The TS rejected the launch (leaving the game running un-awaited); the game here has already ended,
+            // so only the line is kept (judgement call, see the SUMMARY).
+            ctx.log_sink.general(
+                Prefix::Backend,
+                Level::Warning,
+                &format!("Setting presence failed ({word})"),
+            );
+        }
+    }
+    let launched = match launch_answer {
         Ok(reply) => {
             log.take_back(reply.rotated);
             reply.launched
@@ -385,31 +607,65 @@ async fn lead(
             false
         }
     };
-    log.close();
 
+    // The `finally` of the launch promise: the after script, then the log's end, then the engine release.
+    let after = run_launch_script(
+        ctx,
+        steps,
+        host,
+        &mut log,
+        ScriptStage::After,
+        runner,
+        &app_name,
+        &title,
+        &game_info,
+        &settings,
+    )
+    .await;
+    if after.is_ok() {
+        log.close();
+    }
+    release_engine(ctx, steps, release_key.as_deref());
+    if after.is_err() {
+        return Err("launch:script:after-failed".to_string());
+    }
+
+    // `await command` resolved when the game process exited, so its duration is a play signal. Steam is skipped:
+    // its launch promise tracks a steam:// hand-off, not the game.
+    if runner != RunnerName::Steam && launched {
+        let elapsed = ctx.engine.clock.now_ms().saturating_sub(launched_at_ms);
+        record_play_session(
+            ctx,
+            &app_name,
+            runner,
+            i64::try_from(elapsed).unwrap_or(i64::MAX),
+            ctx.engine.platform,
+        );
+    }
+
+    escaped(hooks.clear_presence(runner).await, "clear-presence")?;
+    // Stop the display sleep blocker.
     release_display_sleep(ctx);
 
-    // Playtime and last played date, in whole minutes.
+    // Update playtime and last played date.
     let finished_ms = ctx.engine.clock.now_ms();
-    timestamp_set(
-        ctx,
-        timestamps.as_ref(),
-        &format!("{app_name}.lastPlayed"),
-        json!(iso_string(finished_ms)),
-    );
-    let stored_total = timestamps
-        .as_ref()
-        .and_then(|store| store.get(&format!("{app_name}.totalPlayed")))
-        .and_then(|value| value.to_value().as_f64())
-        .unwrap_or(0.0);
-    let session_minutes = (finished_ms.saturating_sub(start_ms)) as f64 / 1000.0 / 60.0;
-    let total = (session_minutes + stored_total).floor();
-    timestamp_set(
-        ctx,
-        timestamps.as_ref(),
-        &format!("{app_name}.totalPlayed"),
-        json!(total as i64),
-    );
+    play_times.record_session_end(ctx, &app_name, start_ms, finished_ms);
+
+    if runner == RunnerName::Gog {
+        if facts.global.disable_playtime_sync {
+            ctx.log_sink.general(
+                Prefix::Backend,
+                Level::Warning,
+                "Posting playtime session to server skipped - playtime sync disabled",
+            );
+        } else {
+            // A rejected post rejects the whole launch in the TS: the rest of the tail is skipped (D-20).
+            hooks
+                .update_gog_playtime(&app_name, &iso_string(start_ms), &iso_string(finished_ms))
+                .await
+                .map_err(|e| format!("launch:gog-playtime:{}", e.0))?;
+        }
+    }
 
     if let Err(reason) = steps.recent_add(
         ctx,
@@ -424,6 +680,28 @@ async fn lead(
             Level::Warning,
             &format!("Recording recent game failed: {reason}"),
         );
+    }
+
+    if auto_sync_saves && ctx.engine.is_online() {
+        send_status(ctx, &app_name, runner, "done");
+        send_status(ctx, &app_name, runner, "syncing-saves");
+        ctx.log_sink.general(
+            Prefix::Backend,
+            Level::Info,
+            &format!("Uploading saves for {title}"),
+        );
+        let synced = hooks
+            .sync_saves(
+                runner,
+                &app_name,
+                SyncSavesArgs {
+                    direction: SyncDirection::SkipDownload,
+                    saves_path,
+                    gog_saves,
+                },
+            )
+            .await;
+        saves_line(ctx, synced, &format!("Saves uploaded for {title}"));
     }
 
     send_status(ctx, &app_name, runner, "done");
@@ -442,19 +720,23 @@ async fn lead(
     })
 }
 
+/// The line after a saves sync: the success text, nothing for a TS call that threw (its handler wrote the error
+/// line), and a fixed line for a hook that could not be reached at all.
+fn saves_line(ctx: &LaunchCtx, synced: Result<(), HookError>, done: &str) {
+    match synced {
+        Ok(()) => ctx.log_sink.general(Prefix::Backend, Level::Info, done),
+        Err(HookError("failed")) => {}
+        Err(HookError(word)) => ctx.log_sink.general(
+            Prefix::Backend,
+            Level::Error,
+            &format!("Saves sync did not run ({word})"),
+        ),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn the_iso_string_is_to_iso_string() {
-        assert_eq!(iso_string(0), "1970-01-01T00:00:00.000Z");
-        assert_eq!(iso_string(1_767_225_600_000), "2026-01-01T00:00:00.000Z");
-        assert_eq!(iso_string(1_767_225_690_123), "2026-01-01T00:01:30.123Z");
-        // A leap day and the last millisecond of a year.
-        assert_eq!(iso_string(1_709_164_800_000), "2024-02-29T00:00:00.000Z");
-        assert_eq!(iso_string(1_798_761_599_999), "2026-12-31T23:59:59.999Z");
-    }
 
     #[test]
     fn truthiness_follows_javascript() {
@@ -465,5 +747,33 @@ mod tests {
         assert!(truthy(Some(&json!("x"))));
         assert!(truthy(Some(&json!([]))));
         assert!(truthy(Some(&json!({}))));
+    }
+
+    #[test]
+    fn the_engine_answer_is_narrowed_like_the_ts_parse() {
+        let reply = |kind: SelectKind, key: Option<&str>, settings: Option<Value>| SelectReply {
+            kind,
+            key: key.map(str::to_string),
+            selection: None,
+            prefix: None,
+            log_lines: Vec::new(),
+            launch_settings: settings,
+        };
+        assert!(matches!(
+            narrow_engine_step(&reply(SelectKind::Skip, None, None)),
+            Ok(EngineStep::Skip)
+        ));
+        assert_eq!(
+            narrow_engine_step(&reply(SelectKind::Legacy, None, None)).err(),
+            Some("no-engine-key")
+        );
+        assert_eq!(
+            narrow_engine_step(&reply(SelectKind::Use, Some("k"), None)).err(),
+            Some("unexpected-answer")
+        );
+        assert!(matches!(
+            narrow_engine_step(&reply(SelectKind::Use, Some("k"), Some(json!({})))),
+            Ok(EngineStep::Use { .. })
+        ));
     }
 }
