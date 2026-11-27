@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: "88.2"
 current_phase_name: Command runner and game processes
 status: executing
-stopped_at: Completed 88.2-23-PLAN.md
-last_updated: "2026-11-27T01:48:42.985Z"
+stopped_at: Completed 88.2-24-PLAN.md
+last_updated: "2026-11-27T02:37:46.618Z"
 last_activity: 2026-11-26
 last_activity_desc: Phase 88.2 execution started
-state_head: 19c753370af1e28bc9d5339e0d4b2d0e0303fbbc
+state_head: 20c0165cec133b1f7f33f420e136fc412c497fff
 progress:
   total_phases: 25
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-25)
 ## Current Position
 
 Phase: 88.2 (Command runner and game processes) — EXECUTING
-Plan: 24 of 25
+Plan: 25 of 25
 Status: Ready to execute
 Last activity: 2026-11-26 — Phase 88.2 execution started
 Progress: [████████████████░░░░] 204/257 plans ([█████████░] 92%)
@@ -570,6 +570,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 88.2 P21 | 55min | 3 tasks | 17 files |
 | Phase 88.2 P22 | 40 min | 2 tasks | 16 files |
 | Phase 88.2 P23 | 45 min | 2 tasks | 12 files |
+| Phase 88.2 P24 | 46 min | 2 tasks | 38 files |
 
 ## Accumulated Context
 
@@ -1290,6 +1291,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 88.2]: D-18/D-25: the TS drivers of 88.2's runner goldens are retired outright; every recorded golden stays and replays in Rust, runnerOraclePortComplete keeps the drivers from returning
 - [Phase 88.2]: 88.2-23: the known-red runner.oracle deltas-table test is resolved by retirement (test deleted, deltas.json untouched); the mask-secret golden re-recording was not done (needs a Rust recording run and a golden diff)
 - [Phase 88.2]: 88.2-23: RF1's CrossOver wine-binary invariant is asserted over prepare_wine_command's spawned program in crossover_env.rs, since getWineFlags stays TS until the managers move
+- [Phase 88.2]: 88.2-24: the TS command runner is deleted behind a RED-first commandRunnerPortComplete (13 failing, then green); the validWine shim, its schedule row and the Launcher's callerless validWine member go with it rather than re-targeting to 88.3
+- [Phase 88.2]: 88.2-24: RunnerProps and WineCommandResult live in runnerAdapter.ts; the managers' ProcessRunner dep is dropped from sideload only (nile still hands its deps to NileSetupDeps)
 
 ### Pending Todos
 
@@ -1576,8 +1579,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-27T01:48:39.668Z
-Stopped at: Completed 88.2-23-PLAN.md
+Last session: 2026-11-27T02:37:26.562Z
+Stopped at: Completed 88.2-24-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
