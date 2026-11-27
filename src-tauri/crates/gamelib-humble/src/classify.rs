@@ -183,7 +183,7 @@ pub fn classify_tpk(
     is_locally_revealed: bool,
     is_locally_redeemed: bool,
     now_ms: i64,
-    zone: LocalZone,
+    zone: LocalZone<'_>,
 ) -> HumbleKeyState {
     let expired_by_date = tpk
         .expiration
@@ -299,7 +299,7 @@ fn is_blank(value: &str) -> bool {
 ///   negative means "no expiry window").
 ///
 /// `None` when no recognised, parseable expiration is present. Never panics.
-pub fn extract_expiration(tpk: &JsValue, now_ms: i64, zone: LocalZone) -> Option<String> {
+pub fn extract_expiration(tpk: &JsValue, now_ms: i64, zone: LocalZone<'_>) -> Option<String> {
     for field in ABSOLUTE_EXPIRATION_FIELDS {
         let Some(JsValue::String(value)) = tpk.get(field) else {
             continue;
@@ -375,7 +375,7 @@ pub fn classify_order(
     raw_order: &JsValue,
     is_revealed: impl Fn(&str) -> bool,
     now_ms: i64,
-    zone: LocalZone,
+    zone: LocalZone<'_>,
     is_locally_redeemed: impl Fn(&str, &str) -> bool,
 ) -> ClassifiedOrder {
     let gamekey = str_prop(Some(raw_order), "gamekey")
@@ -731,7 +731,7 @@ pub fn describe_skipped_entitlements(raw_order: &JsValue) -> Option<String> {
 pub fn describe_missing_expiration_tpks(
     raw_order: &JsValue,
     now_ms: i64,
-    zone: LocalZone,
+    zone: LocalZone<'_>,
 ) -> Option<String> {
     let mut names: Vec<String> = Vec::new();
     let mut missing = 0usize;
@@ -921,7 +921,7 @@ mod tests {
     }
 
     /// The fixed-offset zones the date-only anchoring is proven in: UTC, one west, one east.
-    fn zones() -> [LocalZone; 3] {
+    fn zones() -> [LocalZone<'static>; 3] {
         [
             LocalZone::UTC,
             LocalZone::from_east_secs(-7 * 3600),
@@ -930,8 +930,9 @@ mod tests {
     }
 
     /// The calendar date `iso` shows in `zone` (what `getFullYear`, `getMonth` and `getDate` read).
-    fn local_date(iso: &str, zone: LocalZone) -> (i32, i32, i32) {
-        let shifted = to_iso_string(at(iso) + zone.east_secs_for_test() * 1000).expect("in range");
+    fn local_date(iso: &str, zone: LocalZone<'_>) -> (i32, i32, i32) {
+        let shifted = to_iso_string(at(iso) + i64::from(zone.offset_east_secs_at(at(iso))) * 1000)
+            .expect("in range");
         (
             shifted[0..4].parse().expect("year"),
             shifted[5..7].parse().expect("month"),

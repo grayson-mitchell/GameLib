@@ -43,7 +43,7 @@ fn golden_dir() -> PathBuf {
 
 /// The fixed-offset zones the goldens were recorded in (none observes daylight saving). A case with
 /// no `tz` is zone-independent by construction (every instant it carries has a zone of its own).
-fn zone_of(input: &JsValue) -> LocalZone {
+fn zone_of(input: &JsValue) -> LocalZone<'_> {
     match input.get("tz").and_then(JsValue::as_str) {
         None | Some("UTC") => LocalZone::UTC,
         Some("America/Phoenix") => LocalZone::from_east_secs(-7 * 3600),

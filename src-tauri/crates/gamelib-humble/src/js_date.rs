@@ -10,31 +10,79 @@
 //! `jiff::Timestamp`: V8 accepts years up to 275760, and a `Timestamp` stops at 9999.
 //!
 //! Local time. A string with no zone (`"2026-08-01 12:34"`, `"2026/08/01"`) is read in the host's zone.
-//! The crate allows fixed-offset civil time only (no tz database), so the host's zone is a
-//! [`LocalZone`] the caller supplies; 94-15 decides where the shell gets it. A zone that observes
-//! daylight saving cannot be one fixed offset, which is the one place this port is narrower than V8.
+//! The crate reads no tz database itself, so the zone arrives as a [`LocalZone`]: one fixed offset (a
+//! golden replay, a test) or the host's [`HostZone`] lookup (the shell, via `HumbleCtx::local_zone`),
+//! which answers the offset in force at an instant. A local time becomes UTC the way ECMA-262 `UTC(t)`
+//! (and V8) does it: the offset in force at that local time, the earlier instant for a repeated time,
+//! the pre-change offset for a skipped one. The only remaining narrowing is the lookup's own: the
+//! shell's answers in whole minutes and clamps to 1970..9999 (so pre-1900 local mean time is still not
+//! reproduced).
 
-/// The host's local zone as a fixed offset east of UTC.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct LocalZone {
-    east_secs: i32,
+use crate::ctx::HostZone;
+
+/// The host's local zone: what a zone-less or date-only value is read in.
+///
+/// `Fixed` is one offset east of UTC, for a golden replay or a test. `Host` is the shell's live zone,
+/// a lookup of the offset in force at an instant, so a daylight-saving host reads each date with the
+/// offset of its own date.
+#[derive(Clone, Copy)]
+pub enum LocalZone<'a> {
+    /// Seconds east of UTC, the same at every instant.
+    Fixed(i32),
+    /// The host's lookup of the offset at an instant.
+    Host(&'a dyn HostZone),
 }
 
-impl LocalZone {
-    pub const UTC: LocalZone = LocalZone { east_secs: 0 };
+impl std::fmt::Debug for LocalZone<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            LocalZone::Fixed(secs) => f.debug_tuple("Fixed").field(secs).finish(),
+            LocalZone::Host(_) => f.write_str("Host"),
+        }
+    }
+}
 
-    pub const fn from_east_secs(east_secs: i32) -> LocalZone {
-        LocalZone { east_secs }
+impl<'a> LocalZone<'a> {
+    pub const UTC: LocalZone<'static> = LocalZone::Fixed(0);
+
+    pub const fn from_east_secs(east_secs: i32) -> LocalZone<'static> {
+        LocalZone::Fixed(east_secs)
     }
 
-    fn east_ms(self) -> i64 {
-        i64::from(self.east_secs) * 1000
+    /// A zone backed by the host's lookup.
+    pub fn host(zone: &'a dyn HostZone) -> LocalZone<'a> {
+        LocalZone::Host(zone)
     }
 
-    /// The offset in seconds east of UTC (the tests read a local calendar date off it).
-    #[cfg(test)]
-    pub(crate) fn east_secs_for_test(self) -> i64 {
-        i64::from(self.east_secs)
+    /// The offset in seconds east of UTC in force at the UTC instant `utc_ms`.
+    pub fn offset_east_secs_at(self, utc_ms: i64) -> i32 {
+        match self {
+            LocalZone::Fixed(secs) => secs,
+            LocalZone::Host(zone) => zone.offset_east_secs_at(utc_ms),
+        }
+    }
+
+    /// Local time value to UTC. This is ECMA-262 `UTC(t)`, as V8 answers it through ICU
+    /// (`getOffsetFromLocal`, FORMER/FORMER): a repeated wall-clock time (fall-back overlap) takes the
+    /// earlier instant, and a skipped one (spring-forward gap) takes the offset in force before the
+    /// change.
+    fn utc_from_local(self, local_ms: i64) -> i64 {
+        let zone = match self {
+            LocalZone::Fixed(secs) => return local_ms - i64::from(secs) * 1000,
+            LocalZone::Host(zone) => zone,
+        };
+        // A local value read as a UTC instant; offsets widen to i64 ms before any arithmetic.
+        let at = |t: i64| i64::from(zone.offset_east_secs_at(t)) * 1000;
+        let before = at(local_ms - MS_PER_DAY);
+        let after = at(local_ms + MS_PER_DAY);
+        // The last two guard a window that holds two changes.
+        let candidates = [before, after, at(local_ms - before), at(local_ms - after)];
+        // A candidate is valid when the host agrees it is in force at the instant it implies.
+        let valid = candidates
+            .into_iter()
+            .filter(|&o| at(local_ms - o) == o)
+            .max();
+        local_ms - valid.unwrap_or(before)
     }
 }
 
@@ -138,7 +186,7 @@ fn make_day(year: i64, month0: i64, day: i64) -> Option<i64> {
 
 /// `new Date(year, month0, day)` in `zone`: local midnight as a time value. A year of 0..=99 is read
 /// as 1900..=1999, as the constructor does.
-pub fn local_midnight(year: i64, month0: i64, day: i64, zone: LocalZone) -> Option<i64> {
+pub fn local_midnight(year: i64, month0: i64, day: i64, zone: LocalZone<'_>) -> Option<i64> {
     let year = if (0..=99).contains(&year) {
         1900 + year
     } else {
@@ -148,7 +196,7 @@ pub fn local_midnight(year: i64, month0: i64, day: i64, zone: LocalZone) -> Opti
     if t.abs() > MAX_TIME_BEFORE_UTC_MS {
         return None;
     }
-    time_clip_ms(t - zone.east_ms())
+    time_clip_ms(zone.utc_from_local(t))
 }
 
 /// `Date.prototype.toISOString`: `None` where JavaScript throws a `RangeError` (an invalid date).
@@ -796,7 +844,7 @@ fn parse_es5(
 }
 
 /// `new Date(raw).getTime()`: `None` where JavaScript answers `NaN`.
-pub fn parse_js_date(raw: &str, zone: LocalZone) -> Option<i64> {
+pub fn parse_js_date(raw: &str, zone: LocalZone<'_>) -> Option<i64> {
     let units: Vec<u16> = raw.encode_utf16().collect();
     let mut scanner = Scanner::new(&units);
     let mut day = DayComposer::new();
@@ -932,11 +980,60 @@ pub fn parse_js_date(raw: &str, zone: LocalZone) -> Option<i64> {
             if date.abs() > MAX_TIME_BEFORE_UTC_MS {
                 return None;
             }
-            date - zone.east_ms()
+            zone.utc_from_local(date)
         }
         Some(secs) => date - secs * 1000,
     };
     time_clip_ms(utc)
+}
+
+/// Synthetic daylight-saving zones the tests share. Each holds only the transitions named, measured
+/// from node (`process.env.TZ` set at runtime); none is a tz database.
+#[cfg(test)]
+pub(crate) mod test_zones {
+    use crate::ctx::HostZone;
+
+    /// America/New_York, the 2026 transitions only, measured from node: EDT (-4h) from
+    /// 2026-03-08T07:00:00Z until 2026-11-01T06:00:00Z, EST (-5h) otherwise.
+    pub(crate) struct NewYork2026;
+
+    impl HostZone for NewYork2026 {
+        fn offset_east_secs_at(&self, utc_ms: i64) -> i32 {
+            if (1_772_953_200_000..1_793_512_800_000).contains(&utc_ms) {
+                -4 * 3600
+            } else {
+                -5 * 3600
+            }
+        }
+    }
+
+    /// Pacific/Auckland, the 2026 transitions only, measured from node: NZST (+12h) from
+    /// 2026-04-04T14:00:00Z until 2026-09-26T14:00:00Z, NZDT (+13h) otherwise.
+    pub(crate) struct Auckland2026;
+
+    impl HostZone for Auckland2026 {
+        fn offset_east_secs_at(&self, utc_ms: i64) -> i32 {
+            if (1_775_311_200_000..1_790_431_200_000).contains(&utc_ms) {
+                12 * 3600
+            } else {
+                13 * 3600
+            }
+        }
+    }
+
+    /// America/Sao_Paulo, the 2018 transition only, measured from node: -3h before
+    /// 2018-11-04T03:00:00Z, -2h from then (local midnight itself was skipped).
+    pub(crate) struct SaoPaulo2018;
+
+    impl HostZone for SaoPaulo2018 {
+        fn offset_east_secs_at(&self, utc_ms: i64) -> i32 {
+            if utc_ms < 1_541_300_400_000 {
+                -3 * 3600
+            } else {
+                -2 * 3600
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -1018,6 +1115,158 @@ mod tests {
         assert!(!is_js_whitespace('\u{85}'));
         assert!(is_js_whitespace('\u{2028}'));
         assert!(!is_js_whitespace('x'));
+    }
+
+    use super::test_zones::{Auckland2026, NewYork2026, SaoPaulo2018};
+
+    /// `parse_js_date` rendered as `toISOString`.
+    fn parsed(raw: &str, zone: LocalZone<'_>) -> Option<String> {
+        parse_js_date(raw, zone).and_then(to_iso_string)
+    }
+
+    /// `new Date(year, month0, day)` rendered as `toISOString`.
+    fn midnight(year: i64, month0: i64, day: i64, zone: LocalZone<'_>) -> Option<String> {
+        local_midnight(year, month0, day, zone).and_then(to_iso_string)
+    }
+
+    #[test]
+    fn a_zone_less_time_takes_the_offset_of_its_own_date() {
+        let ny = LocalZone::host(&NewYork2026);
+        assert_eq!(
+            parsed("2026-07-01 00:30", ny).as_deref(),
+            Some("2026-07-01T04:30:00.000Z")
+        );
+        assert_eq!(
+            parsed("2026-12-15 00:30", ny).as_deref(),
+            Some("2026-12-15T05:30:00.000Z")
+        );
+        assert_eq!(
+            midnight(2026, 6, 1, ny).as_deref(),
+            Some("2026-07-01T04:00:00.000Z")
+        );
+        assert_eq!(
+            midnight(2026, 11, 15, ny).as_deref(),
+            Some("2026-12-15T05:00:00.000Z")
+        );
+        assert_eq!(
+            midnight(2026, 2, 8, ny).as_deref(),
+            Some("2026-03-08T05:00:00.000Z")
+        );
+        assert_eq!(
+            midnight(2026, 10, 1, ny).as_deref(),
+            Some("2026-11-01T04:00:00.000Z")
+        );
+
+        let nz = LocalZone::host(&Auckland2026);
+        assert_eq!(
+            parsed("2026-07-01 00:30", nz).as_deref(),
+            Some("2026-06-30T12:30:00.000Z")
+        );
+        assert_eq!(
+            parsed("2026-12-01 00:30", nz).as_deref(),
+            Some("2026-11-30T11:30:00.000Z")
+        );
+        assert_eq!(
+            midnight(2026, 6, 1, nz).as_deref(),
+            Some("2026-06-30T12:00:00.000Z")
+        );
+        assert_eq!(
+            midnight(2026, 11, 1, nz).as_deref(),
+            Some("2026-11-30T11:00:00.000Z")
+        );
+    }
+
+    #[test]
+    fn a_skipped_wall_time_uses_the_offset_from_before_the_change() {
+        let ny = LocalZone::host(&NewYork2026);
+        assert_eq!(
+            parsed("2026-03-08 02:30", ny).as_deref(),
+            Some("2026-03-08T07:30:00.000Z")
+        );
+        assert_eq!(
+            parsed("2026-03-08 01:59", ny).as_deref(),
+            Some("2026-03-08T06:59:00.000Z")
+        );
+        assert_eq!(
+            parsed("2026-03-08 03:00", ny).as_deref(),
+            Some("2026-03-08T07:00:00.000Z")
+        );
+        let nz = LocalZone::host(&Auckland2026);
+        assert_eq!(
+            parsed("2026-09-27 02:30", nz).as_deref(),
+            Some("2026-09-26T14:30:00.000Z")
+        );
+        // Sao Paulo skipped local midnight itself.
+        let sp = LocalZone::host(&SaoPaulo2018);
+        assert_eq!(
+            midnight(2018, 10, 4, sp).as_deref(),
+            Some("2018-11-04T03:00:00.000Z")
+        );
+        assert_eq!(
+            parsed("2018-11-04 00:30", sp).as_deref(),
+            Some("2018-11-04T03:30:00.000Z")
+        );
+    }
+
+    #[test]
+    fn a_repeated_wall_time_takes_the_earlier_instant() {
+        let ny = LocalZone::host(&NewYork2026);
+        assert_eq!(
+            parsed("2026-11-01 01:30", ny).as_deref(),
+            Some("2026-11-01T05:30:00.000Z")
+        );
+        assert_eq!(
+            parsed("2026-11-01 00:59", ny).as_deref(),
+            Some("2026-11-01T04:59:00.000Z")
+        );
+        assert_eq!(
+            parsed("2026-11-01 02:00", ny).as_deref(),
+            Some("2026-11-01T07:00:00.000Z")
+        );
+        let nz = LocalZone::host(&Auckland2026);
+        assert_eq!(
+            parsed("2026-04-05 02:30", nz).as_deref(),
+            Some("2026-04-04T13:30:00.000Z")
+        );
+    }
+
+    #[test]
+    fn a_host_zone_with_one_offset_converts_like_the_fixed_zone() {
+        struct Phoenix;
+        impl HostZone for Phoenix {
+            fn offset_east_secs_at(&self, _utc_ms: i64) -> i32 {
+                -7 * 3600
+            }
+        }
+        let host = LocalZone::host(&Phoenix);
+        let fixed = LocalZone::from_east_secs(-7 * 3600);
+        for raw in ["2026-07-01 00:30", "2026-12-15", "8/1/26", "March 5, 2020"] {
+            assert_eq!(parse_js_date(raw, host), parse_js_date(raw, fixed), "{raw}");
+        }
+        assert_eq!(
+            local_midnight(2026, 1, 30, host),
+            local_midnight(2026, 1, 30, fixed)
+        );
+        // A string with its own zone is the same instant under every zone.
+        let ny = LocalZone::host(&NewYork2026);
+        for raw in ["2026-07-01T00:30:00Z", "Sat, 01 Aug 2026 12:34:56 GMT"] {
+            let utc = parse_js_date(raw, LocalZone::UTC);
+            assert!(utc.is_some(), "{raw}");
+            assert_eq!(parse_js_date(raw, ny), utc, "{raw}");
+            assert_eq!(parse_js_date(raw, host), utc, "{raw}");
+        }
+    }
+
+    #[test]
+    fn the_range_checks_hold_under_a_host_zone() {
+        let ny = LocalZone::host(&NewYork2026);
+        // The -5h shift passes TimeClip, so the date is invalid; under UTC it is the last valid day.
+        assert_eq!(local_midnight(275760, 8, 13, ny), None);
+        assert_eq!(
+            midnight(275760, 8, 13, LocalZone::UTC).as_deref(),
+            Some("+275760-09-13T00:00:00.000Z")
+        );
+        assert_eq!(local_midnight(1_000_000, 0, 1, ny), None);
     }
 
     #[test]

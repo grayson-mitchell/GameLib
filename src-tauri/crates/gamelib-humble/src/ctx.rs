@@ -24,9 +24,10 @@ pub enum Platform {
 }
 
 /// The host's local time zone, as the shell reads it: the UTC offset in force at an instant. The crate
-/// allows fixed-offset civil time only (no tz database), so a zone arrives as an offset that
-/// [`HumbleCtx::local_zone_at`] turns into a [`LocalZone`]. A host with daylight saving gives a different
-/// offset in summer and winter, which is why this asks for an instant and not for "the" offset.
+/// reads no tz database, so [`LocalZone::Host`] resolves a local time against this lookup per ECMA-262
+/// `UTC(t)`. It is asked about instants near each local time (a day either side), so a daylight-saving
+/// host is exact on both sides of a change, and a date read in winter gets the winter offset whatever
+/// the season of the sync.
 pub trait HostZone: Send + Sync + 'static {
     /// Seconds east of UTC that apply at `utc_ms` (milliseconds since the epoch).
     fn offset_east_secs_at(&self, utc_ms: i64) -> i32;
@@ -97,7 +98,8 @@ pub struct HumbleCtx {
     /// Every HTTP request this crate makes (Humble and the Steam store search). The shell passes
     /// `ReqwestHttp`; a test passes a `Replay` pinned to the TypeScript's recorded requests.
     pub http: Arc<dyn Http>,
-    /// The host's time zone: what the classifier reads a zone-less or date-only expiry in.
+    /// The host's time zone lookup: what the classifier reads a zone-less or date-only expiry in, at
+    /// the offset in force on that expiry's own date (see [`HumbleCtx::local_zone`]).
     pub zone: Arc<dyn HostZone>,
     /// The session cookie and CSRF token owner (D-18): the cache, dedupe and failure memo over the
     /// shell's Keychain (or dev vault) source. [`UnavailableSecretSource`] until the shell's is wired in.
@@ -142,11 +144,11 @@ impl HumbleCtx {
         self
     }
 
-    /// The host zone as the fixed offset the classifier takes, for dates read around `utc_ms`. The
-    /// offset is the one in force AT that instant, so a caller passes the instant the date belongs
-    /// to when it knows it (the order's own date) and "now" when it does not.
-    pub fn local_zone_at(&self, utc_ms: i64) -> LocalZone {
-        LocalZone::from_east_secs(self.zone.offset_east_secs_at(utc_ms))
+    /// The host zone as a [`LocalZone`]. Hand this to `parse_js_date`, `classify_order`,
+    /// `extract_expiration` and `classify_tpk`; each zone-less or date-only value is then resolved at
+    /// its own date's offset.
+    pub fn local_zone(&self) -> LocalZone<'_> {
+        LocalZone::host(&*self.zone)
     }
 
     /// The emitter the shell pushes through.
@@ -199,6 +201,7 @@ impl HumbleCtx {
 mod tests {
     use super::*;
     use crate::http::NoHttp;
+    use crate::js_date::{parse_js_date, to_iso_string};
     use gamelib_core::clock::SystemClock;
     use std::sync::Mutex;
 
@@ -331,17 +334,24 @@ mod tests {
     #[test]
     fn the_default_zone_is_utc_and_a_shell_zone_answers_the_offset_at_the_instant_asked() {
         let utc = base(PathBuf::new());
-        assert_eq!(utc.local_zone_at(1_795_521_600_000), LocalZone::UTC);
+        assert_eq!(utc.local_zone().offset_east_secs_at(1_795_521_600_000), 0);
 
         let ctx = base(PathBuf::new()).with_zone(Arc::new(SouthernZone));
         // 2026-07-01 is winter, 2026-12-01 is summer: one zone object, two offsets.
         assert_eq!(
-            ctx.local_zone_at(1_782_864_000_000),
-            LocalZone::from_east_secs(12 * 3600)
+            ctx.local_zone().offset_east_secs_at(1_782_864_000_000),
+            12 * 3600
         );
         assert_eq!(
-            ctx.local_zone_at(1_795_521_600_000),
-            LocalZone::from_east_secs(13 * 3600)
+            ctx.local_zone().offset_east_secs_at(1_795_521_600_000),
+            13 * 3600
+        );
+        // A zone-less time is resolved at its own date's offset (winter, +12h).
+        assert_eq!(
+            parse_js_date("2026-07-01 00:30", ctx.local_zone())
+                .and_then(to_iso_string)
+                .as_deref(),
+            Some("2026-06-30T12:30:00.000Z")
         );
     }
 }

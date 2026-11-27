@@ -133,17 +133,24 @@ impl HumbleUi for ShellHumbleUi {
     }
 }
 
-/// The host's time zone, read from the system at the instant asked (D-94-15): the crate allows
-/// fixed-offset civil time only, so the shell answers "what offset applies at this instant" through the
-/// same `jiff` system-zone lookup the log writer stamps its lines with, and the crate turns the answer
-/// into a `LocalZone`. A host without daylight saving always answers its one offset.
+/// The latest instant the shell's lookup answers for: 9999-12-01T00:00:00Z, inside `jiff`'s range.
+const ZONE_LOOKUP_LAST_MS: i64 = 253_399_622_400_000;
+
+/// The host's time zone, read from the system at the instant asked (D-94-15): the shell answers "what
+/// offset applies at this instant" through the same `jiff` system-zone lookup the log writer stamps its
+/// lines with. The classifier asks for the offset at a zone-less expiry's own date (quick 261128-22q),
+/// so a daylight-saving host reads a winter expiry with its winter offset whatever the season of the
+/// sync. Two clamps are accepted limits:
+/// - before 1970 reads the 1970 offset; Humble's dates are decades later.
+/// - past 9999-12-01 reads that instant's offset. Without this clamp the lookup answers UTC there,
+///   which the offset-now rule never did.
 struct ShellHostZone;
 
 impl HostZone for ShellHostZone {
     fn offset_east_secs_at(&self, utc_ms: i64) -> i32 {
-        // `SystemTz` takes an unsigned instant and answers minutes; an instant before 1970 reads as
-        // 1970 (the classifier's dates are years away from it).
-        gamelib_log::SystemTz.offset_minutes(u64::try_from(utc_ms).unwrap_or(0)) * 60
+        // `SystemTz` takes an unsigned instant and answers minutes.
+        let clamped = utc_ms.clamp(0, ZONE_LOOKUP_LAST_MS);
+        gamelib_log::SystemTz.offset_minutes(u64::try_from(clamped).unwrap_or(0)) * 60
     }
 }
 
@@ -427,14 +434,19 @@ mod tests {
         );
         // The offset at an instant is what the log writer's lookup says, whole minutes, within a day.
         for instant in [0_i64, 1_782_864_000_000, 1_795_521_600_000] {
-            let zone = ctx.local_zone_at(instant);
             let minutes = gamelib_log::SystemTz.offset_minutes(instant as u64);
-            assert_eq!(
-                zone,
-                gamelib_humble::js_date::LocalZone::from_east_secs(minutes * 60)
-            );
+            assert_eq!(ctx.local_zone().offset_east_secs_at(instant), minutes * 60);
             assert!(minutes.abs() <= 14 * 60);
         }
+        // Before 1970 reads the 1970 offset; past 9999-12-01 reads the offset at that instant.
+        assert_eq!(
+            ctx.local_zone().offset_east_secs_at(-1_000_000_000_000),
+            gamelib_log::SystemTz.offset_minutes(0) * 60
+        );
+        assert_eq!(
+            ctx.local_zone().offset_east_secs_at(8_640_000_000_000_000),
+            ctx.local_zone().offset_east_secs_at(ZONE_LOOKUP_LAST_MS)
+        );
         // A request that cannot connect is an `HttpError` that names neither the URL nor its query.
         let port = {
             let probe = std::net::TcpListener::bind("127.0.0.1:0").unwrap();

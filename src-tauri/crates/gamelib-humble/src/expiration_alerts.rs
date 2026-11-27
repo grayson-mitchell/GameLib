@@ -306,14 +306,13 @@ fn record(ctx: &HumbleCtx, store: &Store, key: &str, value: Json) -> io::Result<
 /// one its `Invalid Date`.
 ///
 /// The language is the one `ctx.catalog` resolved, the catalog the digest text renders through; with no
-/// catalog it is `en`. A date with no zone is read in the offset in force now (the fixed-offset rule of
-/// the crate's date parser); the calendar day is then read in the offset in force at that instant.
+/// catalog it is `en`. A date with no zone is read in the host offset in force at that local time; the
+/// calendar day is then read in the offset in force at the instant.
 pub fn digest_date(ctx: &HumbleCtx, expiration: &str) -> String {
     if expiration.is_empty() {
         return String::new();
     }
-    let now = i64::try_from(ctx.clock.now_ms()).unwrap_or(0);
-    let Some(instant) = parse_js_date(expiration, ctx.local_zone_at(now)) else {
+    let Some(instant) = parse_js_date(expiration, ctx.local_zone()) else {
         return "Invalid Date".to_string();
     };
     let east_ms = i64::from(ctx.zone.offset_east_secs_at(instant)) * 1000;
@@ -940,6 +939,17 @@ mod tests {
         let ctx = fixture().ctx.with_zone(Arc::new(Auckland));
         assert_eq!(digest_date(&f.ctx, "2027-01-02T20:00:00.000Z"), "1/2/2027");
         assert_eq!(digest_date(&ctx, "2027-01-02T20:00:00.000Z"), "1/3/2027");
+    }
+
+    #[test]
+    fn a_zone_less_expiry_is_read_at_its_own_dates_offset() {
+        // Auckland 2026, synced on 2026-11-24 (NZDT, +13h). The expiry falls in NZST (+12h), so
+        // 2026-07-01 00:30 local is 2026-06-30T12:30Z, which is 7/1 in the zone then in force. Reading
+        // it with the sync-time offset gave 6/30/2026.
+        let ctx = fixture()
+            .ctx
+            .with_zone(Arc::new(crate::js_date::test_zones::Auckland2026));
+        assert_eq!(digest_date(&ctx, "2026-07-01 00:30"), "7/1/2026");
     }
 
     #[test]
