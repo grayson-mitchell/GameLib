@@ -1,0 +1,14 @@
+[
+  {
+    "event": "construct",
+    "pendingTimers": 0
+  },
+  {
+    "event": "second-raiser-stopped",
+    "pendingTimers": 0
+  },
+  {
+    "event": "first-raiser-stopped",
+    "pendingTimers": 0
+  }
+]

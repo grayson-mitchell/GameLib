@@ -1,0 +1,60 @@
+[
+  {
+    "event": "construct",
+    "pendingTimers": 0
+  },
+  {
+    "event": "action",
+    "op": "raise",
+    "as": "r1",
+    "input": {
+      "context": "ctx",
+      "pids": [
+        "77"
+      ]
+    }
+  },
+  {
+    "event": "spawn",
+    "at": 0,
+    "program": "osascript",
+    "argv": [
+      "-e",
+      "<script>",
+      "1",
+      "77"
+    ]
+  },
+  {
+    "event": "log",
+    "level": "info",
+    "prefix": "Steam",
+    "text": "raiseWineGameWindow [ctx]: raised (Name With Spaces pid=77)"
+  },
+  {
+    "event": "timer",
+    "at": 0,
+    "ms": 2500
+  },
+  {
+    "event": "action",
+    "op": "advance",
+    "ms": 2500
+  },
+  {
+    "event": "spawn",
+    "at": 2500,
+    "program": "osascript",
+    "argv": [
+      "-e",
+      "<script>",
+      "1",
+      "77"
+    ]
+  },
+  {
+    "event": "settled",
+    "raise": "r1",
+    "at": 2500
+  }
+]

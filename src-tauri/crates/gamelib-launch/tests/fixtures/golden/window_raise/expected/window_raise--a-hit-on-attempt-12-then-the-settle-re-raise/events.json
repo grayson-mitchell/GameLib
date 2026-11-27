@@ -1,0 +1,236 @@
+[
+  {
+    "event": "construct",
+    "pendingTimers": 0
+  },
+  {
+    "event": "action",
+    "op": "raise",
+    "as": "r1",
+    "input": {
+      "context": "c",
+      "pids": [
+        "9"
+      ]
+    }
+  },
+  {
+    "event": "spawn",
+    "at": 0,
+    "program": "osascript",
+    "argv": [
+      "-e",
+      "<script>",
+      "1",
+      "9"
+    ]
+  },
+  {
+    "event": "timer",
+    "at": 0,
+    "ms": 1500
+  },
+  {
+    "event": "action",
+    "op": "advance",
+    "ms": 20000
+  },
+  {
+    "event": "spawn",
+    "at": 1500,
+    "program": "osascript",
+    "argv": [
+      "-e",
+      "<script>",
+      "1",
+      "9"
+    ]
+  },
+  {
+    "event": "timer",
+    "at": 1500,
+    "ms": 1500
+  },
+  {
+    "event": "spawn",
+    "at": 3000,
+    "program": "osascript",
+    "argv": [
+      "-e",
+      "<script>",
+      "1",
+      "9"
+    ]
+  },
+  {
+    "event": "timer",
+    "at": 3000,
+    "ms": 1500
+  },
+  {
+    "event": "spawn",
+    "at": 4500,
+    "program": "osascript",
+    "argv": [
+      "-e",
+      "<script>",
+      "1",
+      "9"
+    ]
+  },
+  {
+    "event": "timer",
+    "at": 4500,
+    "ms": 1500
+  },
+  {
+    "event": "spawn",
+    "at": 6000,
+    "program": "osascript",
+    "argv": [
+      "-e",
+      "<script>",
+      "1",
+      "9"
+    ]
+  },
+  {
+    "event": "timer",
+    "at": 6000,
+    "ms": 1500
+  },
+  {
+    "event": "spawn",
+    "at": 7500,
+    "program": "osascript",
+    "argv": [
+      "-e",
+      "<script>",
+      "1",
+      "9"
+    ]
+  },
+  {
+    "event": "timer",
+    "at": 7500,
+    "ms": 1500
+  },
+  {
+    "event": "spawn",
+    "at": 9000,
+    "program": "osascript",
+    "argv": [
+      "-e",
+      "<script>",
+      "1",
+      "9"
+    ]
+  },
+  {
+    "event": "timer",
+    "at": 9000,
+    "ms": 1500
+  },
+  {
+    "event": "spawn",
+    "at": 10500,
+    "program": "osascript",
+    "argv": [
+      "-e",
+      "<script>",
+      "1",
+      "9"
+    ]
+  },
+  {
+    "event": "timer",
+    "at": 10500,
+    "ms": 1500
+  },
+  {
+    "event": "spawn",
+    "at": 12000,
+    "program": "osascript",
+    "argv": [
+      "-e",
+      "<script>",
+      "1",
+      "9"
+    ]
+  },
+  {
+    "event": "timer",
+    "at": 12000,
+    "ms": 1500
+  },
+  {
+    "event": "spawn",
+    "at": 13500,
+    "program": "osascript",
+    "argv": [
+      "-e",
+      "<script>",
+      "1",
+      "9"
+    ]
+  },
+  {
+    "event": "timer",
+    "at": 13500,
+    "ms": 1500
+  },
+  {
+    "event": "spawn",
+    "at": 15000,
+    "program": "osascript",
+    "argv": [
+      "-e",
+      "<script>",
+      "1",
+      "9"
+    ]
+  },
+  {
+    "event": "timer",
+    "at": 15000,
+    "ms": 1500
+  },
+  {
+    "event": "spawn",
+    "at": 16500,
+    "program": "osascript",
+    "argv": [
+      "-e",
+      "<script>",
+      "1",
+      "9"
+    ]
+  },
+  {
+    "event": "log",
+    "level": "info",
+    "prefix": "Steam",
+    "text": "raiseWineGameWindow [c]: raised (X.exe pid=9)"
+  },
+  {
+    "event": "timer",
+    "at": 16500,
+    "ms": 2500
+  },
+  {
+    "event": "spawn",
+    "at": 19000,
+    "program": "osascript",
+    "argv": [
+      "-e",
+      "<script>",
+      "1",
+      "9"
+    ]
+  },
+  {
+    "event": "settled",
+    "raise": "r1",
+    "at": 19000
+  }
+]

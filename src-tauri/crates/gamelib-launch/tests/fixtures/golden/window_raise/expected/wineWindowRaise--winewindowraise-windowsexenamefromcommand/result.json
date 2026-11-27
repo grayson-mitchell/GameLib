@@ -1,0 +1,52 @@
+{
+  "rows": [
+    {
+      "input": "C:\\Games\\Avernum 6\\Avernum 6.exe -x",
+      "output": "Avernum 6.exe"
+    },
+    {
+      "input": "/usr/bin/foo",
+      "output": null
+    },
+    {
+      "input": "Game.exe",
+      "output": "Game.exe"
+    },
+    {
+      "input": "game.EXE",
+      "output": "game.EXE"
+    },
+    {
+      "input": "C:\\Games\\X\\X.Exe /windowed",
+      "output": "X.Exe"
+    },
+    {
+      "input": "C:\\Games\\X\\X.exe",
+      "output": "X.exe"
+    },
+    {
+      "input": "C:\\Games\\No Extension\\Launcher",
+      "output": null
+    },
+    {
+      "input": "D:/Games/Forward/Slash.exe",
+      "output": "D:/Games/Forward/Slash.exe"
+    },
+    {
+      "input": ".exe",
+      "output": ".exe"
+    },
+    {
+      "input": "",
+      "output": null
+    },
+    {
+      "input": "C:\\a\\b.exe.bak",
+      "output": "b.exe"
+    },
+    {
+      "input": "run.exe other.exe",
+      "output": "run.exe"
+    }
+  ]
+}

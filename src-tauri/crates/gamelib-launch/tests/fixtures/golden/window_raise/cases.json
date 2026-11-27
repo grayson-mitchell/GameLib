@@ -1,0 +1,852 @@
+[
+  {
+    "id": "wineWindowRaise--winewindowraise-construction-arms-no-timer-and-two-raisers-are-independent",
+    "note": "two raisers are built, one is stopped: no timer is ever armed at construction",
+    "kind": "construct"
+  },
+  {
+    "id": "wineWindowRaise--winewindowraise-no-op-off-macos",
+    "note": "off macOS nothing is spawned and the raise settles at once",
+    "kind": "raise",
+    "mac": false,
+    "answers": [],
+    "actions": [
+      {
+        "op": "raise",
+        "as": "r1",
+        "input": {
+          "context": "c",
+          "pids": [
+            "1"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "wineWindowRaise--winewindowraise-hit-pid-passed-as-separate-argv-one-settle-re-raise",
+    "note": "a hit on attempt 1: one info line, one 2500 ms settle timer, one re-raise; the pid and the name are separate argv elements",
+    "kind": "raise",
+    "mac": true,
+    "answers": [
+      {
+        "stdout": "Avernum 6.exe pid=123"
+      },
+      {
+        "stdout": "Avernum 6.exe pid=123"
+      }
+    ],
+    "actions": [
+      {
+        "op": "raise",
+        "as": "r1",
+        "input": {
+          "context": "bridge:1",
+          "pids": [
+            "123"
+          ],
+          "processNames": [
+            "Avernum 6.exe"
+          ]
+        }
+      },
+      {
+        "op": "advance",
+        "ms": 2500
+      }
+    ]
+  },
+  {
+    "id": "wineWindowRaise--winewindowraise-miss-then-hit",
+    "note": "none on attempt 1, a hit on attempt 2 after 1500 ms, then the settle re-raise after 2500 ms",
+    "kind": "raise",
+    "mac": true,
+    "answers": [
+      {
+        "stdout": "none"
+      },
+      {
+        "stdout": "X.exe pid=5"
+      },
+      {
+        "stdout": "X.exe pid=5"
+      }
+    ],
+    "actions": [
+      {
+        "op": "raise",
+        "as": "r1",
+        "input": {
+          "context": "c",
+          "pids": [
+            "5"
+          ]
+        }
+      },
+      {
+        "op": "advance",
+        "ms": 4000
+      }
+    ]
+  },
+  {
+    "id": "wineWindowRaise--winewindowraise-persistent-miss-stops-at-12-attempts-with-one-warning",
+    "note": "no hit in 12 attempts at 1500 ms spacing: twelve spawns, one warning, no settle re-raise",
+    "kind": "raise",
+    "mac": true,
+    "answers": [
+      {
+        "stdout": "none"
+      },
+      {
+        "stdout": "none"
+      },
+      {
+        "stdout": "none"
+      },
+      {
+        "stdout": "none"
+      },
+      {
+        "stdout": "none"
+      },
+      {
+        "stdout": "none"
+      },
+      {
+        "stdout": "none"
+      },
+      {
+        "stdout": "none"
+      },
+      {
+        "stdout": "none"
+      },
+      {
+        "stdout": "none"
+      },
+      {
+        "stdout": "none"
+      },
+      {
+        "stdout": "none"
+      }
+    ],
+    "actions": [
+      {
+        "op": "raise",
+        "as": "r1",
+        "input": {
+          "context": "c",
+          "pids": [
+            "5"
+          ]
+        }
+      },
+      {
+        "op": "advance",
+        "ms": 30000
+      }
+    ]
+  },
+  {
+    "id": "wineWindowRaise--winewindowraise-spawn-rejection-is-logged-and-loop-continues",
+    "note": "the first spawn rejects (one warning), the loop goes on and the second attempt hits",
+    "kind": "raise",
+    "mac": true,
+    "answers": [
+      {
+        "rejects": "boom"
+      },
+      {
+        "stdout": "X.exe pid=5"
+      },
+      {
+        "stdout": "X.exe pid=5"
+      }
+    ],
+    "actions": [
+      {
+        "op": "raise",
+        "as": "r1",
+        "input": {
+          "context": "c",
+          "pids": [
+            "5"
+          ]
+        }
+      },
+      {
+        "op": "advance",
+        "ms": 4000
+      }
+    ]
+  },
+  {
+    "id": "wineWindowRaise--winewindowraise-non-numeric-pids-dropped-names-only-as-argv",
+    "note": "a pid that is not all digits is dropped, a hostile name is one argv element, and the script text is unchanged",
+    "kind": "raise",
+    "mac": true,
+    "answers": [
+      {
+        "stdout": "none"
+      }
+    ],
+    "actions": [
+      {
+        "op": "raise",
+        "as": "r1",
+        "input": {
+          "context": "c",
+          "pids": [
+            "12; do shell script"
+          ],
+          "processNames": [
+            "a\"b.exe"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "wineWindowRaise--winewindowraise-only-invalid-pids-and-no-names-no-spawn",
+    "note": "nothing valid to raise: no spawn and the raise settles at once",
+    "kind": "raise",
+    "mac": true,
+    "answers": [],
+    "actions": [
+      {
+        "op": "raise",
+        "as": "r1",
+        "input": {
+          "context": "c",
+          "pids": [
+            "x"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "wineWindowRaise--winewindowraise-windowsexenamefromcommand",
+    "note": "an exe path, a bare name, no .exe, mixed case, a trailing argument, a forward-slash path, an empty string",
+    "kind": "exe-names",
+    "inputs": [
+      "C:\\Games\\Avernum 6\\Avernum 6.exe -x",
+      "/usr/bin/foo",
+      "Game.exe",
+      "game.EXE",
+      "C:\\Games\\X\\X.Exe /windowed",
+      "C:\\Games\\X\\X.exe",
+      "C:\\Games\\No Extension\\Launcher",
+      "D:/Games/Forward/Slash.exe",
+      ".exe",
+      "",
+      "C:\\a\\b.exe.bak",
+      "run.exe other.exe"
+    ]
+  },
+  {
+    "id": "wineWindowRaise--winewindowraise-stop-mid-loop-halts-further-spawns",
+    "note": "stop() after the first attempt: the pending timer is cleared, no further spawn, and the raise never settles",
+    "kind": "raise",
+    "mac": true,
+    "answers": [
+      {
+        "stdout": "none"
+      },
+      {
+        "stdout": "none"
+      },
+      {
+        "stdout": "none"
+      },
+      {
+        "stdout": "none"
+      },
+      {
+        "stdout": "none"
+      },
+      {
+        "stdout": "none"
+      },
+      {
+        "stdout": "none"
+      },
+      {
+        "stdout": "none"
+      },
+      {
+        "stdout": "none"
+      },
+      {
+        "stdout": "none"
+      },
+      {
+        "stdout": "none"
+      },
+      {
+        "stdout": "none"
+      }
+    ],
+    "actions": [
+      {
+        "op": "raise",
+        "as": "r1",
+        "input": {
+          "context": "c",
+          "pids": [
+            "5"
+          ]
+        }
+      },
+      {
+        "op": "stop"
+      },
+      {
+        "op": "advance",
+        "ms": 10000
+      }
+    ]
+  },
+  {
+    "id": "window_raise--a-hit-on-attempt-12-then-the-settle-re-raise",
+    "note": "eleven misses at 1500 ms spacing, a hit on the twelfth attempt, then the 2500 ms settle and one more spawn",
+    "kind": "raise",
+    "mac": true,
+    "answers": [
+      {
+        "stdout": "none"
+      },
+      {
+        "stdout": "none"
+      },
+      {
+        "stdout": "none"
+      },
+      {
+        "stdout": "none"
+      },
+      {
+        "stdout": "none"
+      },
+      {
+        "stdout": "none"
+      },
+      {
+        "stdout": "none"
+      },
+      {
+        "stdout": "none"
+      },
+      {
+        "stdout": "none"
+      },
+      {
+        "stdout": "none"
+      },
+      {
+        "stdout": "none"
+      },
+      {
+        "stdout": "X.exe pid=9"
+      },
+      {
+        "stdout": "X.exe pid=9"
+      }
+    ],
+    "actions": [
+      {
+        "op": "raise",
+        "as": "r1",
+        "input": {
+          "context": "c",
+          "pids": [
+            "9"
+          ]
+        }
+      },
+      {
+        "op": "advance",
+        "ms": 20000
+      }
+    ]
+  },
+  {
+    "id": "window_raise--no-hit-in-12-names-and-pids-in-the-warning",
+    "note": "no hit in 12 attempts with two pids and two names: the one warning names both lists comma-joined",
+    "kind": "raise",
+    "mac": true,
+    "answers": [
+      {
+        "stdout": "none"
+      },
+      {
+        "stdout": "none"
+      },
+      {
+        "stdout": "none"
+      },
+      {
+        "stdout": "none"
+      },
+      {
+        "stdout": "none"
+      },
+      {
+        "stdout": "none"
+      },
+      {
+        "stdout": "none"
+      },
+      {
+        "stdout": "none"
+      },
+      {
+        "stdout": "none"
+      },
+      {
+        "stdout": "none"
+      },
+      {
+        "stdout": "none"
+      },
+      {
+        "stdout": "none"
+      }
+    ],
+    "actions": [
+      {
+        "op": "raise",
+        "as": "r1",
+        "input": {
+          "context": "ctx",
+          "pids": [
+            "5",
+            "6"
+          ],
+          "processNames": [
+            "A.exe",
+            "B.exe"
+          ]
+        }
+      },
+      {
+        "op": "advance",
+        "ms": 30000
+      }
+    ]
+  },
+  {
+    "id": "window_raise--every-spawn-rejects-warns-per-attempt-then-the-no-match-warning",
+    "note": "all twelve spawns reject: twelve osascript-failed warnings and then the no-matching-process warning",
+    "kind": "raise",
+    "mac": true,
+    "answers": [
+      {
+        "rejects": "osascript missing"
+      },
+      {
+        "rejects": "osascript missing"
+      },
+      {
+        "rejects": "osascript missing"
+      },
+      {
+        "rejects": "osascript missing"
+      },
+      {
+        "rejects": "osascript missing"
+      },
+      {
+        "rejects": "osascript missing"
+      },
+      {
+        "rejects": "osascript missing"
+      },
+      {
+        "rejects": "osascript missing"
+      },
+      {
+        "rejects": "osascript missing"
+      },
+      {
+        "rejects": "osascript missing"
+      },
+      {
+        "rejects": "osascript missing"
+      },
+      {
+        "rejects": "osascript missing"
+      }
+    ],
+    "actions": [
+      {
+        "op": "raise",
+        "as": "r1",
+        "input": {
+          "context": "c",
+          "pids": [
+            "5"
+          ]
+        }
+      },
+      {
+        "op": "advance",
+        "ms": 30000
+      }
+    ]
+  },
+  {
+    "id": "window_raise--the-settle-re-raise-rejects-warns-and-the-raise-still-settles",
+    "note": "a hit, then the settle re-raise spawn rejects: one warning, no throw, the raise settles",
+    "kind": "raise",
+    "mac": true,
+    "answers": [
+      {
+        "stdout": "X.exe pid=5"
+      },
+      {
+        "rejects": "late failure"
+      }
+    ],
+    "actions": [
+      {
+        "op": "raise",
+        "as": "r1",
+        "input": {
+          "context": "c",
+          "pids": [
+            "5"
+          ]
+        }
+      },
+      {
+        "op": "advance",
+        "ms": 2500
+      }
+    ]
+  },
+  {
+    "id": "window_raise--invalid-pids-filtered-valid-kept-empty-names-dropped",
+    "note": "pids 12, x, \"7; rm\" and 034 keep 12 and 034 in order; an empty name is dropped; the count argument is 2",
+    "kind": "raise",
+    "mac": true,
+    "answers": [
+      {
+        "stdout": "none"
+      }
+    ],
+    "actions": [
+      {
+        "op": "raise",
+        "as": "r1",
+        "input": {
+          "context": "c",
+          "pids": [
+            "12",
+            "x",
+            "7; rm",
+            "034"
+          ],
+          "processNames": [
+            "",
+            "a.exe"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "window_raise--names-only-passes-a-zero-pid-count",
+    "note": "no pids and one name: argv carries the count 0 and then the name",
+    "kind": "raise",
+    "mac": true,
+    "answers": [
+      {
+        "stdout": "none"
+      }
+    ],
+    "actions": [
+      {
+        "op": "raise",
+        "as": "r1",
+        "input": {
+          "context": "c",
+          "processNames": [
+            "Game.exe"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "window_raise--empty-input-is-a-no-op",
+    "note": "no pids and no names at all: no spawn",
+    "kind": "raise",
+    "mac": true,
+    "answers": [],
+    "actions": [
+      {
+        "op": "raise",
+        "as": "r1",
+        "input": {
+          "context": "c"
+        }
+      }
+    ]
+  },
+  {
+    "id": "window_raise--empty-arrays-are-a-no-op",
+    "note": "empty pid and name lists: no spawn",
+    "kind": "raise",
+    "mac": true,
+    "answers": [],
+    "actions": [
+      {
+        "op": "raise",
+        "as": "r1",
+        "input": {
+          "context": "c",
+          "pids": [],
+          "processNames": []
+        }
+      }
+    ]
+  },
+  {
+    "id": "window_raise--a-hostile-exe-name-travels-as-argv-and-never-in-the-script",
+    "note": "a name with quotes and AppleScript syntax is one argv element; the script text is the constant one",
+    "kind": "raise",
+    "mac": true,
+    "answers": [
+      {
+        "stdout": "none"
+      }
+    ],
+    "actions": [
+      {
+        "op": "raise",
+        "as": "r1",
+        "input": {
+          "context": "c",
+          "processNames": [
+            "a\" & (do shell script \"x\") & \""
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "window_raise--empty-stdout-is-a-miss",
+    "note": "an empty stdout is a miss, not a hit: the loop continues and a hit on attempt 2 raises",
+    "kind": "raise",
+    "mac": true,
+    "answers": [
+      {
+        "stdout": ""
+      },
+      {
+        "stdout": "X.exe pid=5"
+      },
+      {
+        "stdout": "X.exe pid=5"
+      }
+    ],
+    "actions": [
+      {
+        "op": "raise",
+        "as": "r1",
+        "input": {
+          "context": "c",
+          "pids": [
+            "5"
+          ]
+        }
+      },
+      {
+        "op": "advance",
+        "ms": 4000
+      }
+    ]
+  },
+  {
+    "id": "window_raise--none-with-surrounding-whitespace-is-a-miss",
+    "note": "stdout \"  none \\n\" is trimmed to none and is a miss",
+    "kind": "raise",
+    "mac": true,
+    "answers": [
+      {
+        "stdout": "  none \n"
+      },
+      {
+        "stdout": "X.exe pid=5"
+      },
+      {
+        "stdout": "X.exe pid=5"
+      }
+    ],
+    "actions": [
+      {
+        "op": "raise",
+        "as": "r1",
+        "input": {
+          "context": "c",
+          "pids": [
+            "5"
+          ]
+        }
+      },
+      {
+        "op": "advance",
+        "ms": 4000
+      }
+    ]
+  },
+  {
+    "id": "window_raise--the-hit-line-is-trimmed-and-logged-whole",
+    "note": "a hit line with trailing newline is trimmed and logged as the matched process text",
+    "kind": "raise",
+    "mac": true,
+    "answers": [
+      {
+        "stdout": "Name With Spaces pid=77\n"
+      },
+      {
+        "stdout": "none"
+      }
+    ],
+    "actions": [
+      {
+        "op": "raise",
+        "as": "r1",
+        "input": {
+          "context": "ctx",
+          "pids": [
+            "77"
+          ]
+        }
+      },
+      {
+        "op": "advance",
+        "ms": 2500
+      }
+    ]
+  },
+  {
+    "id": "window_raise--stop-between-the-hit-and-the-settle-re-raise",
+    "note": "a hit, then stop() before the 2500 ms settle: the timer is cleared, no second spawn, the raise never settles",
+    "kind": "raise",
+    "mac": true,
+    "answers": [
+      {
+        "stdout": "X.exe pid=5"
+      },
+      {
+        "stdout": "X.exe pid=5"
+      }
+    ],
+    "actions": [
+      {
+        "op": "raise",
+        "as": "r1",
+        "input": {
+          "context": "c",
+          "pids": [
+            "5"
+          ]
+        }
+      },
+      {
+        "op": "advance",
+        "ms": 1000
+      },
+      {
+        "op": "stop"
+      },
+      {
+        "op": "advance",
+        "ms": 5000
+      }
+    ]
+  },
+  {
+    "id": "window_raise--a-raise-after-a-stop-runs-normally",
+    "note": "stop() cancels the first raise; a new raise on the same raiser resets the cancel flag and runs its own schedule",
+    "kind": "raise",
+    "mac": true,
+    "answers": [
+      {
+        "stdout": "none"
+      },
+      {
+        "stdout": "X.exe pid=5"
+      },
+      {
+        "stdout": "X.exe pid=5"
+      }
+    ],
+    "actions": [
+      {
+        "op": "raise",
+        "as": "r1",
+        "input": {
+          "context": "one",
+          "pids": [
+            "5"
+          ]
+        }
+      },
+      {
+        "op": "stop"
+      },
+      {
+        "op": "raise",
+        "as": "r2",
+        "input": {
+          "context": "two",
+          "pids": [
+            "5"
+          ]
+        }
+      },
+      {
+        "op": "advance",
+        "ms": 5000
+      }
+    ]
+  },
+  {
+    "id": "window_raise--a-stop-with-nothing-in-flight-arms-nothing",
+    "note": "stop() before any raise: no timer, and a later raise still runs",
+    "kind": "raise",
+    "mac": true,
+    "answers": [
+      {
+        "stdout": "X.exe pid=5"
+      },
+      {
+        "stdout": "X.exe pid=5"
+      }
+    ],
+    "actions": [
+      {
+        "op": "stop"
+      },
+      {
+        "op": "raise",
+        "as": "r1",
+        "input": {
+          "context": "c",
+          "pids": [
+            "5"
+          ]
+        }
+      },
+      {
+        "op": "advance",
+        "ms": 2500
+      }
+    ]
+  }
+]

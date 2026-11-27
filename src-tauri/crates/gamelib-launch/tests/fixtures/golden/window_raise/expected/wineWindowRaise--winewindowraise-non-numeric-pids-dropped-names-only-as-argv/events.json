@@ -1,0 +1,36 @@
+[
+  {
+    "event": "construct",
+    "pendingTimers": 0
+  },
+  {
+    "event": "action",
+    "op": "raise",
+    "as": "r1",
+    "input": {
+      "context": "c",
+      "pids": [
+        "12; do shell script"
+      ],
+      "processNames": [
+        "a\"b.exe"
+      ]
+    }
+  },
+  {
+    "event": "spawn",
+    "at": 0,
+    "program": "osascript",
+    "argv": [
+      "-e",
+      "<script>",
+      "0",
+      "a\"b.exe"
+    ]
+  },
+  {
+    "event": "timer",
+    "at": 0,
+    "ms": 1500
+  }
+]
