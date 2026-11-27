@@ -13,6 +13,7 @@ import {
 } from 'common/types/sidecarTransport'
 import type { RustInvokeArgsOf } from 'common/types/ipc/rustInvoke'
 import {
+  LAUNCH_MANAGER_OPS,
   sidecarInternalInvokeArgs,
   sidecarInternalSendArgs
 } from 'common/types/ipc/sidecarInternal'
@@ -227,6 +228,26 @@ export async function askForceUninstall(
 }
 
 /**
+ * Why a `launchManagerCall` was refused. The only thing the message may name is an op the call carried, cut to 32 characters
+ * with anything outside `[A-Za-z0-9_-]` shown as `?`; the runner and the app name (the payload) are never in it, whatever was
+ * wrong with them, because a forged call's text can carry a path or a token.
+ */
+function managerCallRefusal(args: unknown[]): string {
+  const [op] = args
+  if (
+    typeof op !== 'string' ||
+    !(LAUNCH_MANAGER_OPS as readonly string[]).includes(op)
+  ) {
+    const named =
+      typeof op === 'string'
+        ? ` '${op.slice(0, 32).replace(/[^A-Za-z0-9_-]/g, '?')}'`
+        : ''
+    return `launchManagerCall: unknown op${named}`
+  }
+  return `launchManagerCall: bad arguments for ${op}`
+}
+
+/**
  * Answers the shell's `launchManagerCall` (88.2-18, 88.2-20, D-26): the Rust launch crate's ManagerHooks, called as `[op,
  * { runner, appName }]`.
  *
@@ -246,7 +267,7 @@ export function registerLaunchManagerHooks(
     'launchManagerCall',
     async (_event: unknown, ...args: unknown[]) => {
       const parsed = sidecarInternalInvokeArgs.launchManagerCall.safeParse(args)
-      if (!parsed.success) throw new Error('launchManagerCall: bad arguments')
+      if (!parsed.success) throw new Error(managerCallRefusal(args))
       const [op, { runner, appName }] = parsed.data
       const game = deps.libraryManagers[runner].getGame(appName)
       if (op === 'game_title') return resolveTitleForGame(game, appName)

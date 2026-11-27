@@ -88,4 +88,96 @@ describe('registerLaunchManagerHooks (88.2-20)', () => {
       call('force_uninstall', { runner: 'gog', appName: 'a' })
     ).rejects.toThrow('disk gone')
   })
+
+  describe('refusals', () => {
+    const SECRET = '/Users/someone/secret-profile-path'
+
+    async function refusal(game: FakeGame, ...args: unknown[]) {
+      const { call, getGame } = registered(game)
+      const failure = await call(...args).then(
+        () => undefined,
+        (err: unknown) => err
+      )
+      expect(failure).toBeInstanceOf(Error)
+      // No manager was reached for a refused call.
+      expect(getGame).not.toHaveBeenCalled()
+      expect(game.forceUninstall).not.toHaveBeenCalled()
+      return (failure as Error).message
+    }
+
+    it('an unknown op is refused naming the op only', async () => {
+      const message = await refusal(fakeGame('T'), 'delete_everything', {
+        runner: 'gog',
+        appName: SECRET
+      })
+      expect(message).toBe("launchManagerCall: unknown op 'delete_everything'")
+      expect(message).not.toContain(SECRET)
+    })
+
+    it('an op that is not a string, or is long or odd, is named safely or not at all', async () => {
+      const game = fakeGame('T')
+      expect(await refusal(game, 7, { runner: 'gog', appName: SECRET })).toBe(
+        'launchManagerCall: unknown op'
+      )
+      const odd = await refusal(game, `${SECRET}${'x'.repeat(100)}`, {
+        runner: 'gog',
+        appName: 'a'
+      })
+      expect(odd).not.toContain('/')
+      expect(odd.length).toBeLessThan(80)
+      expect(await refusal(game)).toBe('launchManagerCall: unknown op')
+    })
+
+    it('a runner outside the five names is refused without echoing the payload', async () => {
+      for (const op of ['game_title', 'force_uninstall']) {
+        const message = await refusal(fakeGame('T'), op, {
+          runner: SECRET,
+          appName: SECRET
+        })
+        expect(message).toBe(`launchManagerCall: bad arguments for ${op}`)
+        expect(message).not.toContain(SECRET)
+      }
+    })
+
+    it('an empty app name is refused without echoing the payload', async () => {
+      const message = await refusal(fakeGame('T'), 'force_uninstall', {
+        runner: 'gog',
+        appName: ''
+      })
+      expect(message).toBe(
+        'launchManagerCall: bad arguments for force_uninstall'
+      )
+    })
+
+    it('a payload with an extra key, a missing key or an extra argument is refused', async () => {
+      for (const args of [
+        ['game_title', { runner: 'gog', appName: SECRET, extra: SECRET }],
+        ['game_title', { runner: 'gog' }],
+        ['game_title', { appName: SECRET }],
+        ['game_title', { runner: 'gog', appName: 'a' }, SECRET],
+        ['game_title', SECRET],
+        ['game_title']
+      ]) {
+        const message = await refusal(fakeGame('T'), ...args)
+        expect(message).toMatch(/^launchManagerCall: /)
+        expect(message).not.toContain(SECRET)
+      }
+    })
+  })
+
+  describe('the title fallback', () => {
+    it('a game with no title answers its app name, as the TypeScript dialog did', async () => {
+      const { call } = registered(fakeGame(undefined))
+      await expect(
+        call('game_title', { runner: 'gog', appName: 'no-title-app' })
+      ).resolves.toBe('no-title-app')
+    })
+
+    it('an empty title falls back to the app name too', async () => {
+      const { call } = registered(fakeGame(''))
+      await expect(
+        call('game_title', { runner: 'steam', appName: '480' })
+      ).resolves.toBe('480')
+    })
+  })
 })
