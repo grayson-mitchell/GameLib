@@ -108,7 +108,7 @@ result: pass — launches 4 and 5 under `sandbox-exec -f nolicence.sb`, on the o
 
 ### 3. Bottles
 expected: A second launch of a game reuses its bottle with no new bottle create in the log, and removing one game's bottle leaves a sibling game's bottle, its `.gamelib-engine.json` and its files byte-identical to the P4 record.
-result: blocked — reuse half passes, removal half cannot be exercised. Reuse (launch 1, Avernum 6): second launch of a game with its P3 bottle: `Engine: 206060 uses engine=crossover ... reason=cx-healthy`, bridge READY, game matched; `.gamelib-engine.json` and `cxbottle.conf` byte-equal to `bottles-before/`, same top-level entries, bottle birth time 2026-10-22T20:07:06 unchanged, 46 bottle directories before and after, no new bottle created. Removal: Test 6's premise is not met. Trash Goblin's Uninstall dialog shows a ToggleSwitch "Remove prefix" that is DISABLED because the game's stored `winePrefix` equals the default prefix (`~/Games/GameLib/Prefixes/shared`, as do Racine and Caravan SandWitch; `UninstallModal/index.tsx:104-107`, disabled style `--icon-disabled` is near-invisible in every theme) and, even enabled, `uninstaller.ts removePrefix` deletes the stored winePrefix, not the game's per-game CrossOver bottle. Both are TS survivors Phase 87 did not touch. Nothing was removed; the sibling (Caravan SandWitch, 1900 files, `.reg` files excluded) stayed byte-equal to `sibling-before.sha` at the close. The Steam bridge uninstall route (which removes a per-game bottle) was not exercised: the contract names two non-Steam games and the operator was not asked to delete a game install. Also: Racine (GOG 1192621307) is installed on disk but `gog_library.json` says `is_installed: False`, so the library hides it; Bloody Hell's install path is broken (`Bloody Hell x`); Soma, Balrum and Conquest of Elysium 3 are native Mac installs with no bottle.
+result: pass — superseded: the removal half (F5) passed live in `87-RERUN-2-HUMAN-UAT.md` item 6 (signed 0.13.2, 2026-11-26; fixed by 87-66, 87-67, 87-70, 87-75); the reuse half passed here. Original 87-59 result, kept verbatim: blocked — reuse half passes, removal half cannot be exercised. Reuse (launch 1, Avernum 6): second launch of a game with its P3 bottle: `Engine: 206060 uses engine=crossover ... reason=cx-healthy`, bridge READY, game matched; `.gamelib-engine.json` and `cxbottle.conf` byte-equal to `bottles-before/`, same top-level entries, bottle birth time 2026-10-22T20:07:06 unchanged, 46 bottle directories before and after, no new bottle created. Removal: Test 6's premise is not met. Trash Goblin's Uninstall dialog shows a ToggleSwitch "Remove prefix" that is DISABLED because the game's stored `winePrefix` equals the default prefix (`~/Games/GameLib/Prefixes/shared`, as do Racine and Caravan SandWitch; `UninstallModal/index.tsx:104-107`, disabled style `--icon-disabled` is near-invisible in every theme) and, even enabled, `uninstaller.ts removePrefix` deletes the stored winePrefix, not the game's per-game CrossOver bottle. Both are TS survivors Phase 87 did not touch. Nothing was removed; the sibling (Caravan SandWitch, 1900 files, `.reg` files excluded) stayed byte-equal to `sibling-before.sha` at the close. The Steam bridge uninstall route (which removes a per-game bottle) was not exercised: the contract names two non-Steam games and the operator was not asked to delete a game install. Also: Racine (GOG 1192621307) is installed on disk but `gog_library.json` says `is_installed: False`, so the library hides it; Bloody Hell's install path is broken (`Bloody Hell x`); Soma, Balrum and Conquest of Elysium 3 are native Mac installs with no bottle.
 
 ### 4. Tools and downloads
 expected: A Winetricks verb queued from Wine settings runs with progress lines, DXVK installs and then restores on one bottle and DXMT is provisioned and removed through a wine-manager Wine-Staging-macOS install and uninstall (its `-DXMT` copy appears and disappears), and a wine-manager version download completes with progress and appears in the list.
@@ -205,11 +205,11 @@ Taken 2026-11-24 after the last quit (P2 clean: no GameLib, reaper, sidecar or w
 ## Summary
 
 total: 4
-passed: 1
+passed: 2
 issues: 2
 pending: 0
 skipped: 0
-blocked: 1
+blocked: 0
 
 ## Evidence capture
 
@@ -504,3 +504,39 @@ and (e)) were not re-run and keep their 87-59 result. New findings are RF1 to RF
 | IMPOSSIBLE log row: engine download and `[engine-notice]` lines | 2 | pass: 12 download lines and 4 notice lines across the archives; engine-origin lines carry no home path, account, argument line or token |
 | IMPOSSIBLE log row: launch-deadline fired and notice lines | 3 | blocked: REACHABLE now, but not emitted because the hold did not run |
 | IMPOSSIBLE log row: DXMT skip line | 6 | pass: `Not creating DXMT copy of` logged once, path as `~` |
+
+## Gaps
+
+<!-- Reconciled 2026-11-27 by /gsd-verify-work 87: each finding below was fixed by the named gap plan and re-scored pass in a later live gate. -->
+- gap_id: G-87-1-LOG
+  truth: "Engine log lines reach gamelib.log, redacted"
+  status: resolved
+  reason: "87-59 deferred engine-log gap; re-run 1 item 2 pass"
+  severity: major
+  test: 1
+  resolved_by: 87-61-PLAN.md
+  resolved_at: 2026-11-27
+- gap_id: G-87-1-F1
+  truth: "Offline refusal fires before any download (item 1 (d))"
+  status: resolved
+  reason: "F1: a real download was attempted offline; re-run 1 item 1 showed F1 no longer reproduces"
+  severity: major
+  test: 1
+  resolved_by: 87-63-PLAN.md
+  resolved_at: 2026-11-27
+- gap_id: G-87-4-F2F4
+  truth: "Wine manager installs a never-installed entry and the list follows install and remove"
+  status: resolved
+  reason: "F2 IpcValidationError at 0.isInstalled; F4 stale list; re-run 1 item 6 pass"
+  severity: major
+  test: 4
+  resolved_by: 87-62-PLAN.md
+  resolved_at: 2026-11-27
+- gap_id: G-87-4-F3
+  truth: "Winetricks acts on the game own bottle and a failure shows"
+  status: resolved
+  reason: "F3 stored shared prefix, silent failure; re-run 1 item 4 pass"
+  severity: major
+  test: 4
+  resolved_by: 87-64-PLAN.md
+  resolved_at: 2026-11-27

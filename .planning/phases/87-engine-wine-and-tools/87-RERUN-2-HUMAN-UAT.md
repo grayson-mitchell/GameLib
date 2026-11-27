@@ -161,7 +161,9 @@ result: pass — launch 1, Stop on Trash Goblin's third run (operator: runs 1 an
 
 ### 5. The 180 s no-match notice does not raise the window
 expected: The P5 (d) title held past 180 s, with the operator watching which application is frontmost, shows the system notification and the in-app notice without raising GameLib's window, and gamelib.log carries the deadline-fired line and the notice line with `raise=false`.
-result: blocked — P5 (d) named no title. The pre-run re-check listed Trash Goblin, Racine and Caravan SandWitch, all of which meet rule (1) on paper only (the store CLI joins the relative exe to the install directory, so the matcher sees it); no title meets rules (2) or (3). The operator proposed Stellaris, which is a Steam title (its launch arms `DeadlineKind::Bridge`, or no deadline for a native Mac title, never `Notice`), so it cannot reach the `fire_notice` path this item scores; the operator accepted `none` (notes.log 17:23:06Z). Gap: no installed non-Steam Windows title whose launcher stays up while its game is unmatched, as in re-run 1.
+result: skipped
+reason: "Deferred follow-up: run the 180 s no-raise hold when an unmatched non-Steam launcher title is installed (0.13.2 carries the path, no new build needed); automated no-raise proof accepted by the operator (87-VERIFICATION.md overrides, 2026-11-26)"
+original_result: blocked — P5 (d) named no title. The pre-run re-check listed Trash Goblin, Racine and Caravan SandWitch, all of which meet rule (1) on paper only (the store CLI joins the relative exe to the install directory, so the matcher sees it); no title meets rules (2) or (3). The operator proposed Stellaris, which is a Steam title (its launch arms `DeadlineKind::Bridge`, or no deadline for a native Mac title, never `Notice`), so it cannot reach the `fire_notice` path this item scores; the operator accepted `none` (notes.log 17:23:06Z). Gap: no installed non-Steam Windows title whose launcher stays up while its game is unmatched, as in re-run 1.
 
 ### 6. Cancel changes nothing, and removing a game's bottle leaves its sibling byte-identical
 expected: With the named game's Show in Steam switch on, Cancel in its uninstall dialog leaves the switch on and logs no Steam shortcut removal; then, with the bottle toggle on, the uninstall removes that game's own bottle and nothing else, with no protected-root refusal, so the sibling's bottle, marker and files equal the P4 record.
@@ -640,5 +642,15 @@ total: 7
 passed: 6
 issues: 0
 pending: 0
-skipped: 0
-blocked: 1
+skipped: 1
+blocked: 0
+
+## Gaps
+
+[none — re-run 2 recorded no issue]
+
+## Deferred Follow-Ups
+
+- test: 5
+  idea: "Run the 180 s no-raise hold live when an unmatched non-Steam launcher title is installed; 0.13.2 carries the path"
+  deferred_at: 2026-11-27

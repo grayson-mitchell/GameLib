@@ -124,7 +124,9 @@ result: pass — launch 2, online in the same sandboxed session (`gamelib-launch
 
 ### 3. The 180 s no-match notice does not raise the window
 expected: A launch of the operator-named title held past 180 s, with the operator watching which application is frontmost, shows the system notification and the in-app notice without raising GameLib's window, and gamelib.log carries the deadline-fired line and the notice line with `raise=false`.
-result: blocked — no launch. P5 (d) named no title: the operator said launcher titles exist but none can be identified as one the matcher cannot see without launching each game in the library ("block for now"). The gap is named as the plan's flagged assumption and as 87-59 left it: the 180 s no-raise hold still needs a Windows title whose game process the matcher cannot see. The deadline lines (`launch deadline fired (`, `raise=false`) are REACHABLE but were not emitted (0 in every archive), because no hold ran; their absence is not a finding.
+result: skipped
+reason: "Deferred follow-up: run the 180 s no-raise hold when an unmatched non-Steam launcher title is installed; automated no-raise proof accepted by the operator (87-VERIFICATION.md overrides, 2026-11-26); re-scored blocked again as 87-RERUN-2-HUMAN-UAT.md item 5"
+original_result: blocked — no launch. P5 (d) named no title: the operator said launcher titles exist but none can be identified as one the matcher cannot see without launching each game in the library ("block for now"). The gap is named as the plan's flagged assumption and as 87-59 left it: the 180 s no-raise hold still needs a Windows title whose game process the matcher cannot see. The deadline lines (`launch deadline fired (`, `raise=false`) are REACHABLE but were not emitted (0 in every archive), because no hold ran; their absence is not a finding.
 
 ### 4. Winetricks acts on the game's own bottle and a failure shows
 expected: A verb applied from the game's Wine settings runs against the game's own bottle with progress lines, the bottle's `winetricks.log` gains the verb, the shared default prefix directory is not created, and a download verb applied with the network off only for the Apply ends with its row in the failed state and the failure in the log panel.
@@ -132,7 +134,7 @@ result: pass — launch 1, Trash Goblin (Epic, bottle `GameLib-legendary-54f7949
 
 ### 5. Stop ends a non-Steam game on CrossOver
 expected: Stop from the game page of the running named game ends it, and within 15 s no game process and no wineserver for its bottle remain.
-result: blocked — by RF1, launches 1 and 3 (`gamelib-launch-1.log`, `gamelib-launch-3.log`, `notes.log` ITEM 5, DIAG, F6). No non-Steam CrossOver game stayed running long enough to press Stop. Trash Goblin, Play twice (18:57:18Z, 18:57:32Z), `engine=crossover reason=cx-healthy`, then `launch deadline cancelled (launcher-exited)` 1 to 2 s later with no wine or game process left (7 `launcher-exited` lines in launch 1). Deviation (operator decision 18:59:48Z): the item moved to Caravan SandWitch (Amazon, own bottle), which exited the same way (nile `Process exited with code 1`). Launch 3: the one CrossOver launch right after the pinned-to-crossover restore ran normally (19:11:49Z to 19:12:08Z) but the operator closed it before Stop was pressed; the next two (19:13:52Z, 19:14:03Z) dropped again. Stop's 87-65 route was never exercised live.
+result: pass — superseded: passed live in `87-RERUN-2-HUMAN-UAT.md` items 3 and 4 (signed 0.13.2, 2026-11-26; RF1 fixed by 87-72, 87-77). Original re-run 1 result, kept verbatim: blocked — by RF1, launches 1 and 3 (`gamelib-launch-1.log`, `gamelib-launch-3.log`, `notes.log` ITEM 5, DIAG, F6). No non-Steam CrossOver game stayed running long enough to press Stop. Trash Goblin, Play twice (18:57:18Z, 18:57:32Z), `engine=crossover reason=cx-healthy`, then `launch deadline cancelled (launcher-exited)` 1 to 2 s later with no wine or game process left (7 `launcher-exited` lines in launch 1). Deviation (operator decision 18:59:48Z): the item moved to Caravan SandWitch (Amazon, own bottle), which exited the same way (nile `Process exited with code 1`). Launch 3: the one CrossOver launch right after the pinned-to-crossover restore ran normally (19:11:49Z to 19:12:08Z) but the operator closed it before Stop was pressed; the next two (19:13:52Z, 19:14:03Z) dropped again. Stop's 87-65 route was never exercised live.
 
 ### 6. Wine manager installs a never-installed release and the list follows
 expected: Install on the named never-installed entry downloads with progress and toasts, `tools/wine/<version>` appears with no temporary sibling, the row shows installed without a restart or a tab switch, Remove flips it back the same way, gamelib.log has no IPC argument rejection for `installWineVersion`, and a Wine-Staging-macOS install either creates its `-DXMT` copy or logs the DXMT skip line.
@@ -595,11 +597,11 @@ no restores from the P3 copies.
 ## Summary
 
 total: 7
-passed: 3
+passed: 4
 issues: 2
 pending: 0
-skipped: 0
-blocked: 2
+skipped: 1
+blocked: 0
 
 ## Re-run 2 (87-79)
 
@@ -613,3 +615,45 @@ The re-run 1 results above are left as written.
 | item 5 blocked (RF1, CrossOver launches exit) | 3 (launches stay up) and 4 (Stop) | 3 pass, 4 pass |
 | item 7 issue (RF3 Cancel removed the shortcut; RF4 is-protected-root) | 6 | pass |
 | item 7's disabled-toggle legibility half (not runnable) | 7 | pass, on the Start Minimized fallback surface |
+
+## Gaps
+
+<!-- Reconciled 2026-11-27 by /gsd-verify-work 87: each finding below was fixed by the named gap plan and re-scored pass in a later live gate. -->
+- gap_id: G-87-R1-1-RF2
+  truth: "A refused launch ends and the Play button leaves launching"
+  status: resolved
+  reason: "RF2 Play stayed on launching; re-run 2 item 1 pass"
+  severity: major
+  test: 1
+  resolved_by: 87-73-PLAN.md
+  resolved_at: 2026-11-27
+- gap_id: G-87-R1-1-RF5
+  truth: "The offline refusal shows only the engine dialog, not the generic warning first"
+  status: resolved
+  reason: "RF5 generic offline warning shown first; re-run 2 items 1 and 2 pass"
+  severity: major
+  test: 1
+  resolved_by: 87-76-PLAN.md
+  resolved_at: 2026-11-27
+- gap_id: G-87-R1-7-RF3
+  truth: "Uninstall dialog Cancel changes nothing"
+  status: resolved
+  reason: "RF3 Cancel removed the Steam shortcut; re-run 2 item 6 pass"
+  severity: major
+  test: 7
+  resolved_by: 87-74-PLAN.md
+  resolved_at: 2026-11-27
+- gap_id: G-87-R1-7-RF4
+  truth: "A bottle-backed game on the shared default prefix reaches the bottle removal"
+  status: resolved
+  reason: "RF4 refused is-protected-root before the bottle route; re-run 2 item 6 pass"
+  severity: major
+  test: 7
+  resolved_by: 87-75-PLAN.md
+  resolved_at: 2026-11-27
+
+## Deferred Follow-Ups
+
+- test: 3
+  idea: "Run the 180 s no-raise hold live when an unmatched non-Steam launcher title is installed; 0.13.2 carries the path"
+  deferred_at: 2026-11-27
