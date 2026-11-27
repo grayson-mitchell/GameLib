@@ -535,6 +535,65 @@ fn a_concurrent_add_and_remove_both_take_effect() {
     }
 }
 
+/// Quick 261127-wem (rule: keep): "a stored entry that is not the game being added or removed
+/// survives an add and a remove". Every shape the todo names (an empty, `null`, `false`, `0` or
+/// missing `appName`, a truthy non-string, a bare string, an array) goes through one add and two
+/// removes, and must come out the same on disk, in the list and in the sink payloads.
+#[test]
+fn every_entry_that_is_not_the_game_survives_add_and_remove() {
+    let p = profile(None);
+    let stored = vec![
+        json!({ "appName": "" }),
+        json!({ "appName": null }),
+        json!({ "appName": false }),
+        json!({ "appName": 0 }),
+        json!({ "title": "no name" }),
+        json!("just a string"),
+        json!({ "appName": 7 }),
+        json!(["a"]),
+        json!({ "appName": "keep" }),
+        json!({ "appName": "gone" }),
+    ];
+    let store_dir = p.user_data.join("store");
+    std::fs::create_dir_all(&store_dir).unwrap();
+    std::fs::write(
+        store_dir.join("config.json"),
+        serde_json::to_vec(&json!({ "games": { "recent": stored } })).unwrap(),
+    )
+    .unwrap();
+
+    let new = json!({ "appName": "new", "title": "New", "runner": "gog" });
+    dispatch_sync("info_recent_add", std::slice::from_ref(&new), &p.ctx).unwrap();
+    // `{"appName":7}` is not the string "7", so nothing leaves on the second remove.
+    for name in ["gone", "7"] {
+        dispatch_sync("info_recent_remove", &[json!({ "appName": name })], &p.ctx).unwrap();
+    }
+
+    let want = json!([
+        new,
+        { "appName": "" },
+        { "appName": null },
+        { "appName": false },
+        { "appName": 0 },
+        { "title": "no name" },
+        "just a string",
+        { "appName": 7 },
+        ["a"],
+        { "appName": "keep" }
+    ]);
+    assert_eq!(recent::list(&p.ctx).unwrap().to_value(), want, "list");
+    assert_eq!(
+        read_json(&p.user_data.join("store/config.json"))["games"]["recent"],
+        want,
+        "disk"
+    );
+    let seen = p.sink.0.lock().unwrap().clone();
+    assert_eq!(seen.len(), 3, "the sink is told after every op");
+    assert_eq!(seen[0].as_array().unwrap().len(), 11, "after the add");
+    assert_eq!(seen[0][0], new);
+    assert_eq!(seen[2], want, "last payload");
+}
+
 #[test]
 fn many_concurrent_adds_all_land() {
     let p = Arc::new(profile(None));
