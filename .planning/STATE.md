@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: "88.3"
 current_phase_name: Launch funnel, re-adoption and the live gate
 status: executing
-stopped_at: Completed 88.3-09-PLAN.md
-last_updated: "2026-11-27T23:32:42.704Z"
+stopped_at: Completed 88.3-10-PLAN.md
+last_updated: "2026-11-27T23:40:01.620Z"
 last_activity: 2026-11-27
 last_activity_desc: Phase 88.3 execution started
-state_head: a307d0cb14ce972c9dbe19fffb19003936b7fa86
+state_head: 9b8bf58cf393e514e7d27000f5087c04849bbacd
 progress:
   total_phases: 26
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-25)
 ## Current Position
 
 Phase: 88.3 (Launch funnel, re-adoption and the live gate) — EXECUTING
-Plan: 12 of 22
+Plan: 13 of 22
 Status: Ready to execute
 Last activity: 2026-11-27 — Phase 88.3 execution started
 Progress: [████████████████░░░░] 204/257 plans ([█████████░] 88%)
@@ -588,6 +588,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 88.3 P14 | 12min | 2 tasks | 9 files |
 | Phase 88.3 P08 | 50 min | 2 tasks | 10 files |
 | Phase 88.3 P09 | 100min | 3 tasks | 13 files |
+| Phase 88.3 P10 | 35min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -1330,6 +1331,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 88.3]: 88.3-14: a launchOracle harness file is deleted only when git grep at HEAD shows no importer beyond the retired drivers; baseEnv, probes, pairwise and census stay
 - [Phase 88.3]: 88.3-08: launchManagerCall boundary schema is a tuple [op, unknown] refined by a per-op union (the channel table takes tuples); the launch hand-off must name the call's own game and the launch log type
 - [Phase 88.3]: 88.3-09: a re-adopted game is a registry entry holding an AdoptProof, ended only through kill_adopted_tree; its play time is recorded through the same function as a quit-kill's (launch-start totalPlayed); 88.3-12 should call readopt::start_with_host with the shell's RunnerHost so owed after-scripts inherit an environment
+- [Phase 88.3]: 88.3-10: settleLaunchStatus lives in launchBuilderReply.ts (schedule discovery scope), launchRun takes the schema's request type, the Launcher copies LaunchParams through toLaunchRunRequest
 
 ### Pending Todos
 
@@ -1623,8 +1625,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-27T23:32:37.553Z
-Stopped at: Completed 88.3-09-PLAN.md
+Last session: 2026-11-27T23:39:56.268Z
+Stopped at: Completed 88.3-10-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
