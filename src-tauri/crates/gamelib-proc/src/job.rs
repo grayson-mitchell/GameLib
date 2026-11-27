@@ -1,7 +1,8 @@
 //! Windows Job Objects: one kill-on-close `Job` per `SpawnClass::Helper` spawn (the analogue of one
 //! unix process group per helper, so reaping a dead sidecar's Job never touches unrelated helpers),
 //! and one named `GameJob` per tracked `SpawnClass::Game` spawn that does NOT kill on close, so the
-//! game tree outlives GameLib and can be found again by name. An empty module on other platforms.
+//! game tree outlives GameLib and can be found again by name while a handle to it is open. An empty
+//! module on other platforms.
 
 /// What a `ChildSet` entry holds for its Job: the Job on Windows, nothing elsewhere.
 #[cfg(windows)]
@@ -125,8 +126,11 @@ mod win {
 
     /// A named Job Object holding one tracked game's tree, created WITHOUT
     /// `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`: closing the last handle, or GameLib dying, leaves the
-    /// game and its descendants running, and the Job (which lives while any member does) can be
-    /// reopened by name from another process (`GameJob::open`).
+    /// game and its descendants running. The Job can be reopened by name from another process
+    /// (`GameJob::open`) only while some process still holds a handle to it: the name is removed
+    /// when the last handle closes even though members run on (measured on windows-latest in
+    /// 88.2-25, which disproved the earlier assumption that it survives), after which
+    /// `kill_game_tree` finds the tree by parentage.
     ///
     /// Known limit, the same as the helper `Job`: assignment happens after the game is created, so
     /// a descendant it creates before then is not in the Job.

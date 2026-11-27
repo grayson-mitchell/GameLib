@@ -22,13 +22,16 @@ libc = "0.2.186"
 # job.rs: one kill-on-close Job Object per Helper spawn and one named Game Job per tracked game.
 # CreateJobObjectW is gated on Win32_Security; OpenProcess / GetExitCodeProcess / GetProcessTimes /
 # TerminateProcess / CREATE_BREAKAWAY_FROM_JOB on Win32_System_Threading; JOB_OBJECT_TERMINATE and
-# JOB_OBJECT_QUERY on Win32_System_SystemServices.
+# JOB_OBJECT_QUERY on Win32_System_SystemServices; the process snapshot behind the descendant-walk
+# fallback of `kill_game_tree` (CreateToolhelp32Snapshot, Process32FirstW/NextW) on
+# Win32_System_Diagnostics_ToolHelp.
 # windows-sys 0.61.2 is already locked for steampoll, steamfiles and depot, so no new crate enters
 # the tree; Windows-target-gated, so macOS and Linux builds never see it.
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61", features = [
     "Win32_Foundation",
     "Win32_Security",
+    "Win32_System_Diagnostics_ToolHelp",
     "Win32_System_JobObjects",
     "Win32_System_SystemServices",
     "Win32_System_Threading",

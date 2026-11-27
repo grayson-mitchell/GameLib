@@ -1,6 +1,7 @@
 //! Process-tree termination. Unix signals process groups. Windows has no group signal; its helper
 //! tree kill is the per-helper Job Object in `job.rs`, and its stamp-checked game tree kill
-//! (`kill_game_tree`) terminates the game's named Game Job, so only that function lives here.
+//! (`kill_game_tree`) terminates the game's named Game Job, or, once that name is gone, the
+//! stamped leader and its parent-linked descendants, so only that function lives here.
 //! With `job.rs`, this is where `TerminateProcess` is called.
 
 /// How a stamp-checked game tree kill ended.
@@ -30,7 +31,13 @@ mod win {
     use crate::probe;
     use std::os::windows::io::{AsRawHandle, FromRawHandle, OwnedHandle};
     use std::time::{Duration, Instant};
-    use windows_sys::Win32::Foundation::{GetLastError, ERROR_INVALID_PARAMETER};
+    use windows_sys::Win32::Foundation::{
+        GetLastError, ERROR_INVALID_PARAMETER, INVALID_HANDLE_VALUE,
+    };
+    use windows_sys::Win32::System::Diagnostics::ToolHelp::{
+        CreateToolhelp32Snapshot, Process32FirstW, Process32NextW, PROCESSENTRY32W,
+        TH32CS_SNAPPROCESS,
+    };
     use windows_sys::Win32::System::Threading::{
         OpenProcess, TerminateProcess, WaitForSingleObject, PROCESS_QUERY_LIMITED_INFORMATION,
         PROCESS_TERMINATE,
@@ -49,8 +56,10 @@ mod win {
     /// mismatch. Windows has no graceful signal, so `grace` only bounds the wait for the tree to
     /// end after it has been terminated.
     ///
-    /// When no Game Job of that name exists (the game never had one, or it was never created) only
-    /// the stamped leader is terminated and the line `game job not found; leader only` is logged.
+    /// When no Game Job of that name can be opened (the process that created it is gone, which
+    /// removes the name, or it was never created) the tree is found by parentage instead
+    /// (`terminate_stamped_tree`) and the line `game job not found; walking the descendants of the
+    /// stamped leader` is logged.
     pub fn kill_game_tree(pid: u32, stamp: u64, grace: Duration) -> KillOutcome {
         if !probe::is_alive(pid) {
             return KillOutcome::Gone;
@@ -68,10 +77,129 @@ mod win {
                 KillOutcome::Killed
             }
             None => {
-                diag("game job not found; leader only");
-                terminate_stamped_leader(pid, stamp, grace)
+                diag("game job not found; walking the descendants of the stamped leader");
+                terminate_stamped_tree(pid, stamp, grace)
             }
         }
+    }
+
+    /// How many times the descendant walk repeats to catch a process the tree started while it
+    /// was being terminated.
+    const WALK_PASSES: usize = 3;
+
+    /// The fallback when the named Game Job cannot be reopened. A named Job's name is removed from
+    /// the object namespace once its last handle closes, even while members run, so after the
+    /// process that created it is gone (a GameLib restart, or its death) the name is dead and the
+    /// tree has to be found by parentage instead.
+    ///
+    /// The tree is every live process reachable from `pid` through parent pids where each is
+    /// newer than the process it names as its parent (the root's age being `stamp`): a pid that
+    /// was recycled to an unrelated, newer process is therefore never followed. Every descendant
+    /// is held as an open handle from the check to the terminate, so its pid cannot be recycled
+    /// between them. The descendants are collected before the leader is terminated, while the
+    /// parent links are intact, and the walk repeats (`WALK_PASSES`) for anything started in the
+    /// gap. Unlike a Job this does not follow a process that was reparented away or whose parent
+    /// died and whose pid was reused.
+    fn terminate_stamped_tree(pid: u32, stamp: u64, grace: Duration) -> KillOutcome {
+        let first = collect_descendants(pid, stamp);
+        let outcome = terminate_stamped_leader(pid, stamp, grace);
+        if outcome == KillOutcome::NotOurs {
+            return outcome;
+        }
+        let deadline = Instant::now() + grace.min(TERMINATE_SETTLE);
+        let mut batch = first;
+        for _ in 0..WALK_PASSES {
+            if batch.is_empty() {
+                break;
+            }
+            for member in &batch {
+                // SAFETY: `member` holds a valid process handle opened with terminate rights; a
+                // process that already ended makes this fail, which is the outcome wanted.
+                unsafe { TerminateProcess(member.as_raw_handle() as _, 1) };
+            }
+            for member in &batch {
+                let left = deadline.saturating_duration_since(Instant::now());
+                let wait_ms = u32::try_from(left.as_millis()).unwrap_or(0);
+                // SAFETY: a valid process handle; it is signalled when the process exits.
+                unsafe { WaitForSingleObject(member.as_raw_handle() as _, wait_ms) };
+            }
+            batch = collect_descendants(pid, stamp);
+        }
+        KillOutcome::Killed
+    }
+
+    /// Open handles (terminate and query rights) to every live descendant of `root`, found from a
+    /// process snapshot and kept only where each process is newer than its named parent, the
+    /// root counting as created at `root_stamp`. Empty when the snapshot cannot be taken.
+    fn collect_descendants(root: u32, root_stamp: u64) -> Vec<OwnedHandle> {
+        let Some(table) = process_table() else {
+            return Vec::new();
+        };
+        // (pid, creation time) of every process already accepted into the tree, root first.
+        let mut accepted: Vec<(u32, u64)> = vec![(root, root_stamp)];
+        let mut held: Vec<OwnedHandle> = Vec::new();
+        let mut next = 0;
+        while next < accepted.len() {
+            let (parent_pid, parent_created) = accepted[next];
+            next += 1;
+            for &(child_pid, ppid) in &table {
+                if ppid != parent_pid
+                    || child_pid == 0
+                    || accepted.iter().any(|(seen, _)| *seen == child_pid)
+                {
+                    continue;
+                }
+                // SAFETY: OpenProcess takes plain values and returns null on failure.
+                let raw = unsafe {
+                    OpenProcess(
+                        PROCESS_TERMINATE | PROCESS_QUERY_LIMITED_INFORMATION,
+                        0,
+                        child_pid,
+                    )
+                };
+                if raw.is_null() {
+                    continue;
+                }
+                // SAFETY: `raw` is a valid, uniquely-owned handle; OwnedHandle closes it on drop.
+                let handle = unsafe { OwnedHandle::from_raw_handle(raw as _) };
+                let Some(created) = probe::creation_time(handle.as_raw_handle() as _) else {
+                    continue;
+                };
+                if created < parent_created || !probe::is_alive(child_pid) {
+                    continue;
+                }
+                accepted.push((child_pid, created));
+                held.push(handle);
+            }
+        }
+        held
+    }
+
+    /// `(pid, parent pid)` of every process in a snapshot taken now, `None` when none can be taken.
+    fn process_table() -> Option<Vec<(u32, u32)>> {
+        // SAFETY: plain values; the result is checked against INVALID_HANDLE_VALUE below.
+        let raw = unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) };
+        if raw == INVALID_HANDLE_VALUE {
+            // SAFETY: GetLastError has no preconditions.
+            let err = unsafe { GetLastError() };
+            diag(&format!("process snapshot failed (error {err})"));
+            return None;
+        }
+        // SAFETY: `raw` is a valid, uniquely-owned handle; OwnedHandle closes it on drop.
+        let snapshot = unsafe { OwnedHandle::from_raw_handle(raw as _) };
+        let mut entry = PROCESSENTRY32W {
+            dwSize: std::mem::size_of::<PROCESSENTRY32W>() as u32,
+            ..Default::default()
+        };
+        let mut table = Vec::new();
+        // SAFETY: a valid snapshot handle and an entry whose dwSize is set; it outlives the call.
+        let mut more = unsafe { Process32FirstW(snapshot.as_raw_handle() as _, &mut entry) } != 0;
+        while more {
+            table.push((entry.th32ProcessID, entry.th32ParentProcessID));
+            // SAFETY: as above.
+            more = unsafe { Process32NextW(snapshot.as_raw_handle() as _, &mut entry) } != 0;
+        }
+        Some(table)
     }
 
     /// Terminates the process `pid` if, and only if, the handle opened for it reports creation

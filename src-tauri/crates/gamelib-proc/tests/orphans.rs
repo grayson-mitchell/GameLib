@@ -628,8 +628,10 @@ fn sigkill_spares_game_then_stamped_kill_removes_its_tree() {
 }
 
 /// The Windows arm of the above and the proof of flagged assumption A5: `TerminateProcess` on the
-/// stand-in parent closes its handles, the Game Job (no kill-on-close) keeps the game and its
-/// grandchild running, and `kill_game_tree` reopens that Job by name and terminates both.
+/// stand-in parent closes its handles and the Game Job (no kill-on-close) keeps the game and its
+/// grandchild running. A5 as first stated (that the Job can then be reopened by name) failed on
+/// windows-latest: the name goes with the last handle. `kill_game_tree` therefore falls back to
+/// the stamped leader's parent-linked descendants, and this arm proves that both end.
 #[cfg(windows)]
 #[test]
 fn terminate_parent_spares_game_then_stamped_kill_removes_its_tree() {
