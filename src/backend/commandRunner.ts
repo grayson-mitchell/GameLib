@@ -93,6 +93,14 @@ export interface CommandRunnerDeps {
   }
 }
 
+/**
+ * The TS twin's call options (88.2-22): `CallRunnerOptions.logSanitizer` now names a Rust sanitizer, but this twin runs no
+ * Rust, so it keeps taking the function its tests and oracles hand it. Nothing constructs it at boot; 88.2-24 deletes it.
+ */
+type TsCallRunnerOptions = Omit<CallRunnerOptions, 'logSanitizer'> & {
+  logSanitizer?: (line: string) => string
+}
+
 export type CommandRunner = ReturnType<typeof createCommandRunner>
 
 const WINESERVER_WAIT_TIMEOUT_MS = 1_800_000
@@ -417,7 +425,7 @@ export function createCommandRunner(deps: CommandRunnerDeps) {
   async function callRunner(
     commandParts: string[],
     runnerProps: RunnerProps,
-    options: CallRunnerOptions
+    options: TsCallRunnerOptions
   ): Promise<ExecResult> {
     const appName = appNameFromCommandParts(commandParts, runnerProps.name)
 

@@ -295,12 +295,14 @@ const DEADLINE_SHIM_IMPORTERS: readonly string[] = [
 // `registerLaunchManagerHooks` to answer the shell's hook calls. 88.2-21: the bootstrap also builds the kill-aware stream
 // table and the abort forwarding (`runnerKill`, `runnerAbort`), `handlers.ts` registers the output listener,
 // and the spawnAsync adapter calls `spawnAsyncRun` and `runnerKill`. 88.2-22: the legendary, nile and sideload managers' `stop()`
-// calls `trackedKill`.
+// calls `trackedKill`, and gog's launch and the launcher's folder-missing prompt call `askForceUninstall`.
 const RUNNER_SHIM_IMPORTERS: readonly string[] = [
+  'src/backend/launcher.ts',
   'src/backend/runnerAdapter.ts',
   'src/backend/sidecar/bootstrap.ts',
   'src/backend/sidecar/handlers.ts',
   'src/backend/spawnAsync.ts',
+  'src/backend/storeManagers/gog/games.ts',
   'src/backend/storeManagers/legendary/games.ts',
   'src/backend/storeManagers/nile/games.ts',
   'src/backend/storeManagers/sideload/games.ts'

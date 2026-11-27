@@ -1,7 +1,6 @@
 import { parseGogdlProgress } from './resumeProgress'
 import { join } from 'path'
 import {
-  errorHandler,
   getFileSize,
   moveOnUnix,
   moveOnWindows,
@@ -86,6 +85,7 @@ import { checkInstalledMacArch } from 'backend/macArch/recovery'
 import type { LongLivedHandle } from 'backend/process/types'
 
 import { readKnownFixLaunchOverrides } from 'backend/launchrust/knownFixes'
+import { askForceUninstall } from 'backend/launchrust/runner'
 import { settleKnownFixLaunchOverrides } from 'backend/knownFixLaunchReply'
 import type LogWriter from 'backend/logger/targetWriter'
 import { engineKeyFor } from 'backend/enginewine/twin'
@@ -630,7 +630,11 @@ export default class GOGGame implements Game {
     }
 
     if (!existsSync(gameInfo.install.install_path)) {
-      errorHandler(this.deps, 'appears to be deleted', this.id, 'gog')
+      // 88.2-22 (82 amendment): the folder-missing prompt is asked in Rust. Not awaited, as `errorHandler` was not.
+      void askForceUninstall(
+        { requestRustInvoke: this.deps.requestRustInvoke },
+        { runner: 'gog', appName: this.id }
+      )
       return false
     }
 

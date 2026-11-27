@@ -159,7 +159,7 @@ describe('GOG: getCredentialsWithVerdict follows D-17', () => {
       expect.objectContaining({
         abortId: 'gogdl-get-credentials',
         skipErrorHandler: true,
-        logSanitizer: expect.any(Function),
+        logSanitizer: 'gogAuth',
         onOutput: expect.any(Function)
       })
     )

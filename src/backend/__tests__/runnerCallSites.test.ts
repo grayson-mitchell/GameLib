@@ -11,7 +11,9 @@
 import { readFileSync } from 'fs'
 import { join } from 'path'
 
-import type { GameInfo } from 'common/types'
+import { createLauncher } from 'backend/launcher'
+import { createTestToolsSlices } from 'backend/testUtils/testServices'
+import GOGGame from 'backend/storeManagers/gog/games'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import { createTestManagerDeps } from 'backend/testUtils/testServices'
 import type { ManagerDeps } from 'backend/services/types'
@@ -69,7 +71,7 @@ describe("the managers' stop() ends a Rust-launched game through trackedKill (D-
       runner: 'sideload',
       app_name: 'app-s',
       install: { executable: '/games/s.exe' }
-    } as unknown as GameInfo)
+    } as never)
     jest.spyOn(game, 'isNative').mockReturnValue(false)
     jest.spyOn(game, 'getSettings').mockResolvedValue({
       wineVersion: { wineserver: '/nonexistent/wineserver' },
@@ -95,7 +97,7 @@ describe("the managers' stop() ends a Rust-launched game through trackedKill (D-
       runner: 'sideload',
       app_name: 'app-s',
       install: { executable: '/games/s' }
-    } as unknown as GameInfo)
+    } as never)
     jest.spyOn(game, 'isNative').mockReturnValue(true)
 
     await game.stop()
@@ -117,5 +119,103 @@ describe("the managers' stop() ends a Rust-launched game through trackedKill (D-
     const steam = source('storeManagers/steam/games.ts')
     expect(steam).toMatch(/this\.deps\.runner\.killTracked\(/)
     expect(steam).not.toMatch(/trackedKill/)
+  })
+})
+
+describe('the auth runner calls pass the name of a Rust sanitizer (D-02, T-88.2-33)', () => {
+  it('the option type is the two names, not a function', () => {
+    expect(readFileSync(join(BACKEND, '../common/types.ts'), 'utf8')).toMatch(
+      /logSanitizer\?: 'gogAuth' \| 'nileAuth'/
+    )
+  })
+
+  it('gog passes gogAuth at both auth calls and nile passes nileAuth at its one', () => {
+    const gog = source('storeManagers/gog/user.ts')
+    const nile = source('storeManagers/nile/user.ts')
+    expect(gog.match(/logSanitizer: 'gogAuth'/g)).toHaveLength(2)
+    expect(nile.match(/logSanitizer: 'nileAuth'/g)).toHaveLength(1)
+    // No call hands the runner a function any more.
+    expect(gog).not.toMatch(/logSanitizer:\s*authLogSanitizer/)
+    expect(nile).not.toMatch(/logSanitizer:\s*authLogSanitizer/)
+  })
+})
+
+describe('the folder-missing prompt is asked in Rust through askForceUninstall (the 82 amendment)', () => {
+  const asks = (invokes: Invoke[]) =>
+    invokes.filter((i) => i.channel === 'launch_ask_force_uninstall')
+
+  it("gog's launch of a game whose folder is gone sends { runner: gog, appName } and returns false", async () => {
+    const { deps, invokes } = rig()
+    const game = new GOGGame('gog-1', deps)
+    jest.spyOn(game, 'getSettings').mockResolvedValue({} as never)
+    jest.spyOn(game, 'getGameInfo').mockReturnValue({
+      runner: 'gog',
+      app_name: 'gog-1',
+      install: {
+        install_path: join(BACKEND, 'definitely-not-here'),
+        platform: 'windows'
+      }
+    } as never)
+
+    const launched = await game.launch({} as never)
+
+    expect(launched).toBe(false)
+    expect(asks(invokes).map((i) => i.args)).toEqual([
+      [{ runner: 'gog', appName: 'gog-1' }]
+    ])
+  })
+
+  it("the launcher's folder-missing path asks before it reports done, then aborts", async () => {
+    const order: string[] = []
+    const invokes: Invoke[] = []
+    const base = createTestToolsSlices()
+    const launcher = createLauncher({
+      ...base,
+      requestRustInvoke: ((channel: string, args: unknown[]) => {
+        invokes.push({ channel, args })
+        order.push(channel)
+        return Promise.resolve(1)
+      }) as unknown as ManagerDeps['requestRustInvoke'],
+      sendFrontendMessage: ((channel: string, payload: { status?: string }) => {
+        if (channel === 'gameStatusUpdate')
+          order.push(`status:${payload.status}`)
+      }) as unknown as ManagerDeps['sendFrontendMessage'],
+      libraryManagers: {
+        gog: {
+          getGame: () => ({
+            getGameInfo: () => ({
+              app_name: 'gog-1',
+              install: { install_path: join(BACKEND, 'definitely-not-here') }
+            })
+          })
+        }
+      } as never,
+      launchHooks: { gog: {} } as never,
+      commandRunner: {} as never,
+      runner: {} as never,
+      spawnAsync: (() => Promise.reject(new Error('unscripted'))) as never,
+      stores: {} as never
+    })
+
+    const result = await launcher.launchEventCallback({
+      appName: 'gog-1',
+      runner: 'gog'
+    })
+
+    expect(result).toEqual({ status: 'abort' })
+    expect(asks(invokes).map((i) => i.args)).toEqual([
+      [{ runner: 'gog', appName: 'gog-1' }]
+    ])
+    expect(order).toEqual(['launch_ask_force_uninstall', 'status:done'])
+  })
+
+  it('no non-test file still imports errorHandler or askForceUninstall from backend/utils', () => {
+    for (const file of ['launcher.ts', 'storeManagers/gog/games.ts']) {
+      const text = source(file)
+      expect(text).not.toMatch(/\berrorHandler\b/)
+      expect(text).not.toMatch(
+        /import\s*{[^}]*\baskForceUninstall\b[^}]*}\s*from\s*['"](\.\/utils|\.\.\/\.\.\/utils|backend\/utils)['"]/
+      )
+    }
   })
 })

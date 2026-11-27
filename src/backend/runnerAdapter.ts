@@ -41,7 +41,9 @@ import type LogWriter from 'backend/logger/targetWriter'
  */
 
 /** The names Rust knows a log sanitizer by (`logSanitizer` of the call). */
-export type RunnerLogSanitizerName = 'gogAuth' | 'nileAuth'
+export type RunnerLogSanitizerName = NonNullable<
+  CallRunnerOptions['logSanitizer']
+>
 
 /** What the adapter takes from the rest of the backend, all of it passed in at boot (88.2-21). */
 export interface RunnerAdapterDeps extends RustInvokeDeps {
@@ -50,14 +52,6 @@ export interface RunnerAdapterDeps extends RustInvokeDeps {
   getRunnerLogWriter(runner: Runner): LogWriter
   /** `flushLogForwarder`: resolves once every line queued so far is written; never rejects. */
   flushLogs(): Promise<void>
-  /**
-   * The sanitizer function each Rust sanitizer name stands for. A caller passes a function (`logSanitizer`); Rust applies a
-   * named one, so the adapter finds the name by identity. A function that is none of these is refused: it would otherwise
-   * reach the log unsanitized.
-   */
-  logSanitizers?: Partial<
-    Record<RunnerLogSanitizerName, (line: string) => string>
-  >
 }
 
 /** The options `callRunner` takes: the TS ones, and the spawn observer the stream carries. */
@@ -164,22 +158,13 @@ function envRecord(
 }
 
 export function createRunnerAdapter(deps: RunnerAdapterDeps): RunnerAdapter {
-  function sanitizerName(
-    sanitizer: CallRunnerOptions['logSanitizer']
-  ): RunnerLogSanitizerName | undefined {
-    if (!sanitizer) return undefined
-    for (const name of ['gogAuth', 'nileAuth'] as const) {
-      if (deps.logSanitizers?.[name] === sanitizer) return name
-    }
-    throw new Error('callRunner: the log sanitizer is not one Rust knows')
-  }
-
   async function callRunner(
     commandParts: string[],
     runnerProps: RunnerProps,
     options: RunnerAdapterCallOptions
   ): Promise<ExecResult> {
-    const logSanitizer = sanitizerName(options.logSanitizer)
+    // 88.2-22 (D-02): the caller names a Rust sanitizer; Rust redacts before any log write.
+    const logSanitizer = options.logSanitizer
 
     // Automatically add the relevant LogWriter for the runner, as the TypeScript did.
     options.logWriters ??= []

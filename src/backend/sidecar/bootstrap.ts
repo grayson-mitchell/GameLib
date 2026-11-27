@@ -235,8 +235,6 @@ import { checkRosettaInstall } from '../utils'
 import { createRunnerAdapter } from '../runnerAdapter'
 import { createRunnerStreams } from '../runnerStream'
 import { createSpawnAsync } from '../spawnAsync'
-import { authLogSanitizer as gogAuthLogSanitizer } from '../storeManagers/gog/user'
-import { authLogSanitizer as nileAuthLogSanitizer } from '../storeManagers/nile/user'
 import { createQuitHandler } from '../quitHandler'
 import { tOrFallback } from '../i18nFallback'
 import { createDownloadQueue } from '../downloadmanager/downloadqueue'
@@ -1869,12 +1867,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
               getRunnerLogWriter(runner, {
                 disableLogs: config.getSettings().disableLogs
               }),
-            flushLogs: flushLogForwarder,
-            // Rust applies a sanitizer by name; the adapter finds the name by identity and refuses any other function.
-            logSanitizers: {
-              gogAuth: gogAuthLogSanitizer,
-              nileAuth: nileAuthLogSanitizer
-            }
+            flushLogs: flushLogForwarder
           })
         // The same stream table: a spawnAsync caller's `onOutput` and abort ride the same frames and kill as the runner's.
         state.services.spawnAsync =

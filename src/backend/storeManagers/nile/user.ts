@@ -192,7 +192,7 @@ export class NileUser {
         ['auth', '--login', '--non-interactive'],
         {
           abortId: 'nile-auth',
-          logSanitizer: authLogSanitizer
+          logSanitizer: 'nileAuth'
         }
       )
       const output: NileLoginData = JSON.parse(stdout)

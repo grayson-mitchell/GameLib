@@ -186,7 +186,7 @@ export class GOGUser {
       ['auth', '--code', code],
       {
         abortId: 'gogdl-auth',
-        logSanitizer: authLogSanitizer
+        logSanitizer: 'gogAuth'
       }
     )
 
@@ -376,7 +376,7 @@ export class GOGUser {
     const capture = createBoundedOutputCapture()
     const res = await deps.libraryManagers.gog.runRunnerCommand(['auth'], {
       abortId: 'gogdl-get-credentials',
-      logSanitizer: authLogSanitizer,
+      logSanitizer: 'gogAuth',
       skipErrorHandler: true,
       onOutput: (chunk) => capture.onOutput(chunk)
     })

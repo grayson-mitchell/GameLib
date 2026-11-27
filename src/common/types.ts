@@ -546,7 +546,12 @@ interface SpawnedChildHandle {
 export interface CallRunnerOptions {
   logMessagePrefix?: string
   logWriters?: LogWriter[]
-  logSanitizer?: (line: string) => string
+  /**
+   * Phase 88.2 D-02 (88.2-08, 88.2-22): the name of the Rust sanitizer that rewrites the runner's output before any log write.
+   * `'gogAuth'` and `'nileAuth'` redact the token keys of the GOG and Amazon auth output; Rust applies the sanitizer, so a
+   * caller can no longer hand a function. The observer (`onOutput`) still gets the raw chunk.
+   */
+  logSanitizer?: 'gogAuth' | 'nileAuth'
   env?: Record<string, string> | NodeJS.ProcessEnv
   wrappers?: string[]
   onOutput?: (output: string, child: SpawnedChildHandle) => void

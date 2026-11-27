@@ -256,9 +256,7 @@ describe('createRunnerAdapter.callRunner', () => {
     expect(request.commandParts).toEqual(['install', 'Fortnite'])
   })
 
-  it('sends a named sanitizer for the function it matches, and refuses one it does not know', async () => {
-    const gogSanitizer = (line: string) => line
-    const stranger = (line: string) => line
+  it('sends the named sanitizer the caller asks for, and none when it asks for none (88.2-22)', async () => {
     const events: unknown[] = []
     const streams = createRunnerStreams({ kill: () => Promise.resolve(true) })
     const adapter = createRunnerAdapter({
@@ -268,17 +266,18 @@ describe('createRunnerAdapter.callRunner', () => {
       }) as unknown as RustInvokeDeps['requestRustInvoke'],
       streams,
       getRunnerLogWriter: () => new LogWriter(RUNNER_TARGET, false),
-      flushLogs: () => Promise.resolve(),
-      logSanitizers: { gogAuth: gogSanitizer }
+      flushLogs: () => Promise.resolve()
     })
     await adapter.callRunner(['auth'], runnerProps, {
-      logSanitizer: gogSanitizer
+      logSanitizer: 'gogAuth'
     })
+    await adapter.callRunner(['auth'], runnerProps, {
+      logSanitizer: 'nileAuth'
+    })
+    await adapter.callRunner(['list'], runnerProps, {})
     expect(events[0]).toMatchObject({ logSanitizer: 'gogAuth' })
-    await expect(
-      adapter.callRunner(['auth'], runnerProps, { logSanitizer: stranger })
-    ).rejects.toThrow('log sanitizer')
-    expect(events).toHaveLength(1)
+    expect(events[1]).toMatchObject({ logSanitizer: 'nileAuth' })
+    expect(events[2]).not.toHaveProperty('logSanitizer')
   })
 
   it('closes the stream and rejects when the call could not be made', async () => {
@@ -457,10 +456,13 @@ describe('createRunnerAdapter.runWineCommand', () => {
 
   it('is assignable to commandRunner`s own type', () => {
     const r = rig()
+    // `callRunner` is left out of the pick: since 88.2-22 the adapter takes a sanitizer NAME and the TS twin a function, so
+    // their option types differ on that one field by design (the twin goes in 88.2-24).
     const asRunner: Pick<
       CommandRunner,
-      'callRunner' | 'runWineCommand' | 'getWinePath' | 'runScriptForGame'
-    > = r.adapter
+      'runWineCommand' | 'getWinePath' | 'runScriptForGame'
+    > &
+      Pick<typeof r.adapter, 'callRunner'> = r.adapter
     expect(Object.keys(asRunner).sort()).toEqual([
       'callRunner',
       'getWinePath',

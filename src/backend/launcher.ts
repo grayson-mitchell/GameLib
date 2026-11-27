@@ -17,7 +17,8 @@ import type { AppState } from './host/appState'
 import type { AppInfo, AppPaths } from './process/context'
 import { existsSync } from 'graceful-fs'
 
-import { sendGameStatusUpdate, askForceUninstall } from './utils'
+import { sendGameStatusUpdate } from './utils'
+import { askForceUninstall as askForceUninstallShim } from './launchrust/runner'
 import type { StoreLaunchHooks } from 'backend/storeManagers'
 import { hasCapability, isStore } from 'common/storeCapabilities'
 import {
@@ -157,7 +158,10 @@ async function runLaunchEventCallback(
     gameInfo.install.install_path &&
     !existsSync(gameInfo.install.install_path)
   ) {
-    await askForceUninstall(deps, game, appName)
+    await askForceUninstallShim(
+      { requestRustInvoke: deps.requestRustInvoke },
+      { runner, appName }
+    )
 
     sendGameStatusUpdate(deps, {
       appName,
