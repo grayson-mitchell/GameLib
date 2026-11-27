@@ -1,10 +1,12 @@
 //! Recent games against the TS goldens (86-04, SC3 and D-18): every case in
 //! `tests/fixtures/golden/recent/cases.json` runs over a copy of its before-state in a FakeHome,
 //! and the bytes of every file it left must equal the TS oracle's `after/` tree, and the sink must
-//! have seen exactly the payloads the TS `recentGamesChanged` push carried. `sixty-entry-list` is the
-//! one case that is not a TS recording: it is hand-derived from the 50-entry cap (quick 261123-bax,
-//! operator ruling 2026-11-23), because the TS original never trimmed and its oracle was deleted in
-//! 86-24; its note in cases.json says so.
+//! have seen exactly the payloads the TS `recentGamesChanged` push carried. Three cases are not TS
+//! recordings and are hand-derived instead: `sixty-entry-list` (the 50-entry cap, quick 261123-bax,
+//! operator ruling 2026-11-23, because the TS original never trimmed), and
+//! `add-over-empty-appname-entry` and `remove-keeps-empty-appname-entry` (the keep rule, quick
+//! 261127-wem: the TS filter dropped an entry with an empty appName). The TS oracle was deleted in
+//! 86-24; their notes in cases.json say so.
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -491,7 +493,8 @@ fn bad_args_are_rejected_with_a_fixed_literal_and_write_nothing() {
 #[test]
 fn a_concurrent_add_and_remove_both_take_effect() {
     let before = fixtures().join("state/recent/add-over-empty-appname-entry");
-    // [ghost (empty appName), app2]: a remove of app2 and an add of app1 must give [app1].
+    // [ghost (empty appName), app2]: a remove of app2 and an add of app1 must give [app1, ghost],
+    // whichever runs first.
     for round in 0..100 {
         let p = Arc::new(profile(Some(&before)));
         let barrier = Arc::new(std::sync::Barrier::new(2));
@@ -526,7 +529,7 @@ fn a_concurrent_add_and_remove_both_take_effect() {
             .iter()
             .map(|e| e["appName"].as_str().unwrap())
             .collect();
-        assert_eq!(names, ["app1"], "round {round}: an effect was lost");
+        assert_eq!(names, ["app1", ""], "round {round}: an effect was lost");
         // The file agrees with the list, and every change was announced.
         assert_eq!(p.sink.0.lock().unwrap().len(), 2, "round {round}");
     }

@@ -1447,7 +1447,8 @@ mod tests {
 
     #[test]
     fn a_launch_add_and_a_native_remove_on_two_threads_both_land() {
-        // [ghost, app2] + add app1 + remove app2 = [app1], whichever runs first.
+        // [ghost (empty appName), app2]: a remove of app2 and an add of app1 must give [app1, ghost],
+        // whichever runs first.
         for round in 0..30 {
             let home = FakeHome::new("info-dispatch-");
             let ctx = Arc::new(test_ctx(&home, Some("add-over-empty-appname-entry")));
@@ -1473,7 +1474,7 @@ mod tests {
                 .iter()
                 .map(|e| e["appName"].as_str().unwrap())
                 .collect();
-            assert_eq!(names, ["app1"], "round {round}: an effect was lost");
+            assert_eq!(names, ["app1", ""], "round {round}: an effect was lost");
         }
     }
 
