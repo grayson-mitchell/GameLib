@@ -32,15 +32,6 @@ jest.mock('backend/utils', () => ({
 jest.mock('backend/launchAdapters', () => ({
   checkWineBeforeLaunch: (...a: unknown[]) => mockCheckWine(...a)
 }))
-jest.mock('../../../launcher', () => ({
-  getWinePath: jest.fn(),
-  runWineCommand: (...a: unknown[]) => mockRunWine(...a),
-  verifyWinePrefix: (...a: unknown[]) => mockVerifyPrefix(...a)
-}))
-jest.mock('backend/launcher', () => ({
-  runWineCommand: (...a: unknown[]) => mockRunWine(...a),
-  verifyWinePrefix: (...a: unknown[]) => mockVerifyPrefix(...a)
-}))
 jest.mock('backend/logger', () => ({
   getRunnerLogWriter: jest.fn(() => ({})),
   logError: jest.fn(),
