@@ -494,10 +494,15 @@ async fn quit_kill_ends_the_game_tree_and_reads_as_abort() {
         "the kill outlasted the child grace: {:?}",
         started.elapsed()
     );
-    assert!(
-        !probe::is_alive(game[0]) && !probe::is_alive(game[1]),
-        "the game or its child survived the quit-kill"
-    );
+    // The kill answers once the tree is counted gone; the processes read as exited a moment later on
+    // Windows (a terminated process is signalled after its threads end), so the probe from outside
+    // polls to the test's limit instead of reading once. A member that escaped the kill never dies and
+    // still fails here.
+    wait_async(
+        "the game and its child to be gone after the quit-kill",
+        || !probe::is_alive(game[0]) && !probe::is_alive(game[1]),
+    )
+    .await;
 
     let result = finished(run).await;
     assert_eq!(result.error, None, "a kill is not an error: {result:?}");
@@ -553,7 +558,10 @@ async fn a_filtered_tracked_kill_ends_only_the_game_it_names() {
     );
     let result = finished(run).await;
     assert_eq!(result.abort, Some(true));
-    assert!(!probe::is_alive(game[0]) && !probe::is_alive(game[1]));
+    wait_async("the game and its child to be gone", || {
+        !probe::is_alive(game[0]) && !probe::is_alive(game[1])
+    })
+    .await;
 }
 
 /// The abort id reaches a game run too (`run_abort` alone finds only helper runs): the tree ends and the run
@@ -582,7 +590,10 @@ async fn the_abort_id_ends_a_game_run_through_its_handle() {
     );
     let result = finished(run).await;
     assert_eq!(result.abort, Some(true));
-    assert!(!probe::is_alive(game[0]) && !probe::is_alive(game[1]));
+    wait_async("the game and its child to be gone", || {
+        !probe::is_alive(game[0]) && !probe::is_alive(game[1])
+    })
+    .await;
 }
 
 /// Spawns the stub with `args` as a tracked game on a fresh fake profile and registers it the way a run

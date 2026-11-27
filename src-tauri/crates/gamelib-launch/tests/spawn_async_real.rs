@@ -164,8 +164,11 @@ fn a_timeout_kills_the_child_group_and_answers_timed_out_with_a_null_code() {
 fn a_runner_kill_mid_run_answers_aborted_as_a_resolved_result() {
     let s = setup();
     let pidfile = s.rig.root().join("grandchild.pid");
+    // The pause after `started` gives the run's reader time to take the line off the pipe before the
+    // kill: an abort answers the output read so far, and on a loaded runner the kill can land before a
+    // line printed just ahead of it has been read.
     let script = format!(
-        "printf started\nsleep 30 &\necho $! > '{}'\nwait",
+        "printf started\nsleep 0.5\nsleep 30 &\necho $! > '{}'\nwait",
         pidfile.display()
     );
     let rt = runtime();
