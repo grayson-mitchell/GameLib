@@ -51,3 +51,18 @@ The exact alternative, the offset at the expiry's own date, needs `classify`/`ex
 LOOKUP instead of one `LocalZone` (and `parse_js_date` to resolve local time against it). That is a change to the 94-12
 classifier API, so it stays here as the follow-up; nothing in 94-15 forecloses it (the seam already answers "the offset
 at this instant").
+
+## Resolution
+
+Fixed 2026-11-28 in quick task 261128-22q (own-date resolution `9499299de`, classifier tests `2edf6ffd4`).
+
+- The rule. A zone-less or date-only expiry is converted with the host offset at that local time, per ECMA-262
+  `UTC(t)` and V8: a skipped time takes the pre-change offset, a repeated time the earlier instant. This supersedes
+  the offset-now rule of "Decision (94-15)" above and the matching `digest_date` rule from 94-17.
+- The API. `js_date::LocalZone` is `Fixed(secs)` or `Host(&dyn HostZone)`. `HumbleCtx::local_zone()` returns the host
+  form, and the instant-based helper is removed. The library port passes `ctx.local_zone()` to `classify_order`.
+- Parity. `classify.ts` already did this, so there is no TS change and no `recordDelta`. The 94-06 goldens are
+  fixed-offset zones and pass unchanged.
+- Remaining accepted limits. The shell's `ShellHostZone` answers whole minutes and clamps to 1970..9999-12-01, so the
+  104 pre-1900 local-mean-time strings still differ from node. The synthetic DST zones in the tests hold the 2026 (and
+  2018) transitions only.
