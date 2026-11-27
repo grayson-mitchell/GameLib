@@ -48,7 +48,14 @@ const EngineNotices = ({ state }: Props) => {
           <button
             type="button"
             className="button is-text"
-            onClick={openCrossover}
+            onClick={() => {
+              // The click opens a URL and nothing else logs it, so the renderer
+              // writes its own line. Ids and a day count only: no path or payload URL.
+              window.api.logInfo(
+                `[engine-notice] Buy CrossOver clicked runner=${state.runner} appName=${state.appName} daysRemaining=${state.trialDaysRemaining}`
+              )
+              openCrossover()
+            }}
           >
             {t('steam.engine.trial.buy', 'Buy CrossOver')}
           </button>

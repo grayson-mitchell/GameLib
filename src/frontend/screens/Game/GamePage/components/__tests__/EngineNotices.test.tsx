@@ -81,6 +81,19 @@ describe('EngineNotices', () => {
     expect(openExternalUrl).toHaveBeenCalledWith(
       'https://www.codeweavers.com/crossover'
     )
+    expect(logInfo).toHaveBeenCalledTimes(1)
+    expect(logInfo).toHaveBeenCalledWith(
+      '[engine-notice] Buy CrossOver clicked runner=steam appName=730 daysRemaining=5'
+    )
+  })
+
+  it('no-CrossOver Get CrossOver opens the page and is not logged', () => {
+    const els = render(make({ showNoCrossoverNote: true }))
+    button(els, 'Get CrossOver')?.props.onClick?.()
+    expect(openExternalUrl).toHaveBeenCalledWith(
+      'https://www.codeweavers.com/crossover'
+    )
+    expect(logInfo).not.toHaveBeenCalled()
   })
 
   it('trial notice dismiss persists the trial and hides it immediately', async () => {
@@ -92,6 +105,8 @@ describe('EngineNotices', () => {
       kind: 'crossover-trial',
       daysRemaining: 5
     })
+    // Rust logs the dismissal; the renderer writes no line of its own.
+    expect(logInfo).not.toHaveBeenCalled()
     expect(useEngineState.getState().byGame['steam:730']?.showTrialNotice).toBe(
       false
     )
