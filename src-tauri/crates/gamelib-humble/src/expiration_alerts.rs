@@ -14,8 +14,9 @@
 //! - **Gates.** A first-ever sync seeds the baseline silently (`suppress_notifications`); the settings
 //!   switch (D-93) and Steam Deck Game Mode (Pitfall 4) withhold the toast. All three still advance the
 //!   record, so lifting a gate later does not re-fire a date already seen.
-//! - **Text.** Title and body come from `humble.notification.*` through [`Catalog::t`], the same keys,
-//!   defaults and params as the i18next calls, so the escaping is i18next's too (see below).
+//! - **Text.** Title and body come from `humble.notification.*` through [`Catalog::t_unescaped`], the same
+//!   keys, defaults and params as the i18next calls, which each pass `interpolation: { escapeValue: false }`
+//!   (see below).
 //! - **The date** follows the UI language: the resolved language of `ctx.catalog`, the same catalog the
 //!   text renders through, which the shell loads from the profile language. A per-language layout
 //!   measured from CLDR through Intl is picked by it ([`digest_date`]). `en`, an unshipped language and
@@ -23,11 +24,13 @@
 //!   still read in the host zone. The TypeScript this was ported from renders the host's locale
 //!   instead; the divergence ends when that TypeScript is deleted (94-30).
 //!
-//! The body is built with the escaping [`Catalog::t`], exactly as i18next does, so a title or date is
-//! HTML-escaped in the notification text today (`1&#x2F;2&#x2F;2027`). That is parity with the TypeScript
-//! the goldens pin (T-94-31), not a choice: the escaping is a filed defect
-//! (`2026-11-24-humble-digest-text-is-html-escaped`) to fix by moving to [`Catalog::t_unescaped`] together
-//! with the golden.
+//! Title and body render through [`Catalog::t_unescaped`], exactly as the TypeScript's per-call
+//! `interpolation: { escapeValue: false }`, so a title or date reaches the notification as written
+//! (`Tom & Jerry's`, `1/2/2027`). The OS notification is plain text (macOS UNUserNotificationCenter; the
+//! Windows toast escapes its own XML), so i18next's default HTML escaping had shown `Tom &amp; Jerry` and
+//! `1&#x2F;2&#x2F;2027`. Both sides were fixed together with the goldens (quick 261128-3qh,
+//! `2026-11-24-humble-digest-text-is-html-escaped`), so the goldens stay TypeScript-written and no delta
+//! exists.
 //!
 //! Nothing here is wired to a caller yet: the library sync calls it (94-25).
 
@@ -93,6 +96,8 @@ pub enum Withheld {
 }
 
 /// One i18next call the digest makes: the key, the inline default and the params (empty for the titles).
+/// Every digest call also passes `interpolation: { escapeValue: false }`, because the notification is
+/// plain text; [`DigestCall::to_value`] records it.
 #[derive(Debug, Clone, PartialEq)]
 pub struct DigestCall {
     pub key: &'static str,
@@ -101,16 +106,18 @@ pub struct DigestCall {
 }
 
 impl DigestCall {
-    /// The call as the golden records it: `[key, default]`, plus the params when there are any.
+    /// The call as the golden records it: `[key, default, options]`, where the options are the params
+    /// plus `interpolation: { escapeValue: false }` (every digest call passes it, titles included).
     pub fn to_value(&self) -> Value {
-        let mut call = vec![
+        let mut options = self.params.clone();
+        let mut interpolation = Map::new();
+        interpolation.insert("escapeValue".to_string(), Value::Bool(false));
+        options.insert("interpolation".to_string(), Value::Object(interpolation));
+        Value::Array(vec![
             Value::String(self.key.to_string()),
             Value::String(self.default.to_string()),
-        ];
-        if !self.params.is_empty() {
-            call.push(Value::Object(self.params.clone()));
-        }
-        Value::Array(call)
+            Value::Object(options),
+        ])
     }
 }
 
@@ -237,7 +244,8 @@ pub fn detect_and_notify_expiration_transitions(
 }
 
 /// The two i18next calls the digest copy makes: the title, then the body. One transition names the title
-/// and the date; any other number names the count.
+/// and the date; any other number names the count. Each passes `interpolation: { escapeValue: false }`
+/// (see [`DigestCall`]).
 pub fn digest_calls(transitions: &[Transition]) -> [DigestCall; 2] {
     if let [single] = transitions {
         let mut params = Map::new();
@@ -273,11 +281,12 @@ pub fn digest_calls(transitions: &[Transition]) -> [DigestCall; 2] {
 }
 
 /// `buildDigestCopy`: the notification title and body. Reads only each key's title and date (Pitfall 5).
+/// Both render unescaped, as the TypeScript's `interpolation: { escapeValue: false }` does.
 pub fn build_digest_copy(catalog: &Catalog, transitions: &[Transition]) -> (String, String) {
     let [title, body] = digest_calls(transitions);
     (
-        catalog.t(title.key, title.default, &title.params),
-        catalog.t(body.key, body.default, &body.params),
+        catalog.t_unescaped(title.key, title.default, &title.params),
+        catalog.t_unescaped(body.key, body.default, &body.params),
     )
 }
 
@@ -791,7 +800,7 @@ mod tests {
     #[test]
     fn pitfall_5_the_digest_copy_is_built_only_from_the_title_and_the_date() {
         // `AlertKey` has no field for a key value or index, so none can leak; the body is exactly the
-        // template over the title and the date (escaped, as i18next does).
+        // template over the title and the date (verbatim: the notification is plain text).
         let f = fixture();
         let k = some_key("sometitle_steam", "Safe Title", "2026-08-01T00:00:00.000Z");
         detect_and_notify_expiration_transitions(&f.ctx, &[k], &ON);
@@ -799,7 +808,31 @@ mod tests {
         assert_eq!(shown[0].0, "Humble key expiring");
         assert_eq!(
             shown[0].1,
-            "Safe Title's Humble key now expires on 8&#x2F;1&#x2F;2026"
+            "Safe Title's Humble key now expires on 8/1/2026"
+        );
+    }
+
+    #[test]
+    fn a_hostile_title_and_the_date_reach_the_notification_verbatim() {
+        let f = fixture();
+        let k = some_key(
+            "sometitle_steam",
+            "Tom & Jerry's <b>\"Cheese\"</b> / Co",
+            "2026-08-01T00:00:00.000Z",
+        );
+        let out = detect_and_notify_expiration_transitions(&f.ctx, &[k], &ON);
+        let shown = f.ui.shown();
+        assert_eq!(shown.len(), 1);
+        assert_eq!(
+            shown[0].1,
+            "Tom & Jerry's <b>\"Cheese\"</b> / Co's Humble key now expires on 8/1/2026"
+        );
+        // The contrast: the escaping call renders other text, so the choice of call matters.
+        let digest = out.notification.expect("a digest was raised");
+        let body = &digest.calls[1];
+        assert_ne!(
+            Catalog::default().t(body.key, body.default, &body.params),
+            shown[0].1
         );
     }
 
@@ -1094,7 +1127,8 @@ mod tests {
             title.to_value(),
             serde_json::json!([
                 "humble.notification.expiringTitleSingle",
-                "Humble key expiring"
+                "Humble key expiring",
+                { "interpolation": { "escapeValue": false } }
             ])
         );
         assert_eq!(
@@ -1102,7 +1136,11 @@ mod tests {
             serde_json::json!([
                 "humble.notification.expiringBodySingle",
                 "{{title}}'s Humble key now expires on {{date}}",
-                { "title": "T", "date": "1/2/2027" }
+                {
+                    "title": "T",
+                    "date": "1/2/2027",
+                    "interpolation": { "escapeValue": false }
+                }
             ])
         );
         let many: Vec<Transition> = (0..5)
@@ -1118,7 +1156,7 @@ mod tests {
             serde_json::json!([
                 "humble.notification.expiringBodyPlural",
                 "{{count}} Humble keys gained expiration dates",
-                { "count": 5 }
+                { "count": 5, "interpolation": { "escapeValue": false } }
             ])
         );
     }

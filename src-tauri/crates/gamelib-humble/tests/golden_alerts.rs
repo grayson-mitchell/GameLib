@@ -8,8 +8,9 @@
 //!
 //! - seeds `stateBefore` into a FakeHome and builds a context over a clock pinned to the instant the
 //!   TypeScript's fake clock read, with a recording `HumbleUi` and the bundled `public/locales` catalog;
-//! - replays each run and compares the notifications shown (title and body, escaped exactly as i18next
-//!   escapes them), the i18n calls (key, default, params) and the number of notifications;
+//! - replays each run and compares the notifications shown (title and body, rendered exactly as i18next
+//!   renders them: unescaped, because every digest call passes `interpolation: { escapeValue: false }`),
+//!   the i18n calls (key, default and options, the option included) and the number of notifications;
 //! - compares the exact bytes of the store file after the case.
 //!
 //! Two legacy backfill goldens are replayed. `legacy-machine-name-entry-is-backfilled-to-the-composite-key`

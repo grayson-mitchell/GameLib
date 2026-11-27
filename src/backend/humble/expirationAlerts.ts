@@ -102,6 +102,12 @@ export function detectAndNotifyExpirationTransitions(
  * off `HumbleKey` (Pitfall 5) — the internal-only secret-surface fields
  * carried by the cache's internal key shape (see stores.ts) must
  * never be touched here.
+ *
+ * Every call passes `interpolation: { escapeValue: false }`: the OS notification
+ * renders plain text (macOS UNUserNotificationCenter; the Windows toast
+ * XML-escapes its own text), so i18next's default HTML escaping showed
+ * `1&#x2F;2&#x2F;2027` and `Tom &amp; Jerry`. The option is per call, so every
+ * other i18next call still escapes (quick 261128-3qh).
  */
 function buildDigestCopy(newlyExpiring: HumbleKey[]): {
   title: string
@@ -115,12 +121,17 @@ function buildDigestCopy(newlyExpiring: HumbleKey[]): {
     return {
       title: i18next.t(
         'humble.notification.expiringTitleSingle',
-        'Humble key expiring'
+        'Humble key expiring',
+        { interpolation: { escapeValue: false } }
       ),
       body: i18next.t(
         'humble.notification.expiringBodySingle',
         "{{title}}'s Humble key now expires on {{date}}",
-        { title: single.title, date }
+        {
+          title: single.title,
+          date,
+          interpolation: { escapeValue: false }
+        }
       )
     }
   }
@@ -128,12 +139,13 @@ function buildDigestCopy(newlyExpiring: HumbleKey[]): {
   return {
     title: i18next.t(
       'humble.notification.expiringTitlePlural',
-      'Humble keys expiring'
+      'Humble keys expiring',
+      { interpolation: { escapeValue: false } }
     ),
     body: i18next.t(
       'humble.notification.expiringBodyPlural',
       '{{count}} Humble keys gained expiration dates',
-      { count: newlyExpiring.length }
+      { count: newlyExpiring.length, interpolation: { escapeValue: false } }
     )
   }
 }

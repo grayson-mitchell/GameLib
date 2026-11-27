@@ -1,6 +1,6 @@
 {
   "input": {
-    "about": "The single body interpolates the title through the default escaping of i18next",
+    "about": "The single body places the title and the date verbatim: every digest call passes interpolation: { escapeValue: false }, because the OS notification is plain text",
     "locale": "en",
     "dateLocale": "en-US (pinned, the host default is not recorded)",
     "steamDeckGameMode": false
@@ -20,21 +20,29 @@
       "i18nCalls": [
         [
           "humble.notification.expiringTitleSingle",
-          "Humble key expiring"
+          "Humble key expiring",
+          {
+            "interpolation": {
+              "escapeValue": false
+            }
+          }
         ],
         [
           "humble.notification.expiringBodySingle",
           "{{title}}'s Humble key now expires on {{date}}",
           {
             "title": "Tom & Jerry's <b>\"Cheese\"</b>",
-            "date": "1/2/2027"
+            "date": "1/2/2027",
+            "interpolation": {
+              "escapeValue": false
+            }
           }
         ]
       ],
       "notifications": [
         {
           "title": "Humble key expiring",
-          "body": "Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt;'s Humble key now expires on 1&#x2F;2&#x2F;2027"
+          "body": "Tom & Jerry's <b>\"Cheese\"</b>'s Humble key now expires on 1/2/2027"
         }
       ]
     }

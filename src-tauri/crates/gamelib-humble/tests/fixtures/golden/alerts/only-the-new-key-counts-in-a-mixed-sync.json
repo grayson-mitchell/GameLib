@@ -26,21 +26,29 @@
       "i18nCalls": [
         [
           "humble.notification.expiringTitleSingle",
-          "Humble key expiring"
+          "Humble key expiring",
+          {
+            "interpolation": {
+              "escapeValue": false
+            }
+          }
         ],
         [
           "humble.notification.expiringBodySingle",
           "{{title}}'s Humble key now expires on {{date}}",
           {
             "title": "Fake Game Two",
-            "date": "12/31/2027"
+            "date": "12/31/2027",
+            "interpolation": {
+              "escapeValue": false
+            }
           }
         ]
       ],
       "notifications": [
         {
           "title": "Humble key expiring",
-          "body": "Fake Game Two's Humble key now expires on 12&#x2F;31&#x2F;2027"
+          "body": "Fake Game Two's Humble key now expires on 12/31/2027"
         }
       ]
     }

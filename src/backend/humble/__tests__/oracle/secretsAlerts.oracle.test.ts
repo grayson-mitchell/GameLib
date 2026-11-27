@@ -14,7 +14,7 @@
  *
  * alerts: `detectAndNotifyExpirationTransitions` over the real notified-expiration store, a recording
  * notification slice, the real i18next at the sidecar's `en` locale (the `i18next.t` calls are
- * recorded with their params), and the host's own `toLocaleDateString()`. The date the digest shows
+ * recorded with their params and options), and the host's own `toLocaleDateString()`. The date the digest shows
  * is the en-US `M/D/YYYY` the sidecar renders today: a host whose default locale differs fails the
  * case instead of recording its own format.
  *
@@ -789,9 +789,9 @@ alertCases.push({
   ]
 })
 alertCases.push({
-  id: 'a-hostile-title-is-escaped-by-the-digest-copy',
+  id: 'a-hostile-title-renders-verbatim-in-the-digest-copy',
   about:
-    'The single body interpolates the title through the default escaping of i18next',
+    'The single body places the title and the date verbatim: every digest call passes interpolation: { escapeValue: false }, because the OS notification is plain text',
   runs: [{ keys: [humbleKey(1, `Tom & Jerry's <b>"Cheese"</b>`, EXPIRES_A)] }]
 })
 alertCases.push({

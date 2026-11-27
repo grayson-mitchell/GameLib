@@ -44,13 +44,21 @@
       "i18nCalls": [
         [
           "humble.notification.expiringTitlePlural",
-          "Humble keys expiring"
+          "Humble keys expiring",
+          {
+            "interpolation": {
+              "escapeValue": false
+            }
+          }
         ],
         [
           "humble.notification.expiringBodyPlural",
           "{{count}} Humble keys gained expiration dates",
           {
-            "count": 5
+            "count": 5,
+            "interpolation": {
+              "escapeValue": false
+            }
           }
         ]
       ],
