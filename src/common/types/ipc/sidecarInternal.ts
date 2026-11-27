@@ -253,11 +253,12 @@ const runnerSpawnedFrame = z.strictObject({
   pid: z.number().int().positive().max(0xffffffff)
 })
 
-// Phase 88.2 (88.2-20, D-26): the shell's ManagerHooks call into the TS managers. `[op, { runner, appName }]`: the op names the
-// manager action (`game_title`, the title to show a person; `force_uninstall`, remove a game whose folder is gone from the
-// installed list) and the payload the game. The runner is one of the five names and the app name is bounded as the crate bounds
-// it (non-empty, 256), so a forged call is refused at the boundary. Never renderer-reachable.
-const managerHookOps = ['game_title', 'force_uninstall'] as const
+// Phase 88.2 (88.2-20, D-26) and 88.3 (88.3-08): the shell's ManagerHooks call into the TS managers, `[op, payload]`. The
+// op names the manager action and the payload is one strict object per op. 88.2's two ops carry `{ runner, appName }`
+// (`game_title`, the title to show a person; `force_uninstall`, remove a game whose folder is gone from the installed
+// list); 88.3's eight funnel ops carry the payloads `launch_dispatch.rs` sends (88.3-06). The runner is one of the five
+// names and the app name is bounded as the crate bounds it (non-empty, 256), so a forged call is refused at the boundary.
+// Never renderer-reachable.
 const managerHookRunner = z.enum([
   'gog',
   'legendary',
@@ -269,8 +270,129 @@ const managerHookGame = z.strictObject({
   runner: managerHookRunner,
   appName: nonEmptyString(256)
 })
+const hookGameOps = ['game_title', 'force_uninstall'] as const
+const hookFunnelOps = [
+  'launch_facts',
+  'launch',
+  'sync_saves',
+  'set_presence',
+  'clear_presence',
+  'persist_bottle_wine_version',
+  'update_gog_playtime',
+  'wine_settings_write'
+] as const
+
+/** One ISO instant (`Date.prototype.toISOString` text) the shell sends for a playtime post. */
+const hookInstant = z
+  .string()
+  .min(1)
+  .max(64)
+  .refine((text) => !Number.isNaN(new Date(text).getTime()), 'not an instant')
+
+/**
+ * The per-game log's state the funnel hands the `launch` op (`LogHandOffWire`): the typed `launch` target of the same game
+ * the call names, the writer's own switch and whether the rotation is still owed (true only when the writer is not
+ * disabled and nobody claimed it yet).
+ */
+const hookLogHandOff = z.strictObject({
+  target: z.strictObject({
+    kind: z.literal('game'),
+    appName: nonEmptyString(256),
+    runner: managerHookRunner,
+    type: z.literal('launch')
+  }),
+  disabled: z.boolean(),
+  rotate: z.boolean()
+})
+
+const hookLaunchPayload = z
+  .strictObject({
+    runner: managerHookRunner,
+    appName: nonEmptyString(256),
+    // The Play's launch option, opaque here (a `LaunchOption` the manager reads); an absent one is absent, never null.
+    launchArguments: z.record(z.string(), z.unknown()).optional(),
+    args: z.array(z.string().max(32768)).max(4096).optional(),
+    skipVersionCheck: z.boolean().optional(),
+    log: hookLogHandOff
+  })
+  .refine(
+    ({ runner, appName, log }) =>
+      log.target.runner === runner && log.target.appName === appName,
+    'log target is another game'
+  )
+
+const hookSyncSavesPayload = z.strictObject({
+  runner: managerHookRunner,
+  appName: nonEmptyString(256),
+  direction: z.enum(['--skip-upload', '--skip-download']),
+  // The game settings' `savesPath` as stored: a game with none sends null (the TS passed undefined).
+  savesPath: z.string().max(32768).nullable(),
+  gogSaves: z
+    .array(
+      z.object({ name: z.string().max(4096), location: z.string().max(32768) })
+    )
+    .max(256)
+})
+
+const hookClearPresencePayload = z.strictObject({ runner: managerHookRunner })
+
+// The wine values are opaque here and narrowed to a wine installation by the handler (T-88.1-40, T-88.3-18).
+const hookPersistBottleWinePayload = z.strictObject({
+  runner: managerHookRunner,
+  appName: nonEmptyString(256),
+  wine: z.unknown()
+})
+
+const hookGogPlaytimePayload = z.strictObject({
+  appName: nonEmptyString(256),
+  start: hookInstant,
+  end: hookInstant
+})
+
+const hookWineSettingsWritePayload = z.strictObject({
+  appName: nonEmptyString(256),
+  global: z.unknown().optional(),
+  game: z.unknown().optional()
+})
+
+/** The eight funnel ops (88.3-06's `SidecarManagerHooks`), each `[op, strict payload]`. */
+const funnelHookCall = z.union([
+  z.tuple([z.literal('launch_facts'), managerHookGame]),
+  z.tuple([z.literal('launch'), hookLaunchPayload]),
+  z.tuple([z.literal('sync_saves'), hookSyncSavesPayload]),
+  z.tuple([z.literal('set_presence'), managerHookGame]),
+  z.tuple([z.literal('clear_presence'), hookClearPresencePayload]),
+  z.tuple([
+    z.literal('persist_bottle_wine_version'),
+    hookPersistBottleWinePayload
+  ]),
+  z.tuple([z.literal('update_gog_playtime'), hookGogPlaytimePayload]),
+  z.tuple([z.literal('wine_settings_write'), hookWineSettingsWritePayload])
+])
+/**
+ * One `launchManagerCall` as a union of strict per-op tuples (an op enum and one strict payload per op): the handler's
+ * second validation, whose result is typed per op.
+ */
+export const launchManagerCallUnion = z.union([
+  z.tuple([z.literal('game_title'), managerHookGame]),
+  z.tuple([z.literal('force_uninstall'), managerHookGame]),
+  funnelHookCall
+])
+
 /** The op names a `launchManagerCall` carries, in the order the shell sends them. */
-export const LAUNCH_MANAGER_OPS = managerHookOps
+export const LAUNCH_MANAGER_OPS = [...hookGameOps, ...hookFunnelOps] as const
+
+/** One funnel hook call (`[op, payload]`) as validated off the wire (88.3-08). */
+export type FunnelHookCall = z.infer<typeof funnelHookCall>
+
+// The channel table takes a tuple, so the boundary's schema is a pair (the op, any payload) whose check is the union above:
+// the same strictness at the boundary, and a wrong payload for the op is refused the same way.
+const launchManagerCall = z
+  .tuple([z.enum([...hookGameOps, ...hookFunnelOps]), z.unknown()])
+  .refine(
+    (args) => launchManagerCallUnion.safeParse(args).success,
+    'launchManagerCall: payload does not fit the op'
+  )
 
 const noArgs = z.tuple([])
 
@@ -286,8 +408,9 @@ export const sidecarInternalInvokeArgs = {
   depotManifestRequestCode: z.tuple([depotManifestRequestCodeRequest]),
   // Shell-originated: the Rust steam poll tells Node about sidecar-owned state changes (D-02).
   steamPollStateEvent: z.tuple([steamPollStateEvent]),
-  // Shell-originated: the Rust launch crate asks a TS manager for a game's title or to remove a game (88.2-18, 88.2-20, D-26).
-  launchManagerCall: z.tuple([z.enum(managerHookOps), managerHookGame])
+  // Shell-originated: the Rust launch crate asks a TS manager for a game's title, to remove a game (88.2-18, 88.2-20, D-26) or
+  // one of the funnel's eight hook ops (88.3-06, 88.3-08).
+  launchManagerCall
 }
 
 export const sidecarInternalSendArgs = {

@@ -104,6 +104,7 @@ import { registerStoreEmbedFlows } from './storeEmbedFlowRegistration'
 import { registerDepotHostFlows } from './depotHostRegistration'
 import { registerSteamPollEventFlows } from './steamPollEventRegistration'
 import { managerDepsFromServices } from '../services/managerDeps'
+import { isCLINoGui } from '../constants/environment'
 import type { GameCommandSource } from '../services/gameCommandFacts'
 import { resolveWinetricksTarget } from '../services/winetricksTarget'
 import { gatherGameCommandFacts } from '../services/gameCommandFacts'
@@ -414,10 +415,16 @@ export function registerHandlers(deps: {
   registerEngineSelectionView(ipc)
   // A Steam bridge launch's deadline fired in Rust (87-54, D-17): the callback the bridge stored when it armed runs.
   registerEngineDeadlineFired(ipc)
-  // The Rust launch crate's ManagerHooks (88.2-20, D-26): it asks a manager for a game's title and to remove a game whose
-  // folder is gone, over `launchManagerCall`. Leaves with the managers in 92.
+  // The Rust launch crate's ManagerHooks (88.2-20, 88.3-08, D-26): it asks a manager for a game's title, to remove a game
+  // whose folder is gone and, for the launch funnel, the eight funnel ops, over `launchManagerCall`. Leaves with the
+  // managers in 92.
   registerLaunchManagerHooks(ipc, {
-    libraryManagers: deps.services.managers.library
+    libraryManagers: deps.services.managers.library,
+    launchHooks: deps.services.managers.launchHooks,
+    config: deps.services.config,
+    gameConfigs: deps.services.gameConfigs,
+    stores: deps.services.stores,
+    isCLINoGui
   })
   // The runner's output and spawn frames (88.2-21, D-02): the shell sends `runnerOutput` and `runnerSpawned` on the sidecar's
   // stdin ahead of a watched call's reply, and the one stream table the runner and spawnAsync adapters opened their streams in

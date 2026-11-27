@@ -3,6 +3,7 @@ import os from 'os'
 import { LogPrefix, RunnerToLogPrefixMap } from './constants'
 import { LogForwarder } from './forwarder'
 import LogWriter from './targetWriter'
+import type { LogHandOff } from './targetWriter'
 
 import type { Runner } from 'common/types'
 import type {
@@ -200,6 +201,16 @@ async function createGameLogWriter(
 }
 
 /**
+ * The facade the manager's `launch()` writes through when the Rust launch funnel owns the per-game log (88.3-08, D-29): the
+ * target and the switch are the funnel's, and the rotation is owed exactly when the funnel's hand-off said so (`rotate`),
+ * so the funnel and the manager rotate the file once between them. `rotationClaimed` then tells the funnel whether this
+ * facade took it.
+ */
+function gameLogWriterFromHandOff(log: LogHandOff): LogWriter {
+  return new LogWriter(log.target, log.disabled, { rotationOwed: log.rotate })
+}
+
+/**
  * The 'logger' boot step's marker. The general log has no writer to create any more: it is the
  * forwarder (`logForwarder` above), usable from module load, and the shell owns the file. Kept so
  * the boot step order and the `initHeadless as initLogger` import stay as they were.
@@ -246,6 +257,7 @@ export {
   logErrorSettled,
   getRunnerLogWriter,
   createGameLogWriter,
+  gameLogWriterFromHandOff,
   LogPrefix,
   RunnerToLogPrefixMap
 }
