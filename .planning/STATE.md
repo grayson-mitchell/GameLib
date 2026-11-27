@@ -2,18 +2,18 @@
 gsd_state_version: "1.0"
 milestone: v0.11
 milestone_name: Node Sidecar Retirement
-current_phase: "88.3"
-current_phase_name: Launch funnel, re-adoption and the live gate
+current_phase: "88.2"
+current_phase_name: Command runner and game processes
 status: executing
-stopped_at: Completed 88.2-25-PLAN.md
-last_updated: "2026-11-27T09:29:48.173Z"
+stopped_at: Completed 88.2-26-PLAN.md
+last_updated: "2026-11-27T09:54:36.472Z"
 last_activity: 2026-11-27
-last_activity_desc: Phase 88.3 execution started
-state_head: 685d0237217fbdc528b89c246d9386c4666d9f85
+last_activity_desc: Phase 88.2 execution started
+state_head: 57bebd489235aeb0fe5b1559f969fdbe8c4b5b02
 progress:
   total_phases: 26
   completed_phases: 23
-  total_plans: 317
+  total_plans: 323
   completed_plans: 531
   percent: 88
 ---
@@ -25,7 +25,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-25)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 88.3 — Launch funnel, re-adoption and the live gate
+**Current focus:** Phase 88.2 — Command runner and game processes
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -76,10 +76,10 @@ See: .planning/PROJECT.md (updated 2026-11-25)
 
 ## Current Position
 
-Phase: 88.3 (Launch funnel, re-adoption and the live gate) — EXECUTING
-Plan: 1 of 22
-Status: Executing Phase 88.3
-Last activity: 2026-11-27 — Phase 88.3 execution started
+Phase: 88.2 (Command runner and game processes) — EXECUTING
+Plan: 27 of 31
+Status: Ready to execute
+Last activity: 2026-11-27 — Phase 88.2 execution started
 Progress: [████████████████░░░░] 204/257 plans ([█████████░] 88%)
 
 ## Native-Install Arc Phase Map (21–25)
@@ -572,6 +572,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 88.2 P23 | 45 min | 2 tasks | 12 files |
 | Phase 88.2 P24 | 46 min | 2 tasks | 38 files |
 | Phase 88.2 P25 | 85min | 3 tasks | 8 files |
+| Phase 88.2 P26 | 14 min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -1296,6 +1297,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 88.2]: 88.2-24: RunnerProps and WineCommandResult live in runnerAdapter.ts; the managers' ProcessRunner dep is dropped from sideload only (nile still hands its deps to NileSetupDeps)
 - [Phase 88.2]: 88.2-25: operator chose push for the 88.2 CI proof; CI-only fix commits land without asking again
 - [Phase 88.2]: 88.2-25: flagged assumption A5 disproved on windows-latest (named Game Job name dies with its last handle); Windows kill_game_tree falls back to a parent-linked descendant walk inside gamelib-proc
+- [Phase 88.2]: 88.2-26: handle_exited re-export carries allow(dead_code) until 88.2-27 uses it (clippy -D warnings rejects an unused pub(crate) re-export; expect would itself warn once used)
 
 ### Pending Todos
 
@@ -1585,8 +1587,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-27T08:08:28.876Z
-Stopped at: Completed 88.2-25-PLAN.md
+Last session: 2026-11-27T09:54:32.312Z
+Stopped at: Completed 88.2-26-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
