@@ -942,7 +942,9 @@ export default class GOGGame implements Game {
         env: commandEnv,
         wrappers,
         logMessagePrefix: `Launching ${gameInfo.title}`,
-        logWriters: [logWriter]
+        logWriters: [logWriter],
+        // D-05: the game outlives GameLib's helpers, so Rust spawns it as a Game-class process.
+        spawnClass: 'game'
       })
 
     if (comet) {

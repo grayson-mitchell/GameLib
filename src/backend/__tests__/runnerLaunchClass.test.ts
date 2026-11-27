@@ -145,16 +145,67 @@ describe('the launch sites name the game class (T-88.2-29)', () => {
     expect(body).toContain('legendary.runRunnerCommand(')
     expect(body.match(GAME_CLASS)).toHaveLength(1)
   })
+
+  it('gog launch() sets it on its runner call', () => {
+    const body = bodyFrom(source('gog', 'games.ts'), 'async launch(')
+    expect(body).toContain('gog.runRunnerCommand(')
+    expect(body.match(GAME_CLASS)).toHaveLength(1)
+  })
+
+  it('nile launch() sets it on its runner call', () => {
+    const body = bodyFrom(source('nile', 'games.ts'), 'async launch(')
+    expect(body).toContain('nile.runRunnerCommand(')
+    expect(body.match(GAME_CLASS)).toHaveLength(1)
+  })
+
+  it('the sideload launch sets it on its native callRunner and on its wine runWineCommand', () => {
+    const body = bodyFrom(
+      source('storeManagerCommon', 'games.ts'),
+      'export async function launchGame('
+    )
+    const native = body.slice(
+      body.indexOf('commandRunner.callRunner('),
+      body.indexOf('commandRunner.runWineCommand(')
+    )
+    const wine = body.slice(body.indexOf('commandRunner.runWineCommand('))
+    expect(native.match(GAME_CLASS)).toHaveLength(1)
+    expect(wine.match(GAME_CLASS)).toHaveLength(1)
+    // On the wine command it sits in `options`, where the adapter reads it.
+    expect(wine).toMatch(/options:\s*\{[^}]*spawnClass:\s*'game'/)
+  })
 })
 
 describe('no other call sets the game class (T-88.2-29)', () => {
-  it('only the launch sites of the manager code name spawnClass at all', () => {
-    const named = walk(MANAGERS)
-      .filter((file) =>
-        /spawnClass/.test(stripSourceComments(readFileSync(file, 'utf8')))
+  it('exactly the five launch sites name spawnClass in the manager code: no install, auth, list or bridge call does', () => {
+    const counts: Record<string, number> = {}
+    for (const file of walk(MANAGERS)) {
+      const found = stripSourceComments(readFileSync(file, 'utf8')).match(
+        /spawnClass/g
       )
-      .map((file) => file.slice(MANAGERS.length + 1))
-      .sort()
-    expect(named).toEqual(['legendary/games.ts'])
+      if (found) counts[file.slice(MANAGERS.length + 1)] = found.length
+    }
+    expect(counts).toEqual({
+      'gog/games.ts': 1,
+      'legendary/games.ts': 1,
+      'nile/games.ts': 1,
+      'storeManagerCommon/games.ts': 2
+    })
   })
+
+  it.each(['gog', 'nile'] as const)(
+    'a %s install through the adapter sends no spawn class',
+    async (name) => {
+      const r = rig()
+      await r.adapter.callRunner(
+        ['install', 'game'],
+        { ...runnerProps, name, bin: name },
+        { abortId: 'game' }
+      )
+      const request = rustInvokeArgs[RUST_LAUNCH_RUNNER_CALL].parse(
+        r.invokes[0]?.args
+      )[0]
+      expect(request.runner.name).toBe(name)
+      expect(request).not.toHaveProperty('spawnClass')
+    }
+  )
 })

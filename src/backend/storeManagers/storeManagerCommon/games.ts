@@ -183,7 +183,9 @@ export async function launchGame(
           wrappers,
           logWriters: [logWriter],
           logMessagePrefix: LogPrefix.Backend,
-          trackKey: appName
+          trackKey: appName,
+          // D-05: the game outlives GameLib's helpers, so Rust spawns it as a Game-class process.
+          spawnClass: 'game'
         }
       )
 
@@ -223,7 +225,9 @@ export async function launchGame(
         wrappers,
         logWriters: [logWriter],
         logMessagePrefix: LogPrefix.Backend,
-        trackKey: appName
+        trackKey: appName,
+        // D-05: the game outlives GameLib's helpers, so Rust spawns it as a Game-class process.
+        spawnClass: 'game'
       }
     })
 
