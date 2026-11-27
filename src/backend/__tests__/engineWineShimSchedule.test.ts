@@ -293,11 +293,13 @@ const DEADLINE_SHIM_IMPORTERS: readonly string[] = [
 // 88.2-16: the importers of `launchrust/runner.ts`, every one counted per file. The adapter calls `runnerCall`. 88.2-19: the
 // sidecar bootstrap imports `gamesRunning` and `trackedKillAll` for the quit handler (D-27). 88.2-20: `handlers.ts` imports
 // `registerLaunchManagerHooks` to answer the shell's hook calls. 88.2-21: the bootstrap also builds the kill-aware stream
-// table and the abort forwarding (`runnerKill`, `runnerAbort`), `handlers.ts` registers the output listener.
+// table and the abort forwarding (`runnerKill`, `runnerAbort`), `handlers.ts` registers the output listener,
+// and the spawnAsync adapter calls `spawnAsyncRun` and `runnerKill`.
 const RUNNER_SHIM_IMPORTERS: readonly string[] = [
   'src/backend/runnerAdapter.ts',
   'src/backend/sidecar/bootstrap.ts',
-  'src/backend/sidecar/handlers.ts'
+  'src/backend/sidecar/handlers.ts',
+  'src/backend/spawnAsync.ts'
 ]
 
 const COMMAND_RUNNER_IMPORTERS: readonly string[] = [

@@ -1876,8 +1876,15 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
               nileAuth: nileAuthLogSanitizer
             }
           })
+        // The same stream table: a spawnAsync caller's `onOutput` and abort ride the same frames and kill as the runner's.
         state.services.spawnAsync =
-          prebuilt.spawnAsync ?? createSpawnAsync({ runner: ctx.runner })
+          prebuilt.spawnAsync ??
+          createSpawnAsync({
+            get requestRustInvoke() {
+              return requireHost(state).requestRustInvoke
+            },
+            streams: runnerStreams
+          })
         state.services.quit =
           prebuilt.quit ??
           createQuitHandler({

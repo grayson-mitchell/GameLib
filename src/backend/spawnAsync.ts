@@ -1,22 +1,29 @@
 /**
- * `spawnAsync` as a thin caller of `ProcessRunner.run` (Phase 66.1, MH-5 / D-11).
+ * `spawnAsync` as an adapter over the `spawnAsyncRun` shim (Phase 88.2, 88.2-21, D-02, D-30). It keeps the signature and the
+ * result of the legacy `utils.spawnAsync` and runs the child in Rust (`launch_spawn_async`, Helper class) instead of in
+ * `ProcessRunner`. It is an interim adapter over a scheduled shim (`spawnAsyncRun`, deletedBy 98): the 29 importers keep this
+ * entry until they call the shim themselves.
  *
- * Same signature and result shape as the legacy `utils.spawnAsync`: it resolves
- * `{ code, stdout, stderr }` where stdout/stderr are the last 50 chunks joined, rejects on a
- * spawn error, and has NO timeout of its own because callers run installers, archive moves and
- * cxbottle for hours. A caller that wants a cap passes `timeout` (milliseconds); `signal` aborts.
+ * Same contract as before: it resolves `{ code, stdout, stderr, timedOut, aborted }` where stdout/stderr are the last 50 chunks
+ * joined (Rust keeps them), rejects on a spawn error, and has NO timeout of its own because callers run installers, archive
+ * moves and cxbottle for hours. A caller that wants a cap passes `timeout` (milliseconds); `signal` aborts.
  *
- * Contract (A-WR-4, 66.1 review) -- how a stopped child is reported:
- * - timeout: the runner kills the child with SIGKILL (not SIGTERM, which the legacy
- *   child_process `timeout` option sent), resolves with `code: null` and `timedOut: true`.
- * - abort: resolves (never rejects with AbortError, which the legacy implementation did) with
- *   `code: null` and `aborted: true`. Callers that must treat abort as cancellation check
- *   `aborted` or `signal.aborted`.
- * - output truncation is not reported here: stdout/stderr are the last 50 chunks.
+ * - option allow-list: an option no production caller passes is a `TypeError` here, before anything is sent;
+ * - `env` is the whole environment of the child (Rust's replace-env); absent, the child inherits the shell's environment;
+ * - `timeout` passes through (a `NaN` or `Infinity` travels as `null`, which the schema takes and Rust reads as no timeout);
+ *   the timeout kills the child with SIGKILL and resolves `code: null`, `timedOut: true`;
+ * - `signal`: an abort sends `runnerKill(streamId)` and resolves (never rejects with an AbortError) `code: null`,
+ *   `aborted: true`. A signal that is already aborted resolves so without starting a child (a helper-class `spawnAsync`
+ *   reports no spawned frame to kill after, and a kill sent right behind the call could reach Rust before the run is
+ *   registered);
+ * - `onOutput` is called with every chunk of both streams, in order, from the frames the shell sends ahead of the reply.
  *
- * Value imports are limited to `node:*` so this module never joins the utils import cycle.
+ * Value imports are limited to the shim module and `node:*`, so this module never joins the utils import cycle.
  */
-import type { ProcessRunner } from './process/types'
+import { runnerKill, spawnAsyncRun } from './launchrust/runner'
+import type { SpawnAsyncRequest } from './launchrust/runner'
+import type { RustInvokeDeps } from './host/rustInvokeDeps'
+import type { RunnerStreams } from './runnerStream'
 
 /** The only SpawnOptions keys any production caller passes (enumerated in the 66.1-06 SUMMARY). */
 interface SpawnAsyncOptions {
@@ -51,19 +58,52 @@ const ALLOWED_KEYS: readonly string[] = [
   'windowsHide'
 ]
 
-// Local copy of utils.memoryLog (last `limit` chunks); kept here so this module stays narrow.
-const lastChunks = (limit = 50) => {
-  const lines: string[] = []
-  return {
-    push: (chunk: string) => {
-      lines.unshift(chunk)
-      if (lines.length > limit) lines.length = limit
-    },
-    join: () => lines.toReversed().join('')
-  }
+/**
+ * How long an abort that reached Rust before the run was registered keeps asking: the call is processed on a worker thread
+ * within milliseconds, so a kill that answers "no such run" is retried briefly. Bounded (`KILL_RETRIES` times), its timer is
+ * unref'd, and it stops as soon as the call settles, so it leaves no in-flight work behind (the sidecar exit contract).
+ */
+const KILL_RETRY_MS = 25
+const KILL_RETRIES = 40
+
+/** What the adapter takes: the boot's transport and the stream table the shell's output frames are fed into. */
+export interface SpawnAsyncDeps extends RustInvokeDeps {
+  streams: RunnerStreams
 }
 
-export function createSpawnAsync(deps: { runner: ProcessRunner }): SpawnAsync {
+/** The environment as a string map; a variable with no value is left out (a child never sees `undefined`). */
+function envRecord(env: NodeJS.ProcessEnv): Record<string, string> {
+  const record: Record<string, string> = {}
+  for (const [key, value] of Object.entries(env)) {
+    if (typeof value === 'string') record[key] = value
+  }
+  return record
+}
+
+/** Narrows Rust's answer to the result: an answer of any other shape is an error at the call, never a malformed result. */
+function settleResult(reply: unknown): Awaited<ReturnType<SpawnAsync>> {
+  if (
+    typeof reply === 'object' &&
+    reply !== null &&
+    'stdout' in reply &&
+    typeof reply.stdout === 'string' &&
+    'stderr' in reply &&
+    typeof reply.stderr === 'string' &&
+    'code' in reply &&
+    (reply.code === null || typeof reply.code === 'number')
+  ) {
+    return {
+      code: reply.code,
+      stdout: reply.stdout,
+      stderr: reply.stderr,
+      timedOut: 'timedOut' in reply && reply.timedOut === true,
+      aborted: 'aborted' in reply && reply.aborted === true
+    }
+  }
+  throw new Error('spawnAsync: the reply was not a command result')
+}
+
+export function createSpawnAsync(deps: SpawnAsyncDeps): SpawnAsync {
   return async (command, args, options = {}, onOutput) => {
     for (const key of Object.keys(options)) {
       if (!ALLOWED_KEYS.includes(key)) {
@@ -72,43 +112,65 @@ export function createSpawnAsync(deps: { runner: ProcessRunner }): SpawnAsync {
         )
       }
     }
-    const stdout = lastChunks()
-    const stderr = lastChunks()
-    const capped =
-      typeof options.timeout === 'number' &&
-      Number.isFinite(options.timeout) &&
-      options.timeout > 0
-
-    const result = await deps.runner.run(command, args, {
-      cwd: options.cwd,
-      env: options.env,
-      replaceEnv: options.env !== undefined,
-      ...(capped
-        ? { timeoutMs: options.timeout }
-        : {
-            timeout: {
-              none: true as const,
-              reason:
-                'spawnAsync callers (installers, archive moves, cxbottle, ps) run unbounded; callers own cancellation'
-            }
-          }),
-      signal: options.signal,
-      windowsHide: options.windowsHide ?? false,
-      onStdout: (chunk) => {
-        onOutput?.(chunk)
-        stdout.push(chunk)
-      },
-      onStderr: (chunk) => {
-        onOutput?.(chunk)
-        stderr.push(chunk)
+    const { signal } = options
+    if (signal?.aborted) {
+      return {
+        code: null,
+        stdout: '',
+        stderr: '',
+        timedOut: false,
+        aborted: true
       }
-    })
-    return {
-      code: result.code,
-      stdout: stdout.join(),
-      stderr: stderr.join(),
-      timedOut: result.timedOut,
-      aborted: result.aborted
+    }
+
+    // A stream is opened to hear the output, and to name the run a kill ends (an abort).
+    const streamId =
+      onOutput || signal
+        ? deps.streams.open(
+            onOutput ? { onOutput: (chunk) => onOutput(chunk) } : {}
+          )
+        : undefined
+
+    const request: SpawnAsyncRequest = { command, args: [...args] }
+    if (streamId !== undefined) request.streamId = streamId
+    if (onOutput) request.observe = true
+    if (options.cwd !== undefined) request.cwd = options.cwd
+    if (options.env !== undefined) request.env = envRecord(options.env)
+    if (typeof options.timeout === 'number') {
+      request.timeoutMs = Number.isFinite(options.timeout)
+        ? options.timeout
+        : null
+    }
+    if (options.windowsHide !== undefined)
+      request.windowsHide = options.windowsHide
+
+    let settled = false
+    let retryTimer: ReturnType<typeof setTimeout> | undefined
+    const kill = (attempt: number): void => {
+      if (settled || streamId === undefined) return
+      void runnerKill(deps, streamId).then(
+        (ended) => {
+          // False: the run is not registered yet (or has ended); ask again briefly unless the call has settled.
+          if (ended === true || settled || attempt + 1 >= KILL_RETRIES) return
+          retryTimer = setTimeout(() => kill(attempt + 1), KILL_RETRY_MS)
+          retryTimer.unref()
+        },
+        () => undefined
+      )
+    }
+    const onAbort = () => kill(0)
+    signal?.addEventListener('abort', onAbort, { once: true })
+
+    try {
+      return settleResult(await spawnAsyncRun(deps, request))
+    } catch (error) {
+      // A spawn error rejects with Rust's text, as the child's `error` event did: always an Error.
+      throw error instanceof Error ? error : new Error(String(error))
+    } finally {
+      settled = true
+      if (retryTimer) clearTimeout(retryTimer)
+      signal?.removeEventListener('abort', onAbort)
+      if (streamId !== undefined) deps.streams.close(streamId)
     }
   }
 }

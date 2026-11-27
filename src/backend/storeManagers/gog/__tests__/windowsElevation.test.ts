@@ -16,7 +16,8 @@ import { tmpdir } from 'os'
 import { join } from 'path'
 
 import { initHeadless } from 'backend/logger'
-import { createSpawnAsync, type SpawnAsync } from 'backend/spawnAsync'
+import type { SpawnAsync } from 'backend/spawnAsync'
+import { createRunnerSpawnAsync } from 'backend/testUtils/runnerSpawnAsync'
 import { createRealRunner } from 'backend/testUtils/realRunner'
 import {
   MAX_BATCH_STATEMENT_CHARS,
@@ -265,7 +266,7 @@ fs.writeFileSync(process.argv[2], JSON.stringify({ args: process.argv.slice(3), 
 winDescribe('261120-uzn real PowerShell round trip (not elevated)', () => {
   jest.setTimeout(60_000)
   const harness = createRealRunner()
-  const spawnAsync = createSpawnAsync({ runner: harness.runner })
+  const spawnAsync = createRunnerSpawnAsync(harness.runner)
   // A name with a space, an apostrophe and a wildcard-looking [x].
   const folder = mkdtempSync(join(tmpdir(), "gl o'brien [x] "))
 
@@ -318,7 +319,7 @@ fs.writeFileSync(process.argv[2], JSON.stringify({ args: process.argv.slice(4), 
 winDescribe('261120-uzn batch round trip (not elevated)', () => {
   jest.setTimeout(60_000)
   const harness = createRealRunner()
-  const spawnAsync = createSpawnAsync({ runner: harness.runner })
+  const spawnAsync = createRunnerSpawnAsync(harness.runner)
   const folder = mkdtempSync(join(tmpdir(), "gl o'brien [b] "))
 
   afterAll(() => {

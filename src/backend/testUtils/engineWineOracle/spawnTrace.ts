@@ -21,7 +21,8 @@
  * Only `run` and `runSync` are traced so far. `spawnLongLived` (winetricks progress) is a later
  * plan's seam and throws by name until then.
  */
-import { createSpawnAsync, type SpawnAsync } from 'backend/spawnAsync'
+import type { SpawnAsync } from 'backend/spawnAsync'
+import { createRunnerSpawnAsync } from 'backend/testUtils/runnerSpawnAsync'
 import { FAKE_HOME_ENV_KEYS } from 'backend/testUtils/fakeHomeProfile'
 import type {
   ChildHandle,
@@ -280,7 +281,7 @@ export function createSpawnTracer(options: SpawnTracerOptions): SpawnTracer {
 
   return {
     runner,
-    spawnAsync: createSpawnAsync({ runner }),
+    spawnAsync: createRunnerSpawnAsync(runner),
     records,
     expectAllConsumed() {
       const left = script.filter((e) => !e.used && !e.step.repeat)
