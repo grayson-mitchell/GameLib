@@ -13,6 +13,7 @@
 
 pub mod builders;
 pub mod ctx;
+pub mod funnel;
 pub mod game;
 pub mod hooks;
 pub mod prepare;

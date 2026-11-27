@@ -9,6 +9,9 @@ use gamelib_info::ctx::InfoCtx;
 use gamelib_knownfix::ctx::KnownFixCtx;
 use gamelib_wine::ctx::WineCtx;
 
+use crate::funnel::flights::LaunchFlights;
+use crate::funnel::shell::{FunnelShell, PowerState};
+use crate::funnel::steps::FunnelSteps;
 use crate::game::registry::TrackedRegistry;
 use crate::game::spawn::{GameSpawner, ProcGameSpawner};
 use crate::hooks::ManagerHooks;
@@ -57,6 +60,16 @@ pub struct LaunchCtx {
     pub registry: Arc<TrackedRegistry>,
     /// How a game-class run starts its game: `gamelib_proc::spawn_game_tracked` unless a test sets a scripted one.
     pub game_spawner: Arc<dyn GameSpawner>,
+    /// The launches in flight (88.3-04, D-04): the one single-flight table, keyed `<runner>:<appName>`.
+    pub flights: Arc<LaunchFlights>,
+    /// The window and the display-sleep blocker (88.3-04). `None` (the CLI, a headless run): no window to hide,
+    /// no blocker to hold, no app to exit.
+    pub shell: Option<Arc<dyn FunnelShell>>,
+    /// The in-process steps of a launch (88.3-04). `None` is [`crate::funnel::steps::CtxFunnelSteps`], the real
+    /// functions; a test sets a recorder through [`LaunchCtx::with_steps`].
+    pub steps: Option<Arc<dyn FunnelSteps>>,
+    /// The display-sleep blocker this context holds (the TS launcher's per-instance `PowerState`).
+    pub power: Arc<PowerState>,
 }
 
 impl LaunchCtx {
@@ -80,6 +93,10 @@ impl LaunchCtx {
             hooks: None,
             registry: Arc::new(TrackedRegistry::new()),
             game_spawner: Arc::new(ProcGameSpawner),
+            flights: Arc::new(LaunchFlights::new()),
+            shell: None,
+            steps: None,
+            power: Arc::new(PowerState::new()),
         }
     }
 
@@ -122,6 +139,18 @@ impl LaunchCtx {
     /// The same context with the shell's wine-manager facts.
     pub fn with_manager(mut self, manager: Arc<dyn WineManagerFacts>) -> LaunchCtx {
         self.manager = Some(manager);
+        self
+    }
+
+    /// The same context with the shell's window and wake-lock hooks.
+    pub fn with_shell(mut self, shell: Arc<dyn FunnelShell>) -> LaunchCtx {
+        self.shell = Some(shell);
+        self
+    }
+
+    /// The same context with other funnel steps (a test's recorder).
+    pub fn with_steps(mut self, steps: Arc<dyn FunnelSteps>) -> LaunchCtx {
+        self.steps = Some(steps);
         self
     }
 }

@@ -30,9 +30,10 @@ tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "sync"
 tokio-util = "0.7"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-# Only the stub-game binary's `shell` mode builds a context over a `StoreHost`, as the CLI does (88.2-10).
-# A workspace crate already in the lockfile, behind the `harness` feature so no shipped build carries it.
-gamelib-store = { path = "../gamelib-store", optional = true }
+# The funnel records play time through the shared `StoreHost` (the `store/timestamp` row, 88.3-04); the
+# stub-game binary's `shell` mode also builds a context over one, as the CLI does (88.2-10). A workspace crate
+# already in the lockfile (gamelib-engine and gamelib-info depend on it too).
+gamelib-store = { path = "../gamelib-store" }
 
 # The command-line echo stub (`GetCommandLineW`) behind tests/windows_quoting.rs (88.2-14). windows-sys 0.61.2 is
 # already locked for gamelib-proc, steamfiles, steampoll, depot and info, and `Win32_System_Environment` is a
@@ -45,7 +46,7 @@ windows-sys = { version = "0.61", features = ["Win32_System_Environment"], optio
 testing = ["gamelib-knownfix/testing"]
 # The stub-game and command-line-echo binaries behind tests/stub_game.rs and tests/windows_quoting.rs. Never part
 # of a shipped build.
-harness = ["testing", "dep:gamelib-store", "dep:windows-sys"]
+harness = ["testing", "dep:windows-sys"]
 
 [[bin]]
 name = "gamelib-launch-stub-game"

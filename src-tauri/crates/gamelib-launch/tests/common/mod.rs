@@ -3,6 +3,8 @@
 //! pieces `golden_wine_launch.rs` carries (that file is left as it was); each test file uses a subset.
 #![allow(dead_code)]
 
+pub mod funnel_rig;
+
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
