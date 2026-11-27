@@ -100,6 +100,32 @@ fn class_of(site: &str) -> String {
         .to_string()
 }
 
+/// The recorded cases are POSIX, so on Windows a path the code joined under a profile root
+/// (`<HOME>\.steam\steam`, `<TOOLS>\runtimes\umu\umu_run.py`) has its separators folded to `/` after the
+/// placeholder. A path that does not start at a placeholder (`C:\Games\Game One\save`) is left alone.
+/// Nothing changes off Windows.
+fn fold_windows_separators(text: String, tokens: &[&'static str]) -> String {
+    if !cfg!(windows) {
+        return text;
+    }
+    let mut out = String::with_capacity(text.len());
+    let mut rest = text.as_str();
+    while let Some((at, token)) = tokens
+        .iter()
+        .filter_map(|t| rest.find(t).map(|i| (i, *t)))
+        .min_by_key(|(i, _)| *i)
+    {
+        let end = at + token.len();
+        out.push_str(&rest[..end]);
+        rest = &rest[end..];
+        let run = rest.find(char::is_whitespace).unwrap_or(rest.len());
+        out.push_str(&rest[..run].replace('\\', "/"));
+        rest = &rest[run..];
+    }
+    out.push_str(rest);
+    out
+}
+
 // ---------------------------------------------------------------------------------------------
 // The profile a case runs in
 // ---------------------------------------------------------------------------------------------
@@ -208,7 +234,8 @@ impl Rig {
                     for (token, root) in table {
                         s = s.replace(root.as_str(), token);
                     }
-                    Value::String(s)
+                    let tokens: Vec<&'static str> = table.iter().map(|(t, _)| *t).collect();
+                    Value::String(fold_windows_separators(s, &tokens))
                 }
                 Value::Array(items) => {
                     Value::Array(items.into_iter().map(|v| walk(v, table)).collect())
