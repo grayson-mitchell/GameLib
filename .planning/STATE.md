@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: "88.2"
 current_phase_name: Command runner and game processes
 status: executing
-stopped_at: Completed 88.2-21-PLAN.md
-last_updated: "2026-11-27T01:06:27.279Z"
+stopped_at: Completed 88.2-22-PLAN.md
+last_updated: "2026-11-27T01:19:30.924Z"
 last_activity: 2026-11-26
 last_activity_desc: Phase 88.2 execution started
-state_head: eaf6995095ae309a24f17f944b3f24e1c61cb602
+state_head: a33a365bbf9e8ccbed147b4bb8e173eff357cc7d
 progress:
   total_phases: 25
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-25)
 ## Current Position
 
 Phase: 88.2 (Command runner and game processes) — EXECUTING
-Plan: 22 of 25
+Plan: 23 of 25
 Status: Ready to execute
 Last activity: 2026-11-26 — Phase 88.2 execution started
 Progress: [████████████████░░░░] 204/257 plans ([█████████░] 92%)
@@ -568,6 +568,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 88.2 P19 | 12 min | 2 tasks | 6 files |
 | Phase 88.2 P20 | 12 min | 2 tasks | 16 files |
 | Phase 88.2 P21 | 55min | 3 tasks | 17 files |
+| Phase 88.2 P22 | 40 min | 2 tasks | 16 files |
 
 ## Accumulated Context
 
@@ -1282,6 +1283,9 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 88.2]: 88.2-19: the quit dialog also opens for a running game read from the Rust registry (a failed read asks) and Yes ends it through trackedKillAll between killAllTracked and abortAll (D-27); leader death left unchanged and recorded: a game whose leader exits while a grandchild lives reads as not running
 - [Phase 88.2]: 88.2-20: registerLaunchManagerHooks validates launchManagerCall a second time and refuses naming at most a sanitised op, never the runner or app name; launch_ask_force_uninstall is unbounded like the dialog channels (T-88.2-27, T-88.2-48)
 - [Phase 88.2]: 88.2-21: the boot builds the runner adapter and spawnAsync adapter over one runnerStreams table; only the five launch sites set spawnClass 'game' (D-05); an already-aborted spawnAsync signal resolves aborted without a call
+- [Phase 88.2]: D-02: logSanitizer is the name of a Rust sanitizer (gogAuth | nileAuth); the adapter forwards it with no identity table, and the TS runner twin keeps a function-typed option until 88.2-24 deletes it
+- [Phase 88.2]: D-07: legendary, nile and sideload stop() await trackedKill with the old filters; the Steam direct launch keeps the TS killTracked (Phase 90's)
+- [Phase 88.2]: 82 amendment: gog's deleted-folder call and the launcher's folder-missing prompt go through the askForceUninstall shim, leaving errorHandler and the utils askForceUninstall callerless for 88.2-24
 
 ### Pending Todos
 
@@ -1568,8 +1572,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-27T01:06:19.541Z
-Stopped at: Completed 88.2-21-PLAN.md
+Last session: 2026-11-27T01:19:23.707Z
+Stopped at: Completed 88.2-22-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
