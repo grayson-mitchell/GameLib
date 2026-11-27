@@ -30,6 +30,7 @@ use gamelib_core::shutdown::Shutdown;
 use gamelib_shortcuts::add::{add_with_desktop, steam_registration_wanted, AddArgs, AddOutcome};
 use gamelib_shortcuts::ctx::{Platform, ShortcutPaths, ShortcutsCtx};
 use gamelib_shortcuts::game::{ShortcutGame, ShortcutSettings};
+use gamelib_shortcuts::launch_url::launch_url;
 use gamelib_shortcuts::notice;
 use gamelib_shortcuts::paths::shortcut_files;
 use gamelib_shortcuts::testing::RecordingUi;
@@ -358,9 +359,61 @@ fn seed_icon(profile: &Profile, app_name: &str) {
         .expect("write the icon");
 }
 
+/// The recorded macOS `run.sh` deltas (`golden/text/deltas.json`): case id to the reason the Rust bytes differ
+/// from the TypeScript's. The coverage checks on the delta set live in `golden_text.rs`.
+fn text_deltas() -> BTreeMap<String, String> {
+    let text = fs::read_to_string(golden_dir("text").join("deltas.json"))
+        .expect("golden/text/deltas.json is readable");
+    serde_json::from_str(&text).expect("deltas.json is an object from case id to reason")
+}
+
+/// The case the Rust is expected to reproduce: the golden itself, unless `id` has a recorded delta, which is
+/// one substitution in the TS's own `run.sh` bytes (the single-quoted launch URL with every `'` written
+/// `%27`). Panics when the delta does not apply. Copied from `golden_text.rs` like `golden_dir` and `Profile`.
+fn with_text_delta(id: &str, case: &Value) -> Value {
+    let Some(reason) = text_deltas().remove(id) else {
+        return case.clone();
+    };
+    assert!(!reason.trim().is_empty(), "{id}: the delta has no reason");
+    assert_eq!(
+        case["platform"].as_str(),
+        Some("darwin"),
+        "{id}: a run.sh delta on a non-darwin case"
+    );
+    let input = &case["input"];
+    let ts_url = launch_url(
+        input["appName"].as_str().expect("appName"),
+        input["runner"].as_str().expect("runner"),
+        true,
+    );
+    assert!(
+        ts_url.contains('\''),
+        "{id}: the delta is unused, the TS URL holds no apostrophe"
+    );
+    let anchor = format!("'{ts_url}'");
+    let mut out = case.clone();
+    let entries = out["tree"]["Applications"]
+        .as_array_mut()
+        .expect("Applications entries");
+    let entry = entries
+        .iter_mut()
+        .find(|e| e["path"].as_str().is_some_and(|p| p.ends_with("run.sh")))
+        .expect("a recorded run.sh");
+    let utf8 = entry["utf8"].as_str().expect("run.sh utf8").to_string();
+    assert_eq!(
+        utf8.matches(&anchor).count(),
+        1,
+        "{id}: the TS's quoted URL is not in run.sh exactly once"
+    );
+    let fixed = format!("'{}'", ts_url.replace('\'', "%27"));
+    entry["utf8"] = Value::String(utf8.replacen(&anchor, &fixed, 1));
+    out
+}
+
 /// One text case through the op. `Ok(true)` when the host could not make the Desktop link and the case was
 /// skipped.
 async fn replay_text(id: &str, case: &Value) -> Result<bool, String> {
+    let case = &with_text_delta(id, case);
     let profile = Profile::new();
     let platform = match case["platform"].as_str().expect("platform") {
         "darwin" => Platform::Mac,

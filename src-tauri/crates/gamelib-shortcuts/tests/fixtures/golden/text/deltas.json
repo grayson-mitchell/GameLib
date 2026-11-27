@@ -1,0 +1,10 @@
+{
+  "darwin-everything-gog": "quick 261128-9fj: run.sh writes ' as %27 inside its single-quoted launch URL (encodeURIComponent leaves it, so the TS run.sh closed its quotes early); every other byte is the TS's",
+  "darwin-everything-legendary": "quick 261128-9fj: run.sh writes ' as %27 inside its single-quoted launch URL (encodeURIComponent leaves it, so the TS run.sh closed its quotes early); every other byte is the TS's",
+  "darwin-everything-nile": "quick 261128-9fj: run.sh writes ' as %27 inside its single-quoted launch URL (encodeURIComponent leaves it, so the TS run.sh closed its quotes early); every other byte is the TS's",
+  "darwin-everything-sideload": "quick 261128-9fj: run.sh writes ' as %27 inside its single-quoted launch URL (encodeURIComponent leaves it, so the TS run.sh closed its quotes early); every other byte is the TS's",
+  "darwin-everything-steam": "quick 261128-9fj: run.sh writes ' as %27 inside its single-quoted launch URL (encodeURIComponent leaves it, so the TS run.sh closed its quotes early); every other byte is the TS's",
+  "darwin-plain-r-quotes": "quick 261128-9fj: run.sh writes ' as %27 inside its single-quoted launch URL (encodeURIComponent leaves it, so the TS run.sh closed its quotes early); every other byte is the TS's",
+  "darwin-single-quote-legendary": "quick 261128-9fj: run.sh writes ' as %27 inside its single-quoted launch URL (encodeURIComponent leaves it, so the TS run.sh closed its quotes early); every other byte is the TS's",
+  "darwin-single-quote-legendary-icon": "quick 261128-9fj: run.sh writes ' as %27 inside its single-quoted launch URL (encodeURIComponent leaves it, so the TS run.sh closed its quotes early); every other byte is the TS's"
+}

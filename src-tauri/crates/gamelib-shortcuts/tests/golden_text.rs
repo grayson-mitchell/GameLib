@@ -12,10 +12,16 @@
 //! refuses (FND-02, D-22), so those cases replay against the recorded delta: the item is left and
 //! the Desktop link is reported refused.
 //!
+//! The apostrophe cases (`golden/text/deltas.json`, 8 darwin cases) are the TS writing `'` raw inside the
+//! single-quoted launch URL of `run.sh`, which closes the quotes early (quick 261128-9fj). The Rust writes it
+//! `%27`, so those cases replay against the TS bytes with that one substitution applied
+//! ([`with_text_delta`]), never against a run.sh typed here; no recorded case file is edited. The delta set
+//! is held to the cases' own inputs by `the_text_deltas_are_exactly_the_apostrophe_cases`.
+//!
 //! A host that cannot make symlinks (a Windows account without the privilege) compares everything
 //! but the link and says so on stderr; on CI that is a panic, not a skip.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -349,9 +355,85 @@ fn setting(input: &Value, key: &str) -> bool {
     input["settings"][key].as_bool().unwrap_or(false)
 }
 
+/// The recorded `run.sh` deltas (`golden/text/deltas.json`, in `recordDelta`'s format): case id to the
+/// reason the Rust bytes differ from the TypeScript's.
+fn text_deltas() -> BTreeMap<String, String> {
+    let text = fs::read_to_string(golden_dir("text").join("deltas.json"))
+        .expect("golden/text/deltas.json is readable");
+    serde_json::from_str(&text).expect("deltas.json is an object from case id to reason")
+}
+
+/// The golden's macOS `run.sh` entry.
+fn run_sh_entry(case: &Value) -> &Value {
+    case["tree"]["Applications"]
+        .as_array()
+        .and_then(|entries| {
+            entries
+                .iter()
+                .find(|e| e["path"].as_str().is_some_and(|p| p.ends_with("run.sh")))
+        })
+        .expect("a recorded run.sh")
+}
+
+/// The `run.sh` line of a golden that holds the command.
+fn run_sh_command_line(case: &Value) -> String {
+    run_sh_entry(case)["utf8"]
+        .as_str()
+        .expect("run.sh utf8")
+        .lines()
+        .find(|line| line.contains("--no-gui"))
+        .expect("a --no-gui line")
+        .to_string()
+}
+
+/// The case the Rust is expected to reproduce: the golden itself, unless `id` has a recorded delta. A
+/// delta is exactly one substitution in the TS's own bytes: the single-quoted launch URL, with every `'`
+/// written `%27`. It panics when the delta does not apply (empty reason, not darwin, no `'` in the TS
+/// URL, or the TS URL not found in `run.sh` exactly once).
+fn with_text_delta(id: &str, case: &Value) -> Value {
+    let Some(reason) = text_deltas().remove(id) else {
+        return case.clone();
+    };
+    assert!(!reason.trim().is_empty(), "{id}: the delta has no reason");
+    assert_eq!(
+        platform_of(case),
+        "darwin",
+        "{id}: a run.sh delta on a non-darwin case"
+    );
+    let input = &case["input"];
+    let ts_url = launch_url(
+        input["appName"].as_str().expect("appName"),
+        input["runner"].as_str().expect("runner"),
+        true,
+    );
+    assert!(
+        ts_url.contains('\''),
+        "{id}: the delta is unused, the TS URL holds no apostrophe"
+    );
+    let anchor = format!("'{ts_url}'");
+    let mut out = case.clone();
+    let entries = out["tree"]["Applications"]
+        .as_array_mut()
+        .expect("Applications entries");
+    let entry = entries
+        .iter_mut()
+        .find(|e| e["path"].as_str().is_some_and(|p| p.ends_with("run.sh")))
+        .expect("a recorded run.sh");
+    let utf8 = entry["utf8"].as_str().expect("run.sh utf8").to_string();
+    assert_eq!(
+        utf8.matches(&anchor).count(),
+        1,
+        "{id}: the TS's quoted URL is not in run.sh exactly once"
+    );
+    let fixed = format!("'{}'", ts_url.replace('\'', "%27"));
+    entry["utf8"] = Value::String(utf8.replacen(&anchor, &fixed, 1));
+    out
+}
+
 /// One macOS text case: what `addShortcuts` does on darwin, then the tree comparison. Returns
 /// whether the Desktop symlink could not be made on this host (and was therefore not compared).
 fn replay_darwin(id: &str, case: &Value) -> Result<bool, String> {
+    let case = &with_text_delta(id, case);
     let profile = Profile::new();
     let input = &case["input"];
     let title = input["title"].as_str().expect("title");
@@ -613,6 +695,46 @@ fn the_subshell_hostile_run_sh_is_byte_identical() {
         replay_darwin(id, case).unwrap_or_else(|e| panic!("{e}"));
     }
     println!("hostile subshell cases replayed: {}", hostile.len());
+}
+
+/// The delta set is the apostrophe cases and nothing else, computed from the cases' own inputs: a delta
+/// that goes unused, or an apostrophe case without one, fails here.
+#[test]
+fn the_text_deltas_are_exactly_the_apostrophe_cases() {
+    let cases = text_cases();
+    let deltas = text_deltas();
+    let has_apostrophe = |case: &Value| {
+        ["appName", "runner"]
+            .iter()
+            .any(|key| case["input"][key].as_str().unwrap_or("").contains('\''))
+    };
+    let want: BTreeSet<&String> = cases
+        .iter()
+        .filter(|(_, c)| platform_of(c) == "darwin" && has_apostrophe(c))
+        .map(|(id, _)| id)
+        .collect();
+    let got: BTreeSet<&String> = deltas.keys().collect();
+    assert!(!got.is_empty(), "no run.sh deltas are recorded");
+    assert_eq!(
+        got, want,
+        "deltas.json does not list exactly the apostrophe cases"
+    );
+    for (id, reason) in &deltas {
+        assert!(!reason.trim().is_empty(), "{id}: an empty reason");
+        let case = &cases[id];
+        let before = run_sh_command_line(case).matches('\'').count();
+        let after = run_sh_command_line(&with_text_delta(id, case))
+            .matches('\'')
+            .count();
+        assert!(
+            before > 2,
+            "{id}: the TS run.sh holds {before} quotes, a delta is unused"
+        );
+        assert_eq!(
+            after, 2,
+            "{id}: the delta-applied run.sh must hold only the URL's pair"
+        );
+    }
 }
 
 /// The Windows `.lnk` goldens carry the percent-encoded URL the TS built for each hostile name:
