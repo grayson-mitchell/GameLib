@@ -23,6 +23,8 @@ use gamelib_knownfix::ctx::KnownFixCtx;
 use gamelib_launch::ctx::LaunchCtx;
 use gamelib_launch::dispatch;
 use gamelib_launch::game::capture::capture_file;
+use gamelib_launch::game::end::{wait_end, Ended, GameEnd};
+use gamelib_launch::game::registry::{GameEntry, RunIds, TrackedRegistry};
 use gamelib_launch::runner::call_runner::{
     call_runner, ExecResult, RunnerCallArgs, RunnerHost, RunnerProps, SpawnClassArg,
 };
@@ -32,10 +34,11 @@ use gamelib_log::frame::FrameTarget;
 use gamelib_log::{Entry, Level, Prefix, TargetBatch};
 use gamelib_proc::kill_tree::kill_game_tree;
 use gamelib_proc::probe;
-use gamelib_proc::KillOutcome;
+use gamelib_proc::{spawn_game_tracked, KillOutcome};
 use gamelib_store::host::StoreHost;
 use gamelib_testutil::FakeHome;
 use gamelib_wine::ctx::WineCtx;
+use tokio_util::sync::CancellationToken;
 
 const STUB: &str = env!("CARGO_BIN_EXE_gamelib-launch-stub-game");
 const POLL: Duration = Duration::from_millis(100);
@@ -580,4 +583,50 @@ async fn the_abort_id_ends_a_game_run_through_its_handle() {
     let result = finished(run).await;
     assert_eq!(result.abort, Some(true));
     assert!(!probe::is_alive(game[0]) && !probe::is_alive(game[1]));
+}
+
+/// Spawns the stub with `args` as a tracked game on a fresh fake profile and registers it the way a run
+/// does, answering the registry entry `wait_end` reads. The leader is put in `strays` at once, so a failing
+/// arm leaves nothing behind.
+fn register_stub(home: &FakeHome, args: &[&str], strays: &mut Strays) -> GameEntry {
+    let mut cmd = std::process::Command::new(STUB);
+    cmd.args(args);
+    home.apply(&mut cmd);
+    let handle = spawn_game_tracked(cmd, None).expect("spawn the stub game");
+    strays.add(handle.pid);
+    let registry = TrackedRegistry::new();
+    let ids = RunIds {
+        runner: "sideload".to_string(),
+        key: "wait-end".to_string(),
+        abort_id: "wait-end-abort".to_string(),
+        stream_id: String::new(),
+    };
+    let id = registry.register_game(ids, 0, CancellationToken::new(), handle);
+    registry.entry(id).expect("the entry just registered")
+}
+
+/// WR-07: a game that exits with 259 (`STILL_ACTIVE`, which is also a legal exit code) is over. On Windows
+/// the liveness read took 259 for "still running" and `wait_end` never ended; there the status must read
+/// 259 too. On unix the exit status is 259 truncated to 3 and the run settles regardless, so the arm only
+/// discriminates on Windows.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn an_exit_code_of_259_ends_the_run() {
+    let home = FakeHome::new("stub-game-259-");
+    let mut strays = Strays(Vec::new());
+    let entry = register_stub(&home, &["exit", "--code", "259"], &mut strays);
+    let never = CancellationToken::new();
+
+    let ended = tokio::time::timeout(LIMIT, wait_end(&entry, GameEnd::Close, &never))
+        .await
+        .expect("the run of a game that exited with 259 never ended");
+    match ended {
+        Ended::Finished(status) => {
+            #[cfg(windows)]
+            assert_eq!(status.and_then(|s| s.code()), Some(259));
+            #[cfg(not(windows))]
+            let _ = status;
+        }
+        Ended::Shutdown => panic!("nothing cancelled the run, yet it read as a shutdown"),
+    }
+    assert!(entry.ended.load(std::sync::atomic::Ordering::SeqCst));
 }

@@ -271,6 +271,24 @@ mod tests {
         assert_eq!(start_time(pid), first);
     }
 
+    /// WR-07: 259 is `STILL_ACTIVE` as `GetExitCodeProcess` reports it, and also a legal exit code. A
+    /// process that exited with it is over. The `Child` stays held so the pid cannot be recycled.
+    #[cfg(windows)]
+    #[test]
+    fn an_exit_code_of_259_is_not_alive() {
+        let mut child = std::process::Command::new("cmd")
+            .args(["/C", "exit 259"])
+            .spawn()
+            .expect("spawn");
+        let pid = child.id();
+        let status = child.wait().expect("wait");
+        assert_eq!(status.code(), Some(259));
+        assert!(
+            !is_alive(pid),
+            "a process that exited with 259 is not alive"
+        );
+    }
+
     #[cfg(unix)]
     #[test]
     fn a_fresh_group_is_alive_and_a_killed_one_is_not() {
