@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: "88.3"
 current_phase_name: Launch funnel, re-adoption and the live gate
 status: executing
-stopped_at: Completed 88.3-03-PLAN.md
-last_updated: "2026-11-27T20:18:55.273Z"
+stopped_at: Completed 88.3-15-PLAN.md
+last_updated: "2026-11-27T20:21:39.696Z"
 last_activity: 2026-11-27
 last_activity_desc: Phase 88.3 execution started
-state_head: e0bdb237ee301af1d7735a2509adcec051fab59b
+state_head: 0443d12815cbf3cd6d8a7bead88bf91a60469e94
 progress:
   total_phases: 26
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-25)
 ## Current Position
 
 Phase: 88.3 (Launch funnel, re-adoption and the live gate) — EXECUTING
-Plan: 4 of 22
+Plan: 5 of 22
 Status: Ready to execute
 Last activity: 2026-11-27 — Phase 88.3 execution started
 Progress: [████████████████░░░░] 204/257 plans ([█████████░] 88%)
@@ -580,6 +580,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 88.3 P01 | 1h | 2 tasks | 4 files |
 | Phase 88.3 P02 | 1h | 2 tasks | 3 files |
 | Phase 88.3 P03 | ~1h | 2 tasks | 7 files |
+| Phase 88.3 P15 | 10min | 2 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -1313,6 +1314,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 88.3]: 88.3-01: golden/funnel is recorded from the real TS funnel only (59 cases); the launch hook's writer state is derived from earlier frames, never handOff(); six D-20 candidates listed in the SUMMARY for 88.3-05 to file
 - [Phase 88.3]: 88.3-02: golden/single_flight, runs_for_me and window_raise recorded from the real TS; the runs-for-me vectors test stays live as the TS-side pin
 - [Phase 88.3]: 88.3-03: identify answers NotOurs for a live leader with another stamp before any member is read; kill_adopted_tree re-proves the member (alive, stamp, pgid) immediately before it signals; Windows Job arm only works while a handle to the Game Job is held
+- [Phase 88.3]: 88.3-15: a launcher stub is proven stale by swapping its factory for one that throws and running the suite; pass means never loaded
 
 ### Pending Todos
 
@@ -1606,8 +1608,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-27T20:18:51.634Z
-Stopped at: Completed 88.3-03-PLAN.md
+Last session: 2026-11-27T20:21:36.018Z
+Stopped at: Completed 88.3-15-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
