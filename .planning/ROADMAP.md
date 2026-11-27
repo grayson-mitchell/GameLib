@@ -198,7 +198,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 90.1: Steam install, update, uninstall and the depot path** — not planned
 - [ ] **Phase 90.2: Steam launch, Mac Steam adoption and the router** — not planned (runs the 90/89 live gate)
 - [ ] **Phase 91: Epic (legendary) runner** — not planned
-- [ ] **Phase 92: GOG, Amazon and sideloaded runners** — not planned
+- [ ] **Phase 92: GOG runner** — not planned (split 2026-11-27, `92-CONTEXT.md` D-01; 92.1 shares the CONTEXT)
+- [ ] **Phase 92.1: Amazon and sideloaded runners** — not planned
 - [ ] **Phase 93: Download manager** — not planned
 - [ ] **Phase 94: Humble Bundle and shortcuts** — 32 plans in 18 waves; planned 2026-11-24 (Lane C, its own worktree, parallel with 87; D-01, D-02)
 - [ ] **Phase 95: Steam bridge install** — not planned
@@ -322,7 +323,7 @@ Milestone v0.11 Node Sidecar Retirement. Planned 2026-11-17 alongside v0.10; sta
 **Lanes** (set 2026-11-24 from the research's own dependency rules and a check of the TS imports; each lane runs in its own worktree):
 
 - **Lane A — Steam (sets the pace):** 87 → 88 → 88.1 → 88.2 → 88.3 → 89 → 90 → 90.1 → 90.2 → 95 → 96 → 97
-- **Lane B — runners:** after 88.3: 91 → 92 → 93 (93 also waits for 90.1, because the download queue calls Steam install code: `cancelDelete`, `queueHeadRevalidation`, `gameRequirements`)
+- **Lane B — runners:** after 88.3: 91 → 92 → 92.1 → 93 (93 also waits for 90.1, because the download queue calls Steam install code: `cancelDelete`, `queueHeadRevalidation`, `gameRequirements`)
 - **Lane C — Humble and shortcuts:** 94, startable now (Humble imports only Steam *types*; shortcuts use `process/context` and the Rust steamfiles)
 - **Join:** 98 after 93, 94 and 97; then 99.
 
@@ -1202,29 +1203,44 @@ Plans:
 Plans:
 - [ ] TBD (run /gsd-plan-phase 91 to break down)
 
-### Phase 92: GOG, Amazon and sideloaded runners
+### Phase 92: GOG runner
 
-**Goal**: GOG, Amazon and sideloaded apps run from Rust over the bundled binaries.
-**Requirements**: STO-02, STO-03
+**Goal**: GOG runs from Rust over the bundled gogdl and comet binaries.
+**Requirements**: STO-02 (split 2026-11-27, `92-CONTEXT.md` D-01, which also governs 92.1)
 **Depends on**: Phase 91
-**Research flag**: Needs deeper research (gogdl/comet/nile binary formats, Windows kill and quoting)
+**Research flag**: Needs deeper research (gogdl/comet binary formats, save-sync output, Windows kill and quoting)
 **Success Criteria** (what must be TRUE):
-  1. A user can sign in to GOG, see the library, install, update, repair, move and uninstall a game, launch it, and sync cloud saves
-  2. A user can sign in to Amazon, see the library, and install, launch and uninstall an Amazon game
-  3. A sideloaded app can be added, launched and removed as before
-  4. Discord rich presence is absent by the recorded operator decision, not by accident
-  5. The gog, nile and sideload TypeScript, `storeManagerCommon`, `save_sync` and their sidecar registrations are deleted in this phase
+  1. A user can sign in to GOG, see the library, install, update, repair, move and uninstall a game, launch it, and sync cloud saves (goldens and three-OS CI in 92; the live proof is the 92.1 gate, D-02)
+  2. Discord rich presence is absent by the recorded operator decision, not by accident: the dead Settings toggle is removed and a gate test fails if a Discord client or toggle returns (D-08)
+  3. The gog TypeScript, `save_sync` and their sidecar registrations are deleted in this phase
 
 **Plans:** 0 plans
 
 Plans:
 - [ ] TBD (run /gsd-plan-phase 92 to break down)
 
+### Phase 92.1: Amazon and sideloaded runners (INSERTED)
+
+**Goal**: Amazon and sideloaded apps run from Rust, and the `ManagerHooks` channel is gone.
+**Requirements**: STO-03 (`92-CONTEXT.md` D-01)
+**Depends on**: Phase 92
+**Research flag**: Needs deeper research (nile binary format); shares `92-CONTEXT.md`
+**Success Criteria** (what must be TRUE):
+  1. A user can sign in to Amazon, see the library, and install, launch and uninstall an Amazon game
+  2. A sideloaded app can be added, launched and removed as before
+  3. The nile and sideload TypeScript, `storeManagerCommon`, the `ManagerHooks` channel and their sidecar registrations are deleted in this phase
+  4. The operator gate for 92 and 92.1 together (`92.1-HUMAN-UAT.md`, written before 92's coding) passes on a signed build installed over the previous signed build (D-02)
+
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 92.1 to break down)
+
 ### Phase 93: Download manager
 
 **Goal**: The download queue runs in Rust and keeps every behaviour users rely on.
 **Requirements**: STO-04
-**Depends on**: Phases 90.1, 92 (the queue calls Steam install code that 90.1 ports)
+**Depends on**: Phases 90.1, 92.1 (the queue calls Steam install code that 90.1 ports)
 **Research flag**: Needs deeper research (regression scenarios from `steam-dm-queue-wedge` and `gog-download-resume-from-zero`)
 **Success Criteria** (what must be TRUE):
   1. Downloads can be paused and resumed, and a download interrupted by quitting resumes after relaunch without restarting from zero

@@ -81,7 +81,7 @@ Every requirement below is a "still works after the port" guarantee unless it sa
 | STM-02 | Phase 90 | Pending |
 | STO-01 | Phase 91 | Pending |
 | STO-02 | Phase 92 | Pending |
-| STO-03 | Phase 92 | Pending |
+| STO-03 | Phase 92.1 | Pending |
 | STO-04 | Phase 93 | Pending |
 | SVC-04 | Phase 94 | Pending |
 | SVC-05 | Phase 94 | Pending |
