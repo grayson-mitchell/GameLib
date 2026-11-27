@@ -4,13 +4,18 @@
 //! One bundle is written, into `~/Applications`; the Desktop item is a plain symlink to it, so the
 //! macOS Apps list shows the game once. The `Info.plist` and `run.sh` templates are the TypeScript's
 //! own, whitespace and literal tabs included, and are pinned byte for byte by the `golden/text`
-//! replay (D-14). `run.sh` double-quotes the executable path and single-quotes the percent-encoded
-//! URL (T-34.5-C6-17), so `;`, `$()`, a backtick or a space in a name cannot run anything.
+//! replay (D-14), except the `run.sh` cases listed in `tests/fixtures/golden/text/deltas.json`.
+//! `run.sh` double-quotes the executable path and single-quotes the percent-encoded URL
+//! (T-34.5-C6-17), so `;`, `$()`, a backtick or a space in a name cannot run anything. `'` is written
+//! `%27` in that URL: it is the one character `encodeURIComponent` leaves that a single-quoted word
+//! cannot hold.
 //!
-//! One defect of that template is reproduced on purpose: `encodeURIComponent` leaves `'` alone, so
-//! an app name holding an apostrophe closes the single quotes early and the launch breaks (not an
-//! injection as measured; todo 2026-11-24-macos-shortcut-run-sh-breaks-on-single-quote-in-app-name).
-//! The goldens pin those bytes, so the port keeps them until that todo is decided.
+//! The TypeScript template's apostrophe breakout is fixed here, and is a deliberate divergence from
+//! the TS bytes: `encodeURIComponent` leaves `'` alone, so an app name holding one closed the single
+//! quotes early and the launch broke. The divergence is recorded in `golden/text/deltas.json` and
+//! fixed by quick 261128-9fj, which closed todo
+//! `.planning/todos/completed/2026-11-24-macos-shortcut-run-sh-breaks-on-single-quote-in-app-name.md`.
+//! `src/backend/protocol.ts`'s `searchParams.get` decodes the `%27` back to `'`.
 
 use std::fs;
 use std::path::{Path, PathBuf};

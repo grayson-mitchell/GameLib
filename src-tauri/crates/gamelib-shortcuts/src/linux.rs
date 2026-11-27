@@ -10,7 +10,7 @@
 //! - `Exec=` carries `appName` and `runner` unencoded (the macOS and Windows arms percent-encode
 //!   them). A name holding a space or `&` therefore breaks the launch, and a `Name=` line holding a
 //!   newline starts a new key. Not fixed here: the goldens pin the bytes and the fix is a decision
-//!   for todo 2026-11-24-macos-shortcut-run-sh-breaks-on-single-quote-in-app-name.
+//!   for todo 2026-11-28-linux-desktop-exec-writes-app-name-and-runner-unencoded.
 //! - The parent folder is not created: a missing Desktop or applications folder is a failed write,
 //!   as in the TypeScript.
 

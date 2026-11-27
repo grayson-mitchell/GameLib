@@ -38,3 +38,28 @@ Decide in the Rust port (94-07 and the shortcut writer plan) whether the Rust wr
 say what they are) or fixes both, and record the choice in `golden/text/deltas.json` through `recordDelta` with the reason.
 A fix for macOS is to escape `'` as `%27` (or `'\''`) in the URL; for Linux, percent-encode the two values the way the
 Windows `.lnk` arm already does.
+
+## Resolution
+
+Fixed 2026-11-28 by quick 261128-9fj for macOS (RED `6cc668288`, GREEN `a186254d9`). `run_sh_url` in
+`src-tauri/crates/gamelib-shortcuts/src/mac.rs` writes every `'` of the launch URL as `%27` before `run_sh` single-quotes
+it. `encode_uri_component` and `launch_url` are unchanged, because the Windows `.lnk` goldens pin them.
+
+The 8 darwin cases whose `appName` or `runner` holds `'` (`darwin-everything-gog`, `-legendary`, `-nile`, `-sideload`,
+`-steam`, `darwin-plain-r-quotes`, `darwin-single-quote-legendary` and `-icon`) are listed in
+`tests/fixtures/golden/text/deltas.json`, each with the same reason. The file is hand-written in `recordDelta`'s format
+(sorted keys, 2-space JSON, trailing newline) because 94-24 deleted the TS shortcuts oracle harness, so `recordDelta` can
+no longer run for this crate. No golden was re-recorded or edited. Both text replays (`golden_text.rs`, `golden_add.rs`)
+derive the expected `run.sh` from the TS bytes through one substitution (`with_text_delta`), and
+`the_text_deltas_are_exactly_the_apostrophe_cases` holds the delta set to the cases' own inputs.
+
+The receiver decodes `%27` back: `src/backend/protocol.ts:172-173` reads `url.searchParams.get('appName')` and
+`get('runner')`, and the shell forwards the argv URL byte for byte (`src-tauri/src/single_instance.rs:53`).
+
+Tests: `tests/run_sh_quoting.rs` writes the `run.sh` over six cases and checks that the command line holds exactly two
+`'`, that the URL decodes to the inputs, that `/bin/sh -n` and `/bin/bash -n` accept it, and that the shell hands the
+executable exactly `--no-gui` plus one URL. The argv check exists because `Rock'n'Roll` passes `bash -n` at HEAD yet the
+shell delivers `appName=RocknRoll`, which a syntax check cannot see.
+
+The Linux `.desktop` arm was not touched; it moved to
+`.planning/todos/pending/2026-11-28-linux-desktop-exec-writes-app-name-and-runner-unencoded.md`.

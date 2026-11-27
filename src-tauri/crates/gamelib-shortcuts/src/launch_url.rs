@@ -1,10 +1,14 @@
 //! The `gamelib://launch` URL a shortcut opens. Ported from the three places the TypeScript builds
 //! it (`shortcuts.ts`): the macOS `run.sh` and the Windows `.lnk` percent-encode `appName` and
-//! `runner` with `encodeURIComponent` (T-34.5-C6-17); the Linux `.desktop` `Exec=` writes them raw.
+//! `runner` with this `encodeURIComponent` port (T-34.5-C6-17); the Linux `.desktop` `Exec=` writes
+//! them raw.
+//!
+//! This encoder stays JavaScript-exact, `'` included, because the Windows `.lnk` goldens pin it. The
+//! macOS arm writes `'` as `%27` on top of it, in `mac.rs` (`run_sh_url`).
 //!
 //! The raw Linux form is reproduced byte for byte (the goldens pin it), including its defect: a
 //! name holding a space or `&` is not encoded there. That is recorded in the 94-14 summary and in
-//! `.planning/todos/pending/2026-11-24-macos-shortcut-run-sh-breaks-on-single-quote-in-app-name.md`.
+//! `.planning/todos/pending/2026-11-28-linux-desktop-exec-writes-app-name-and-runner-unencoded.md`.
 
 /// JavaScript `encodeURIComponent`'s unreserved set besides ASCII letters and digits.
 const UNRESERVED_MARKS: &[u8] = b"-_.!~*'()";
