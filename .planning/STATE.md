@@ -6,10 +6,10 @@ current_phase: "88.3"
 current_phase_name: Launch funnel, re-adoption and the live gate
 status: executing
 stopped_at: Completed 88.2-25-PLAN.md
-last_updated: "2026-11-27T08:08:32.560Z"
+last_updated: "2026-11-27T09:16:30.011Z"
 last_activity: 2026-11-27
 last_activity_desc: Phase 88.3 execution started
-state_head: a88e39799d7db891f8d56f96d93b2c044e1e0277
+state_head: 386d7bb2583fc659d97f6f5c9a01e94b0d066116
 progress:
   total_phases: 26
   completed_phases: 23
@@ -1384,6 +1384,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261125-qp9 | Steam-managed download row opens the game page with its gameInfo (plain-text title when not in the library) | 2026-11-25 | 5e16ee214 | — | [261125-qp9-steam-managed-download-row-opens-the-gam](./quick/261125-qp9-steam-managed-download-row-opens-the-gam/) |
 | 261125-r0j | The game page loads the game itself when opened without router state (store, then getGameInfo; loading and not-found states) | 2026-11-25 | a94f6f9db | — | [261125-r0j-game-page-loads-the-game-itself-when-ope](./quick/261125-r0j-game-page-loads-the-game-itself-when-ope/) |
 | 261125-uzz | Remove from Steam proves the shortcut is GameLib's before deleting it and its grid art | 2026-11-25 | f0709db9d | — | [261125-uzz-remove-from-steam-proves-the-shortcut-is](./quick/261125-uzz-remove-from-steam-proves-the-shortcut-is/) |
+| 261127-upb | Remove dead imagecache:// branch in the renderer (no backend serves the scheme after D-22) | 2026-11-27 | 386d7bb25 | — | [261127-upb-remove-dead-imagecache-scheme-branch-in-](./quick/261127-upb-remove-dead-imagecache-scheme-branch-in-/) |
 
 ## Deferred Items
 
