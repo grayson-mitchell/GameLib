@@ -744,7 +744,18 @@ const STRING_MODES: Record<string, string> = {
 }
 
 const SIGNATURES: Record<string, { params: string[]; required: number }> = {
-  protontricks: { params: ['verb'], required: 1 }
+  protontricks: { params: ['verb'], required: 1 },
+  set_environment: { params: ['envvar', 'value'], required: 2 },
+  winedll_override: { params: ['dll', 'dtype'], required: 2 },
+  regedit_add: {
+    params: ['folder', 'name', 'typ', 'value', 'arch'],
+    required: 1
+  },
+  append_argument: { params: ['argument'], required: 1 },
+  replace_command: { params: ['orig', 'repl'], required: 2 },
+  disable_esync: { params: [], required: 0 },
+  disable_fsync: { params: [], required: 0 },
+  disable_nvapi: { params: [], required: 0 }
 }
 const NOT_APPLICABLE = new Set([
   'disable_esync',
@@ -1128,9 +1139,13 @@ function applyHelper(
   const invalid = (): never => {
     throw new StatementReject('invalid-value')
   }
+  // a literal of the wrong type is as unusable as a non-literal one
+  const wrongType = (): never => {
+    throw new StatementReject('non-literal-argument')
+  }
   const str = (name: string): string => {
     const lit = args[name]
-    if (lit === undefined || lit.t !== 'str') return invalid()
+    if (lit === undefined || lit.t !== 'str') return wrongType()
     return lit.v
   }
   switch (helper) {
@@ -1201,9 +1216,9 @@ function applyHelper(
       const value = given('value')
       if (name === undefined || typ === undefined || value === undefined)
         throw new StatementReject('registry-key-only')
-      if (name.t !== 'str' || typ.t !== 'str') invalid()
+      if (name.t !== 'str' || typ.t !== 'str') wrongType()
       const arch = args.arch
-      if (arch !== undefined && arch.t !== 'bool') invalid()
+      if (arch !== undefined && arch.t !== 'bool') wrongType()
       const key = canonicalizeRegistryKey(folder)
       const regName = (name as { v: string }).v
       const regType = (typ as { v: string }).v.toUpperCase()

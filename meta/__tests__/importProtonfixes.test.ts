@@ -458,3 +458,384 @@ describe('parseArgs', () => {
     )
   })
 })
+
+const call = (body: string): string =>
+  `from protonfixes import util\n\ndef main():\n${body
+    .split('\n')
+    .map((l) => `    ${l}`)
+    .join('\n')}\n`
+
+const translate = (body: string, appId = '1') =>
+  translateFixSource(call(body), appId, ATTRIBUTION)
+
+const reasons = (body: string): string[] =>
+  translate(body).unmapped.map((u) => u.reason)
+
+describe('set_environment', () => {
+  it('maps to envVariables, last value wins, and validates keys and values', () => {
+    const result = translate(
+      "util.set_environment('DXVK_ASYNC', '1')\nutil.set_environment('A', 'x')\nutil.set_environment('DXVK_ASYNC', '2')"
+    )
+    expect(result.tier1?.envVariables).toEqual({ DXVK_ASYNC: '2', A: 'x' })
+    expect(
+      reasons(
+        "util.set_environment('bad-key', '1')\nutil.set_environment('K', 'a\\0b')"
+      )
+    ).toEqual(['invalid-value', 'invalid-value'])
+  })
+
+  it('leaves PROTON_ variables unmapped', () => {
+    const result = translate("util.set_environment('PROTON_USE_WINED3D', '1')")
+    expect(result.status).toBe('skipped')
+    expect(result.unmapped[0]?.reason).toBe('proton-launcher-env')
+  })
+
+  it('routes WINEDLLOVERRIDES to dllOverrides, never envVariables', () => {
+    const src = `util.replace_command('Launcher.exe', 'Game.exe')\nutil.set_environment('WINEDLLOVERRIDES', 'xaudio2_7=n;d3d9,d3d10=n,b')`
+    const result = translate(src)
+    expect(result.tier1?.envVariables).toBeUndefined()
+    expect(result.tier2?.dllOverrides).toEqual([
+      {
+        exe: 'Game.exe',
+        dlls: {
+          xaudio2_7: 'native',
+          d3d9: 'native,builtin',
+          d3d10: 'native,builtin'
+        }
+      }
+    ])
+    expect(
+      reasons("util.set_environment('WINEDLLOVERRIDES', 'd3d9=x')")
+    ).toEqual(['invalid-value'])
+    expect(reasons("util.set_environment('WINEDLLOVERRIDES', 'd3d9')")).toEqual(
+      ['invalid-value']
+    )
+  })
+})
+
+describe('append_argument', () => {
+  it('maps to launchArgs keeping order and duplicates', () => {
+    const result = translate(
+      "util.append_argument('-dx11')\nutil.append_argument('-a b')\nutil.append_argument('-dx11')"
+    )
+    expect(result.tier1?.launchArgs).toEqual(['-dx11', '-a b', '-dx11'])
+    expect(reasons('util.append_argument(5)')).toEqual(['non-literal-argument'])
+    expect(reasons('util.append_argument()')).toEqual(['bad-arguments'])
+  })
+})
+
+describe('replace_command', () => {
+  it('maps an exe replacement to exeOverride with a caveat note', () => {
+    const result = translate("util.replace_command('Launcher.exe', 'Game.exe')")
+    expect(result.tier1?.exeOverride).toBe('Game.exe')
+    expect(result.tier1?.notes?.exeOverride).toContain('Launcher.exe')
+    expect(result.tier1?.notes?.exeOverride).toContain('Game.exe')
+  })
+
+  it('accepts regex escapes in the original and a subfolder target', () => {
+    const result = translate(
+      "util.replace_command('launcher\\\\.exe$', 'bin\\\\xblades.exe')"
+    )
+    expect(result.tier1?.exeOverride).toBe('bin/xblades.exe')
+  })
+
+  it('rejects non-exe replacements, unsafe paths and repeats', () => {
+    expect(reasons("util.replace_command('-issteam', '')")).toEqual([
+      'replace-command-not-exe'
+    ])
+    expect(
+      reasons("util.replace_command('Launcher.exe', '-nolauncher')")
+    ).toEqual(['replace-command-not-exe'])
+    expect(
+      reasons("util.replace_command('eg2.exe', '../bin/evil.exe')")
+    ).toEqual(['invalid-value'])
+    expect(reasons("util.replace_command('a.exe', '/abs/b.exe')")).toEqual([
+      'invalid-value'
+    ])
+    expect(reasons("util.replace_command('a.exe', 'C:/b.exe')")).toEqual([
+      'invalid-value'
+    ])
+    expect(
+      reasons(
+        "util.replace_command('a.exe', 'b.exe')\nutil.replace_command('c.exe', 'd.exe')"
+      )
+    ).toEqual(['multiple-exe-overrides'])
+    expect(
+      reasons("util.replace_command('a.exe', 'b.exe', re.NOFLAG)")
+    ).toEqual(['bad-arguments'])
+    expect(
+      reasons("util.replace_command('a.exe', 'b.exe', match_flags=0)")
+    ).toEqual(['bad-arguments'])
+  })
+})
+
+describe('winedll_override', () => {
+  it('never invents an exe: without one it is dll-override-exe-unknown', () => {
+    const result = translate(
+      "util.winedll_override('d3d11', util.OverrideOrder.NATIVE)"
+    )
+    expect(result.status).toBe('skipped')
+    expect(result.tier2).toBeUndefined()
+    expect(result.unmapped[0]?.reason).toBe('dll-override-exe-unknown')
+  })
+
+  it('uses the basename of a mapped exeOverride', () => {
+    const result = translate(
+      "util.replace_command('Launcher.exe', 'bin/Game.exe')\nutil.winedll_override('d3d11', util.OverrideOrder.NATIVE)"
+    )
+    expect(result.status).toBe('translated')
+    expect(result.tier2?.dllOverrides).toEqual([
+      { exe: 'Game.exe', dlls: { d3d11: 'native' } }
+    ])
+    expect(result.tier2?.evidence).toBe(
+      `${ATTRIBUTION.url}/blob/${SHA}/gamefixes-steam/1.py`
+    )
+    expect(Object.keys(result.tier2 ?? {})).toEqual([
+      'title',
+      'evidence',
+      'notes',
+      'dllOverrides'
+    ])
+  })
+
+  it('maps every mode spelling and strips a .dll suffix', () => {
+    const modes: Array<[string, string]> = [
+      ["'n'", 'native'],
+      ["'b'", 'builtin'],
+      ["'n,b'", 'native,builtin'],
+      ["'b,n'", 'builtin,native'],
+      ["''", 'disabled'],
+      ['OverrideOrder.NATIVE', 'native'],
+      ['util.OverrideOrder.BUILTIN', 'builtin'],
+      ['util.OverrideOrder.NATIVE_BUILTIN', 'native,builtin'],
+      ['util.OverrideOrder.BUILTIN_NATIVE', 'builtin,native'],
+      ['util.OverrideOrder.DISABLED', 'disabled']
+    ]
+    for (const [literal, mode] of modes) {
+      const result = translate(
+        `util.replace_command('a.exe', 'G.exe')\nutil.winedll_override('d3d9.DLL', ${literal})`
+      )
+      expect(result.tier2?.dllOverrides?.[0]?.dlls).toEqual({ d3d9: mode })
+    }
+    expect(
+      reasons("util.winedll_override('bad name', util.OverrideOrder.NATIVE)")
+    ).toEqual(['invalid-value'])
+  })
+
+  it('drops overrides when the exe fails the dllOverrides exe rule', () => {
+    const result = translate(
+      "util.replace_command('a.exe', 'bin/we$ird.exe')\nutil.winedll_override('d3d9', util.OverrideOrder.NATIVE)"
+    )
+    expect(result.unmapped.map((u) => u.reason)).toContain(
+      'dll-override-exe-unknown'
+    )
+    expect(result.tier2).toBeUndefined()
+  })
+})
+
+describe('regedit_add', () => {
+  it('maps a DWORD from hex, with no views by default', () => {
+    const result = translate(
+      "util.regedit_add('HKCU\\\\Software\\\\Game', 'Opt', 'REG_DWORD', '0x10')"
+    )
+    expect(result.tier2?.registry).toEqual([
+      { key: 'HKCU\\Software\\Game', name: 'Opt', type: 'REG_DWORD', value: 16 }
+    ])
+    expect(result.tier1).toBeUndefined()
+  })
+
+  it('maps arch=True to views [64], REG_SZ verbatim, canonical root and type', () => {
+    const result = translate(
+      "util.regedit_add('hkcu\\\\Software\\\\Game', 'Path', 'reg_sz', 'C:\\\\x', arch=True)\nutil.regedit_add('HKEY_LOCAL_MACHINE\\\\Software\\\\G', 'N', 'REG_DWORD', 7)"
+    )
+    expect(result.tier2?.registry).toEqual([
+      {
+        key: 'HKCU\\Software\\Game',
+        name: 'Path',
+        type: 'REG_SZ',
+        value: 'C:\\x',
+        views: [64]
+      },
+      {
+        key: 'HKEY_LOCAL_MACHINE\\Software\\G',
+        name: 'N',
+        type: 'REG_DWORD',
+        value: 7
+      }
+    ])
+  })
+
+  it('classifies key-only, unsupported types and invalid values', () => {
+    expect(
+      reasons(
+        "util.regedit_add('HKLM\\\\Software\\\\Ubisoft')\nutil.regedit_add('HKLM\\\\Software\\\\X', 'n')"
+      )
+    ).toEqual(['registry-key-only', 'registry-key-only'])
+    expect(
+      reasons(
+        "util.regedit_add('HKLM\\\\Software\\\\X', 'n', 'REG_BINARY', '00')"
+      )
+    ).toEqual(['unsupported-registry-type'])
+    expect(
+      reasons(
+        "util.regedit_add('HKLM\\\\Software\\\\X', 'n', 'REG_MULTI_SZ', 'a')\nutil.regedit_add('HKLM\\\\Software\\\\X', 'n', 'REG_EXPAND_SZ', 'a')"
+      )
+    ).toEqual(['unsupported-registry-type', 'unsupported-registry-type'])
+    expect(
+      reasons(
+        [
+          "util.regedit_add('HKCR\\\\X', 'n', 'REG_SZ', 'v')",
+          "util.regedit_add('HKCU\\\\\\\\X', 'n', 'REG_SZ', 'v')",
+          "util.regedit_add('HKCU\\\\X\\\\', 'n', 'REG_SZ', 'v')",
+          "util.regedit_add('HKCU\\\\X', 'n', 'REG_SZ', 'a\"b')",
+          "util.regedit_add('HKCU\\\\X', '/n', 'REG_SZ', 'v')",
+          "util.regedit_add('HKCU\\\\X', 'n', 'REG_DWORD', '0x100000000')",
+          "util.regedit_add('HKCU\\\\X', 'n', 'REG_DWORD', 'abc')",
+          "util.regedit_add('HKCU\\\\X', 'n', 'REG_SZ', '" +
+            'x'.repeat(1025) +
+            "')"
+        ].join('\n')
+      )
+    ).toEqual(Array(8).fill('invalid-value'))
+  })
+
+  it('routes the Wine DllOverrides key to dllOverrides, not registry', () => {
+    const result = translate(
+      "util.replace_command('a.exe', 'G.exe')\nutil.regedit_add('HKCU\\\\Software\\\\Wine\\\\DllOverrides', 'd3d9', 'REG_SZ', 'native')"
+    )
+    expect(result.tier2?.registry).toBeUndefined()
+    expect(result.tier2?.dllOverrides).toEqual([
+      { exe: 'G.exe', dlls: { d3d9: 'native' } }
+    ])
+  })
+})
+
+describe('not applicable and other helpers', () => {
+  it('records esync/fsync/nvapi without affecting classification', () => {
+    const result = translate(
+      "util.protontricks('corefonts')\nutil.disable_esync()\nutil.disable_fsync()\nutil.disable_nvapi()"
+    )
+    expect(result.status).toBe('translated')
+    expect(result.notApplicable.map((n) => n.helper)).toEqual([
+      'disable_esync',
+      'disable_fsync',
+      'disable_nvapi'
+    ])
+  })
+
+  it('skips a file with only not-applicable helpers', () => {
+    const result = translate('util.disable_esync()\nutil.disable_fsync()')
+    expect(result.status).toBe('skipped')
+    expect(result.skipReason).toBe('only-not-applicable')
+  })
+
+  it('marks other util helpers unsupported-helper', () => {
+    expect(
+      reasons(
+        "util.protonprefix()\nutil.set_cpu_topology_limit(4)\nutil.del_environment('X')\nutil.get_game_install_path()"
+      )
+    ).toEqual([
+      'unsupported-helper:protonprefix',
+      'unsupported-helper:set_cpu_topology_limit',
+      'unsupported-helper:del_environment',
+      'unsupported-helper:get_game_install_path'
+    ])
+  })
+
+  it('honours bare helpers imported from a util module', () => {
+    const src = `from protonfixes.util import protontricks, set_environment as senv\n\ndef main():\n    protontricks('corefonts')\n    senv('A', 'b')\n`
+    const result = translateFixSource(src, '1', ATTRIBUTION)
+    expect(result.tier1?.winetricks).toEqual(['corefonts'])
+    expect(result.tier1?.envVariables).toEqual({ A: 'b' })
+  })
+})
+
+describe('profile and tier-1 file emission', () => {
+  it('writes both files for a mixed fix, each attributed', () => {
+    const result = translate(
+      "util.protontricks('corefonts')\nutil.regedit_add('HKCU\\\\Software\\\\G', 'A', 'REG_DWORD', '1')"
+    )
+    expect(result.emitted).toEqual({
+      tier1: ['winetricks'],
+      tier2: ['registry']
+    })
+    expect(result.tier1?.notes?.['umu-protonfixes']).toContain('BSD-2-Clause')
+    expect(result.tier2?.notes?.['umu-protonfixes']).toContain('BSD-2-Clause')
+    expect(result.tier2?.notes?.exeOverride).toBeUndefined()
+  })
+
+  it('writes only the profile when no tier-1 key exists', () => {
+    const result = translate(
+      "util.regedit_add('HKCU\\\\Software\\\\G', 'A', 'REG_DWORD', '1')"
+    )
+    expect(result.tier1).toBeUndefined()
+    expect(result.tier2).toBeDefined()
+  })
+
+  it('writes .profile.json files through runImport', () => {
+    const source = makeCheckout({
+      '1.py': call(
+        "util.regedit_add('HKCU\\\\Software\\\\G', 'A', 'REG_DWORD', '1')"
+      )
+    })
+    const out = join(root, 'out')
+    const { tier1Files, tier2Files } = runImport({ source, out })
+    expect([tier1Files, tier2Files]).toEqual([0, 1])
+    expect(readdirSync(join(out, 'fixes'))).toEqual(['1-steam.profile.json'])
+  })
+})
+
+describe('allow-list drift against gamelib-knownfix types.rs', () => {
+  const rust = readFileSync(
+    join(
+      __dirname,
+      '..',
+      '..',
+      'src-tauri',
+      'crates',
+      'gamelib-knownfix',
+      'src',
+      'types.rs'
+    ),
+    'utf8'
+  )
+  const list = (name: string): string[] => {
+    const match = new RegExp(
+      `${name}: \\[&str; \\d+\\] = \\[([^\\]]*)\\]`
+    ).exec(rust)
+    expect(match).not.toBeNull()
+    return [...(match?.[1] ?? '').matchAll(/"([A-Za-z]+)"/g)].map(
+      (m) => m[1] ?? ''
+    )
+  }
+
+  it('lists every key the importer emits in the matching tier', () => {
+    const tier1 = list('TIER1_KNOWN_FIX_KEYS')
+    const tier2 = list('TIER2_PROFILE_KEYS')
+    const mixed = translate(
+      [
+        "util.protontricks('a')",
+        "util.set_environment('A', 'b')",
+        "util.append_argument('-x')",
+        "util.replace_command('a.exe', 'b.exe')",
+        "util.winedll_override('d3d9', util.OverrideOrder.NATIVE)",
+        "util.regedit_add('HKCU\\\\Software\\\\G', 'A', 'REG_DWORD', '1')",
+        'util.unknown()'
+      ].join('\n')
+    )
+    for (const key of Object.keys(mixed.tier1 ?? {}))
+      expect(tier1).toContain(key)
+    for (const key of Object.keys(mixed.tier2 ?? {}))
+      expect(tier2).toContain(key)
+    for (const fix of ['registry', 'dllOverrides'])
+      expect(tier1).not.toContain(fix)
+    expect(Object.keys(mixed.tier1 ?? {})).toEqual([
+      'title',
+      'notes',
+      'winetricks',
+      'envVariables',
+      'launchArgs',
+      'exeOverride'
+    ])
+  })
+})
