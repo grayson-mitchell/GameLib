@@ -19,8 +19,11 @@
 //! before any output, then every chunk (raw, never sanitised or trimmed) to the writers and the observer, and
 //! answer the last 50 chunks of each stream joined with `''` (the TS `runWineCommand` rule). A spawn that
 //! fails is logged as `Wine command failed to run:` and answered as an empty result, and the waited
-//! `wineserver --wait` is a Helper capped at 30 minutes. The caller's `commandParts` and `wrappers` lists are
-//! only read: the argv is built on a copy.
+//! `wineserver --wait` is a Helper capped at 30 minutes. The three lines this module writes to the general
+//! log (`Running Wine command:`, `Wine command failed to run:` and the `wineserver --wait` warning) carry no
+//! path (quick 261127-u6h): each deep absolute part is reduced to its file name, the failed program is named by
+//! its file name and the prefix by its folder. The per-game `Wine Command:` header keeps the full command. The caller's
+//! `commandParts` and `wrappers` lists are only read: the argv is built on a copy.
 //!
 //! The differences from the TS that remain are `golden/wine_launch/deltas.json`'s, and:
 //!
@@ -49,6 +52,7 @@ use tokio::sync::watch;
 use tokio_util::sync::CancellationToken;
 
 use super::call_runner::{SpawnClassArg, RUNNER_READ_CHUNK};
+use super::redact::{file_name_of, reduce_in_text, reduce_part};
 use super::stream::{ChunkWindow, LaunchLogSink, LogHandOff, LogTargets, OutputSink};
 use super::{lock, RunnerEvent};
 use crate::ctx::LaunchCtx;
@@ -276,7 +280,15 @@ pub async fn launch_wine_command(
     ctx.log_sink.general(
         Prefix::Backend,
         Level::Debug,
-        &format!("Running Wine command: {}", prepared.debug_parts),
+        &format!(
+            "Running Wine command: {}",
+            prepared
+                .debug_parts
+                .iter()
+                .map(|part| reduce_part(part))
+                .collect::<Vec<_>>()
+                .join(" ")
+        ),
     );
 
     let shared = Arc::new(Shared {
@@ -316,7 +328,10 @@ pub async fn launch_wine_command(
             ctx.log_sink.general(
                 Prefix::Backend,
                 Level::Error,
-                &format!("Wine command failed to run: {reason}"),
+                &format!(
+                    "Wine command failed to run: {}",
+                    reduce_in_text(&reason, &prepared.program)
+                ),
             );
             wait_for_wineserver(ctx, &prepared, host).await;
             shared.answer(None)
@@ -352,7 +367,7 @@ async fn wait_for_wineserver(ctx: &LaunchCtx, prepared: &PreparedWine, host: &Wi
             Level::Warning,
             &format!(
                 "wineserver --wait for prefix {} did not finish within 30 minutes; returning the command result without waiting further",
-                prepared.wine_prefix
+                file_name_of(&prepared.wine_prefix)
             ),
         );
     }

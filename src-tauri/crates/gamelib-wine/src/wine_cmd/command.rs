@@ -212,9 +212,10 @@ pub struct PreparedWine {
     pub header_bin: String,
     /// The parts of that line (`argv` joined by a space).
     pub header_parts: String,
-    /// The parts of the `Running Wine command:` debug line: the caller's parts after the proton verb and
-    /// before the wrappers, joined by a space (the TS logged them at that point).
-    pub debug_parts: String,
+    /// The parts of the `Running Wine command:` debug line, unjoined: the caller's parts after the proton verb
+    /// and before the wrappers (the TS logged them at that point). The launch variant reduces each one to
+    /// carry no path before it logs them (quick 261127-u6h).
+    pub debug_parts: Vec<String>,
     /// The wine's `wineserver`, when it has one: `wineserver --wait` follows a waited command.
     pub wineserver: Option<String>,
     pub wait: bool,
@@ -296,7 +297,7 @@ fn prepare_unchecked(
     if wine.kind == WineKind::Proton && !umu {
         command_parts.insert(0, proton_verb);
     }
-    let debug_parts = command_parts.join(" ");
+    let debug_parts = command_parts.clone();
     let mut wrappers = options.wrappers;
     let mut bin = runner_bin.clone();
     if !wrappers.is_empty() {

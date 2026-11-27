@@ -16,6 +16,15 @@
 //! capture file, so those cases are compared under the `game-merged-streams` delta
 //! (`golden/wine_launch/deltas.json`). A count floor lives here next to each replay (equal to the cases it
 //! compares), so editing the JSON alone cannot lower the bar.
+//!
+//! The three general log lines the wine command writes (`Running Wine command:`, `Wine command failed to run:`
+//! and the `wineserver --wait` warning) are compared under the `general-log-paths-and-env-reduced` delta (quick
+//! 261127-u6h): `gamelib.log` is uploadable, so Rust writes each deep absolute part by its file name, a failed
+//! program by its file name and the prefix by its folder. The recorded `events.json` lines stay as the TS wrote
+//! them; the expected text of an exact line is derived with `tests/log_oracle/mod.rs`, which does not call the
+//! production reduction, and every general line is checked to carry no rig placeholder and no deep path.
+
+mod log_oracle;
 
 use std::collections::BTreeMap;
 use std::io::Write;
@@ -1359,6 +1368,11 @@ fn compare_wine_launch(
                 }
                 other => panic!("unexpected parts {other}"),
             };
+            let text = if exact {
+                log_oracle::reduce_recorded_paths(&text)
+            } else {
+                text
+            };
             (
                 level_of(e["level"].as_str().unwrap_or_default()),
                 e["prefix"].as_str().unwrap_or_default().to_string(),
@@ -1378,6 +1392,11 @@ fn compare_wine_launch(
         ));
     }
     for (got, want) in got_lines.iter().zip(&want_lines) {
+        if log_oracle::carries_a_path(&got.2) {
+            return Err(format!(
+                "{id}: general log line carries a path or a rig placeholder: {got:?}"
+            ));
+        }
         let same_text = if want.3 {
             got.2 == want.2
         } else {
@@ -1788,6 +1807,14 @@ fn replay_wine_command(case: &Value) -> Result<(), String> {
     if debug_lines != usize::from(result.ran) || general.len() != debug_lines {
         return Err(format!("{id}: the general log is {general:?}"));
     }
+    if let Some((_, _, text)) = general
+        .iter()
+        .find(|(_, _, text)| log_oracle::carries_a_path(&rig.norm_text(text)))
+    {
+        return Err(format!(
+            "{id}: general log line carries a path or a rig placeholder: {text:?}"
+        ));
+    }
 
     if rig.tree() != comparable_tree(golden("tree.json")) {
         return Err(format!(
@@ -1932,6 +1959,52 @@ fn a_changed_call_or_a_changed_golden_fails_the_replay() {
 
 /// No entry of gamelib-wine's `deltas.json` is applied: it still holds exactly the three entries 87 wrote, and
 /// this crate's own `deltas.json` names every delta the launch replay compares under.
+/// The number of recorded wine_launch lines the delta changes (pinned: a different count means the oracle's
+/// rules or the recordings moved).
+const REDUCED_WINE_LINES: usize = 21;
+
+#[test]
+fn the_general_log_delta_reduces_the_recorded_wine_lines() {
+    let mut changed = 0usize;
+    let mut cases = 0usize;
+    for entry in
+        std::fs::read_dir(fixtures().join("golden/wine_launch/expected")).expect("expected dir")
+    {
+        let path = entry.expect("entry").path().join("events.json");
+        if !path.is_file() {
+            continue;
+        }
+        let events = read_json(&path);
+        let mut in_case = 0usize;
+        for event in events.as_array().cloned().unwrap_or_default() {
+            let text = match &event["parts"] {
+                Value::String(s) => s.clone(),
+                Value::Array(parts) => {
+                    let strings: Vec<String> = parts
+                        .iter()
+                        .filter_map(|p| p.as_str().map(str::to_string))
+                        .collect();
+                    if strings.len() != parts.len() {
+                        continue;
+                    }
+                    strings.join(" ")
+                }
+                _ => continue,
+            };
+            if log_oracle::reduce_recorded_paths(&text) != text {
+                in_case += 1;
+            }
+        }
+        changed += in_case;
+        cases += usize::from(in_case > 0);
+    }
+    assert_eq!(
+        changed, REDUCED_WINE_LINES,
+        "recorded wine lines changed ({cases} cases)"
+    );
+    assert_eq!(cases, 21, "cases holding a changed line");
+}
+
 #[test]
 fn the_launch_replay_applies_no_delta_of_the_wine_crate_and_names_its_own() {
     let wine_deltas = read_json(&wine_command_dir().join("deltas.json"));
@@ -1957,6 +2030,7 @@ fn the_launch_replay_applies_no_delta_of_the_wine_crate_and_names_its_own() {
         "error-stack-trace",
         "game-merged-streams",
         "helper-spawn-not-reported",
+        "general-log-paths-and-env-reduced",
     ] {
         assert!(
             launch_deltas[key].as_str().is_some_and(|t| t.len() > 40),
