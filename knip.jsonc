@@ -40,6 +40,7 @@
     "meta/gen_vtables.ts",
     "meta/graphifyCodeViz.ts",
     "meta/i18nCatalogChurnGuard.ts",
+    "meta/importProtonfixes.ts",
     "meta/lintTranslations.ts",
     "meta/machineFillGamelib.ts",
     "meta/pinRunnerDigests.ts",

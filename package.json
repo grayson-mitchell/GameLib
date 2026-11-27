@@ -79,6 +79,7 @@
     "check-csteamworks64-exports": "node meta/checkCsteamworks64Exports.cjs",
     "gen-vtables": "node meta/runTs.cjs --bundle --platform=node --target=node21 meta/gen_vtables.ts",
     "extract-proton-inventory": "node meta/runTs.cjs --bundle --platform=node --target=node21 meta/extractProtonInventory.ts",
+    "import-protonfixes": "node meta/runTs.cjs --bundle --platform=node --target=node22 meta/importProtonfixes.ts",
     "build:overlay-archive": "node meta/runTs.cjs --bundle --platform=node --target=node22 meta/buildOverlayArchive.ts",
     "build:lsteamclient": "node meta/runTs.cjs --bundle --platform=node --target=node22 meta/buildLsteamclient.ts",
     "build:drm-native": "node meta/runTs.cjs --bundle --platform=node --target=node22 meta/buildDrmNativeParts.ts",
