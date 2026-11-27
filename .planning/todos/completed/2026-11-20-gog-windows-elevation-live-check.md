@@ -96,3 +96,13 @@ machine-wide) fails, so the uninstall keeps its single UAC prompt.
 - `2026-11-27-gog-declined-setup-uac-reports-install-success.md` (item 2)
 - `2026-11-27-gog-setup-uac-prompt-names-powershell-not-game.md` (operator feedback: the setup
   prompt names "Windows PowerShell", which was "bit unclear that is the game install")
+
+### Fix re-checked live (2026-11-27 23:07)
+
+Rebuilt `pnpm tauri:dev` at `bf30031f4`. Balrum (still installed from the declined attempt, so no
+`unins000.exe`) was launched, saved (slot 1 and a quicksave) and uninstalled. The GOG log shows
+`Kept 1 save folder(s) inside the install folder: C:\Users\grays\Games\GameLib\Balrum\files\saves`
+then `Finished uninstalling`, with no refusal. On disk only `Balrum\files\saves` remains
+(`1\darkwood1.sav`, `quicksave\darkwood1.sav`, `savesdata.dat`); every game file was deleted.
+The uninstaller-present path (unins000.exe /KEEPSAVES, then the delete around the saves) is covered
+by the jest cases only.
