@@ -6,6 +6,11 @@
 //! handle would stand in the way of a kill through the registry (88.2-11), which needs the same handle
 //! while the run is still waiting. The leader stays unreaped (nothing waits on it) until the run reaps
 //! it below, so its pid, and its group id, cannot be recycled in the meantime.
+//!
+//! The run never waits on the handle's std `Mutex` inside the async fn (88.2-26, WR-02): a registry kill
+//! holds that lock for its whole kill (D-27, up to the child grace), and a blocking `lock` here would park a
+//! tokio worker for that long, with a shutdown unanswered. A busy handle reads as "still running", and the
+//! run sleeps one poll period through `cancelled_during` and tries again.
 
 use std::process::ExitStatus;
 use std::time::Duration;
@@ -46,9 +51,12 @@ pub enum Ended {
     Shutdown,
 }
 
-/// Waits for `end` and reaps the leader. Returns [`Ended::Shutdown`] the moment `shutdown` fires, never
-/// having signalled anything. The reap marks the entry `ended` under the handle's lock, so a kill through
-/// the registry never signals a group whose leader this run has reaped.
+/// Waits for `end` and reaps the leader. Returns [`Ended::Shutdown`] the moment `shutdown` fires (within
+/// one poll period when a kill holds the handle), never having signalled anything. The handle is only ever
+/// taken with `try_lock`: a busy handle (a kill is ending the tree) reads as still running and is tried
+/// again one poll period later, so no std lock is waited on inside this async fn. The reap marks the entry
+/// `ended` under the handle's lock, so a kill through the registry never signals a group whose leader this
+/// run has reaped.
 pub async fn wait_end(entry: &GameEntry, end: GameEnd, shutdown: &CancellationToken) -> Ended {
     let game = &entry.handle;
     let pid = entry.pid;
@@ -59,7 +67,8 @@ pub async fn wait_end(entry: &GameEntry, end: GameEnd, shutdown: &CancellationTo
     }
     match end {
         GameEnd::Close => {
-            while lock(game).group_alive() {
+            // A busy handle is a kill in progress: the tree is still being ended, so it reads as alive.
+            while try_lock_game(game).map_or(true, |handle| handle.group_alive()) {
                 if cancelled_during(shutdown, GROUP_POLL).await {
                     return Ended::Shutdown;
                 }
@@ -71,11 +80,17 @@ pub async fn wait_end(entry: &GameEntry, end: GameEnd, shutdown: &CancellationTo
             }
         }
     }
-    // The leader has exited, so this returns at once.
-    let mut handle = lock(game);
-    let status = handle.reap_status().ok();
-    entry.ended.store(true, Ordering::SeqCst);
-    Ended::Finished(status)
+    // The leader has exited, so the reap returns at once once the handle is free.
+    loop {
+        if let Some(mut handle) = try_lock_game(game) {
+            let status = handle.reap_status().ok();
+            entry.ended.store(true, Ordering::SeqCst);
+            return Ended::Finished(status);
+        }
+        if cancelled_during(shutdown, LEADER_POLL).await {
+            return Ended::Shutdown;
+        }
+    }
 }
 
 /// Sleeps `period`; true when `shutdown` fired first.
@@ -87,6 +102,14 @@ async fn cancelled_during(shutdown: &CancellationToken, period: Duration) -> boo
     }
 }
 
-fn lock(game: &super::registry::SharedGame) -> std::sync::MutexGuard<'_, gamelib_proc::GameHandle> {
-    game.lock().unwrap_or_else(|e| e.into_inner())
+/// The handle's guard, or `None` while it is busy (a registry kill holds it for its whole kill). A poisoned
+/// lock yields its inner guard, as the registry's `lock` does.
+fn try_lock_game(
+    game: &super::registry::SharedGame,
+) -> Option<std::sync::MutexGuard<'_, gamelib_proc::GameHandle>> {
+    match game.try_lock() {
+        Ok(guard) => Some(guard),
+        Err(std::sync::TryLockError::Poisoned(e)) => Some(e.into_inner()),
+        Err(std::sync::TryLockError::WouldBlock) => None,
+    }
 }
