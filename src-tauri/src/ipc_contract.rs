@@ -235,6 +235,7 @@ pub(crate) enum RustInvokeChannel {
     LaunchTrackedKillAll,
     LaunchGamesRunning,
     LaunchAskForceUninstall,
+    LaunchRun,
     ShortcutsExist,
     ShortcutsAdd,
     ShortcutsRemove,
@@ -457,6 +458,7 @@ impl RustInvokeChannel {
         RustInvokeChannel::LaunchTrackedKillAll,
         RustInvokeChannel::LaunchGamesRunning,
         RustInvokeChannel::LaunchAskForceUninstall,
+        RustInvokeChannel::LaunchRun,
         RustInvokeChannel::ShortcutsExist,
         RustInvokeChannel::ShortcutsAdd,
         RustInvokeChannel::ShortcutsRemove,
@@ -679,6 +681,7 @@ impl RustInvokeChannel {
             "launch_tracked_kill_all" => Some(RustInvokeChannel::LaunchTrackedKillAll),
             "launch_games_running" => Some(RustInvokeChannel::LaunchGamesRunning),
             "launch_ask_force_uninstall" => Some(RustInvokeChannel::LaunchAskForceUninstall),
+            "launch_run" => Some(RustInvokeChannel::LaunchRun),
             "shortcuts_exist" => Some(RustInvokeChannel::ShortcutsExist),
             "shortcuts_add" => Some(RustInvokeChannel::ShortcutsAdd),
             "shortcuts_remove" => Some(RustInvokeChannel::ShortcutsRemove),
@@ -903,6 +906,7 @@ impl RustInvokeChannel {
             RustInvokeChannel::LaunchTrackedKillAll => "launch_tracked_kill_all",
             RustInvokeChannel::LaunchGamesRunning => "launch_games_running",
             RustInvokeChannel::LaunchAskForceUninstall => "launch_ask_force_uninstall",
+            RustInvokeChannel::LaunchRun => "launch_run",
             RustInvokeChannel::ShortcutsExist => "shortcuts_exist",
             RustInvokeChannel::ShortcutsAdd => "shortcuts_add",
             RustInvokeChannel::ShortcutsRemove => "shortcuts_remove",
@@ -4981,6 +4985,42 @@ impl LaunchAskForceUninstallArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let first = args.first().ok_or_else(|| "launch_ask_force_uninstall:bad-args".to_string())?;
         serde_json::from_value(first.clone()).map_err(|_| "launch_ask_force_uninstall:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct LaunchRunArgs {
+    #[serde(rename = "appName")]
+    pub(crate) app_name: String,
+    pub(crate) runner: LaunchRunArgsRunner,
+    #[serde(rename = "launchArguments")]
+    #[serde(default)]
+    pub(crate) launch_arguments: Option<Value>,
+    #[serde(rename = "skipVersionCheck")]
+    #[serde(default)]
+    pub(crate) skip_version_check: Option<bool>,
+    #[serde(default)]
+    pub(crate) args: Option<Vec<String>>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+pub(crate) enum LaunchRunArgsRunner {
+    #[serde(rename = "gog")]
+    Gog,
+    #[serde(rename = "legendary")]
+    Legendary,
+    #[serde(rename = "nile")]
+    Nile,
+    #[serde(rename = "sideload")]
+    Sideload,
+    #[serde(rename = "steam")]
+    Steam,
+}
+
+impl LaunchRunArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "launch_run:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "launch_run:bad-args".to_string())
     }
 }
 

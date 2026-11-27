@@ -338,6 +338,7 @@ pub(crate) fn dispatch_rust_channel(
         RustInvokeChannel::LaunchCheckWineBeforeLaunch => {
             launch_dispatch::rpc_launch_check_wine_before_launch(args)
         }
+        RustInvokeChannel::LaunchRun => launch_dispatch::rpc_launch_run(args),
         RustInvokeChannel::LaunchRunnerCall => launch_dispatch::rpc_launch_runner_call(args),
         RustInvokeChannel::LaunchRunnerKill => launch_dispatch::rpc_launch_runner_kill(args),
         RustInvokeChannel::LaunchRunnerAbort => launch_dispatch::rpc_launch_runner_abort(args),

@@ -15,6 +15,7 @@ import {
   RUST_INFO_WIKI_CACHE_CLEAR,
   RUST_INFO_WIKI_GET,
   RUST_INVOKE_CHANNELS,
+  RUST_LAUNCH_RUN,
   RUST_SHORTCUTS_ADD,
   RUST_SHORTCUTS_EXIST,
   RUST_SHORTCUTS_REMOVE,
@@ -83,7 +84,8 @@ describe('rustInvokeArgs', () => {
     // Phase 88.2 plan 17: 210 -> 213, launch_wine_command, launch_wine_path and launch_script_run.
     // Phase 88.2 plan 17 task 2: 213 -> 217, launch_spawn_async, launch_tracked_kill, launch_tracked_kill_all and launch_games_running.
     // Phase 88.2 plan 20: 217 -> 218, launch_ask_force_uninstall.
-    expect(RUST_INVOKE_CHANNELS).toHaveLength(218)
+    // Phase 88.3 plan 06: 218 -> 219, launch_run.
+    expect(RUST_INVOKE_CHANNELS).toHaveLength(219)
   })
 
   it('parses the store-embed wire fixtures', () => {
@@ -176,6 +178,42 @@ describe('rustInvokeArgs', () => {
       [{ sessionId: 'a', x: 1 }]
     ]) {
       expect(close.safeParse(bad).success).toBe(false)
+    }
+  })
+
+  it('accepts the launch_run Play message and rejects drift (Phase 88.3 plan 06)', () => {
+    const run = rustInvokeArgs[RUST_LAUNCH_RUN]
+    const play = { appName: 'alpha', runner: 'legendary' }
+    expect(run.safeParse([play]).success).toBe(true)
+    expect(
+      run.safeParse([
+        {
+          ...play,
+          launchArguments: { type: 'basic', name: 'Windowed' },
+          skipVersionCheck: false,
+          args: ['-windowed', '-nosplash']
+        }
+      ]).success
+    ).toBe(true)
+    for (const runner of ['gog', 'nile', 'sideload', 'steam']) {
+      expect(run.safeParse([{ ...play, runner }]).success).toBe(true)
+    }
+    for (const bad of [
+      [],
+      [{}],
+      [{ appName: 'alpha' }],
+      [{ runner: 'legendary' }],
+      [{ ...play, runner: 'epic' }],
+      [{ ...play, appName: 7 }],
+      [{ ...play, skipVersionCheck: 'yes' }],
+      [{ ...play, args: '-windowed' }],
+      [{ ...play, args: [1] }],
+      [{ ...play, launchArguments: 'basic' }],
+      [{ ...play, launchArguments: ['basic'] }],
+      [{ ...play, extra: 1 }],
+      [play, {}]
+    ]) {
+      expect(run.safeParse(bad).success).toBe(false)
     }
   })
 

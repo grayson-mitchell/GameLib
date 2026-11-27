@@ -1648,6 +1648,15 @@ export const RUST_LAUNCH_GAMES_RUNNING = 'launch_games_running' as const
  */
 export const RUST_LAUNCH_ASK_FORCE_UNINSTALL =
   'launch_ask_force_uninstall' as const
+/**
+ * Phase 88.3 (SVC-03, 88.3-06, D-19): one Play through the Rust launch funnel (`launchEventCallback`). `launch_run` takes `[params]`
+ * (`{ appName, runner, launchArguments?, skipVersionCheck?, args? }`, the renderer's `LaunchParams`; the shell appends the process
+ * environment and the wine host facts itself, T-88.1-14) and answers `{ status: 'done' | 'error' | 'abort' }`. A launch spans a whole
+ * play session (the funnel waits on the TS `launch` hook over `launchManagerCall` until the game's process is over), so the channel is
+ * unbounded (`UNBOUNDED_RUST_CHANNELS`); the app shutdown ends it. A second Play of the same game joins the first. There is no sidecar
+ * fallback (D-19): before the shell is ready it answers `launch_run:not-ready`.
+ */
+export const RUST_LAUNCH_RUN = 'launch_run' as const
 export const RUST_ENGINE_STATE_RECORD_DECISION =
   'engine_state_record_decision' as const
 export const RUST_ENGINE_STATE_PUBLISH_OVERLAY_NOTICE =
@@ -2105,6 +2114,7 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_LAUNCH_TRACKED_KILL_ALL,
   RUST_LAUNCH_GAMES_RUNNING,
   RUST_LAUNCH_ASK_FORCE_UNINSTALL,
+  RUST_LAUNCH_RUN,
   RUST_SHORTCUTS_EXIST,
   RUST_SHORTCUTS_ADD,
   RUST_SHORTCUTS_REMOVE,

@@ -60,6 +60,7 @@ pub const OPS: &[&str] = &[
     "launch_prepare",
     "launch_prepare_wine_begin",
     "launch_prepare_wine_finish",
+    "launch_run",
     "launch_runner_abort",
     "launch_runner_call",
     "launch_runner_kill",
@@ -296,6 +297,26 @@ async fn route(op: &str, args: &[Value], ctx: &LaunchCtx) -> Result<Value, Strin
             };
             let result = spawn_async(ctx, call, sink).await?;
             result_of(serde_json::to_value(result))
+        }
+        // The Rust launch funnel (88.3-06, D-19): one Play, `launchEventCallback`. Arguments `[params, host]`: the
+        // Play's message (`LaunchParams`: `appName`, `runner`, and optionally `launchArguments`, `skipVersionCheck`
+        // and `args`) and the process facts the shell read (`FunnelHost`: `{ runner, wine }`). Answers
+        // `{ status: "done" | "error" | "abort" }`. A launch spans a whole play session, so its shim lists the
+        // channel as unbounded (the funnel holds its own registrant and the app shutdown ends it). A failure is the
+        // funnel's fixed `launch:<reason>` text, never an error message of a manager.
+        "launch_run" => {
+            let [params @ Value::Object(_), host @ Value::Object(_)] = args else {
+                return Err(bad());
+            };
+            let params: funnel::LaunchParams =
+                serde_json::from_value(params.clone()).map_err(|_| bad())?;
+            if !bounded_name(&params.app_name) {
+                return Err(bad());
+            }
+            let host: funnel::FunnelHost =
+                serde_json::from_value(host.clone()).map_err(|_| bad())?;
+            let status = funnel::run::run_launch(ctx, params, &host).await?;
+            Ok(status.to_value())
         }
         // `getWinePath` (88.2-13). Arguments `[args, host]`: the path, the game's settings and the variant
         // (`WinePathArgs`) and the wine host facts the shell read (the process environment `winepath` inherits).
@@ -775,8 +796,41 @@ mod tests {
 
     #[test]
     fn the_twenty_one_launch_ops_are_in_the_table() {
-        assert_eq!(OPS.len(), 22);
+        assert_eq!(OPS.len(), 23);
         assert!(OPS.iter().all(|op| op.starts_with("launch_")));
+        assert!(
+            OPS.windows(2).all(|pair| pair[0] < pair[1]),
+            "OPS is sorted"
+        );
+    }
+
+    #[tokio::test]
+    async fn the_launch_run_op_refuses_a_bad_call_with_a_fixed_word_and_needs_the_hooks() {
+        let home = FakeHome::new("launch-lib-");
+        let ctx = ctx(&home);
+        let secret = "SECRET-APP-NAME";
+        let params = json!({ "appName": secret, "runner": "gog" });
+        for args in [
+            vec![],
+            vec![params.clone()],
+            vec![json!("params"), json!({})],
+            vec![json!({ "appName": secret }), json!({})],
+            vec![
+                json!({ "appName": secret, "runner": "gog", "extra": 1 }),
+                json!({}),
+            ],
+            vec![json!({ "appName": "", "runner": "gog" }), json!({})],
+            vec![params.clone(), json!({ "unknown": 1 })],
+            vec![params.clone(), json!({}), json!({})],
+        ] {
+            let err = dispatch("launch_run", &args, &ctx).await.unwrap_err();
+            assert_eq!(err, "launch_run:bad-args", "{args:?}");
+        }
+        // A well-formed call on a context with no hooks fails closed with a fixed word, never an error text.
+        let err = dispatch("launch_run", &[params, json!({})], &ctx)
+            .await
+            .unwrap_err();
+        assert_eq!(err, "launch:no-hooks");
     }
 
     #[tokio::test]

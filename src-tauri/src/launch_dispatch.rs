@@ -20,6 +20,12 @@
 //! T-88.1-14: the host facts the env builders read (the process environment, the Darwin release) are
 //! [`wine_dispatch::wine_run_host`], appended here; the sidecar sends neither.
 //!
+//! 88.3-06 (D-01, D-26): the `launch_run` arm starts one Play in the Rust launch funnel
+//! (`gamelib_launch::funnel`); [`SidecarManagerHooks`] carries every funnel hook (`launch_facts`, `launch`,
+//! `sync_saves`, `set_presence`, `clear_presence`, `persist_bottle_wine_version`, `update_gog_playtime`,
+//! `wine_settings_write`) to the TS managers over the one `launchManagerCall` channel, and [`ShellFunnel`] does the
+//! funnel's window, wake lock and CLI exit work through the shell's own functions.
+//!
 //! 88.1-14 (D-28): the context carries a dialog source, [`ShellDialogs`], the same native message box
 //! `dialog_message` shows, so `checkWineBeforeLaunch` asks its question from Rust. A dismissal is `None`, never
 //! index 0 (CR-04).
@@ -62,13 +68,34 @@ impl LaunchDialogs for ShellDialogs {
     }
 }
 
-/// The Rust-to-sidecar invoke channel the TS managers answer (88.2-18, D-26). Called as `[op, payload]` with
-/// `op` one of [`HOOK_OP_GAME_TITLE`] and [`HOOK_OP_FORCE_UNINSTALL`] and `payload` `{ runner, appName }`.
-/// It is in `LONG_RUNNING_CHANNELS`: 88.3 adds the funnel's `launch` hook to this channel, which spans a whole
-/// play session, so no wall-clock bound is right for it.
+/// The Rust-to-sidecar invoke channel the TS managers answer (88.2-18, D-26). Called as `[op, payload]`: 88.2's
+/// two ops, [`HOOK_OP_GAME_TITLE`] and [`HOOK_OP_FORCE_UNINSTALL`], carry `{ runner, appName }`, and 88.3-06's eight
+/// funnel ops carry the payload each of them documents below. It is in `LONG_RUNNING_CHANNELS`: the funnel's
+/// `launch` hook spans a whole play session on this channel, so no wall-clock bound is right for it.
 pub(crate) const LAUNCH_MANAGER_CALL: &str = "launchManagerCall";
 const HOOK_OP_GAME_TITLE: &str = "game_title";
 const HOOK_OP_FORCE_UNINSTALL: &str = "force_uninstall";
+/// `{ runner, appName }`; answers the `LaunchFacts` object.
+const HOOK_OP_LAUNCH_FACTS: &str = "launch_facts";
+/// `{ runner, appName, launchArguments?, args?, skipVersionCheck?, log }` (an argument the Play did not send is
+/// left out; `log` is `{ target, disabled, rotate }`); answers `{ launched, rotated? }` once the game's process
+/// is over.
+const HOOK_OP_LAUNCH: &str = "launch";
+/// `{ runner, appName, direction, savesPath, gogSaves }` (`direction` is `--skip-upload` or `--skip-download`,
+/// the other two the game's settings values, `null` when absent); answers `true`, or `false` when the sync threw
+/// (the TS handler has written the error line).
+const HOOK_OP_SYNC_SAVES: &str = "sync_saves";
+/// `{ runner, appName }`; answers `true`, or `false` when the store defines no presence.
+const HOOK_OP_SET_PRESENCE: &str = "set_presence";
+/// `{ runner }`; answers `true`, or `false` when the store defines no presence.
+const HOOK_OP_CLEAR_PRESENCE: &str = "clear_presence";
+/// `{ runner, appName, wine }`; answers `true`, or `false` when the store defines no such member.
+const HOOK_OP_PERSIST_BOTTLE_WINE_VERSION: &str = "persist_bottle_wine_version";
+/// `{ appName, start, end }` (the instants as `toISOString` text); answers `true`.
+const HOOK_OP_UPDATE_GOG_PLAYTIME: &str = "update_gog_playtime";
+/// `{ appName, global?, game? }` (the `wineVersion` values the Wine check chose, a missing one left out);
+/// answers `true`.
+const HOOK_OP_WINE_SETTINGS_WRITE: &str = "wine_settings_write";
 /// The name of the thread each hook call runs on (never the shared blocking pool: a call may wait as long
 /// as the sidecar takes, and must not hold a pool worker the rest of the shell needs).
 const HOOK_THREAD_NAME: &str = "launch-manager-hook";
@@ -174,12 +201,24 @@ impl SidecarManagerHooks {
         runner: gamelib_launch::runner::RunnerName,
         app_name: &str,
     ) -> gamelib_core::process::BoxFuture<Result<Value, gamelib_launch::hooks::HookError>> {
+        self.ask_with(
+            op,
+            serde_json::json!({ "runner": runner.as_str(), "appName": app_name }),
+        )
+    }
+
+    /// Sends `[op, payload]` from a thread of its own (named [`HOOK_THREAD_NAME`], never the shared blocking
+    /// pool: a call may wait as long as the sidecar takes) and answers the reply, or the category word. A
+    /// sidecar that is not there, one that closed, an error reply and a thread that would not start or ended
+    /// without answering are all `HookError("sidecar")`; nothing of the payload or the error text is kept.
+    fn ask_with(
+        &self,
+        op: &'static str,
+        payload: Value,
+    ) -> gamelib_core::process::BoxFuture<Result<Value, gamelib_launch::hooks::HookError>> {
         use gamelib_launch::hooks::HookError;
         let invoke = Arc::clone(&self.invoke);
-        let args = vec![
-            serde_json::json!(op),
-            serde_json::json!({ "runner": runner.as_str(), "appName": app_name }),
-        ];
+        let args = vec![serde_json::json!(op), payload];
         let (tx, rx) = hook_slot::<Result<Value, String>>();
         let spawned = thread::Builder::new()
             .name(HOOK_THREAD_NAME.into())
@@ -197,6 +236,50 @@ impl SidecarManagerHooks {
             }
         })
     }
+}
+
+/// A reply that must be exactly `true`: an acknowledgement. Anything else is `bad-reply`.
+fn acknowledged(reply: &Value) -> Result<(), gamelib_launch::hooks::HookError> {
+    match reply {
+        Value::Bool(true) => Ok(()),
+        _ => Err(gamelib_launch::hooks::HookError(HOOK_BAD_REPLY)),
+    }
+}
+
+/// The acknowledgement of a store member that may not exist (`launchHooks[runner].setPresence?.()`): `true` is
+/// done, `false` is a store that defines none (`unavailable`, which the funnel treats as "nothing to do").
+fn acknowledged_or_undefined(reply: &Value) -> Result<(), gamelib_launch::hooks::HookError> {
+    match reply {
+        Value::Bool(true) => Ok(()),
+        Value::Bool(false) => Err(gamelib_launch::hooks::HookError("unavailable")),
+        _ => Err(gamelib_launch::hooks::HookError(HOOK_BAD_REPLY)),
+    }
+}
+
+/// `launch`'s payload: the arguments the Play sent are present, the ones it did not send are left out (the TS
+/// passed `undefined`, which is not `null`), then the log hand-off.
+fn launch_payload(
+    runner: gamelib_launch::runner::RunnerName,
+    app_name: &str,
+    args: &gamelib_launch::hooks::LaunchHookArgs,
+) -> Value {
+    let mut payload = serde_json::Map::new();
+    payload.insert("runner".into(), Value::String(runner.as_str().to_string()));
+    payload.insert("appName".into(), Value::String(app_name.to_string()));
+    if let Some(option) = &args.launch_arguments {
+        payload.insert("launchArguments".into(), option.clone());
+    }
+    if let Some(extra) = &args.args {
+        payload.insert("args".into(), serde_json::json!(extra));
+    }
+    if let Some(skip) = args.skip_version_check {
+        payload.insert("skipVersionCheck".into(), Value::Bool(skip));
+    }
+    payload.insert(
+        "log".into(),
+        serde_json::to_value(&args.log).unwrap_or(Value::Null),
+    );
+    Value::Object(payload)
 }
 
 impl gamelib_launch::hooks::ManagerHooks for SidecarManagerHooks {
@@ -222,6 +305,163 @@ impl gamelib_launch::hooks::ManagerHooks for SidecarManagerHooks {
     ) -> gamelib_core::process::BoxFuture<Result<(), gamelib_launch::hooks::HookError>> {
         let reply = self.ask(HOOK_OP_FORCE_UNINSTALL, runner, app_name);
         Box::pin(async move { reply.await.map(|_| ()) })
+    }
+
+    fn launch_facts(
+        &self,
+        runner: gamelib_launch::runner::RunnerName,
+        app_name: &str,
+    ) -> gamelib_core::process::BoxFuture<
+        Result<gamelib_launch::hooks::LaunchFacts, gamelib_launch::hooks::HookError>,
+    > {
+        use gamelib_launch::hooks::HookError;
+        let reply = self.ask(HOOK_OP_LAUNCH_FACTS, runner, app_name);
+        Box::pin(async move {
+            serde_json::from_value(reply.await?).map_err(|_| HookError(HOOK_BAD_REPLY))
+        })
+    }
+
+    fn launch(
+        &self,
+        runner: gamelib_launch::runner::RunnerName,
+        app_name: &str,
+        args: gamelib_launch::hooks::LaunchHookArgs,
+    ) -> gamelib_core::process::BoxFuture<
+        Result<gamelib_launch::hooks::LaunchHookReply, gamelib_launch::hooks::HookError>,
+    > {
+        use gamelib_launch::hooks::HookError;
+        let reply = self.ask_with(HOOK_OP_LAUNCH, launch_payload(runner, app_name, &args));
+        Box::pin(async move {
+            serde_json::from_value(reply.await?).map_err(|_| HookError(HOOK_BAD_REPLY))
+        })
+    }
+
+    fn sync_saves(
+        &self,
+        runner: gamelib_launch::runner::RunnerName,
+        app_name: &str,
+        args: gamelib_launch::hooks::SyncSavesArgs,
+    ) -> gamelib_core::process::BoxFuture<Result<(), gamelib_launch::hooks::HookError>> {
+        use gamelib_launch::hooks::HookError;
+        let reply = self.ask_with(
+            HOOK_OP_SYNC_SAVES,
+            serde_json::json!({
+                "runner": runner.as_str(),
+                "appName": app_name,
+                "direction": args.direction.flag(),
+                "savesPath": args.saves_path,
+                "gogSaves": args.gog_saves,
+            }),
+        );
+        Box::pin(async move {
+            match reply.await? {
+                Value::Bool(true) => Ok(()),
+                // The TS call threw and its handler wrote the error line.
+                Value::Bool(false) => Err(HookError("failed")),
+                _ => Err(HookError(HOOK_BAD_REPLY)),
+            }
+        })
+    }
+
+    fn set_presence(
+        &self,
+        runner: gamelib_launch::runner::RunnerName,
+        app_name: &str,
+    ) -> gamelib_core::process::BoxFuture<Result<(), gamelib_launch::hooks::HookError>> {
+        let reply = self.ask(HOOK_OP_SET_PRESENCE, runner, app_name);
+        Box::pin(async move { acknowledged_or_undefined(&reply.await?) })
+    }
+
+    fn clear_presence(
+        &self,
+        runner: gamelib_launch::runner::RunnerName,
+    ) -> gamelib_core::process::BoxFuture<Result<(), gamelib_launch::hooks::HookError>> {
+        let reply = self.ask_with(
+            HOOK_OP_CLEAR_PRESENCE,
+            serde_json::json!({ "runner": runner.as_str() }),
+        );
+        Box::pin(async move { acknowledged_or_undefined(&reply.await?) })
+    }
+
+    fn persist_bottle_wine_version(
+        &self,
+        runner: gamelib_launch::runner::RunnerName,
+        app_name: &str,
+        wine: Value,
+    ) -> gamelib_core::process::BoxFuture<Result<(), gamelib_launch::hooks::HookError>> {
+        let reply = self.ask_with(
+            HOOK_OP_PERSIST_BOTTLE_WINE_VERSION,
+            serde_json::json!({ "runner": runner.as_str(), "appName": app_name, "wine": wine }),
+        );
+        Box::pin(async move { acknowledged_or_undefined(&reply.await?) })
+    }
+
+    fn update_gog_playtime(
+        &self,
+        app_name: &str,
+        start_iso: &str,
+        end_iso: &str,
+    ) -> gamelib_core::process::BoxFuture<Result<(), gamelib_launch::hooks::HookError>> {
+        let reply = self.ask_with(
+            HOOK_OP_UPDATE_GOG_PLAYTIME,
+            serde_json::json!({ "appName": app_name, "start": start_iso, "end": end_iso }),
+        );
+        Box::pin(async move { acknowledged(&reply.await?) })
+    }
+
+    fn wine_settings_write(
+        &self,
+        app_name: &str,
+        write: gamelib_launch::hooks::WineSettingsWrite,
+    ) -> gamelib_core::process::BoxFuture<Result<(), gamelib_launch::hooks::HookError>> {
+        let mut payload = serde_json::Map::new();
+        payload.insert("appName".into(), Value::String(app_name.to_string()));
+        if let Some(global) = write.global {
+            payload.insert("global".into(), global);
+        }
+        if let Some(game) = write.game {
+            payload.insert("game".into(), game);
+        }
+        let reply = self.ask_with(HOOK_OP_WINE_SETTINGS_WRITE, Value::Object(payload));
+        Box::pin(async move { acknowledged(&reply.await?) })
+    }
+}
+
+/// The funnel's window and power work over the shell's own functions (88.3-06, D-26): the main window, the
+/// display-sleep wake lock and the CLI exit. Every call runs on the funnel's worker thread, the thread the
+/// `rustInvoke` arms already run these functions on. A failed hide or wake lock is a fixed line in `gamelib.log` and
+/// never fails the launch (the TS ignored neither failure's cause either); the exit takes the graceful path
+/// ([`app_lifecycle::rpc_app_exit`]: the sidecar is told to begin its shutdown, then the app exits through the run
+/// loop's exit events, so the one exit budget applies and no wait of its own is added).
+struct ShellFunnel {
+    app: AppHandle,
+}
+
+impl gamelib_launch::funnel::shell::FunnelShell for ShellFunnel {
+    fn hide_main_window(&self) {
+        if app_lifecycle::rpc_main_window_hide(&self.app).is_err() {
+            shell_log("launch funnel: the main window could not be hidden");
+        }
+    }
+
+    fn wake_lock_start(&self, kind: &str) -> Option<u32> {
+        match wake_lock::wake_lock_start(kind) {
+            Ok(id) => Some(id),
+            Err(_) => {
+                shell_log("launch funnel: the display wake lock could not be taken");
+                None
+            }
+        }
+    }
+
+    fn wake_lock_stop(&self, id: u32) {
+        if wake_lock::wake_lock_stop(id).is_err() {
+            shell_log("launch funnel: the display wake lock could not be released");
+        }
+    }
+
+    fn exit_app(&self) {
+        let _ = app_lifecycle::rpc_app_exit(&self.app);
     }
 }
 
@@ -284,6 +524,8 @@ pub(crate) fn install(app: &AppHandle) {
     // 88.2-18 (D-26): the manager hooks the runner's error handler asks (the game's title, forceUninstall).
     // `errors` stays `None`, the production handler (88.2-09), which reads the dialogs and hooks set here.
     let ctx = with_shell_hooks(ctx);
+    // 88.3-06 (D-26): the funnel's window, wake lock and CLI exit over the shell's own functions.
+    let ctx = ctx.with_shell(Arc::new(ShellFunnel { app: app.clone() }));
     let _ = LAUNCH_CTX.set(Arc::new(ctx));
 }
 
@@ -744,6 +986,39 @@ fn runner_call_over(
 /// shutdown token end it.
 pub(crate) fn rpc_launch_runner_call(args: &[Value]) -> Result<Value, String> {
     runner_call_over(launch_ctx(), args, runner_host)
+}
+
+/// The host facts of a funnel run (T-88.1-14): the runner host (the environment the scripts inherit and the `PATH`)
+/// and the wine host (the environment and the Darwin release), both read from this process, never from the sidecar.
+fn funnel_host() -> Value {
+    serde_json::json!({ "runner": runner_host(), "wine": wine_dispatch::wine_run_host() })
+}
+
+/// The body of the `launch_run` arm over a given context and host: the generated decode (one object, the runner
+/// one of the five names) and an arity check first, so a bad call is rejected the same fixed `<op>:bad-args` literal
+/// before and after the install and never echoes the sidecar's value, then the crate over `[params, host]`, which
+/// decodes the object strictly again. `host` is the shell's own facts, taken only once the context is there.
+fn launch_run_over(
+    ctx: Option<&Arc<LaunchCtx>>,
+    args: &[Value],
+    host: impl FnOnce() -> Value,
+) -> Result<Value, String> {
+    LaunchRunArgs::from_args(args)?;
+    if args.len() != 1 {
+        return Err("launch_run:bad-args".to_string());
+    }
+    let ctx = ctx.ok_or_else(|| "launch_run:not-ready".to_string())?;
+    rpc_launch_op(Some(ctx), "launch_run", &[args[0].clone(), host()])
+}
+
+/// The `launch_run` `rustInvoke` arm (88.3-06, D-01, D-19): one Play through the Rust launch funnel, answering
+/// `{ status }` when the game's process is over. The funnel runs here, on the dispatcher's worker thread for this one
+/// request (every `rustInvoke` runs on its own spawned thread), and reaches the TS managers over `launchManagerCall`
+/// and the window and the wake lock through [`ShellFunnel`]. A launch spans a whole play session, so the sidecar lists
+/// the channel as unbounded (`UNBOUNDED_RUST_CHANNELS`); the funnel's registrant and the app shutdown end it. There is
+/// no sidecar fallback: before [`install`] the answer is `launch_run:not-ready`.
+pub(crate) fn rpc_launch_run(args: &[Value]) -> Result<Value, String> {
+    launch_run_over(launch_ctx(), args, funnel_host)
 }
 
 /// The body of the `launch_runner_kill` arm over a given context: the generated decode (`[streamId]`) and an arity
@@ -2730,5 +3005,436 @@ mod tests {
                     .unwrap_err();
             assert_eq!(err, "launch_ask_force_uninstall:bad-args");
         }
+    }
+
+    // ---- the funnel over the shell (88.3-06, D-01, D-19, D-26) ---------------------------------------------
+
+    /// What a per-op scripted invoke saw: the op of each `launchManagerCall` frame, in order, with its payload.
+    type SeenOps = Arc<Mutex<Vec<(String, Value)>>>;
+
+    /// An invoke that answers each funnel op from `answer` (the op and its payload in, the reply out) and keeps
+    /// every frame it saw, checking the channel is the one the TS managers answer.
+    fn scripted_ops(
+        answer: impl Fn(&str, &Value) -> Result<Value, String> + Send + Sync + 'static,
+    ) -> (HookInvoke, SeenOps) {
+        let seen: SeenOps = Arc::new(Mutex::new(Vec::new()));
+        let recorder = Arc::clone(&seen);
+        let invoke: HookInvoke = Arc::new(move |channel, args| {
+            assert_eq!(channel, "launchManagerCall");
+            let op = args[0].as_str().expect("an op").to_string();
+            let payload = args[1].clone();
+            let reply = answer(&op, &payload);
+            recorder.lock().unwrap().push((op, payload));
+            reply
+        });
+        (invoke, seen)
+    }
+
+    fn launch_run_params(app_name: &str) -> Value {
+        json!({ "appName": app_name, "runner": "sideload" })
+    }
+
+    fn no_host() -> Value {
+        json!({})
+    }
+
+    #[test]
+    fn launch_run_reaches_the_funnel_and_the_launch_hook() {
+        let home = FakeHome::new("launch-shell-");
+        // A native game whose install folder exists, so the funnel goes on to the launch.
+        let install = home.root().join("games").join("alpha");
+        std::fs::create_dir_all(&install).unwrap();
+        let install_path = install.to_string_lossy().into_owned();
+        let (invoke, seen) = scripted_ops(move |op, _| match op {
+            "launch_facts" => Ok(json!({
+                "gameInfo": {
+                    "title": "Alpha",
+                    "install": { "install_path": install_path, "platform": "linux" }
+                },
+                "settings": {},
+                "isNative": true,
+            })),
+            "launch" => Ok(json!({ "launched": true, "rotated": false })),
+            _ => Ok(json!(true)),
+        });
+        let ctx =
+            Arc::new(ctx_built(&home, None).with_hooks(Arc::new(SidecarManagerHooks::new(invoke))));
+
+        let answer = launch_run_over(Some(&ctx), &[launch_run_params("alpha")], no_host);
+        assert_eq!(answer, Ok(json!({ "status": "done" })));
+
+        let seen = seen.lock().unwrap();
+        let ops: Vec<&str> = seen.iter().map(|(op, _)| op.as_str()).collect();
+        assert_eq!(ops.first(), Some(&"launch_facts"), "{ops:?}");
+        let launch_at = ops
+            .iter()
+            .position(|op| *op == "launch")
+            .expect("the launch hook was called");
+        assert!(launch_at > 0, "{ops:?}");
+        // The facts were asked for this game, and the launch hook is told the game and the log's state.
+        assert_eq!(
+            seen[0].1,
+            json!({ "runner": "sideload", "appName": "alpha" })
+        );
+        let payload = &seen[launch_at].1;
+        assert_eq!(payload["runner"], json!("sideload"));
+        assert_eq!(payload["appName"], json!("alpha"));
+        assert_eq!(payload["log"]["target"]["appName"], json!("alpha"));
+        // The Play sent no launch option, args or version-check flag, so none is in the frame (absent, not null).
+        for absent in ["launchArguments", "args", "skipVersionCheck"] {
+            assert!(
+                payload.get(absent).is_none(),
+                "{absent} must be left out: {payload}"
+            );
+        }
+    }
+
+    #[test]
+    fn launch_run_is_not_ready_before_the_install_and_rejects_a_wrong_call_the_same_way_after() {
+        let home = FakeHome::new("launch-shell-");
+        let ctx = ctx_over(&home);
+        assert_eq!(
+            launch_run_over(None, &[launch_run_params("alpha")], no_host),
+            Err("launch_run:not-ready".to_string())
+        );
+        let secret = "SECRET-APP-NAME";
+        let wrong: Vec<Vec<Value>> = vec![
+            vec![],
+            vec![json!("not an object")],
+            vec![json!({ "runner": "legendary" })],
+            vec![json!({ "appName": secret })],
+            vec![json!({ "appName": secret, "runner": "epic" })],
+            vec![json!({ "appName": secret, "runner": "gog", "args": "-windowed" })],
+            vec![json!({ "appName": secret, "runner": "gog", "skipVersionCheck": "yes" })],
+            vec![json!({ "appName": secret, "runner": "gog" }), json!(secret)],
+        ];
+        for args in &wrong {
+            for ctx in [None, Some(&ctx)] {
+                let err = launch_run_over(ctx, args, no_host).unwrap_err();
+                assert_eq!(err, "launch_run:bad-args", "{args:?}");
+                assert!(!err.contains(secret), "{args:?}");
+            }
+        }
+        // An unknown key passes the generated decode and is the crate's to refuse, which needs the context.
+        let err = launch_run_over(
+            Some(&ctx),
+            &[json!({ "appName": secret, "runner": "gog", "extra": 1 })],
+            no_host,
+        )
+        .unwrap_err();
+        assert_eq!(err, "launch_run:bad-args");
+        assert!(!err.contains(secret));
+        // An app name the crate refuses (empty, or longer than its bound), and a host it does not know.
+        for name in [String::new(), "a".repeat(257)] {
+            let err = launch_run_over(
+                Some(&ctx),
+                &[json!({ "appName": name, "runner": "gog" })],
+                no_host,
+            )
+            .unwrap_err();
+            assert_eq!(err, "launch_run:bad-args");
+        }
+        let err = launch_run_over(
+            Some(&ctx),
+            &[launch_run_params("alpha")],
+            || json!({ "other": 1 }),
+        )
+        .unwrap_err();
+        assert_eq!(err, "launch_run:bad-args");
+    }
+
+    #[test]
+    fn the_funnel_host_carries_the_runner_host_and_the_wine_host_and_the_crate_accepts_it() {
+        let host = funnel_host();
+        assert!(host["runner"]["env"].is_object());
+        assert!(host["runner"]["path"].is_string());
+        assert!(host["wine"]["env"].is_object());
+        // The crate's strict decode takes exactly this shape, so a real call is not refused for its host.
+        let decoded: gamelib_launch::funnel::FunnelHost = serde_json::from_value(host).unwrap();
+        assert!(!decoded.runner.env.is_empty());
+    }
+
+    /// One funnel hook op: what it sends, what a good reply decodes to and what a wrong one is called.
+    macro_rules! funnel_hook_op_test {
+        ($name:ident, $op:expr, $payload:expr, $good:expr, $wrong:expr, $call:expr) => {
+            #[test]
+            fn $name() {
+                let call: fn(&SidecarManagerHooks) -> Result<(), HookError> = $call;
+                // A good reply: the frame is `[op, payload]` on `launchManagerCall`, from a thread of its own.
+                let (invoke, seen) = scripted(Ok($good));
+                assert_eq!(call(&SidecarManagerHooks::new(invoke)), Ok(()));
+                {
+                    let seen = seen.lock().unwrap();
+                    assert_eq!(seen.len(), 1);
+                    assert_eq!(seen[0].0, "launchManagerCall");
+                    assert_eq!(seen[0].1, vec![json!($op), $payload]);
+                    assert_eq!(seen[0].2.as_deref(), Some("launch-manager-hook"));
+                }
+                // The sidecar's error is the fixed word `sidecar`, never its text, the runner or the app name.
+                let (invoke, _) = scripted(Err("boom SECRET-APP-NAME legendary".to_string()));
+                let err = call(&SidecarManagerHooks::new(invoke)).unwrap_err();
+                assert_eq!(err, HookError("sidecar"));
+                // A reply of the wrong shape is the fixed word `bad-reply`.
+                let (invoke, _) = scripted(Ok($wrong));
+                assert_eq!(
+                    call(&SidecarManagerHooks::new(invoke)),
+                    Err(HookError("bad-reply"))
+                );
+            }
+        };
+    }
+
+    funnel_hook_op_test!(
+        launch_facts_sends_runner_and_app_and_decodes_the_facts_strictly,
+        "launch_facts",
+        json!({ "runner": "gog", "appName": "app" }),
+        json!({ "gameInfo": {}, "settings": {}, "isNative": true, "global": { "minimizeOnLaunch": true } }),
+        json!({ "gameInfo": {}, "settings": {}, "unknownKey": 1 }),
+        |hooks| block_on(hooks.launch_facts(RunnerName::Gog, "app")).map(|_| ())
+    );
+
+    fn launch_hook_args(with_options: bool) -> gamelib_launch::hooks::LaunchHookArgs {
+        gamelib_launch::hooks::LaunchHookArgs {
+            launch_arguments: with_options.then(|| json!({ "type": "basic", "name": "Windowed" })),
+            args: with_options.then(|| vec!["-windowed".to_string()]),
+            skip_version_check: with_options.then_some(true),
+            log: gamelib_launch::funnel::log::LogHandOffWire {
+                target: gamelib_launch::funnel::log::LogTargetWire {
+                    kind: "game",
+                    app_name: "app".to_string(),
+                    runner: "gog",
+                    log_type: "launch",
+                },
+                disabled: false,
+                rotate: true,
+            },
+        }
+    }
+
+    funnel_hook_op_test!(
+        launch_sends_the_play_arguments_and_the_log_state_and_decodes_the_reply_strictly,
+        "launch",
+        json!({
+            "runner": "gog",
+            "appName": "app",
+            "launchArguments": { "type": "basic", "name": "Windowed" },
+            "args": ["-windowed"],
+            "skipVersionCheck": true,
+            "log": {
+                "target": { "kind": "game", "appName": "app", "runner": "gog", "type": "launch" },
+                "disabled": false,
+                "rotate": true
+            }
+        }),
+        json!({ "launched": true, "rotated": true }),
+        json!({ "launched": "yes" }),
+        |hooks| block_on(hooks.launch(RunnerName::Gog, "app", launch_hook_args(true))).map(|_| ())
+    );
+
+    #[test]
+    fn launch_leaves_out_what_the_play_did_not_send_and_answers_a_launched_game() {
+        let payload = launch_payload(RunnerName::Gog, "app", &launch_hook_args(false));
+        assert_eq!(
+            payload,
+            json!({
+                "runner": "gog",
+                "appName": "app",
+                "log": {
+                    "target": { "kind": "game", "appName": "app", "runner": "gog", "type": "launch" },
+                    "disabled": false,
+                    "rotate": true
+                }
+            })
+        );
+        // `rotated` may be left out of the reply (it means "not claimed").
+        let (invoke, _) = scripted(Ok(json!({ "launched": false })));
+        let reply = block_on(SidecarManagerHooks::new(invoke).launch(
+            RunnerName::Gog,
+            "app",
+            launch_hook_args(false),
+        ));
+        assert_eq!(
+            reply,
+            Ok(gamelib_launch::hooks::LaunchHookReply {
+                launched: false,
+                rotated: false
+            })
+        );
+    }
+
+    funnel_hook_op_test!(
+        sync_saves_sends_the_direction_flag_and_the_saves_settings_and_decodes_an_acknowledgement,
+        "sync_saves",
+        json!({
+            "runner": "gog",
+            "appName": "app",
+            "direction": "--skip-upload",
+            "savesPath": "/saves",
+            "gogSaves": []
+        }),
+        json!(true),
+        json!("done"),
+        |hooks| block_on(hooks.sync_saves(
+            RunnerName::Gog,
+            "app",
+            gamelib_launch::hooks::SyncSavesArgs {
+                direction: gamelib_launch::hooks::SyncDirection::SkipUpload,
+                saves_path: json!("/saves"),
+                gog_saves: json!([]),
+            },
+        ))
+    );
+
+    #[test]
+    fn a_sync_that_threw_is_the_word_failed_and_the_upload_flag_is_skip_download() {
+        let (invoke, seen) = scripted(Ok(json!(false)));
+        let reply = block_on(SidecarManagerHooks::new(invoke).sync_saves(
+            RunnerName::Legendary,
+            "app",
+            gamelib_launch::hooks::SyncSavesArgs {
+                direction: gamelib_launch::hooks::SyncDirection::SkipDownload,
+                saves_path: Value::Null,
+                gog_saves: Value::Null,
+            },
+        ));
+        assert_eq!(reply, Err(HookError("failed")));
+        assert_eq!(
+            seen.lock().unwrap()[0].1[1]["direction"],
+            json!("--skip-download")
+        );
+    }
+
+    funnel_hook_op_test!(
+        set_presence_sends_runner_and_app_and_decodes_an_acknowledgement,
+        "set_presence",
+        json!({ "runner": "gog", "appName": "app" }),
+        json!(true),
+        json!({ "ok": true }),
+        |hooks| block_on(hooks.set_presence(RunnerName::Gog, "app"))
+    );
+
+    funnel_hook_op_test!(
+        clear_presence_sends_the_runner_only_and_decodes_an_acknowledgement,
+        "clear_presence",
+        json!({ "runner": "gog" }),
+        json!(true),
+        json!(null),
+        |hooks| block_on(hooks.clear_presence(RunnerName::Gog))
+    );
+
+    funnel_hook_op_test!(
+        persist_bottle_wine_version_sends_the_wine_and_decodes_an_acknowledgement,
+        "persist_bottle_wine_version",
+        json!({ "runner": "steam", "appName": "1", "wine": { "name": "w", "bin": "/w", "type": "wine" } }),
+        json!(true),
+        json!("ok"),
+        |hooks| block_on(hooks.persist_bottle_wine_version(
+            RunnerName::Steam,
+            "1",
+            json!({ "name": "w", "bin": "/w", "type": "wine" }),
+        ))
+    );
+
+    #[test]
+    fn a_store_that_defines_no_presence_or_bottle_hook_is_unavailable_not_a_failure() {
+        let (invoke, _) = scripted(Ok(json!(false)));
+        let hooks = SidecarManagerHooks::new(invoke);
+        assert_eq!(
+            block_on(hooks.set_presence(RunnerName::Legendary, "app")),
+            Err(HookError("unavailable"))
+        );
+        assert_eq!(
+            block_on(hooks.clear_presence(RunnerName::Legendary)),
+            Err(HookError("unavailable"))
+        );
+        assert_eq!(
+            block_on(hooks.persist_bottle_wine_version(RunnerName::Steam, "1", json!(null))),
+            Err(HookError("unavailable"))
+        );
+    }
+
+    funnel_hook_op_test!(
+        update_gog_playtime_sends_the_instants_and_decodes_an_acknowledgement,
+        "update_gog_playtime",
+        json!({ "appName": "app", "start": "2026-01-01T00:00:00.000Z", "end": "2026-01-01T01:00:00.000Z" }),
+        json!(true),
+        json!(false),
+        |hooks| block_on(hooks.update_gog_playtime(
+            "app",
+            "2026-01-01T00:00:00.000Z",
+            "2026-01-01T01:00:00.000Z",
+        ))
+    );
+
+    funnel_hook_op_test!(
+        wine_settings_write_sends_the_two_wine_values_and_decodes_an_acknowledgement,
+        "wine_settings_write",
+        json!({ "appName": "app", "global": { "name": "g" }, "game": { "name": "w" } }),
+        json!(true),
+        json!(null),
+        |hooks| block_on(hooks.wine_settings_write(
+            "app",
+            gamelib_launch::hooks::WineSettingsWrite {
+                global: Some(json!({ "name": "g" })),
+                game: Some(json!({ "name": "w" })),
+            },
+        ))
+    );
+
+    #[test]
+    fn a_wine_write_with_only_the_game_value_leaves_the_global_key_out() {
+        let (invoke, seen) = scripted(Ok(json!(true)));
+        let write = gamelib_launch::hooks::WineSettingsWrite {
+            global: None,
+            game: Some(json!({ "name": "w" })),
+        };
+        let reply = block_on(SidecarManagerHooks::new(invoke).wine_settings_write("app", write));
+        assert_eq!(reply, Ok(()));
+        assert_eq!(
+            seen.lock().unwrap()[0].1[1],
+            json!({ "appName": "app", "game": { "name": "w" } })
+        );
+    }
+
+    #[test]
+    fn a_funnel_hook_whose_thread_ends_without_answering_is_an_error_not_a_hang() {
+        let invoke: HookInvoke = Arc::new(|_, _| panic!("the sidecar handle blew up"));
+        let hooks = SidecarManagerHooks::new(invoke);
+        assert_eq!(
+            block_on(hooks.launch(RunnerName::Gog, "app", launch_hook_args(false))),
+            Err(HookError("sidecar"))
+        );
+        assert_eq!(
+            block_on(hooks.launch_facts(RunnerName::Gog, "app")),
+            Err(HookError("sidecar"))
+        );
+    }
+
+    #[test]
+    fn the_installed_context_carries_the_funnel_shell_over_the_shells_own_functions() {
+        // `install` builds the context from an AppHandle no unit test has, so its composition is pinned as source.
+        let install = install_source();
+        assert!(install.contains("with_shell_hooks(ctx)"));
+        assert!(install.contains(".with_shell(Arc::new(ShellFunnel"));
+        // ShellFunnel is the shell's own functions: the window, the wake lock, and the graceful exit.
+        let source = include_str!("launch_dispatch.rs");
+        let start = source
+            .find("impl gamelib_launch::funnel::shell::FunnelShell for ShellFunnel")
+            .unwrap();
+        let end = start
+            + source[start..]
+                .find("/// The hooks the shell's launch context carries")
+                .unwrap();
+        let shell = &source[start..end];
+        for call in [
+            "app_lifecycle::rpc_main_window_hide(&self.app)",
+            "wake_lock::wake_lock_start(kind)",
+            "wake_lock::wake_lock_stop(id)",
+            "app_lifecycle::rpc_app_exit(&self.app)",
+        ] {
+            assert!(shell.contains(call), "{call}");
+        }
+        // A failed hide or wake lock is a fixed line and never an error of the launch.
+        assert_eq!(shell.matches("shell_log(\"launch funnel: ").count(), 3);
     }
 }

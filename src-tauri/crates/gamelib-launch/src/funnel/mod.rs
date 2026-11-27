@@ -61,9 +61,15 @@ impl LaunchStatus {
 
 /// The process facts the shell reads and the funnel hands on (the funnel reads no environment of its own): the
 /// runner environment a launch script inherits and the wine host the Wine check runs over.
-#[derive(Debug, Clone, Default)]
+///
+/// On the wire (`launch_run`'s second argument, appended by the shell) it is `{ runner, wine }`, each optional,
+/// and strict: an unknown key is a bad argument.
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct FunnelHost {
+    #[serde(default)]
     pub runner: RunnerHost,
+    #[serde(default)]
     pub wine: WineHost,
 }
 

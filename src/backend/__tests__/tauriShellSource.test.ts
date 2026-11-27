@@ -528,7 +528,8 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     // Phase 88.2 plan 17: 210 -> 213, launch_wine_command, launch_wine_path and launch_script_run.
     // Phase 88.2 plan 17 task 2: 213 -> 217, launch_spawn_async, launch_tracked_kill, launch_tracked_kill_all and launch_games_running.
     // Phase 88.2 plan 20: 217 -> 218, launch_ask_force_uninstall.
-    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(218)
+    // Phase 88.3 plan 06: 218 -> 219, launch_run.
+    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(219)
     expect(router).not.toContain('_ =>')
   })
 
@@ -1127,6 +1128,9 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       // Phase 88.2 plan 20: the deleted-folder prompt (`askForceUninstall` in `launchrust/runner.ts`). PROVEN: `launch_dispatch::tests` drives the arm's decode, not-ready and the fixed bad-args;
       // `gamelib-launch`'s `ask_force_uninstall` tests drive the crate op and the shell's EOF test drives a Yes over hooks the sidecar never answers.
       'launch_ask_force_uninstall',
+      // Phase 88.3 plan 06: one Play through the Rust launch funnel (`launch_run`, `RUST_LAUNCH_RUN`). PROVEN: `launch_dispatch::tests` drives the arm's decode, not-ready, the fixed bad-args and a full
+      // run (native game, scripted manager hooks) that answers `{ status: 'done' }` after `launch_facts` and `launch`; `gamelib-launch`'s `funnel.rs` replays golden/funnel against the crate.
+      'launch_run',
       // Phase 94 plan 11: the shortcut exists check (`shortcutsResolvers.ts` resolver). PROVEN: `shortcuts_dispatch::tests`
       // drives the arm's decode, not-ready and a real exists answer on a FakeHome; `golden_paths.rs` replays the TS goldens.
       'shortcuts_exist',
