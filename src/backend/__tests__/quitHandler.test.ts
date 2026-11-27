@@ -6,9 +6,11 @@ function setup(
 ): {
   calls: string[]
   dialogs: Record<string, unknown>[]
+  logged: unknown[]
   deps: QuitHandlerDeps
 } {
   const calls: string[] = []
+  const logged: unknown[] = []
   const dialogs: Record<string, unknown>[] = []
   const deps: QuitHandlerDeps = {
     runner: {
@@ -30,9 +32,10 @@ function setup(
     releaseSteam: async () => void calls.push('releaseSteam'),
     deletePresence: async () => void calls.push('presence'),
     exit: () => void calls.push('exit'),
+    logError: (message) => void logged.push(message),
     ...over
   }
-  return { calls, dialogs, deps }
+  return { calls, dialogs, logged, deps }
 }
 
 describe('createQuitHandler', () => {
@@ -175,16 +178,28 @@ describe('createQuitHandler', () => {
     ])
   })
 
-  test('a failed Rust kill on Yes does not strand the quit: abortAll and exit still run', async () => {
-    const { calls, deps } = setup(
+  test('a failed Rust kill on Yes does not strand the quit: abortAll and exit still run, and the failure is logged once', async () => {
+    const failure = new Error('shell gone')
+    const { calls, logged, deps } = setup(
       {
         isGameRunning: async () => true,
-        killTrackedRust: async () => Promise.reject(new Error('shell gone'))
+        killTrackedRust: async () => Promise.reject(failure)
       },
       1
     )
     await createQuitHandler(deps).handleExit()
     expect(calls).toContain('abort')
     expect(calls[calls.length - 1]).toBe('exit')
+    expect(logged).toHaveLength(1)
+    expect((logged[0] as unknown[])[0]).toBe(
+      'Ending the running games failed; quitting anyway:'
+    )
+    expect((logged[0] as unknown[])[1]).toBe(failure)
+  })
+
+  test('a Yes whose Rust kill succeeds logs nothing', async () => {
+    const { logged, deps } = setup({ isGameRunning: async () => true }, 1)
+    await createQuitHandler(deps).handleExit()
+    expect(logged).toEqual([])
   })
 })

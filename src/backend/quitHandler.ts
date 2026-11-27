@@ -32,6 +32,8 @@ export interface QuitHandlerDeps {
   isGameRunning(): Promise<boolean>
   /** Ends every game tree and Rust-tracked helper through gamelib-proc; answers how many were ended. */
   killTrackedRust(): Promise<number>
+  /** The log for a failure the quit goes on past (the logger arrives as a dep: this module has no value imports). */
+  logError(message: unknown): void
   showMessageBox(opts: QuitMessageBoxOptions): Promise<{ response: number }>
   t(key: string, fallback: string): string
   abortAll(): void
@@ -95,7 +97,14 @@ export function createQuitHandler(deps: QuitHandlerDeps): QuitHandler {
 
       // D-27: games and helpers Rust spawned end through gamelib-proc after its pid-and-stamp proof, bounded by the
       // child grace (inside the one 5 s exit budget). A kill that fails must not strand the quit: abortAll still runs.
-      await deps.killTrackedRust().catch(() => 0)
+      // Nor may it be silent (88.2-30, WR-08): the user chose Yes and the games may be left running.
+      await deps.killTrackedRust().catch((error: unknown) => {
+        deps.logError([
+          'Ending the running games failed; quitting anyway:',
+          error
+        ])
+        return 0
+      })
 
       // Kill all child processes
       deps.abortAll()

@@ -258,6 +258,25 @@ describe('Quit handler reads and ends the Rust running-game registry (88.2-19, D
     expect(deps).toMatch(/isGameRunning:\s*\(\)\s*=>\s*gamesRunning\(/)
     expect(deps).toMatch(/killTrackedRust:\s*\(\)\s*=>\s*trackedKillAll\(/)
   })
+
+  test('bootstrap binds logError to the backend logger and the handler logs a failed kill through it (88.2-30, WR-08)', () => {
+    const strip = (relative: string) =>
+      stripSourceComments(
+        readFileSync(join(__dirname, '..', relative), 'utf-8')
+      )
+        .split('\n')
+        .filter((line) => !line.trim().startsWith('//'))
+        .map(stripTrailingLineCommentTs)
+        .join('\n')
+    const deps = extractBracedBlock(
+      strip('sidecar/bootstrap.ts'),
+      'createQuitHandler('
+    )
+    expect(deps).toMatch(
+      /logError:\s*\(message\)\s*=>\s*logError\(message,\s*LogPrefix\.Backend\)/
+    )
+    expect(strip('quitHandler.ts')).toMatch(/deps\.logError\(/)
+  })
 })
 
 describe('No stale main.ts before-quit claim survives in src/backend (quick 260907-juv)', () => {

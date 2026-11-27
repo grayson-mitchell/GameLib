@@ -1896,6 +1896,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
               trackedKillAll({
                 requestRustInvoke: requireHost(state).requestRustInvoke
               }).then(Number),
+            logError: (message) => logError(message, LogPrefix.Backend),
             showMessageBox: (opts) =>
               requireHost(state).dialogs.showMessageBox(opts),
             t: tOrFallback,
