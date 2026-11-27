@@ -1,11 +1,11 @@
 ---
-status: partial
+status: complete
 phase: 87-engine-wine-and-tools
 source: [87-CONTEXT.md D-09 D-11 D-12 D-13 D-20 D-21]
 authored_by: 87-01
 run_by: 87-59
 started: 2026-11-24T02:45:10Z
-updated: 2026-11-24T09:12:00Z
+updated: 2026-11-27T04:16:50.504Z
 ---
 
 This is the live macOS gate contract for SVC-02 (engine selection, per-game bottles and the Wine tooling run in the Rust
