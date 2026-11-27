@@ -7,6 +7,10 @@
 //! Every slice has a floor: a manifest count the directory does not match, or a count under the
 //! floor, fails the test instead of letting an empty or truncated case set pass.
 //!
+//! `golden/windows/deltas.json` (quick 261128-810) records one windows delta: a REG_SZ value is read
+//! literally, so `reg-sz-keeps-percent-literal` also replays with its data plus `\10%`, and a gate fails
+//! when a recorded REG_SZ with a percent sign has no delta or a delta names anything else.
+//!
 //! Every case builds a fresh `FakeHome`, so nothing reads or writes the operator's real profile.
 
 use std::collections::BTreeMap;
@@ -483,12 +487,43 @@ fn scripted_output(scripted: &Value) -> SpecOutput {
     }
 }
 
+/// The recorded windows registry deltas (`golden/windows/deltas.json`): case id to the reason it differs.
+fn windows_deltas() -> BTreeMap<String, String> {
+    let text =
+        fs::read_to_string(golden_dir("windows").join("deltas.json")).expect("windows deltas.json");
+    serde_json::from_str(&text).expect("windows deltas.json is an object of strings")
+}
+
+/// The data of the first `REG_SZ` line of a recorded `reg.exe` stdout, found without the crate's parser:
+/// the text after the four-space-delimited `REG_SZ` column, trailing whitespace trimmed.
+fn recorded_reg_sz_data(stdout: &str) -> Option<String> {
+    const COLUMN: &str = "    REG_SZ    ";
+    stdout.split('\n').find_map(|piece| {
+        let line = piece.strip_suffix('\r').unwrap_or(piece);
+        line.find(COLUMN)
+            .map(|at| line[at + COLUMN.len()..].trim_end().to_string())
+    })
+}
+
 #[tokio::test]
 async fn windows_registry_replays_every_reg_golden() {
     let slice = load("windows");
     slice.assert_floor("windows");
+    let deltas = windows_deltas();
     let mut replayed = 0usize;
     let mut failures = Vec::new();
+    // The delta set is gated without the code under test: every delta names a reg- case, and a reg- case
+    // has a delta exactly when its recorded REG_SZ data holds a percent sign.
+    for (id, reason) in &deltas {
+        assert!(
+            id.starts_with("reg-") && slice.cases.contains_key(id),
+            "windows deltas.json names no reg- case: {id}"
+        );
+        assert!(
+            reason.starts_with("quick 261128-810:"),
+            "{id}: the delta reason does not start with its quick id"
+        );
+    }
     for (id, case) in slice.cases.iter().filter(|(id, _)| id.starts_with("reg-")) {
         replayed += 1;
         let folder = match case["input"]["name"].as_str() {
@@ -538,6 +573,54 @@ async fn windows_registry_replays_every_reg_golden() {
             && spawns[0].label == "shortcuts-reg";
         if !spawn_ok {
             failures.push(format!("{id}: spawn {:?} want {recorded}", spawns));
+        }
+
+        // The windows delta (quick 261128-810): a REG_SZ value is read literally, so a recorded REG_SZ whose
+        // data holds a percent sign gets a second arm, its data plus `\10%`.
+        let stdout = case["input"]["scripted"]["stdout"]
+            .as_str()
+            .unwrap_or_default();
+        let sz_data = recorded_reg_sz_data(stdout);
+        let wants_delta = sz_data.as_deref().is_some_and(|data| data.contains('%'));
+        if wants_delta != deltas.contains_key(id) {
+            failures.push(format!(
+                "{id}: a recorded REG_SZ with a percent sign needs exactly one windows delta (REG_SZ percent {wants_delta}, delta {})",
+                deltas.contains_key(id)
+            ));
+        }
+        let (true, Some(data)) = (deltas.contains_key(id), sz_data) else {
+            continue;
+        };
+        let needle = format!("REG_SZ    {data}");
+        assert_eq!(
+            stdout.matches(&needle).count(),
+            1,
+            "{id}: the REG_SZ data is not in the stdout exactly once"
+        );
+        // The arm must discriminate: its first `%...%` pair names a variable the case environment does not
+        // set, so the recorded rule (expand REG_SZ) would have answered None.
+        let arm_data = format!("{data}\\10%");
+        let first = arm_data
+            .find('%')
+            .expect("the arm data holds a percent sign");
+        let rest = &arm_data[first + 1..];
+        let close = rest.find('%').expect("the arm data holds a %NAME% pair");
+        let name = rest[..close].to_uppercase();
+        assert!(
+            !env.iter().any(|(k, _)| k.to_uppercase() == name),
+            "{id}: the arm's variable {name:?} is set, so the arm proves nothing"
+        );
+        let arm_stdout = stdout.replacen(&needle, &format!("{needle}\\10%"), 1);
+        let want = Some(PathBuf::from(format!(
+            "{}\\10%",
+            case["folder"].as_str().expect("the recorded folder")
+        )));
+        let mut scripted = scripted_output(&case["input"]["scripted"]);
+        scripted.stdout = arm_stdout;
+        let arm_runner = ScriptedRunner::answering(scripted);
+        let got = read_windows_shell_folder(&arm_runner, folder, &env).await;
+        if got != want {
+            failures.push(format!("{id} (delta arm): folder {got:?} want {want:?}"));
         }
     }
     assert!(replayed >= 20, "only {replayed} reg goldens replayed");
