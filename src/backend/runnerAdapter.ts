@@ -84,23 +84,25 @@ type RunnerAdapterWineCommandArgs = Omit<WineCommandArgs, 'options'> & {
 }
 
 export interface RunnerAdapter {
-  callRunner(
+  callRunner: (
     commandParts: string[],
     runnerProps: RunnerProps,
     options: RunnerAdapterCallOptions
-  ): Promise<ExecResult>
-  runWineCommand(args: RunnerAdapterWineCommandArgs): Promise<WineCommandResult>
-  getWinePath(args: {
+  ) => Promise<ExecResult>
+  runWineCommand: (
+    args: RunnerAdapterWineCommandArgs
+  ) => Promise<WineCommandResult>
+  getWinePath: (args: {
     path: string
     gameSettings: GameSettings
     variant?: 'win' | 'unix'
-  }): Promise<string>
-  runScriptForGame(
+  }) => Promise<string>
+  runScriptForGame: (
     gameInfo: GameInfo,
     gameSettings: GameSettings,
     scriptStage: 'before' | 'after',
     logWriter: LogWriter
-  ): Promise<boolean | string>
+  ) => Promise<boolean | string>
 }
 
 /**
