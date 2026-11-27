@@ -290,11 +290,157 @@ const MS_PER_DAY = 86_400_000
 // better than today's guaranteed-wrong render everywhere west of UTC.
 const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/
 
+// The twelve three-letter month prefixes V8's date parser matches a month word
+// against (a longer word matches on its prefix: `February`, `Sept`).
+const MONTH_NAME_PREFIXES = [
+  'jan',
+  'feb',
+  'mar',
+  'apr',
+  'may',
+  'jun',
+  'jul',
+  'aug',
+  'sep',
+  'oct',
+  'nov',
+  'dec'
+] as const
+
+/**
+ * 261128-2xo: the second validity gate of `extractExpiration`, after the V8
+ * parse. V8 checks a day only against 1..31, so `2026-02-30` parses (as March
+ * 2), and it accepts a bare year, a year-month, a two-digit year and years
+ * 0000-0999 and turns them into dates nobody wrote.
+ *
+ * The rule: an absolute expiry is kept only when its written date is a real
+ * calendar date with year, month and day all present and a four-digit year from
+ * 1000 to 9999, and the parser read that same date: the parsed instant is within
+ * one day of the written date's UTC midnight.
+ *
+ * Steps, run on the raw `value` (untrimmed, as the parse gate saw it) and the
+ * parsed time value in ms:
+ *  1. Walk the maximal ASCII digit runs (global `[0-9]+`) in order. The first
+ *     run whose next character is `:` starts the time of day. That run and
+ *     everything from its start onward are not read (the "cut"). The runs
+ *     before it are the date numbers, kept as strings.
+ *  2. The month word is the LAST maximal ASCII letter run (global `[A-Za-z]+`)
+ *     that starts before the cut and whose first three letters, lower-cased,
+ *     are one of `jan feb mar apr may jun jul aug sep oct nov dec`. This is
+ *     V8's month-name rule: day names, `T`, `Z`, `GMT` and `UTC` never match.
+ *  3. `small(run)`: drop leading `0`s. If at most two digits remain, the value
+ *     is their number (an all-zero run is 0). Otherwise there is no value, so
+ *     it is never a day or a month. A run is day-like when `small(run)` is
+ *     1..31.
+ *  4. With a month word, at least two date numbers are needed. If the first is
+ *     day-like, it is the day and the second is the year; otherwise the first
+ *     is the year and the second the day. Without a month word, at least three
+ *     are needed. If the first is day-like they are month, day, year;
+ *     otherwise year, month, day. Fewer numbers means reject.
+ *  5. Keep only when the year run is exactly four characters and does not
+ *     start with `0`, the month is 1..12, the day is 1..days-in-month (leap
+ *     years: divisible by 4 and (not by 100, or by 400)), and
+ *     `|utcDay(year, month, day) - floor(parsedMs / 86_400_000)| <= 1`. The
+ *     last check rejects strings where V8 and steps 1-4 read different dates
+ *     (`Feb 28 GMT+2026`, `Feb 30 2026 (Mar)`); any real zone offset (under
+ *     24 h) plus a time of day moves the UTC date by at most one day, so no
+ *     legitimate value is lost.
+ *
+ * Linear in the input: the runs are walked with a global match loop and the
+ * character after each run is tested directly. Never search with a pattern
+ * like a digit run followed by a colon: in JavaScript that backtracks across
+ * every start of a long digit run and goes quadratic. Never throws.
+ *
+ * Twin: `has_full_calendar_date` in
+ * src-tauri/crates/gamelib-humble/src/classify.rs; change both together (the
+ * 94-06 goldens replay one against the other).
+ */
+function hasFullCalendarDate(value: string, parsedMs: number): boolean {
+  // Step 1: the date numbers, up to the first run followed by `:`.
+  const numbers: string[] = []
+  let cut = value.length
+  for (const run of value.matchAll(/[0-9]+/g)) {
+    const start = run.index ?? 0
+    if (value.charAt(start + run[0].length) === ':') {
+      cut = start
+      break
+    }
+    numbers.push(run[0])
+  }
+
+  // Step 2: the last month word that starts before the cut.
+  let monthFromWord: number | undefined
+  for (const word of value.matchAll(/[A-Za-z]+/g)) {
+    if ((word.index ?? 0) >= cut) break
+    const prefix = word[0].slice(0, 3).toLowerCase()
+    const found = MONTH_NAME_PREFIXES.findIndex((p) => p === prefix)
+    if (found >= 0) monthFromWord = found + 1
+  }
+
+  // Step 3.
+  const small = (run: string | undefined): number | undefined => {
+    if (run === undefined) return undefined
+    const trimmed = run.replace(/^0+/, '')
+    if (trimmed.length > 2) return undefined
+    return trimmed === '' ? 0 : Number(trimmed)
+  }
+  const dayLike = (run: string | undefined): boolean => {
+    const n = small(run)
+    return n !== undefined && n >= 1 && n <= 31
+  }
+
+  // Step 4.
+  let yearRun: string | undefined
+  let month: number | undefined
+  let day: number | undefined
+  const [first, second, third] = numbers
+  if (monthFromWord !== undefined) {
+    if (numbers.length < 2) return false
+    month = monthFromWord
+    if (dayLike(first)) {
+      day = small(first)
+      yearRun = second
+    } else {
+      yearRun = first
+      day = small(second)
+    }
+  } else {
+    if (numbers.length < 3) return false
+    if (dayLike(first)) {
+      month = small(first)
+      day = small(second)
+      yearRun = third
+    } else {
+      yearRun = first
+      month = small(second)
+      day = small(third)
+    }
+  }
+
+  // Step 5.
+  if (yearRun === undefined || month === undefined || day === undefined) {
+    return false
+  }
+  if (yearRun.length !== 4 || yearRun.startsWith('0')) return false
+  if (month < 1 || month > 12) return false
+  const year = Number(yearRun)
+  const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0)
+  const daysInMonth =
+    month === 2 ? (leap ? 29 : 28) : [4, 6, 9, 11].includes(month) ? 30 : 31
+  if (day < 1 || day > daysInMonth) return false
+  const writtenDay = Date.UTC(year, month - 1, day) / MS_PER_DAY
+  return Math.abs(writtenDay - Math.floor(parsedMs / MS_PER_DAY)) <= 1
+}
+
 /**
  * Pure, tolerant expiration extraction. Reads whichever recognized field a live
  * tpk carries and normalizes it to an ISO-8601 string:
  *  - an absolute date string (any of ABSOLUTE_EXPIRATION_FIELDS) -> parsed and
  *    re-emitted as ISO (an unparseable string is ignored, never thrown on).
+ *    A value that parses but fails `hasFullCalendarDate` (a day past the
+ *    month's length, a missing year/month/day, a short or non-four-digit
+ *    year) is ignored like an unparseable one, so a later field or the
+ *    relative day count can still win (261128-2xo).
  *    A bare date-only value (matching DATE_ONLY_RE) is anchored to LOCAL
  *    midnight rather than UTC midnight (i31); any value carrying a time
  *    and/or zone round-trips byte-identically, unchanged;
@@ -310,15 +456,19 @@ export function extractExpiration(
   for (const field of ABSOLUTE_EXPIRATION_FIELDS) {
     const value = tpk[field]
     if (typeof value === 'string' && value.trim() !== '') {
-      // `new Date(value)` stays the ONE validity gate deliberately: building
+      // `new Date(value)` is the FIRST validity gate deliberately: building
       // straight from parts cannot double as validation, because
       // `new Date(2026, 12, 45)` silently rolls over to 2027-02-14 where the
-      // string form `'2026-13-45'` is Invalid. Match the regex against
-      // `value` unmodified -- a whitespace-padded date string is already
-      // parsed as local time by V8 (already correct), so trimming first
-      // would change a currently-correct case.
+      // string form `'2026-13-45'` is Invalid. But V8 checks a day only
+      // against 1..31, so `'2026-02-30'` parses (as March 2); the SECOND gate,
+      // `hasFullCalendarDate`, is what rejects that and every partial or
+      // short-year date (261128-2xo). Match the regex against `value`
+      // unmodified -- a whitespace-padded date string is already parsed as
+      // local time by V8 (already correct), so trimming first would change a
+      // currently-correct case.
       const parsed = new Date(value)
       if (!Number.isNaN(parsed.getTime())) {
+        if (!hasFullCalendarDate(value, parsed.getTime())) continue
         if (DATE_ONLY_RE.test(value)) {
           const [year, month, day] = value.split('-').map(Number)
           if (year !== undefined && month !== undefined && day !== undefined) {

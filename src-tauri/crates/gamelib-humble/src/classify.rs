@@ -286,6 +286,160 @@ fn date_only_re() -> &'static Regex {
     RE.get_or_init(|| Regex::new("^[0-9]{4}-[0-9]{2}-[0-9]{2}$").expect("a valid pattern"))
 }
 
+/// The twelve three-letter month prefixes V8's date parser matches a month word against (a longer
+/// word matches on its prefix: `February`, `Sept`).
+const MONTH_NAME_PREFIXES: [&str; 12] = [
+    "jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec",
+];
+
+/// `Date` day length in ms, as an integer (the module's `MS_PER_DAY` is `f64`, for the relative path).
+const DAY_MS: i64 = 86_400_000;
+
+/// Maximal ASCII digit runs, the same literal as the TS `/[0-9]+/g`.
+fn digit_run_re() -> &'static Regex {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    RE.get_or_init(|| Regex::new("[0-9]+").expect("a valid pattern"))
+}
+
+/// Maximal ASCII letter runs, the same literal as the TS `/[A-Za-z]+/g`.
+fn letter_run_re() -> &'static Regex {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    RE.get_or_init(|| Regex::new("[A-Za-z]+").expect("a valid pattern"))
+}
+
+/// `small(run)`: drop leading `0`s; at most two digits left is their number (an all-zero run is 0),
+/// otherwise there is no value.
+fn small_number(run: &str) -> Option<i64> {
+    let trimmed = run.trim_start_matches('0');
+    if trimmed.len() > 2 {
+        return None;
+    }
+    if trimmed.is_empty() {
+        return Some(0);
+    }
+    trimmed.parse::<i64>().ok()
+}
+
+/// A run is day-like when `small(run)` is 1..31.
+fn day_like(run: &str) -> bool {
+    small_number(run).is_some_and(|n| (1..=31).contains(&n))
+}
+
+/// 261128-2xo: the second validity gate of [`extract_expiration`], after the parse. V8 checks a day
+/// only against 1..31, so `2026-02-30` parses (as March 2), and it accepts a bare year, a
+/// year-month, a two-digit year and years 0000-0999 and turns them into dates nobody wrote.
+///
+/// The rule: an absolute expiry is kept only when its written date is a real calendar date with
+/// year, month and day all present and a four-digit year from 1000 to 9999, and the parser read that
+/// same date: the parsed instant is within one day of the written date's UTC midnight.
+///
+/// Steps, run on the raw `value` (untrimmed, as the parse gate saw it) and the parsed time value:
+/// 1. Walk the maximal ASCII digit runs (`[0-9]+`) in order. The first run whose next character is
+///    `:` starts the time of day. That run and everything from its start onward are not read (the
+///    "cut"). The runs before it are the date numbers, kept as strings.
+/// 2. The month word is the LAST maximal ASCII letter run (`[A-Za-z]+`) that starts before the cut
+///    and whose first three letters, lower-cased, are one of `jan feb mar apr may jun jul aug sep
+///    oct nov dec`. This is V8's month-name rule: day names, `T`, `Z`, `GMT` and `UTC` never match.
+/// 3. `small(run)`: drop leading `0`s. If at most two digits remain, the value is their number (an
+///    all-zero run is 0). Otherwise there is no value, so it is never a day or a month. A run is
+///    day-like when `small(run)` is 1..31.
+/// 4. With a month word, at least two date numbers are needed. If the first is day-like, it is the
+///    day and the second is the year; otherwise the first is the year and the second the day.
+///    Without a month word, at least three are needed. If the first is day-like they are month,
+///    day, year; otherwise year, month, day. Fewer numbers means reject.
+/// 5. Keep only when the year run is exactly four characters and does not start with `0`, the month
+///    is 1..12, the day is 1..days-in-month (leap years: divisible by 4 and (not by 100, or by
+///    400)), and `|utcDay(year, month, day) - floor(parsed_ms / 86_400_000)| <= 1`. The last check
+///    rejects strings where V8 and steps 1-4 read different dates (`Feb 28 GMT+2026`, `Feb 30 2026
+///    (Mar)`); any real zone offset (under 24 h) plus a time of day moves the UTC date by at most
+///    one day, so no legitimate value is lost.
+///
+/// Linear in the input (`find_iter`, and the character after each run tested directly). Never
+/// panics: an unparsable run means reject.
+///
+/// Twin: `hasFullCalendarDate` in src/backend/humble/classify.ts; change both together.
+fn has_full_calendar_date(value: &str, parsed_ms: i64) -> bool {
+    // Step 1: the date numbers, up to the first run followed by `:`.
+    let mut numbers: Vec<&str> = Vec::new();
+    let mut cut = value.len();
+    for run in digit_run_re().find_iter(value) {
+        if value.as_bytes().get(run.end()) == Some(&b':') {
+            cut = run.start();
+            break;
+        }
+        numbers.push(run.as_str());
+    }
+
+    // Step 2: the last month word that starts before the cut.
+    let mut month_from_word: Option<i64> = None;
+    for word in letter_run_re().find_iter(value) {
+        if word.start() >= cut {
+            break;
+        }
+        if let Some(prefix) = word.as_str().get(..3) {
+            let prefix = prefix.to_ascii_lowercase();
+            if let Some(found) = MONTH_NAME_PREFIXES.iter().position(|p| *p == prefix) {
+                month_from_word = Some(found as i64 + 1);
+            }
+        }
+    }
+
+    // Steps 3 and 4.
+    let first = numbers.first().copied();
+    let second = numbers.get(1).copied();
+    let third = numbers.get(2).copied();
+    let (year_run, month, day): (Option<&str>, Option<i64>, Option<i64>) =
+        if let Some(word_month) = month_from_word {
+            if numbers.len() < 2 {
+                return false;
+            }
+            match (first, second) {
+                (Some(a), _) if day_like(a) => (second, Some(word_month), small_number(a)),
+                (_, Some(b)) => (first, Some(word_month), small_number(b)),
+                _ => return false,
+            }
+        } else {
+            if numbers.len() < 3 {
+                return false;
+            }
+            match (first, second, third) {
+                (Some(a), Some(b), Some(c)) if day_like(a) => {
+                    (Some(c), small_number(a), small_number(b))
+                }
+                (Some(a), Some(b), Some(c)) => (Some(a), small_number(b), small_number(c)),
+                _ => return false,
+            }
+        };
+
+    // Step 5.
+    let (Some(year_run), Some(month), Some(day)) = (year_run, month, day) else {
+        return false;
+    };
+    if year_run.len() != 4 || year_run.starts_with('0') {
+        return false;
+    }
+    if !(1..=12).contains(&month) {
+        return false;
+    }
+    let Ok(year) = year_run.parse::<i64>() else {
+        return false;
+    };
+    let leap = year % 4 == 0 && (year % 100 != 0 || year % 400 == 0);
+    let days_in_month = match month {
+        2 if leap => 29,
+        2 => 28,
+        4 | 6 | 9 | 11 => 30,
+        _ => 31,
+    };
+    if day < 1 || day > days_in_month {
+        return false;
+    }
+    let Some(written_ms) = local_midnight(year, month - 1, day, LocalZone::UTC) else {
+        return false;
+    };
+    (written_ms.div_euclid(DAY_MS) - parsed_ms.div_euclid(DAY_MS)).abs() <= 1
+}
+
 /// `value.trim() !== ''`.
 fn is_blank(value: &str) -> bool {
     value.chars().all(is_js_whitespace)
@@ -294,8 +448,11 @@ fn is_blank(value: &str) -> bool {
 /// Pure, tolerant expiration extraction. Reads whichever recognised field a live tpk carries and
 /// normalises it to an ISO-8601 string:
 /// - an absolute date string (any of [`ABSOLUTE_EXPIRATION_FIELDS`]), parsed as `new Date(value)`
-///   and re-emitted as ISO; an unparseable string is ignored. A bare date-only value is anchored to
-///   LOCAL midnight (i31); a value carrying a time and/or zone round-trips unchanged;
+///   and re-emitted as ISO; an unparseable string is ignored, and so is one that parses but fails
+///   [`has_full_calendar_date`] (a day past the month's length, a missing year/month/day, a short or
+///   non-four-digit year), so a later field or the relative count can still win (261128-2xo). A
+///   bare date-only value is anchored to LOCAL midnight (i31); a value carrying a time and/or zone
+///   round-trips unchanged;
 /// - a relative, strictly positive `num_days_until_expired` number: `now + N days` as ISO (0 or
 ///   negative means "no expiry window").
 ///
@@ -311,13 +468,18 @@ pub fn extract_expiration(tpk: &JsValue, now_ms: i64, zone: LocalZone<'_>) -> Op
         if is_blank(value) {
             continue;
         }
-        // `new Date(value)` stays the ONE validity gate: building from parts cannot double as
-        // validation (`new Date(2026, 12, 45)` rolls over where `'2026-13-45'` is invalid). The
-        // pattern is matched against `value` unmodified, so a whitespace-padded date is parsed as
-        // local time by the parser (already correct) and not re-anchored.
+        // `new Date(value)` is the FIRST validity gate: building from parts cannot double as
+        // validation (`new Date(2026, 12, 45)` rolls over where `'2026-13-45'` is invalid). But V8
+        // checks a day only against 1..31, so `'2026-02-30'` parses (as March 2); the SECOND gate,
+        // `has_full_calendar_date`, is what rejects that and every partial or short-year date
+        // (261128-2xo). The pattern is matched against `value` unmodified, so a whitespace-padded
+        // date is parsed as local time by the parser (already correct) and not re-anchored.
         let Some(parsed) = parse_js_date(value, zone) else {
             continue;
         };
+        if !has_full_calendar_date(value, parsed) {
+            continue;
+        }
         if date_only_re().is_match(value) {
             let mut parts = value.split('-').map(|p| p.parse::<i64>().ok());
             if let (Some(Some(year)), Some(Some(month)), Some(Some(day))) =
