@@ -1152,7 +1152,9 @@ export default class LegendaryGame implements Game {
         wrappers: wrappers,
         logMessagePrefix: `Launching ${gameInfo.title}`,
         logWriters: gameSettings.verboseLogs ? [logWriter] : [],
-        onOutput: (chunk) => launchOutput.onOutput(chunk)
+        onOutput: (chunk) => launchOutput.onOutput(chunk),
+        // D-05: the game outlives GameLib's helpers, so Rust spawns it as a Game-class process.
+        spawnClass: 'game'
       })
 
     const loginFailure = classifyLegendaryLaunchFailure({

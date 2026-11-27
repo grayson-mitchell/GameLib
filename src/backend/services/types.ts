@@ -58,7 +58,8 @@ import type { SteamSignInState } from 'backend/storeManagers/steam/userSignInSta
 import type { SteamAuthTriggerState } from 'backend/storeManagers/steam/authTrigger'
 import type { SteamLibraryState } from 'backend/storeManagers/steam/state'
 import type { SteamGameSessionState } from 'backend/storeManagers/steam/gameSessionState'
-import type { CommandRunner as CommandRunnerImpl } from 'backend/commandRunner'
+import type { RunnerAdapter } from 'backend/runnerAdapter'
+import type { RunnerStreams } from 'backend/runnerStream'
 import type GOGLibraryManager from 'backend/storeManagers/gog/library'
 import type LegendaryLibraryManager from 'backend/storeManagers/legendary/library'
 import type NileLibraryManager from 'backend/storeManagers/nile/library'
@@ -120,7 +121,11 @@ export interface StoreManagers {
 /** The launcher built by createLauncher (the non-command launcher members). */
 export type { Launcher }
 
-export type CommandRunner = CommandRunnerImpl
+/**
+ * The runner every manager calls (88.2-21, D-02): the adapter over the Rust runner transport, structurally the old
+ * `createCommandRunner` result, so every caller type-checks unchanged.
+ */
+export type CommandRunner = RunnerAdapter
 
 export type { SpawnAsync, QuitHandler }
 
@@ -296,6 +301,11 @@ export interface BootServices {
   managers: StoreManagers
   launcher: Launcher
   commandRunner: CommandRunner
+  /**
+   * The per-call stream table the runner adapter and the spawnAsync adapter open streams in, fed by the shell's
+   * `runnerOutput` and `runnerSpawned` frames (88.2-21). Built by the 'command-runner' boot step.
+   */
+  runnerStreams: RunnerStreams
   /** ctx.runner: the process runner commandRunner is built on (one registry). */
   runner: ManagerDeps['runner']
   /** ctx.clock: the boot clock, read by ManagerDeps.clock (66.2). */

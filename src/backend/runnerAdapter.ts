@@ -229,6 +229,7 @@ export function createRunnerAdapter(deps: RunnerAdapterDeps): RunnerAdapter {
       if (options.trackKey !== undefined) request.trackKey = options.trackKey
       if (options.cwd !== undefined) request.cwd = options.cwd
       if (options.skipErrorHandler) request.skipErrorHandler = true
+      if (options.spawnClass) request.spawnClass = options.spawnClass
 
       return settleExecResult(await runnerCall(deps, request))
     } finally {

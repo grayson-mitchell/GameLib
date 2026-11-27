@@ -100,7 +100,6 @@ interface ScheduleRow extends ShimRow {
 /** Every non-test importer of `utils/compatibility_layers.ts` (the twin check is per file). */
 const COMPATIBILITY_LAYERS_IMPORTERS: readonly string[] = [
   'src/backend/config.ts',
-  'src/backend/sidecar/bootstrap.ts',
   'src/backend/storeManagers/gog/games.ts',
   'src/backend/storeManagers/legendary/games.ts',
   'src/backend/storeManagers/nile/games.ts',
@@ -158,12 +157,12 @@ const TOOLS_SHIM_IMPORTERS: readonly string[] = [
 ]
 /**
  * Every non-test importer of `launchrust/builders.ts` (the check is per file, so every row of that file lists them
- * all): the launcher binds the shims into its members, which the three managers' `launch()` call (88.1-07), and the
- * command runner's `wine` binding calls three of them from `bootstrap.ts` (88.1-08).
+ * all): the launcher binds the shims into its members, which the three managers' `launch()` call (88.1-07). The command
+ * runner's `wine` binding called three of them from `bootstrap.ts` (88.1-08) until the boot stopped building the TS runner
+ * (88.2-21).
  */
 const LAUNCH_BUILDER_SHIM_IMPORTERS: readonly string[] = [
-  'src/backend/launcher.ts',
-  'src/backend/sidecar/bootstrap.ts'
+  'src/backend/launcher.ts'
 ]
 /** Every non-test importer of `launchrust/prepare.ts` (the check is per file): the interim prepare adapters (88.1-15). */
 const LAUNCH_PREPARE_SHIM_IMPORTERS: readonly string[] = [
@@ -291,10 +290,10 @@ const DEADLINE_SHIM_IMPORTERS: readonly string[] = [
   'src/backend/storeManagers/steam/engine/bridgeDeadline.ts',
   'src/backend/storeManagers/steam/gameBridgeWineLaunch.ts'
 ]
-// 88.2-16: the importers of `launchrust/runner.ts`, every one counted per file. The adapter calls `runnerCall`; it is the
-// only one until the boot wiring (88.2-21) registers the listener and builds the kill-aware stream table. 88.2-19: the
+// 88.2-16: the importers of `launchrust/runner.ts`, every one counted per file. The adapter calls `runnerCall`. 88.2-19: the
 // sidecar bootstrap imports `gamesRunning` and `trackedKillAll` for the quit handler (D-27). 88.2-20: `handlers.ts` imports
-// `registerLaunchManagerHooks` to answer the shell's hook calls.
+// `registerLaunchManagerHooks` to answer the shell's hook calls. 88.2-21: the bootstrap also builds the kill-aware stream
+// table and the abort forwarding (`runnerKill`, `runnerAbort`), `handlers.ts` registers the output listener.
 const RUNNER_SHIM_IMPORTERS: readonly string[] = [
   'src/backend/runnerAdapter.ts',
   'src/backend/sidecar/bootstrap.ts',
@@ -304,8 +303,6 @@ const RUNNER_SHIM_IMPORTERS: readonly string[] = [
 const COMMAND_RUNNER_IMPORTERS: readonly string[] = [
   // 88.2-16: the adapter keeps `RunnerProps` (a type import) so its `callRunner` has the twin's signature; it replaces the twin.
   'src/backend/runnerAdapter.ts',
-  'src/backend/services/types.ts',
-  'src/backend/sidecar/bootstrap.ts',
   'src/backend/storeManagers/steam/bridge/bottleDllOverrides.ts',
   // 88.2-01: the launch oracle's runner trace drives the real runner (a type import of its deps); it goes with the twin.
   'src/backend/testUtils/launchOracle/runnerTrace.ts'
@@ -338,8 +335,8 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     file: 'src/backend/enginewine/wineCore.ts',
     shape: 'shim',
     channel: 'RUST_WINE_VALID',
-    callers: ['src/backend/launcher.ts', 'src/backend/sidecar/bootstrap.ts'],
-    // Last reach: the command runner's `validWine` binding (commandRunner.ts:302, sidecar/bootstrap.ts:1893), ported in 88.2 (D-30).
+    callers: ['src/backend/launcher.ts'],
+    // Last reach: the command runner's `validWine` binding (commandRunner.ts:302), ported in 88.2 (D-30); bootstrap.ts no longer builds the TS runner (88.2-21).
     deletedBy: 88.2
   },
   // 87-26 (D-15, D-22): wine discovery. `discoverAlternativeWine` is the one async TS reach into the Rust discovery

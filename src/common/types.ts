@@ -566,6 +566,12 @@ export interface CallRunnerOptions {
    * join, or the `ExecResult` shape.
    */
   skipErrorHandler?: boolean
+  /**
+   * Phase 88.2 D-05: `'game'` runs the child as a Game-class process (one that outlives GameLib and is not reaped at exit).
+   * Only a manager's own game launch sets it (the five launch spawns); installs, auth, lists and the Steam bridge leave it
+   * unset and stay Helper class.
+   */
+  spawnClass?: 'game'
 }
 
 export interface EnviromentVariable {

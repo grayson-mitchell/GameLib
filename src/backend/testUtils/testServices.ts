@@ -227,6 +227,9 @@ export function createTestServices(
     commandRunner:
       overrides.commandRunner ??
       unscriptedMembers<CommandRunner>('command runner', {}),
+    runnerStreams:
+      overrides.runnerStreams ??
+      unscriptedMembers<BootServices['runnerStreams']>('runner streams', {}),
     runner:
       overrides.runner ??
       unscriptedMembers<BootServices['runner']>('process runner', {}),

@@ -93,7 +93,10 @@ import { registerRunnerAuthFlows } from './runnerAuthFlowRegistration'
 import { registerEngineWineResolvers } from './engineWineResolvers'
 import { registerEngineDeadlineFired } from 'backend/enginewine/deadline'
 import { registerEngineSelectionView } from 'backend/enginewine/selectionView'
-import { registerLaunchManagerHooks } from 'backend/launchrust/runner'
+import {
+  registerLaunchManagerHooks,
+  registerRunnerOutputListener
+} from 'backend/launchrust/runner'
 import { registerShortcutsResolvers } from './shortcutsResolvers'
 import { registerRunnerMiscFlows } from './runnerMiscFlowRegistration'
 import { registerEosOverlayFlows } from './eosOverlayFlowRegistration'
@@ -416,6 +419,10 @@ export function registerHandlers(deps: {
   registerLaunchManagerHooks(ipc, {
     libraryManagers: deps.services.managers.library
   })
+  // The runner's output and spawn frames (88.2-21, D-02): the shell sends `runnerOutput` and `runnerSpawned` on the sidecar's
+  // stdin ahead of a watched call's reply, and the one stream table the runner and spawnAsync adapters opened their streams in
+  // hands each to the caller that asked. Registered once; it creates no timer or handle.
+  registerRunnerOutputListener(ipc, deps.services.runnerStreams)
   // Phase 94 (94-22, 86 D-24): the renderer's shortcut handles are answered by Rust; each resolver gathers the
   // game's and the settings' TypeScript-only inputs. The ctrl+q/k/j/l hotkey channel moved unchanged to the app shell
   // (D-27) and goes with the quit path in Phase 98.

@@ -200,6 +200,7 @@ import {
   logErrorSettled,
   logBootFacts,
   getRunnerLogWriter,
+  flushLogForwarder,
   bindLogTransport,
   LogPrefix
 } from '../logger'
@@ -230,13 +231,12 @@ import { isMac, isSnap } from '../constants/environment'
 // edge back into `sidecar/` (`grep -n "from './sidecar\|from '\.\./sidecar" src/backend/
 // utils.ts` returns nothing), so this import introduces no cycle. `isMac` above is already
 // imported for other blocks -- not duplicated here.
-import {
-  checkRosettaInstall,
-  errorHandler,
-  type ErrorHandlerDeps
-} from '../utils'
-import { createCommandRunner } from '../commandRunner'
+import { checkRosettaInstall } from '../utils'
+import { createRunnerAdapter } from '../runnerAdapter'
+import { createRunnerStreams } from '../runnerStream'
 import { createSpawnAsync } from '../spawnAsync'
+import { authLogSanitizer as gogAuthLogSanitizer } from '../storeManagers/gog/user'
+import { authLogSanitizer as nileAuthLogSanitizer } from '../storeManagers/nile/user'
 import { createQuitHandler } from '../quitHandler'
 import { tOrFallback } from '../i18nFallback'
 import { createDownloadQueue } from '../downloadmanager/downloadqueue'
@@ -246,20 +246,15 @@ import {
 } from '../storeManagers/steam/bridge/helperRegistry'
 import { createSteamApiPinResolver } from '../storeManagers/steam/bridge/steamApiPin'
 import { createSteamUser } from '../storeManagers/steam/user'
-// The command runner's wine env builders and prefix check are Rust's (88.1-08), reached through the launch shims.
-import {
-  setupEnvVars as setupEnvVarsShim,
-  setupWineEnvVars as setupWineEnvVarsShim,
-  verifyWinePrefix as verifyWinePrefixShim
-} from '../launchrust/builders'
 // The quit handler reads the Rust running-game registry and ends its trees on Yes (D-07, D-27).
-import { gamesRunning, trackedKillAll } from '../launchrust/runner'
-import { settleEnvMap } from '../launchBuilderReply'
-import { validWine } from '../enginewine/wineCore'
+import {
+  gamesRunning,
+  runnerAbort,
+  runnerKill,
+  trackedKillAll
+} from '../launchrust/runner'
 import { setEngineOnline } from '../enginewine/engineOnline'
 import { crossoverBinDirSync } from '../enginewine/twin'
-import { getUmuPath, isUmuSupported } from '../utils/compatibility_layers'
-import { searchForExecutableOnPath } from '../utils/os/path'
 import {
   createAbortRegistry,
   type AbortRegistry
@@ -519,6 +514,7 @@ function requireServices(state: BootState): BootServices {
     managers,
     launcher,
     commandRunner,
+    runnerStreams,
     runner,
     clock,
     steamProcesses,
@@ -559,6 +555,7 @@ function requireServices(state: BootState): BootServices {
     !managers ||
     !launcher ||
     !commandRunner ||
+    !runnerStreams ||
     !runner ||
     !clock ||
     !steamProcesses ||
@@ -600,6 +597,7 @@ function requireServices(state: BootState): BootServices {
         'managers',
         'launcher',
         'commandRunner',
+        'runnerStreams',
         'runner',
         'clock',
         'steamProcesses',
@@ -643,6 +641,7 @@ function requireServices(state: BootState): BootServices {
     managers,
     launcher,
     commandRunner,
+    runnerStreams,
     runner,
     clock,
     steamProcesses,
@@ -1773,7 +1772,17 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
       // Stdin EOF aborts the registry
       // ('rpc-server' wires releaseOnStdinEof) after pausing the download queue.
       run: (ctx, _io, state) => {
-        state.services.aborts = prebuilt.aborts ?? createAbortRegistry()
+        // An abort of an id no local controller holds is forwarded to Rust's runner (88.2-21, D-02): a runner run's abort id
+        // answers there. Read the host lazily, it exists only after boot.
+        state.services.aborts =
+          prebuilt.aborts ??
+          createAbortRegistry({
+            forwardAbort: (id) =>
+              runnerAbort(
+                { requestRustInvoke: requireHost(state).requestRustInvoke },
+                id
+              ).then(Boolean)
+          })
         state.services.windowRaiser =
           prebuilt.windowRaiser ?? createWineWindowRaiser({ clock: ctx.clock })
       }
@@ -1819,20 +1828,6 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         const { aborts } = state.services
         if (!aborts)
           throw new Error('command-runner step ran before abort-registry')
-        const errorHandlerDeps: ErrorHandlerDeps = {
-          get libraryManagers() {
-            return requireServices(state).managers.library
-          },
-          get dialogs() {
-            return requireHost(state).dialogs
-          },
-          get appState() {
-            return requireHost(state).appState
-          },
-          get sendFrontendMessage() {
-            return requireHost(state).sendFrontendMessage
-          }
-        }
         state.services.runner = prebuilt.runner ?? ctx.runner
         state.services.clock = ctx.clock
         // Built once per boot; starts nothing, so the exit contract holds.
@@ -1850,79 +1845,35 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
             sendFrontendMessage: requireHost(state).sendFrontendMessage,
             requestRustInvoke: requireHost(state).requestRustInvoke
           })
+        // Every runner command and every spawnAsync child is Rust's (88.2-21, D-02, D-30): both adapters share the one stream
+        // table the shell's `runnerOutput` and `runnerSpawned` frames feed (`registerRunnerOutputListener`, handlers.ts). The
+        // host is read lazily, it exists only after boot; nothing here starts a timer, a watcher or a child.
+        const runnerStreams =
+          prebuilt.runnerStreams ??
+          createRunnerStreams({
+            kill: (streamId) =>
+              runnerKill(
+                { requestRustInvoke: requireHost(state).requestRustInvoke },
+                streamId
+              )
+          })
+        state.services.runnerStreams = runnerStreams
         state.services.commandRunner =
           prebuilt.commandRunner ??
-          createCommandRunner({
-            runner: ctx.runner,
-            platform: ctx.platform,
-            logger: {
-              logInfo,
-              logWarning,
-              logError,
-              logDebug,
-              backendPrefix: LogPrefix.Backend
+          createRunnerAdapter({
+            get requestRustInvoke() {
+              return requireHost(state).requestRustInvoke
             },
+            streams: runnerStreams,
             getRunnerLogWriter: (runner) =>
               getRunnerLogWriter(runner, {
                 disableLogs: config.getSettings().disableLogs
               }),
-            abort: {
-              create: (id) => aborts.create(id),
-              remove: (id) => aborts.delete(id)
-            },
-            // CommandRunnerDeps keeps its (error, appName, runner) shape; the manager table is
-            // read only in errorHandler's deleted-folder branch, after boot, like the
-            // commandToArgsArray closure below ('command-runner' runs before 'store-managers').
-            errorHandler: (error, appName, runner) =>
-              errorHandler(errorHandlerDeps, error, appName, runner),
-            searchForExecutableOnPath,
-            // Read lazily: 'command-runner' runs before 'store-managers', and the closure only
-            // fires after boot has completed.
-            commandToArgsArray: (command) =>
-              requireServices(
-                state
-              ).managers.library.legendary.commandToArgsArray(command),
-            wine: {
-              getDefaultSettings: () =>
-                requireServices(state).config.getSettings(),
-              // Rust's (88.1-08): the prefix check runs its wineboot through the wine command core, so it
-              // no longer re-enters the runner built below. Read lazily, like the host reads around it.
-              verifyWinePrefix: (settings) =>
-                verifyWinePrefixShim(
-                  { requestRustInvoke: requireHost(state).requestRustInvoke },
-                  settings
-                ),
-              // Read lazily, like the host reads around it: the closure only fires after boot.
-              validWine: (wineVersion) =>
-                validWine(
-                  { requestRustInvoke: requireHost(state).requestRustInvoke },
-                  wineVersion
-                ),
-              setupEnvVars: async (settings, installPath) =>
-                settleEnvMap(
-                  await setupEnvVarsShim(
-                    {
-                      requestRustInvoke: requireHost(state).requestRustInvoke
-                    },
-                    settings,
-                    installPath
-                  ),
-                  'setupEnvVars'
-                ),
-              setupWineEnvVars: async (settings, gameId) =>
-                settleEnvMap(
-                  await setupWineEnvVarsShim(
-                    {
-                      requestRustInvoke: requireHost(state).requestRustInvoke
-                    },
-                    settings,
-                    gameId
-                  ),
-                  'setupWineEnvVars'
-                ),
-              isUmuSupported: (settings) =>
-                isUmuSupported({ paths: ctx.paths }, settings),
-              getUmuPath: () => getUmuPath({ paths: ctx.paths })
+            flushLogs: flushLogForwarder,
+            // Rust applies a sanitizer by name; the adapter finds the name by identity and refuses any other function.
+            logSanitizers: {
+              gogAuth: gogAuthLogSanitizer,
+              nileAuth: nileAuthLogSanitizer
             }
           })
         state.services.spawnAsync =

@@ -113,7 +113,7 @@ describe('sidecar bootstrap (headless boot)', () => {
   // proves paths.ts's app.getPath() and typed_store.ts's `new Store()`
   // import-time walls (spike 009) are shimmed before backend code sees them.
   describe('boot services (66.1-04)', () => {
-    it('a default boot returns BootServices with all thirty-eight fields', () => {
+    it('a default boot returns BootServices with all thirty-nine fields', () => {
       const { services } = bootWithLines()
       expect(Object.keys(services).sort()).toEqual([
         'aborts',
@@ -141,6 +141,7 @@ describe('sidecar bootstrap (headless boot)', () => {
         'paths',
         'quit',
         'runner',
+        'runnerStreams',
         'signInProbe',
         'spawnAsync',
         'steamBottle',
