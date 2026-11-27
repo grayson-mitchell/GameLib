@@ -951,7 +951,7 @@ Plans:
   2. Anti-cheat at launch, `check_wine_before_launch`, `download_default_wine` (D-28), `isMacSonomaOrHigher`, `isEpicServiceOffline`, `removeQuoteIfNecessary` and system info behave as before
   3. The builder TS, `gamescopeCommand.ts`, `utils/systeminfo` and the replaced `utils.ts` rows are deleted; closes on goldens, three-OS CI and a Linux stub-gamescope smoke
 
-**Plans:** 23/24 plans executed (20 in 15 waves + 4 gap closure); planned 2026-11-25 (goldens are recorded from the TS before each Rust slice, D-25); gap closure planned 2026-11-26 from 88.1-VERIFICATION (CR-01, WR-01, the truth-2 decision)
+**Plans:** 24/24 plans executed (20 in 15 waves + 4 gap closure); planned 2026-11-25 (goldens are recorded from the TS before each Rust slice, D-25); gap closure planned 2026-11-26 from 88.1-VERIFICATION (CR-01, WR-01, the truth-2 decision)
 
 Plans:
 **Wave 1**
@@ -1012,7 +1012,7 @@ Plans:
 - [x] 88.1-21-PLAN.md — CR-01: setupEnvVars reads a wine-free SetupEnvView; the Windows `{}` builders golden recorded from the pre-port TS; shell arm and CLI reproduction tests
 - [x] 88.1-22-PLAN.md — WR-01: WineInstallation ignores a legacy key; ten more builders goldens recorded from the pre-port TS (legacy-key wine env first, setupEnvVars per platform, the Windows wine env); the full regression set
 - [x] 88.1-23-PLAN.md — The operator-accepted pairwise narrowing as a truth-2 override; SVC-03's edge-coverage row classified; the review ledger closed (WR-02..04 and IN-02 to triaged todos)
-- [ ] 88.1-24-PLAN.md — Gap-closure proof at a candidate head, push checkpoint, three-OS CI with the new cases observed on windows-latest
+- [x] 88.1-24-PLAN.md — Gap-closure proof at a candidate head, push checkpoint, three-OS CI with the new cases observed on windows-latest
 
 **Cross-cutting constraints:** <!-- gsd:generated -->
 - Flagged assumption (spec-less edge probe): SVC-03's edge-coverage row is `unclassified` and unresolved; the D-14 matrix stands in for edge coverage and is not claimed as a verified edge
@@ -1030,7 +1030,7 @@ Plans:
   3. The quit dialog gains a "game running" condition (D-27, a recorded behaviour change) read from the Rust running-game registry
   4. `commandRunner.ts` is deleted; closes on goldens, three-OS CI and a stub-game smoke (launch, quit-kill, survival of parent SIGKILL)
 
-**Plans:** 30/31 plans executed: 25/25 executed in 18 waves; planned 2026-11-26, re-sliced the same day so every plan fits the 100k smart-zone budget and stays below 15 files (goldens are recorded from the TS before each Rust slice, D-25; the quit prompt lands before games become Game-class). Gap closure 88.2-26..31 planned 2026-11-27 from 88.2-UAT.md (G-88.2-1, G-88.2-2), six plans in six sequential waves (each sets its findings to fixed in the one 88.2-REVIEW-DISPOSITION.md)
+**Plans:** 31/31 plans executed: 25/25 executed in 18 waves; planned 2026-11-26, re-sliced the same day so every plan fits the 100k smart-zone budget and stays below 15 files (goldens are recorded from the TS before each Rust slice, D-25; the quit prompt lands before games become Game-class). Gap closure 88.2-26..31 planned 2026-11-27 from 88.2-UAT.md (G-88.2-1, G-88.2-2), six plans in six sequential waves (each sets its findings to fixed in the one 88.2-REVIEW-DISPOSITION.md)
 
 Plans:
 **Wave 1**
@@ -1100,7 +1100,7 @@ Plans:
 - [x] 88.2-28-PLAN.md — WR-01: terminate_all waits for each helper's group and SIGKILLs members that ignore SIGTERM (owned and tokio helpers)
 - [x] 88.2-29-PLAN.md — WR-03 (option A): a clean SpecProcRunner exit releases the helper's kill-on-close Job; timeout, cancel, shutdown and SIGKILL still kill
 - [x] 88.2-30-PLAN.md — WR-05, WR-08, WR-09: best-effort tracked kill in stop(), the quit handler logs a failed kill, the spawnAsync abort retried until the call settles
-- [ ] 88.2-31-PLAN.md — Gap-closure proof at a clean-worktree candidate head, push checkpoint, three-OS CI with every new arm observed on its leg (D-30)
+- [x] 88.2-31-PLAN.md — Gap-closure proof at a clean-worktree candidate head, push checkpoint, three-OS CI with every new arm observed on its leg (D-30)
 
 **Cross-cutting constraints:** <!-- gsd:generated -->
 - Flagged assumption (spec-less edge probe): SVC-03's edge-coverage row is `unclassified` and unresolved; the D-14 matrix stands in for edge coverage and is not claimed as a verified edge
