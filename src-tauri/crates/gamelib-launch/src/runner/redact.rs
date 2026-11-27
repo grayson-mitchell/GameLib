@@ -1,4 +1,4 @@
-//! `getRunnerCallWithoutCredentials` and `quoteIfNecessary`: the only form of a runner's command line
+//! `getRunnerCallWithoutCredentials` and `quoteIfNecessary`: the only producer of a runner's command line
 //! that is ever written to a log (88.2-07, D-02, T-88.2-10). An exact port of `commandRunner.ts`.
 //!
 //! The eight flags are matched by exact array element, never by prefix, so `--code` can never swallow
@@ -6,6 +6,13 @@
 //! members but one string (the member after `-ArgumentList`), each wrapped as `"`"value`""`, so that
 //! branch redacts with a pattern over the wrapped shape. 88.2-08 replays every `golden/redaction`
 //! vector against this module; the runner goldens replay it through every call here.
+//!
+//! The full credential-free form goes to the per-game log writers. `gamelib.log` is uploadable, so its
+//! lines get the general-log form built from the reductions here (quick 261127-u6h, 88.2 prohibition 1):
+//! the runner and every absolute argument of two or more segments reduced to a file name
+//! ([`reduce_part`]), and the env the caller added shown as names only ([`changed_env_names`]). Only two
+//! or more segments: Windows switches (`/S`, `/VERYSILENT`) have the one-segment shape and must stay
+//! readable, and one segment cannot hold a profile directory.
 
 use std::collections::BTreeMap;
 
@@ -78,6 +85,92 @@ fn redact_wrapped(argument_list: &str, flag: &str) -> String {
     argument_list.to_string()
 }
 
+/// The non-PowerShell redaction: the element after each credential flag, matched by exact element, is
+/// replaced with [`REDACTED`] (a trailing flag grows the list, as the TS array assignment does). Runs on
+/// the unwrapped arguments, whatever the runner is called.
+pub fn redact_parts(command: &[String]) -> Vec<String> {
+    let mut modified: Vec<String> = command.to_vec();
+    for flag in SENSITIVE_FLAGS {
+        let Some(position) = modified.iter().position(|part| part == flag) else {
+            continue;
+        };
+        // JavaScript assigns past the end by growing the array.
+        if position + 1 < modified.len() {
+            modified[position + 1] = REDACTED.to_string();
+        } else {
+            modified.push(REDACTED.to_string());
+        }
+    }
+    modified
+}
+
+fn is_separator(c: char) -> bool {
+    c == '/' || c == '\\'
+}
+
+/// The last non-empty segment of a path, splitting on both `/` and `\`; a path with no non-empty segment
+/// answers itself.
+pub fn file_name_of(path: &str) -> &str {
+    path.rsplit(is_separator)
+        .find(|segment| !segment.is_empty())
+        .unwrap_or(path)
+}
+
+/// Whether `token` is an absolute path of two or more segments (or a home-relative, drive or UNC path),
+/// which can hold a profile directory. A one-segment token (`/S`, `/VERYSILENT`, `/games`) is left alone:
+/// Windows switches have that shape and one segment cannot hold a profile directory.
+pub fn is_reducible_path(token: &str) -> bool {
+    if token.starts_with("~/") || token.starts_with("~\\") || token.starts_with("\\\\") {
+        return true;
+    }
+    let mut chars = token.chars();
+    if let (Some(drive), Some(':'), Some(separator)) = (chars.next(), chars.next(), chars.next()) {
+        if drive.is_ascii_alphabetic() && is_separator(separator) {
+            return true;
+        }
+    }
+    if token.starts_with(is_separator) {
+        let trimmed = token.trim_end_matches(is_separator);
+        return trimmed.chars().skip(1).any(is_separator);
+    }
+    false
+}
+
+/// The general-log form of one argument: a reducible path becomes its file name, `key=<reducible path>`
+/// becomes `key=<file name>`, anything else is unchanged.
+pub fn reduce_part(part: &str) -> String {
+    if is_reducible_path(part) {
+        return file_name_of(part).to_string();
+    }
+    if let Some((key, value)) = part.split_once('=') {
+        if is_reducible_path(value) {
+            return format!("{key}={}", file_name_of(value));
+        }
+    }
+    part.to_string()
+}
+
+/// `text` with every occurrence of `path` replaced by its file name. A no-op when `path` is empty or
+/// already is its own file name.
+pub fn reduce_in_text(text: &str, path: &str) -> String {
+    if path.is_empty() || file_name_of(path) == path {
+        return text.to_string();
+    }
+    text.replace(path, file_name_of(path))
+}
+
+/// The names of the variables the caller added whose value differs from GameLib's own, in the caller's
+/// order (the same skip rule as the env words of [`get_runner_call_without_credentials`]).
+pub fn changed_env_names(
+    env: &[(String, String)],
+    own_env: &BTreeMap<String, String>,
+) -> Vec<String> {
+    env.iter()
+        .filter(|(key, value)| own_env.get(key) != Some(value))
+        .map(|(key, _)| key.clone())
+        .collect()
+}
+
 /// `getRunnerCallWithoutCredentials`.
 ///
 /// - `command`: the runner's argv (an array, never the legendary command object: the adapter
@@ -93,9 +186,9 @@ pub fn get_runner_call_without_credentials(
     own_env: &BTreeMap<String, String>,
     runner_path: &str,
 ) -> String {
-    let mut modified: Vec<String> = command.to_vec();
-    for flag in SENSITIVE_FLAGS {
-        if runner_path == "powershell" {
+    let modified: Vec<String> = if runner_path == "powershell" {
+        let mut modified: Vec<String> = command.to_vec();
+        for flag in SENSITIVE_FLAGS {
             // `indexOf('-ArgumentList') + 1` is 0 when absent; a missing member is skipped.
             let Some(position) = modified.iter().position(|part| part == "-ArgumentList") else {
                 continue;
@@ -104,18 +197,11 @@ pub fn get_runner_call_without_credentials(
                 continue;
             };
             modified[position + 1] = redact_wrapped(argument_list, flag);
-        } else {
-            let Some(position) = modified.iter().position(|part| part == flag) else {
-                continue;
-            };
-            // JavaScript assigns past the end by growing the array.
-            if position + 1 < modified.len() {
-                modified[position + 1] = REDACTED.to_string();
-            } else {
-                modified.push(REDACTED.to_string());
-            }
         }
-    }
+        modified
+    } else {
+        redact_parts(command)
+    };
 
     let mut words: Vec<String> = Vec::new();
     for (key, value) in env {
@@ -225,6 +311,101 @@ mod tests {
         assert_eq!(
             get_runner_call_without_credentials(&argv(&["list"]), &env, &own, "/bin/r"),
             "OPT=\"a b\" KEEP2=x /bin/r list"
+        );
+    }
+
+    #[test]
+    fn file_name_of_takes_the_last_non_empty_segment_on_either_separator() {
+        assert_eq!(file_name_of("/a/b/gogdl"), "gogdl");
+        assert_eq!(file_name_of("/a/b/prefix/"), "prefix");
+        assert_eq!(file_name_of("C:\\tools\\x\\gogdl.exe"), "gogdl.exe");
+        assert_eq!(file_name_of("C:/tools/gogdl.exe"), "gogdl.exe");
+        assert_eq!(file_name_of("/tmp/x/gog\\gogdl"), "gogdl");
+        assert_eq!(file_name_of("gogdl"), "gogdl");
+        assert_eq!(file_name_of("/"), "/");
+    }
+
+    #[test]
+    fn is_reducible_path_wants_two_or_more_segments() {
+        for yes in [
+            "/games/app-gog",
+            "\\\\server\\share\\x",
+            "C:\\x",
+            "c:/x/y",
+            "~/x",
+        ] {
+            assert!(is_reducible_path(yes), "{yes}");
+        }
+        for no in [
+            "/S",
+            "/VERYSILENT",
+            "/v",
+            "/games",
+            "/games/",
+            "./gogdl",
+            "Game/game.exe",
+            "--flag",
+            "<redacted>",
+            "C:",
+            "",
+        ] {
+            assert!(!is_reducible_path(no), "{no}");
+        }
+    }
+
+    #[test]
+    fn reduce_part_reduces_a_path_or_the_value_after_an_equals_sign() {
+        assert_eq!(reduce_part("/games/app-gog"), "app-gog");
+        assert_eq!(reduce_part("--path=/Users/x/Games"), "--path=Games");
+        for same in ["/S", "--flag", "app-gog", "Game/game.exe"] {
+            assert_eq!(reduce_part(same), same);
+        }
+    }
+
+    #[test]
+    fn reduce_in_text_names_the_program_by_its_file_name() {
+        assert_eq!(
+            reduce_in_text(
+                "spawn /a/b/wine: No such file or directory (os error 2)",
+                "/a/b/wine"
+            ),
+            "spawn wine: No such file or directory (os error 2)"
+        );
+        assert_eq!(reduce_in_text("spawn x: boom", ""), "spawn x: boom");
+        assert_eq!(
+            reduce_in_text("spawn gogdl: boom", "gogdl"),
+            "spawn gogdl: boom"
+        );
+    }
+
+    #[test]
+    fn changed_env_names_keeps_the_callers_order_and_skips_equal_values() {
+        let own: BTreeMap<String, String> = [("KEEP".to_string(), "same".to_string())]
+            .into_iter()
+            .collect();
+        let env = vec![
+            ("KEEP".to_string(), "same".to_string()),
+            ("OPT".to_string(), "a b".to_string()),
+            ("KEEP2".to_string(), "x".to_string()),
+        ];
+        assert_eq!(changed_env_names(&env, &own), vec!["OPT", "KEEP2"]);
+    }
+
+    #[test]
+    fn redact_parts_redacts_by_exact_element() {
+        for flag in SENSITIVE_FLAGS {
+            assert_eq!(
+                redact_parts(&argv(&["auth", flag, "secret", "--keep", "v"])),
+                argv(&["auth", flag, "<redacted>", "--keep", "v"])
+            );
+        }
+        assert_eq!(
+            redact_parts(&argv(&["--code-verifier", "v1", "--code", "c1"])),
+            argv(&["--code-verifier", "<redacted>", "--code", "<redacted>"])
+        );
+        assert_eq!(
+            redact_parts(&argv(&["login", "--token"])),
+            argv(&["login", "--token", "<redacted>"])
         );
     }
 }

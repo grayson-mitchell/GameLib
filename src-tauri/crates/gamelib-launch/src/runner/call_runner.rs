@@ -11,8 +11,10 @@
 //!   ends as `{ abort: true }`. A tracked kill (`TrackedRegistry::kill_tracked`) and the app shutdown end a run the same
 //!   way.
 //! - **Logs.** The `Running command` line goes to the general log and to each of the caller's writers,
-//!   with `Game Output:` when an app name is found; every chunk then goes to each writer. The command
-//!   line is only ever [`get_runner_call_without_credentials`]'s output.
+//!   with `Game Output:` when an app name is found; every chunk then goes to each writer. The writers
+//!   (and the result's `fullCommand`) get [`get_runner_call_without_credentials`]'s output. The general
+//!   log (`gamelib.log`, which is uploadable) gets the general-log form instead: the runner and deep
+//!   absolute arguments by file name, the env as names only (`general_log_command`, quick 261127-u6h).
 
 use std::collections::BTreeMap;
 use std::fmt;
@@ -27,7 +29,10 @@ use serde::{Deserialize, Deserializer, Serialize};
 use tokio::sync::watch;
 use tokio_util::sync::CancellationToken;
 
-use super::redact::get_runner_call_without_credentials;
+use super::redact::{
+    changed_env_names, file_name_of, get_runner_call_without_credentials, quote_if_necessary,
+    redact_parts, reduce_in_text, reduce_part,
+};
 use super::sanitize::LogSanitizer;
 use super::stream::{ChunkWindow, LaunchLogSink, LogHandOff, LogTargets, OutputSink};
 use super::{lock, Flight, Registered, RunnerEvent, RunnerName, RunnerTables};
@@ -285,6 +290,46 @@ pub fn powershell_command(full_runner_path: &str, parts: &[String]) -> Vec<Strin
     command
 }
 
+/// The general-log form of a runner command (`gamelib.log`, which is uploadable): credentials redacted on
+/// the unwrapped arguments by exact element, the runner named by its file name, every deep absolute
+/// argument reduced to its file name, and the env the caller added shown as the names of the variables whose
+/// value differs from GameLib's own, appended as ` (env: NAME, NAME)`. On the PowerShell branch the
+/// `powershell -NoProfile Start-Process ...` shape is kept, built from the reduced parts.
+///
+/// The credential redaction never runs on the reduced runner name: a runner whose file name is
+/// `powershell` would otherwise select the wrapped-shape redaction and leave a plain `--password` value.
+fn general_log_command(
+    parts: &[String],
+    runner_path: &str,
+    powershell: bool,
+    env: &[(String, String)],
+    own_env: &BTreeMap<String, String>,
+) -> String {
+    let reduced: Vec<String> = redact_parts(parts)
+        .iter()
+        .map(|part| reduce_part(part))
+        .collect();
+    let runner = file_name_of(runner_path);
+    let mut words: Vec<String> = if powershell {
+        let mut words = vec!["powershell".to_string()];
+        words.extend(powershell_command(runner, &reduced));
+        words
+    } else {
+        let mut words = vec![runner.to_string()];
+        words.extend(reduced);
+        words
+    };
+    for word in &mut words {
+        *word = quote_if_necessary(word);
+    }
+    let mut command = words.join(" ");
+    let names = changed_env_names(env, own_env);
+    if !names.is_empty() {
+        command.push_str(&format!(" (env: {})", names.join(", ")));
+    }
+    command
+}
+
 /// What Node's `spawn` throws for a batch file started without a shell (an errno exception: the syscall and the
 /// code, no file name).
 pub const BATCH_REFUSAL: &str = "spawn EINVAL";
@@ -327,6 +372,8 @@ struct Run {
     cwd: Option<String>,
     env: Vec<(String, String)>,
     safe_command: String,
+    /// The general-log form of the command (`gamelib.log` only; see [`general_log_command`]).
+    general_command: String,
     app_name: String,
     runner: RunnerName,
     log_prefix: Prefix,
@@ -406,7 +453,7 @@ impl Run {
             self.ctx.log_sink.general(
                 self.log_prefix,
                 Level::Info,
-                &format!("Abort command \"{}\"", self.safe_command),
+                &format!("Abort command \"{}\"", self.general_command),
             );
             return ExecResult {
                 stdout: String::new(),
@@ -420,7 +467,11 @@ impl Run {
         self.ctx.log_sink.general(
             self.log_prefix,
             Level::Error,
-            &format!("Error running command \"{}\": {message}", self.safe_command),
+            &format!(
+                "Error running command \"{}\": {}",
+                self.general_command,
+                reduce_in_text(message, &self.program)
+            ),
         );
         ExecResult {
             stdout: String::new(),
@@ -696,6 +747,7 @@ pub async fn call_runner(
         .cloned()
         .collect();
 
+    let general_parts = parts.clone();
     let mut bin = args.runner.bin.clone();
     let mut full_runner_path = match args.runner.dir.as_deref().filter(|d| !d.is_empty()) {
         Some(dir) => join_path(windows, dir, &bin),
@@ -714,6 +766,7 @@ pub async fn call_runner(
         .runner
         .powershell
         .get_or_init(|| windows && powershell_on_path(&host.path));
+    let general_runner_path = full_runner_path.clone();
     if use_powershell {
         parts = powershell_command(&full_runner_path, &parts);
         bin = "powershell".to_string();
@@ -723,14 +776,25 @@ pub async fn call_runner(
     let safe_command =
         get_runner_call_without_credentials(&parts, &args.env.0, &host.env, &full_runner_path);
 
+    let general_command = general_log_command(
+        &general_parts,
+        &general_runner_path,
+        use_powershell,
+        &args.env.0,
+        &host.env,
+    );
+
     let prefix = format!(
         "{}:",
         args.log_message_prefix
             .as_deref()
             .unwrap_or("Running command")
     );
-    ctx.log_sink
-        .general(log_prefix, Level::Info, &format!("{prefix} {safe_command}"));
+    ctx.log_sink.general(
+        log_prefix,
+        Level::Info,
+        &format!("{prefix} {general_command}"),
+    );
 
     // The command line (and `Game Output:`) to each of the caller's writers, one writer after the other.
     let targets = Arc::new(Mutex::new(LogTargets::resolve(args.log_targets.clone())));
@@ -797,6 +861,7 @@ pub async fn call_runner(
             .or_else(|| args.runner.dir.clone()),
         env: env.into_iter().collect(),
         safe_command: safe_command.clone(),
+        general_command,
         app_name,
         runner,
         log_prefix,
@@ -950,6 +1015,71 @@ mod tests {
 
     fn parts(words: &[&str]) -> Vec<String> {
         words.iter().map(|w| (*w).to_string()).collect()
+    }
+
+    fn own_env() -> BTreeMap<String, String> {
+        [("SAME".to_string(), "1".to_string())]
+            .into_iter()
+            .collect()
+    }
+
+    fn caller_env() -> Vec<(String, String)> {
+        vec![
+            ("LANG".to_string(), "en_NZ.UTF-8".to_string()),
+            ("SAME".to_string(), "1".to_string()),
+        ]
+    }
+
+    const RUNNER: &str = "/home/u/.config/GameLib/tools/legendary/legendary";
+
+    #[test]
+    fn the_general_log_command_names_the_runner_reduces_paths_and_lists_env_names() {
+        let got = general_log_command(
+            &parts(&["launch", "/home/u/Games/app-gog", "--token", "s3cret", "/S"]),
+            RUNNER,
+            false,
+            &caller_env(),
+            &own_env(),
+        );
+        assert_eq!(
+            got,
+            "legendary launch app-gog --token <redacted> /S (env: LANG)"
+        );
+    }
+
+    #[test]
+    fn the_powershell_general_log_command_keeps_its_shape_with_reduced_parts() {
+        let got = general_log_command(
+            &parts(&["launch", "/home/u/Games/app-gog", "--token", "s3cret", "/S"]),
+            RUNNER,
+            true,
+            &[],
+            &own_env(),
+        );
+        let wrapped = powershell_command(
+            "legendary",
+            &parts(&["launch", "app-gog", "--token", "<redacted>", "/S"]),
+        );
+        let expected = std::iter::once("powershell".to_string())
+            .chain(wrapped)
+            .map(|word| quote_if_necessary(&word))
+            .collect::<Vec<_>>()
+            .join(" ");
+        assert_eq!(got, expected);
+        assert!(!got.contains("s3cret"), "{got}");
+        assert!(!got.contains("/home/u"), "{got}");
+    }
+
+    #[test]
+    fn a_runner_named_powershell_still_has_its_password_redacted() {
+        let got = general_log_command(
+            &parts(&["login", "--password", "hunter2"]),
+            "/opt/tools/powershell",
+            false,
+            &[],
+            &own_env(),
+        );
+        assert_eq!(got, "powershell login --password <redacted>");
     }
 
     #[test]

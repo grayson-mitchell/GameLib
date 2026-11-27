@@ -19,6 +19,15 @@
 //! exits with the recorded code, ends itself with SIGTERM, or idles until the replay stops it through the
 //! tracked registry or the abort id, as the recorded `killedByUs` and `abortWhileHeld` say). A game's two
 //! streams share one capture file, so those cases are compared under the `game-merged-streams` delta.
+//!
+//! The general log lines (`Running command:`, `Abort command`, `Error running command`) are compared under the
+//! `general-log-paths-and-env-reduced` delta (quick 261127-u6h): `gamelib.log` is uploadable, so Rust writes the
+//! runner and every deep absolute argument by file name and the env as names only. The recorded `events.json`
+//! lines stay as the TS wrote them; `reduced_want_parts` derives the expected line through
+//! `tests/log_oracle/mod.rs`, which does not call the production reduction, and every general line is checked to
+//! carry no rig placeholder and no deep absolute path.
+
+mod log_oracle;
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::io::Write;
@@ -1274,7 +1283,13 @@ fn replay(case: &Case, rig: &Rig) -> Result<(), String> {
     }
     for (index, ((level, prefix, msg), want)) in got_general.iter().zip(&want_events).enumerate() {
         let msg = fold_text(msg);
+        if log_oracle::carries_a_path(&msg) {
+            return Err(format!(
+                "{id}: general line {index} carries a path or a rig placeholder: {msg:?}"
+            ));
+        }
         let parts = want["parts"].as_array().cloned().unwrap_or_default();
+        let parts = reduced_want_parts(want["level"].as_str().unwrap_or_default(), &parts);
         let level_ok = level.as_str().to_lowercase() == want["level"].as_str().unwrap_or_default();
         let prefix_ok = prefix.as_str() == want["prefix"].as_str().unwrap_or_default();
         let text_ok = if want["level"] == "error" {
@@ -1299,6 +1314,73 @@ fn replay(case: &Case, rig: &Rig) -> Result<(), String> {
         }
     }
     Ok(())
+}
+
+/// The recorded parts of one general line under the `general-log-paths-and-env-reduced` delta: the command
+/// the TS logged, reduced by the test-side oracle. A line that holds no command is returned as recorded.
+fn reduced_want_parts(level: &str, parts: &[Value]) -> Vec<Value> {
+    let text = |index: usize| parts.get(index).and_then(Value::as_str);
+    let mut out = parts.to_vec();
+    if text(0) == Some("Abort command") && parts.len() == 2 {
+        if let Some(cmd) = text(1).and_then(|t| t.strip_prefix('"')?.strip_suffix('"')) {
+            out[1] = Value::String(format!("\"{}\"", log_oracle::reduce_recorded_command(cmd)));
+        }
+    } else if level == "error" {
+        if parts.len() >= 3 {
+            if let Some(cmd) = text(2).and_then(|t| t.strip_prefix('"')?.strip_suffix("\":")) {
+                out[2] =
+                    Value::String(format!("\"{}\":", log_oracle::reduce_recorded_command(cmd)));
+            }
+        }
+    } else if parts.len() == 2 {
+        if let Some(cmd) = text(1) {
+            out[1] = Value::String(log_oracle::reduce_recorded_command(cmd));
+        }
+    }
+    out
+}
+
+/// The number of recorded runner lines the delta changes (pinned: a different count means the oracle's rules or
+/// the recordings moved).
+const REDUCED_RUNNER_LINES: usize = 54;
+
+#[test]
+fn the_general_log_delta_reduces_the_recorded_runner_lines() {
+    let mut changed = 0usize;
+    let mut cases = 0usize;
+    for entry in std::fs::read_dir(fixtures().join("golden/runner/expected")).expect("expected dir")
+    {
+        let path = entry.expect("entry").path().join("events.json");
+        if !path.is_file() {
+            continue;
+        }
+        let events = read_json(&path);
+        let mut in_case = 0usize;
+        for event in events.as_array().cloned().unwrap_or_default() {
+            let parts = event["parts"].as_array().cloned().unwrap_or_default();
+            let level = event["level"].as_str().unwrap_or_default();
+            if reduced_want_parts(level, &parts) != parts {
+                in_case += 1;
+            }
+        }
+        changed += in_case;
+        cases += usize::from(in_case > 0);
+    }
+    assert_eq!(
+        changed, REDUCED_RUNNER_LINES,
+        "recorded runner lines changed ({cases} cases)"
+    );
+    assert_eq!(cases, 32, "cases holding a changed line");
+    assert_eq!(
+        log_oracle::reduce_recorded_command(
+            "LANG=en_NZ.UTF-8 <TOOLS>/legendary/legendary launch app-legendary"
+        ),
+        "legendary launch app-legendary (env: LANG)"
+    );
+    assert_eq!(
+        log_oracle::reduce_recorded_command("gog download app-gog --path /games"),
+        "gog download app-gog --path /games"
+    );
 }
 
 #[test]
@@ -1377,6 +1459,7 @@ fn deltas_json_names_each_delta_with_a_reason() {
         "windows-path-separator",
         "test-local-sanitizer",
         "game-merged-streams",
+        "general-log-paths-and-env-reduced",
     ] {
         let reason = deltas[name].as_str().unwrap_or_default();
         assert!(reason.len() > 20, "delta {name} has no reason");
