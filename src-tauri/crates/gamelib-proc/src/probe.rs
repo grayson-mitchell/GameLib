@@ -32,10 +32,9 @@ pub(crate) fn creation_time(handle: windows_sys::Win32::Foundation::HANDLE) -> O
 }
 
 /// Windows: whether the process `handle` names has exited, by a zero-timeout wait on it (`Some(true)`
-/// signalled, `Some(false)` still running, `None` when the wait could not be made). 88.2-27's
-/// held-leader walk reuses it; until then only `imp::is_alive` calls it, so this re-export is unused.
+/// signalled, `Some(false)` still running, `None` when the wait could not be made). The held-leader
+/// walk in `kill_tree.rs` reads liveness through it.
 #[cfg(windows)]
-#[allow(dead_code)]
 pub(crate) fn handle_exited(handle: windows_sys::Win32::Foundation::HANDLE) -> Option<bool> {
     imp::handle_exited(handle)
 }

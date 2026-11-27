@@ -23,54 +23,240 @@ pub(crate) use unix::{signal_group, terminate_known_group};
 #[cfg(windows)]
 pub use win::kill_game_tree;
 
+/// What one candidate child's own handle reports, as `select_tree` needs it. Every field is an
+/// `Option` because every read can fail, and a read that failed proves nothing.
+#[derive(Clone, Copy, Debug)]
+#[cfg_attr(not(windows), allow(dead_code))]
+pub(crate) struct ChildFacts {
+    /// Creation time, as `probe::creation_time` reads it.
+    pub created: Option<u64>,
+    /// Whether the process is still running (`probe::handle_exited`, inverted).
+    pub running: Option<bool>,
+    /// The pid the process itself names as its parent
+    /// (`NtQueryInformationProcess(ProcessBasicInformation)`), not the snapshot's claim.
+    pub parent: Option<u32>,
+}
+
+/// The selection rule of the Windows stamped-tree walk, with no OS call in it so every platform
+/// compiles and tests it. Starting from the root (`root_pid`, created at `root_created`, both
+/// proven by the caller through a handle it holds), it follows `table`, the `(pid, parent pid)`
+/// pairs of a process snapshot, breadth first. For each accepted node every entry naming it as
+/// parent is passed to `open`, which answers the handle and the child's own `ChildFacts`.
+///
+/// A child is accepted only when all three hold:
+/// - it is not older than its accepted parent. This rejects children of an older incarnation of
+///   a parent pid. It cannot reject a pid recycled between the snapshot and `open`, because a
+///   recycled pid is always newer;
+/// - it is still running;
+/// - its own handle names the accepted parent's pid as its parent. This is the check that rejects
+///   a child pid recycled between the snapshot and `open`: the unrelated process now holding the
+///   pid has a different parent. A parent query that failed is `None` and rejects the child
+///   (fail closed).
+///
+/// The handles of every accepted node are returned and so held by the caller from the check to
+/// the terminate, which keeps each accepted parent's pid from being reassigned while its children
+/// are checked. Entries with pid 0, an entry naming itself as its parent, and any pid already
+/// accepted (the root included) are never passed to `open`. The answer is the accepted
+/// descendants' handles in acceptance order, the root excluded.
+#[cfg_attr(not(windows), allow(dead_code))]
+pub(crate) fn select_tree<H>(
+    root_pid: u32,
+    root_created: u64,
+    table: &[(u32, u32)],
+    mut open: impl FnMut(u32) -> Option<(H, ChildFacts)>,
+) -> Vec<H> {
+    // (pid, creation time) of every node accepted so far, root first. The root comes only from
+    // the arguments: nothing here re-seeds it from a bare pid.
+    let mut accepted: Vec<(u32, u64)> = vec![(root_pid, root_created)];
+    let mut held: Vec<H> = Vec::new();
+    let mut next = 0;
+    while next < accepted.len() {
+        let (parent_pid, parent_created) = accepted[next];
+        next += 1;
+        for &(child_pid, ppid) in table {
+            if ppid != parent_pid
+                || child_pid == 0
+                || child_pid == ppid
+                || accepted.iter().any(|(seen, _)| *seen == child_pid)
+            {
+                continue;
+            }
+            let Some((handle, facts)) = open(child_pid) else {
+                continue;
+            };
+            let Some(created) = facts.created else {
+                continue;
+            };
+            if created < parent_created
+                || facts.running != Some(true)
+                || facts.parent != Some(parent_pid)
+            {
+                continue;
+            }
+            accepted.push((child_pid, created));
+            held.push(handle);
+        }
+    }
+    held
+}
+
 #[cfg(windows)]
 mod win {
-    use super::KillOutcome;
+    use super::{select_tree, ChildFacts, KillOutcome};
     use crate::diag::diag;
     use crate::job::GameJob;
     use crate::probe;
     use std::os::windows::io::{AsRawHandle, FromRawHandle, OwnedHandle};
     use std::time::{Duration, Instant};
+    use windows_sys::Wdk::System::Threading::{NtQueryInformationProcess, ProcessBasicInformation};
     use windows_sys::Win32::Foundation::{
-        GetLastError, ERROR_INVALID_PARAMETER, INVALID_HANDLE_VALUE,
+        GetLastError, ERROR_INVALID_PARAMETER, HANDLE, INVALID_HANDLE_VALUE, WAIT_OBJECT_0,
     };
     use windows_sys::Win32::System::Diagnostics::ToolHelp::{
         CreateToolhelp32Snapshot, Process32FirstW, Process32NextW, PROCESSENTRY32W,
         TH32CS_SNAPPROCESS,
     };
     use windows_sys::Win32::System::Threading::{
-        OpenProcess, TerminateProcess, WaitForSingleObject, PROCESS_QUERY_LIMITED_INFORMATION,
-        PROCESS_TERMINATE,
+        OpenProcess, TerminateProcess, WaitForSingleObject, PROCESS_BASIC_INFORMATION,
+        PROCESS_QUERY_LIMITED_INFORMATION, PROCESS_SYNCHRONIZE, PROCESS_TERMINATE,
     };
 
-    /// How long a terminated Job gets to empty before the kill stops waiting for it.
+    /// How long a terminated tree gets to end before the kill stops waiting for it. `grace`
+    /// capped at this is the one deadline every wait of a single `kill_game_tree` call shares.
     const TERMINATE_SETTLE: Duration = Duration::from_secs(1);
+
+    /// The rights every handle this walk holds carries. `PROCESS_SYNCHRONIZE` is what makes
+    /// `WaitForSingleObject` (and so `probe::handle_exited`) answer instead of failing.
+    const WALK_RIGHTS: u32 =
+        PROCESS_TERMINATE | PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_SYNCHRONIZE;
+
+    /// The recorded leader, proven once and then held. The handle was opened for the pid, the
+    /// process behind it was read as running, and its creation time was read through that same
+    /// handle and found equal to the recorded stamp. While a `Leader` exists its pid cannot be
+    /// reassigned, so everything done through it (the Job arm, the descendant walk, the
+    /// terminate) is done to the process the stamp named. Only `open_verified_leader` builds one.
+    struct Leader {
+        pid: u32,
+        stamp: u64,
+        handle: OwnedHandle,
+    }
+
+    /// What `open_verified_leader` found.
+    enum Pin {
+        /// The leader is running and has the recorded stamp; the handle is held.
+        Pinned(Leader),
+        /// The leader is not alive. Nothing was signalled.
+        Gone,
+        /// The pid cannot be proven to be the recorded leader (a different stamp, or a read that
+        /// failed). Nothing was signalled.
+        NotOurs,
+    }
+
+    /// How terminating the held leader ended.
+    #[derive(Debug, PartialEq, Eq)]
+    enum Ended {
+        /// TerminateProcess succeeded.
+        Terminated,
+        /// TerminateProcess failed because the leader had already exited on its own.
+        ExitedOnItsOwn,
+        /// TerminateProcess failed and the leader is still running (access refused).
+        Refused,
+    }
+
+    /// Opens `pid` and proves it is the recorded leader. Liveness is judged before the stamp (the
+    /// unix order), so an exited leader is `Gone` whatever its stamp says.
+    fn open_verified_leader(pid: u32, stamp: u64) -> Pin {
+        // SAFETY: OpenProcess takes plain values and returns null on failure.
+        let raw = unsafe { OpenProcess(WALK_RIGHTS, 0, pid) };
+        if raw.is_null() {
+            // SAFETY: GetLastError has no preconditions.
+            let err = unsafe { GetLastError() };
+            if err == ERROR_INVALID_PARAMETER {
+                return Pin::Gone;
+            }
+            diag(&format!("game leader: OpenProcess failed (error {err})"));
+            return Pin::NotOurs;
+        }
+        // SAFETY: `raw` is a valid, uniquely-owned handle; OwnedHandle closes it on drop.
+        let handle = unsafe { OwnedHandle::from_raw_handle(raw as _) };
+        match probe::handle_exited(handle.as_raw_handle() as _) {
+            Some(true) => return Pin::Gone,
+            Some(false) => {}
+            None => {
+                diag("game leader: liveness could not be read; not terminating");
+                return Pin::NotOurs;
+            }
+        }
+        if probe::creation_time(handle.as_raw_handle() as _) != Some(stamp) {
+            return Pin::NotOurs;
+        }
+        Pin::Pinned(Leader { pid, stamp, handle })
+    }
+
+    impl Leader {
+        fn raw(&self) -> HANDLE {
+            self.handle.as_raw_handle() as _
+        }
+
+        /// Waits for the leader to exit, no longer than `deadline`. `true` when it has exited.
+        fn wait_until(&self, deadline: Instant) -> bool {
+            wait_until(self.raw(), deadline)
+        }
+
+        /// Terminates the leader through the held handle.
+        fn terminate(&self) -> Ended {
+            // SAFETY: `self.handle` is a valid process handle with terminate rights.
+            if unsafe { TerminateProcess(self.raw(), 1) } != 0 {
+                return Ended::Terminated;
+            }
+            // SAFETY: GetLastError has no preconditions.
+            let err = unsafe { GetLastError() };
+            if probe::handle_exited(self.raw()) == Some(true) {
+                return Ended::ExitedOnItsOwn;
+            }
+            diag(&format!(
+                "game leader: TerminateProcess failed (error {err})"
+            ));
+            Ended::Refused
+        }
+    }
+
+    /// Waits on `handle` until it is signalled or `deadline` passes. `true` when it is signalled.
+    fn wait_until(handle: HANDLE, deadline: Instant) -> bool {
+        let left = deadline.saturating_duration_since(Instant::now());
+        let wait_ms = u32::try_from(left.as_millis()).unwrap_or(0);
+        // SAFETY: a valid handle opened with `SYNCHRONIZE`; a process handle is signalled on exit.
+        unsafe { WaitForSingleObject(handle, wait_ms) == WAIT_OBJECT_0 }
+    }
 
     /// Kills the tree of a game GameLib recorded as `pid` plus start `stamp` (`probe::start_time`
     /// at spawn), for the case where GameLib holds no `Child` for it (re-adoption after a
     /// restart, quit-kill).
     ///
-    /// Prohibition 5 at the mechanism: nothing is terminated unless the pid's creation time equals
-    /// `stamp`, so a recycled pid is never touched, and the Game Job opened afterwards carries both
-    /// the pid and the stamp in its name. `Gone` when the leader is not alive, `NotOurs` on a stamp
-    /// mismatch. Windows has no graceful signal, so `grace` only bounds the wait for the tree to
-    /// end after it has been terminated.
+    /// Prohibition 5 at the mechanism. The leader is opened once, at the top, and its identity is
+    /// proven through that handle (running, and creation time equal to `stamp`); the handle is
+    /// held through the Job arm and the whole descendant walk, so the pid cannot be reassigned
+    /// while anything is collected or terminated, and nothing re-seeds the root from a bare pid.
+    /// Descendants are taken only by `select_tree`, on handles held from the check to the
+    /// terminate. `Gone` when the leader is not alive and nothing was terminated, `NotOurs` when
+    /// the stamp differs or the leader is running but refuses termination (nothing signalled).
+    /// Windows has no graceful signal, so `grace` (capped at `TERMINATE_SETTLE`) is the one
+    /// deadline that bounds every wait of the call.
     ///
     /// When no Game Job of that name can be opened (the process that created it is gone, which
     /// removes the name, or it was never created) the tree is found by parentage instead
     /// (`terminate_stamped_tree`) and the line `game job not found; walking the descendants of the
     /// stamped leader` is logged.
     pub fn kill_game_tree(pid: u32, stamp: u64, grace: Duration) -> KillOutcome {
-        if !probe::is_alive(pid) {
-            return KillOutcome::Gone;
-        }
-        if probe::start_time(pid) != Some(stamp) {
-            return KillOutcome::NotOurs;
-        }
+        let leader = match open_verified_leader(pid, stamp) {
+            Pin::Pinned(leader) => leader,
+            Pin::Gone => return KillOutcome::Gone,
+            Pin::NotOurs => return KillOutcome::NotOurs,
+        };
+        let deadline = Instant::now() + grace.min(TERMINATE_SETTLE);
         match GameJob::open(pid, stamp) {
             Some(job) => {
                 job.terminate();
-                let deadline = Instant::now() + grace.min(TERMINATE_SETTLE);
                 while Instant::now() < deadline && job.active_processes().is_some_and(|n| n > 0) {
                     std::thread::sleep(Duration::from_millis(20));
                 }
@@ -78,7 +264,7 @@ mod win {
             }
             None => {
                 diag("game job not found; walking the descendants of the stamped leader");
-                terminate_stamped_tree(pid, stamp, grace)
+                terminate_stamped_tree(&leader, deadline)
             }
         }
     }
@@ -92,87 +278,93 @@ mod win {
     /// process that created it is gone (a GameLib restart, or its death) the name is dead and the
     /// tree has to be found by parentage instead.
     ///
-    /// The tree is every live process reachable from `pid` through parent pids where each is
-    /// newer than the process it names as its parent (the root's age being `stamp`): a pid that
-    /// was recycled to an unrelated, newer process is therefore never followed. Every descendant
-    /// is held as an open handle from the check to the terminate, so its pid cannot be recycled
-    /// between them. The descendants are collected before the leader is terminated, while the
-    /// parent links are intact, and the walk repeats (`WALK_PASSES`) for anything started in the
-    /// gap. Unlike a Job this does not follow a process that was reparented away or whose parent
-    /// died and whose pid was reused.
-    fn terminate_stamped_tree(pid: u32, stamp: u64, grace: Duration) -> KillOutcome {
-        let first = collect_descendants(pid, stamp);
-        let outcome = terminate_stamped_leader(pid, stamp, grace);
-        if outcome == KillOutcome::NotOurs {
-            return outcome;
-        }
-        let deadline = Instant::now() + grace.min(TERMINATE_SETTLE);
-        let mut batch = first;
+    /// The tree is what `select_tree` accepts from `leader`: every live process reachable through
+    /// parent pids that is no older than its parent and whose own handle names that parent. The
+    /// `leader` is held for the whole call, so the root pid is never reassigned and never
+    /// re-seeded from a bare pid, and every accepted descendant is held as an open handle from the
+    /// check to the terminate. The descendants are collected before the leader is terminated,
+    /// while the parent links are intact, and the walk repeats (`WALK_PASSES`) for anything
+    /// started in the gap. Unlike a Job this does not follow a process that was reparented away
+    /// or whose parent died and whose pid was reused.
+    ///
+    /// A leader that refuses termination while still running answers `NotOurs` before any
+    /// descendant is terminated. `Killed` when the leader was terminated or any descendant's
+    /// terminate succeeded, otherwise `Gone` (the leader ended on its own and left nothing).
+    fn terminate_stamped_tree(leader: &Leader, deadline: Instant) -> KillOutcome {
+        let mut batch = collect_descendants(leader);
+        let mut signalled = match leader.terminate() {
+            Ended::Refused => return KillOutcome::NotOurs,
+            Ended::Terminated => true,
+            Ended::ExitedOnItsOwn => false,
+        };
+        leader.wait_until(deadline);
         for _ in 0..WALK_PASSES {
             if batch.is_empty() {
                 break;
             }
             for member in &batch {
                 // SAFETY: `member` holds a valid process handle opened with terminate rights; a
-                // process that already ended makes this fail, which is the outcome wanted.
-                unsafe { TerminateProcess(member.as_raw_handle() as _, 1) };
+                // process that already ended makes this fail, which is not a signal.
+                if unsafe { TerminateProcess(member.as_raw_handle() as _, 1) } != 0 {
+                    signalled = true;
+                }
             }
             for member in &batch {
-                let left = deadline.saturating_duration_since(Instant::now());
-                let wait_ms = u32::try_from(left.as_millis()).unwrap_or(0);
-                // SAFETY: a valid process handle; it is signalled when the process exits.
-                unsafe { WaitForSingleObject(member.as_raw_handle() as _, wait_ms) };
+                wait_until(member.as_raw_handle() as _, deadline);
             }
-            batch = collect_descendants(pid, stamp);
+            batch = collect_descendants(leader);
         }
-        KillOutcome::Killed
+        if signalled {
+            KillOutcome::Killed
+        } else {
+            KillOutcome::Gone
+        }
     }
 
-    /// Open handles (terminate and query rights) to every live descendant of `root`, found from a
-    /// process snapshot and kept only where each process is newer than its named parent, the
-    /// root counting as created at `root_stamp`. Empty when the snapshot cannot be taken.
-    fn collect_descendants(root: u32, root_stamp: u64) -> Vec<OwnedHandle> {
+    /// Open handles (`WALK_RIGHTS`) to every descendant of the held `leader` that `select_tree`
+    /// accepts. Empty when the snapshot cannot be taken.
+    fn collect_descendants(leader: &Leader) -> Vec<OwnedHandle> {
         let Some(table) = process_table() else {
             return Vec::new();
         };
-        // (pid, creation time) of every process already accepted into the tree, root first.
-        let mut accepted: Vec<(u32, u64)> = vec![(root, root_stamp)];
-        let mut held: Vec<OwnedHandle> = Vec::new();
-        let mut next = 0;
-        while next < accepted.len() {
-            let (parent_pid, parent_created) = accepted[next];
-            next += 1;
-            for &(child_pid, ppid) in &table {
-                if ppid != parent_pid
-                    || child_pid == 0
-                    || accepted.iter().any(|(seen, _)| *seen == child_pid)
-                {
-                    continue;
-                }
-                // SAFETY: OpenProcess takes plain values and returns null on failure.
-                let raw = unsafe {
-                    OpenProcess(
-                        PROCESS_TERMINATE | PROCESS_QUERY_LIMITED_INFORMATION,
-                        0,
-                        child_pid,
-                    )
-                };
-                if raw.is_null() {
-                    continue;
-                }
-                // SAFETY: `raw` is a valid, uniquely-owned handle; OwnedHandle closes it on drop.
-                let handle = unsafe { OwnedHandle::from_raw_handle(raw as _) };
-                let Some(created) = probe::creation_time(handle.as_raw_handle() as _) else {
-                    continue;
-                };
-                if created < parent_created || !probe::is_alive(child_pid) {
-                    continue;
-                }
-                accepted.push((child_pid, created));
-                held.push(handle);
+        select_tree(leader.pid, leader.stamp, &table, |child_pid| {
+            // SAFETY: OpenProcess takes plain values and returns null on failure.
+            let raw = unsafe { OpenProcess(WALK_RIGHTS, 0, child_pid) };
+            if raw.is_null() {
+                return None;
             }
+            // SAFETY: `raw` is a valid, uniquely-owned handle; OwnedHandle closes it on drop.
+            let handle = unsafe { OwnedHandle::from_raw_handle(raw as _) };
+            let h = handle.as_raw_handle() as HANDLE;
+            let facts = ChildFacts {
+                created: probe::creation_time(h),
+                running: probe::handle_exited(h).map(|exited| !exited),
+                parent: parent_pid_of(h),
+            };
+            Some((handle, facts))
+        })
+    }
+
+    /// The pid the process behind `handle` names as its parent, read through the handle with
+    /// `NtQueryInformationProcess`. `None` when the query fails.
+    fn parent_pid_of(handle: HANDLE) -> Option<u32> {
+        // SAFETY: the struct is plain-old-data; all-zero is a valid value.
+        let mut info: PROCESS_BASIC_INFORMATION = unsafe { std::mem::zeroed() };
+        // SAFETY: a valid process handle with query rights; the pointer and size describe `info`,
+        // which outlives the call; the returned length is not needed.
+        let status = unsafe {
+            NtQueryInformationProcess(
+                handle,
+                ProcessBasicInformation,
+                &mut info as *mut _ as *mut core::ffi::c_void,
+                std::mem::size_of::<PROCESS_BASIC_INFORMATION>() as u32,
+                std::ptr::null_mut(),
+            )
+        };
+        if status < 0 {
+            return None;
         }
-        held
+        u32::try_from(info.InheritedFromUniqueProcessId).ok()
     }
 
     /// `(pid, parent pid)` of every process in a snapshot taken now, `None` when none can be taken.
@@ -202,45 +394,29 @@ mod win {
         Some(table)
     }
 
-    /// Terminates the process `pid` if, and only if, the handle opened for it reports creation
-    /// time `stamp`. The check and the terminate use one handle, so the pid cannot be recycled
-    /// between them.
-    fn terminate_stamped_leader(pid: u32, stamp: u64, grace: Duration) -> KillOutcome {
-        // SAFETY: OpenProcess takes plain values and returns null on failure.
-        let raw = unsafe {
-            OpenProcess(
-                PROCESS_TERMINATE | PROCESS_QUERY_LIMITED_INFORMATION,
-                0,
-                pid,
-            )
-        };
-        if raw.is_null() {
-            // SAFETY: GetLastError has no preconditions.
-            let err = unsafe { GetLastError() };
-            if err == ERROR_INVALID_PARAMETER {
-                return KillOutcome::Gone;
-            }
-            diag(&format!("game leader: OpenProcess failed (error {err})"));
-            return KillOutcome::NotOurs;
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+        use std::process::{Command, Stdio};
+
+        #[test]
+        fn kill_game_tree_on_a_reaped_pid_is_gone_and_signals_nothing() {
+            let mut child = Command::new("cmd")
+                .args(["/C", "exit 0"])
+                .stdin(Stdio::null())
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .spawn()
+                .expect("spawn cmd");
+            let pid = child.id();
+            child.wait().expect("wait");
+            // The std Child still holds its handle, so the pid cannot have been reused and the
+            // open succeeds: the exited check, before the stamp check, is what answers Gone.
+            assert_eq!(
+                kill_game_tree(pid, 1, Duration::from_millis(100)),
+                KillOutcome::Gone
+            );
         }
-        // SAFETY: `raw` is a valid, uniquely-owned handle; OwnedHandle closes it on drop.
-        let handle = unsafe { OwnedHandle::from_raw_handle(raw as _) };
-        if probe::creation_time(handle.as_raw_handle() as _) != Some(stamp) {
-            return KillOutcome::NotOurs;
-        }
-        // SAFETY: `handle` is a valid process handle with terminate rights.
-        if unsafe { TerminateProcess(handle.as_raw_handle() as _, 1) } == 0 {
-            // SAFETY: GetLastError has no preconditions.
-            let err = unsafe { GetLastError() };
-            diag(&format!(
-                "game leader: TerminateProcess failed (error {err})"
-            ));
-            return KillOutcome::NotOurs;
-        }
-        let wait_ms = u32::try_from(grace.min(TERMINATE_SETTLE).as_millis()).unwrap_or(1000);
-        // SAFETY: `handle` is a valid process handle; a process handle is signalled on exit.
-        unsafe { WaitForSingleObject(handle.as_raw_handle() as _, wait_ms) };
-        KillOutcome::Killed
     }
 }
 
@@ -516,5 +692,108 @@ mod unix {
                 Some(libc::ESRCH) | Some(libc::EPERM)
             ));
         }
+    }
+}
+
+#[cfg(test)]
+mod selection_tests {
+    use super::{select_tree, ChildFacts};
+    use std::collections::HashMap;
+
+    /// Facts a fake open answers per pid; a pid missing from the map cannot be opened.
+    fn facts(created: u64, running: bool, parent: Option<u32>) -> ChildFacts {
+        ChildFacts {
+            created: Some(created),
+            running: Some(running),
+            parent,
+        }
+    }
+
+    /// Runs `select_tree` over `table` with root 100 created at 1000. Returns the accepted pids
+    /// and every pid the open closure was asked for.
+    fn run(table: &[(u32, u32)], known: HashMap<u32, ChildFacts>) -> (Vec<u32>, Vec<u32>) {
+        let mut asked = Vec::new();
+        let taken = select_tree(100, 1000, table, |pid| {
+            asked.push(pid);
+            known.get(&pid).map(|f| (pid, *f))
+        });
+        (taken, asked)
+    }
+
+    #[test]
+    fn the_tree_is_followed_through_live_descendants_only() {
+        let table = [(101, 100), (102, 101), (103, 100), (104, 103)];
+        let known = HashMap::from([
+            (101, facts(1001, true, Some(100))),
+            (102, facts(1002, true, Some(101))),
+            (103, facts(1003, false, Some(100))),
+            (104, facts(1004, true, Some(103))),
+        ]);
+        let (taken, asked) = run(&table, known);
+        assert_eq!(taken, vec![101, 102]);
+        assert!(
+            !asked.contains(&104),
+            "a child of a rejected node is never opened"
+        );
+    }
+
+    #[test]
+    fn a_child_whose_real_parent_differs_is_never_taken() {
+        // Listed under 100 in the snapshot, but the pid was recycled before the open: its own
+        // handle names another parent. A recycled pid is always newer, so age cannot catch it.
+        let table = [(105, 100), (106, 100)];
+        let known = HashMap::from([
+            (105, facts(1500, true, Some(777))),
+            (106, facts(1500, true, None)),
+        ]);
+        let (taken, _) = run(&table, known);
+        assert!(taken.is_empty(), "{taken:?}");
+    }
+
+    #[test]
+    fn an_older_child_of_a_recycled_parent_pid_is_never_taken() {
+        let table = [(106, 100)];
+        let known = HashMap::from([(106, facts(999, true, Some(100)))]);
+        let (taken, _) = run(&table, known);
+        assert!(taken.is_empty(), "{taken:?}");
+    }
+
+    #[test]
+    fn a_child_with_unknown_age_or_liveness_is_never_taken() {
+        let table = [(107, 100), (108, 100)];
+        let known = HashMap::from([
+            (
+                107,
+                ChildFacts {
+                    created: None,
+                    running: Some(true),
+                    parent: Some(100),
+                },
+            ),
+            (
+                108,
+                ChildFacts {
+                    created: Some(1100),
+                    running: None,
+                    parent: Some(100),
+                },
+            ),
+        ]);
+        let (taken, _) = run(&table, known);
+        assert!(taken.is_empty(), "{taken:?}");
+    }
+
+    #[test]
+    fn unrelated_and_degenerate_entries_are_never_opened() {
+        // pid 0, a self-parented entry, the root named as a child, and a bystander under 999.
+        let table = [(0, 100), (110, 110), (100, 100), (120, 999), (130, 100)];
+        let known = HashMap::from([
+            (110, facts(1100, true, Some(110))),
+            (120, facts(1100, true, Some(999))),
+            // 130 cannot be opened.
+        ]);
+        let (taken, asked) = run(&table, known);
+        assert!(taken.is_empty(), "{taken:?}");
+        assert_eq!(asked, vec![130], "only the real child entry reaches open");
     }
 }
