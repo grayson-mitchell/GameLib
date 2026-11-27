@@ -202,10 +202,10 @@ mod tests {
         assert_eq!(failed.spawns().len(), 1);
     }
 
-    struct FixedSource(Option<String>);
+    struct FixedSource(Option<registry::RegValue>);
 
     impl registry::ShellFolderSource for FixedSource {
-        fn read(&self, _folder: registry::WindowsShellFolder) -> Option<String> {
+        fn read(&self, _folder: registry::WindowsShellFolder) -> Option<registry::RegValue> {
             self.0.clone()
         }
     }
@@ -238,7 +238,10 @@ mod tests {
         let runner = Arc::new(ScriptedRunner::answering(SpecOutput::default()));
         // The native answer carries a `.` segment, which normalises away.
         let raw = format!("{}\\.\\デスクトップ", one_drive.display());
-        let source = FixedSource(Some(raw));
+        let source = FixedSource(Some(registry::RegValue {
+            value_type: registry::RegValueType::Sz,
+            data: raw,
+        }));
         let ctx =
             windows_ctx(&home, Some(Arc::clone(&runner))).with_shell_folders(Arc::new(source));
         let (desktop_link, _) =
@@ -257,7 +260,10 @@ mod tests {
         let secret = "C:\\Users\\Zoë-Secret\\Desktop".to_string();
         // A relative answer is rejected; the line must name the reason and never the value.
         let ctx = windows_ctx(&home, None)
-            .with_shell_folders(Arc::new(FixedSource(Some("Zoë-Secret".to_string()))))
+            .with_shell_folders(Arc::new(FixedSource(Some(registry::RegValue {
+                value_type: registry::RegValueType::Sz,
+                data: "Zoë-Secret".to_string(),
+            }))))
             .with_log(Arc::clone(&log) as Arc<dyn crate::ctx::ShortcutsLog>);
         assert!(!shortcuts_exist(&ctx, Some("Plain Game")).await);
         let lines = log.lines();

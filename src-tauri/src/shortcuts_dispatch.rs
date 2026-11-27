@@ -37,7 +37,7 @@ use gamelib_shortcuts::ctx::{
 use gamelib_shortcuts::http::ReqwestHttp;
 #[cfg(windows)]
 use gamelib_shortcuts::registry::Win32ShellFolders;
-use gamelib_shortcuts::registry::{ShellFolderSource, WindowsShellFolder};
+use gamelib_shortcuts::registry::{RegValue, RegValueType, ShellFolderSource, WindowsShellFolder};
 use gamelib_store::host::StoreHost;
 
 /// The one context, set once by [`install`].
@@ -439,8 +439,9 @@ pub(crate) fn rpc_shortcuts_steam_is_added(args: &[Value]) -> Result<Value, Stri
 }
 
 /// `windows_shell_folder_read` (quick 261128-7wv): the raw, unexpanded `User Shell Folders` value of the
-/// folder named in `args`, or `null` when `source` is absent or cannot read it. Bad args answer a fixed
-/// literal that never echoes the input.
+/// folder named in `args` with its registry type, `{ "type": "REG_SZ" | "REG_EXPAND_SZ", "data": ... }`, or
+/// `null` when `source` is absent or cannot read it. The sidecar expands `%VAR%` only for a
+/// `REG_EXPAND_SZ` value (quick 261128-810). Bad args answer a fixed literal that never echoes the input.
 fn shell_folder_read_with(
     source: Option<&dyn ShellFolderSource>,
     args: &[Value],
@@ -449,13 +450,15 @@ fn shell_folder_read_with(
         WindowsShellFolderReadArgsName::Desktop => WindowsShellFolder::Desktop,
         WindowsShellFolderReadArgsName::Personal => WindowsShellFolder::Personal,
     };
-    Ok(source
-        .and_then(|s| s.read(folder))
-        .map_or(Value::Null, Value::String))
+    Ok(source.and_then(|s| s.read(folder)).map_or(
+        Value::Null,
+        |value| serde_json::json!({ "type": value.value_type.as_str(), "data": value.data }),
+    ))
 }
 
-/// `windows_shell_folder_read`: the native read on Windows (`RegGetValueW`), `null` elsewhere. It needs
-/// no installed context, so it answers before [`install`] too. It logs nothing: the value holds the
+/// `windows_shell_folder_read`: the native read on Windows (`RegGetValueW`), `null` elsewhere. The answer
+/// is the raw value, unexpanded, with its type, so the sidecar applies the same rule as the Rust read. It
+/// needs no installed context, so it answers before [`install`] too. It logs nothing: the value holds the
 /// user's name and never reaches a log (T-28-04).
 pub(crate) fn rpc_windows_shell_folder_read(args: &[Value]) -> Result<Value, String> {
     #[cfg(windows)]
@@ -501,12 +504,12 @@ mod tests {
 
     /// A source answering a fixed raw value and recording which folder it was asked for.
     struct FakeFolders {
-        answer: Option<String>,
+        answer: Option<RegValue>,
         asked: Mutex<Vec<WindowsShellFolder>>,
     }
 
     impl ShellFolderSource for FakeFolders {
-        fn read(&self, folder: WindowsShellFolder) -> Option<String> {
+        fn read(&self, folder: WindowsShellFolder) -> Option<RegValue> {
             if let Ok(mut asked) = self.asked.lock() {
                 asked.push(folder);
             }
@@ -517,16 +520,30 @@ mod tests {
     #[test]
     fn the_shell_folder_channel_answers_the_raw_value_or_null() {
         let fake = FakeFolders {
-            answer: Some("%USERPROFILE%\\ドキュメント".to_string()),
+            answer: Some(RegValue {
+                value_type: RegValueType::ExpandSz,
+                data: "%USERPROFILE%\\ドキュメント".to_string(),
+            }),
             asked: Mutex::new(Vec::new()),
         };
         assert_eq!(
             shell_folder_read_with(Some(&fake), &[json!({ "name": "Personal" })]),
-            Ok(json!("%USERPROFILE%\\ドキュメント"))
+            Ok(json!({ "type": "REG_EXPAND_SZ", "data": "%USERPROFILE%\\ドキュメント" }))
         );
         assert_eq!(
             fake.asked.lock().map(|a| a.clone()).unwrap_or_default(),
             vec![WindowsShellFolder::Personal]
+        );
+        let literal = FakeFolders {
+            answer: Some(RegValue {
+                value_type: RegValueType::Sz,
+                data: "D:\\50%\\Games\\10%".to_string(),
+            }),
+            asked: Mutex::new(Vec::new()),
+        };
+        assert_eq!(
+            shell_folder_read_with(Some(&literal), &[json!({ "name": "Desktop" })]),
+            Ok(json!({ "type": "REG_SZ", "data": "D:\\50%\\Games\\10%" }))
         );
         let none = FakeFolders {
             answer: None,

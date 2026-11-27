@@ -7,18 +7,20 @@
 //! intact; quick 261128-7wv). `reg.exe query` is the fallback, used when no source is installed or it has
 //! no answer: it runs as a hidden, bounded helper through the injected `SpecRunner` (a GUI process that
 //! spawned a console would flash a window) and prints in the console code page, so its output can carry
-//! U+FFFD, which is rejected. Either way the value goes through one pipeline: `%VAR%` is expanded against
-//! the shell-supplied environment and the result must be an absolute path. Anything else, a failed or
-//! timed-out query included, is `None`, and `None` means "no Desktop path": the caller never falls back
-//! to `<home>\Desktop`.
+//! U+FFFD, which is rejected. Either way the value goes through one pipeline: the `%VAR%` of a
+//! `REG_EXPAND_SZ` value is expanded against the shell-supplied environment, a `REG_SZ` value is literal,
+//! and the result must be an absolute path. Anything else, a failed or timed-out query included, is
+//! `None`, and `None` means "no Desktop path": the caller never falls back to `<home>\Desktop`.
 //!
 //! The crate reads no environment variable: the expansion environment is an argument.
 //!
 //! JavaScript semantics this module copies on purpose (the goldens pin them): `\s` and `.` in the line
-//! pattern follow the JS classes, a value name matches case-insensitively, the expansion applies to
-//! `REG_SZ` as well as `REG_EXPAND_SZ`, and an unset variable makes the whole answer `None`. Path
-//! absoluteness and normalisation follow Node's `path.win32`, ported by hand so they behave the same on
-//! every host the golden replay runs on.
+//! pattern follow the JS classes, a value name matches case-insensitively, and an unset variable in a
+//! `REG_EXPAND_SZ` value makes the whole answer `None`. Path absoluteness and normalisation follow Node's
+//! `path.win32`, ported by hand so they behave the same on every host the golden replay runs on. One
+//! deliberate departure (quick 261128-810, `golden/windows/deltas.json`): the TS expanded `REG_SZ` too,
+//! as it never read the type; Windows expands only `REG_EXPAND_SZ`, so a `REG_SZ` such as
+//! `D:\50%\Games\10%` is read literally.
 
 use std::path::PathBuf;
 use std::sync::OnceLock;
@@ -55,25 +57,51 @@ impl WindowsShellFolder {
     }
 }
 
+/// The registry type of a shell folder value. It decides whether `%VAR%` is expanded: only `ExpandSz` is.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RegValueType {
+    Sz,
+    ExpandSz,
+}
+
+impl RegValueType {
+    /// The registry's name for the type, the form the rustInvoke answer and `reg.exe` print.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            RegValueType::Sz => "REG_SZ",
+            RegValueType::ExpandSz => "REG_EXPAND_SZ",
+        }
+    }
+}
+
+/// A shell folder value as the registry holds it: its raw data and its type. The type decides whether
+/// `%VAR%` in the data is expanded (`REG_EXPAND_SZ`) or read literally (`REG_SZ`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RegValue {
+    pub value_type: RegValueType,
+    pub data: String,
+}
+
 /// The native reader of a `User Shell Folders` value, installed by the shell on Windows. It returns the
-/// raw, unexpanded data of a `REG_SZ` or `REG_EXPAND_SZ` value, or `None` when the value cannot be read.
-/// It takes the typed folder, not a name, so only the two known values can ever be read.
+/// raw, unexpanded data of a `REG_SZ` or `REG_EXPAND_SZ` value with its type, or `None` when the value
+/// cannot be read. It takes the typed folder, not a name, so only the two known values can ever be read.
 pub trait ShellFolderSource: Send + Sync {
-    fn read(&self, folder: WindowsShellFolder) -> Option<String>;
+    fn read(&self, folder: WindowsShellFolder) -> Option<RegValue>;
 }
 
 /// The Windows registry API (`RegGetValueW` on `HKEY_CURRENT_USER`): UTF-16 data, so no console code
-/// page is involved. The value is returned unexpanded (`RRF_NOEXPAND`); `%VAR%` stays literal for
-/// [`expand_windows_env`].
+/// page is involved. The value is returned unexpanded (`RRF_NOEXPAND`) with the type the registry reports,
+/// so `%VAR%` stays literal for [`expand_windows_env`] to expand when the type is `REG_EXPAND_SZ`.
 #[cfg(windows)]
 pub struct Win32ShellFolders;
 
 #[cfg(windows)]
 impl ShellFolderSource for Win32ShellFolders {
-    fn read(&self, folder: WindowsShellFolder) -> Option<String> {
+    fn read(&self, folder: WindowsShellFolder) -> Option<RegValue> {
         use windows_sys::Win32::Foundation::ERROR_SUCCESS;
         use windows_sys::Win32::System::Registry::{
-            RegGetValueW, HKEY_CURRENT_USER, RRF_NOEXPAND, RRF_RT_REG_EXPAND_SZ, RRF_RT_REG_SZ,
+            RegGetValueW, HKEY_CURRENT_USER, REG_EXPAND_SZ, REG_SZ, RRF_NOEXPAND,
+            RRF_RT_REG_EXPAND_SZ, RRF_RT_REG_SZ,
         };
 
         const MAX_U16: u32 = 32_768;
@@ -101,15 +129,17 @@ impl ShellFolderSource for Win32ShellFolders {
         }
         let mut buf = vec![0u16; (bytes as usize).div_ceil(2)];
         let mut len = (buf.len() * 2) as u32;
+        let mut kind: u32 = 0;
         // SAFETY: `buf` holds `len` bytes exactly (len == buf.len() * 2), the invariant RegGetValueW
-        // relies on for the write; the pointers are valid for the duration of the call.
+        // relies on for the write; the pointers are valid for the duration of the call, and the type
+        // pointer is a live local `u32` borrowed for exactly this call.
         let st = unsafe {
             RegGetValueW(
                 HKEY_CURRENT_USER,
                 sub.as_ptr(),
                 val.as_ptr(),
                 FLAGS,
-                std::ptr::null_mut(),
+                &mut kind,
                 buf.as_mut_ptr().cast(),
                 &mut len,
             )
@@ -120,7 +150,16 @@ impl ShellFolderSource for Win32ShellFolders {
         }
         let units = ((len as usize) / 2).min(buf.len());
         let end = buf[..units].iter().position(|&c| c == 0).unwrap_or(units);
-        Some(String::from_utf16_lossy(&buf[..end]))
+        // RRF_NOEXPAND makes the reported type the stored one; any other code is no answer.
+        let value_type = match kind {
+            REG_SZ => RegValueType::Sz,
+            REG_EXPAND_SZ => RegValueType::ExpandSz,
+            _ => return None,
+        };
+        Some(RegValue {
+            value_type,
+            data: String::from_utf16_lossy(&buf[..end]),
+        })
     }
 }
 
@@ -134,7 +173,7 @@ pub enum ShellFolderMiss {
     QueryFailed,
     /// The `reg.exe` output held no matching value line.
     ValueAbsent,
-    /// A `%VAR%` in the value is not in the expansion environment.
+    /// A `%VAR%` in a `REG_EXPAND_SZ` value is not in the expansion environment.
     UnsetVariable,
     /// The value is empty or not an absolute path.
     NotAbsolute,
@@ -186,9 +225,9 @@ fn variable_pattern() -> &'static Regex {
     })
 }
 
-/// Pulls `value_name`'s data out of `reg query <key> /v <value_name>` output: the first line whose name
-/// matches (case-insensitively) and whose type is `REG_SZ` or `REG_EXPAND_SZ`.
-pub fn parse_reg_query_value(output: &str, value_name: &str) -> Option<String> {
+/// Pulls `value_name`'s data and type out of `reg query <key> /v <value_name>` output: the first line whose
+/// name matches (case-insensitively) and whose type is `REG_SZ` or `REG_EXPAND_SZ`.
+pub fn parse_reg_query_value(output: &str, value_name: &str) -> Option<RegValue> {
     let wanted = value_name.to_lowercase();
     for piece in output.split('\n') {
         // JS splits on `/\r?\n/`: one `\r` before the `\n` goes with the break, any other stays.
@@ -197,14 +236,23 @@ pub fn parse_reg_query_value(output: &str, value_name: &str) -> Option<String> {
             continue;
         };
         if caps[1].to_lowercase() == wanted {
-            return Some(caps[3].to_string());
+            let value_type = if &caps[2] == "REG_EXPAND_SZ" {
+                RegValueType::ExpandSz
+            } else {
+                RegValueType::Sz
+            };
+            return Some(RegValue {
+                value_type,
+                data: caps[3].to_string(),
+            });
         }
     }
     None
 }
 
 /// Expands `%NAME%` against `env`, case-insensitively as Windows does. `None` when any variable is unset,
-/// rather than leaving a literal `%NAME%` in a path.
+/// rather than leaving a literal `%NAME%` in a path. It is for `REG_EXPAND_SZ` data: a `REG_SZ` value is
+/// literal, as Windows reads it, and never reaches this (quick 261128-810).
 pub fn expand_windows_env(value: &str, env: &[(String, String)]) -> Option<String> {
     // Later entries win, as the TS builds a `Map` from the entries.
     let lookup: std::collections::HashMap<String, &str> = env
@@ -436,13 +484,19 @@ pub fn win32_normalize(path: &str) -> String {
     String::from_utf16_lossy(&out)
 }
 
-/// The one acceptance pipeline both the native and the `reg.exe` answer go through: expand `%VAR%`, require
-/// a non-empty absolute path, reject U+FFFD, normalise. The check order is the TS's: absolute before U+FFFD.
+/// The one acceptance pipeline both the native and the `reg.exe` answer go through: expand `%VAR%` in a
+/// `REG_EXPAND_SZ` value only (a `REG_SZ` value is literal), require a non-empty absolute path, reject
+/// U+FFFD, normalise. The check order is the TS's: absolute before U+FFFD.
 fn accept_shell_folder_value(
-    raw: &str,
+    value: &RegValue,
     env: &[(String, String)],
 ) -> Result<PathBuf, ShellFolderMiss> {
-    let expanded = expand_windows_env(raw, env).ok_or(ShellFolderMiss::UnsetVariable)?;
+    let expanded = match value.value_type {
+        RegValueType::ExpandSz => {
+            expand_windows_env(&value.data, env).ok_or(ShellFolderMiss::UnsetVariable)?
+        }
+        RegValueType::Sz => value.data.clone(),
+    };
     if expanded.is_empty() || !win32_is_absolute(&expanded) {
         return Err(ShellFolderMiss::NotAbsolute);
     }
@@ -487,7 +541,7 @@ pub async fn read_windows_shell_folder_from(
 }
 
 /// The `reg.exe` read alone, as [`read_windows_shell_folder_from`] with no native source: the location,
-/// or `None` when the query failed, timed out or was cancelled, the value is absent, a variable is unset,
+/// or `None` when the query failed, timed out or was cancelled, the value is absent, a REG_EXPAND_SZ variable is unset,
 /// the result is not an absolute path, or it holds U+FFFD (`reg.exe` prints in the console code page, so
 /// a path outside it comes back mangled; the registry default `%USERPROFILE%\Desktop` is ASCII and covers
 /// the OneDrive case).
@@ -522,18 +576,27 @@ mod tests {
             .collect()
     }
 
+    fn value(value_type: RegValueType, data: &str) -> RegValue {
+        RegValue {
+            value_type,
+            data: data.to_string(),
+        }
+    }
+
     #[test]
-    fn a_query_line_yields_its_data_for_either_registry_type() {
+    fn a_query_line_yields_its_data_and_type_for_either_registry_type() {
         let out = "\r\nHKEY\\x\r\n    Desktop    REG_EXPAND_SZ    %USERPROFILE%\\Desktop\r\n\r\n";
         assert_eq!(
             parse_reg_query_value(out, "Desktop"),
-            Some("%USERPROFILE%\\Desktop".to_string())
+            Some(value(RegValueType::ExpandSz, "%USERPROFILE%\\Desktop"))
         );
         let sz = "    Desktop    REG_SZ    C:\\D \n";
         assert_eq!(
             parse_reg_query_value(sz, "desktop"),
-            Some("C:\\D".to_string())
+            Some(value(RegValueType::Sz, "C:\\D"))
         );
+        assert_eq!(RegValueType::Sz.as_str(), "REG_SZ");
+        assert_eq!(RegValueType::ExpandSz.as_str(), "REG_EXPAND_SZ");
         assert_eq!(
             parse_reg_query_value("    Desktop    REG_DWORD    1", "Desktop"),
             None
@@ -569,21 +632,21 @@ mod tests {
 
     /// A source answering the same raw value for any folder, recording what it was asked.
     struct FakeSource {
-        answer: Option<String>,
+        answer: Option<RegValue>,
         asked: std::sync::Mutex<Vec<WindowsShellFolder>>,
     }
 
     impl FakeSource {
-        fn answering(answer: Option<&str>) -> FakeSource {
+        fn answering(answer: Option<RegValue>) -> FakeSource {
             FakeSource {
-                answer: answer.map(str::to_string),
+                answer,
                 asked: std::sync::Mutex::new(Vec::new()),
             }
         }
     }
 
     impl ShellFolderSource for FakeSource {
-        fn read(&self, folder: WindowsShellFolder) -> Option<String> {
+        fn read(&self, folder: WindowsShellFolder) -> Option<RegValue> {
             if let Ok(mut asked) = self.asked.lock() {
                 asked.push(folder);
             }
@@ -591,12 +654,16 @@ mod tests {
         }
     }
 
-    fn reg_stdout(value: &str) -> SpecOutput {
+    fn reg_stdout_typed(kind: &str, value: &str) -> SpecOutput {
         SpecOutput {
             code: Some(0),
-            stdout: format!("\r\nHKEY\\x\r\n    Desktop    REG_SZ    {value}\r\n\r\n"),
+            stdout: format!("\r\nHKEY\\x\r\n    Desktop    {kind}    {value}\r\n\r\n"),
             ..SpecOutput::default()
         }
+    }
+
+    fn reg_stdout(value: &str) -> SpecOutput {
+        reg_stdout_typed("REG_SZ", value)
     }
 
     #[test]
@@ -609,7 +676,10 @@ mod tests {
 
     #[tokio::test]
     async fn a_native_answer_keeps_every_character_and_spawns_nothing() {
-        let source = FakeSource::answering(Some("C:\\Users\\Zoë\\OneDrive\\.\\デスクトップ"));
+        let source = FakeSource::answering(Some(value(
+            RegValueType::Sz,
+            "C:\\Users\\Zoë\\OneDrive\\.\\デスクトップ",
+        )));
         let runner = ScriptedRunner::answering(SpecOutput::default());
         let got = read_windows_shell_folder_from(
             Some(&source),
@@ -631,7 +701,10 @@ mod tests {
 
     #[tokio::test]
     async fn a_native_answer_expands_against_the_environment() {
-        let source = FakeSource::answering(Some("%USERPROFILE%\\Desktop"));
+        let source = FakeSource::answering(Some(value(
+            RegValueType::ExpandSz,
+            "%USERPROFILE%\\Desktop",
+        )));
         let runner = ScriptedRunner::answering(SpecOutput::default());
         let got = read_windows_shell_folder_from(
             Some(&source),
@@ -642,6 +715,77 @@ mod tests {
         .await;
         assert_eq!(got, Ok(PathBuf::from("C:\\Users\\Zoë\\Desktop")));
         assert!(runner.spawns().is_empty());
+    }
+
+    #[tokio::test]
+    async fn a_native_reg_sz_answer_is_literal_and_spawns_nothing() {
+        let runner = ScriptedRunner::answering(SpecOutput::default());
+        let source = FakeSource::answering(Some(value(RegValueType::Sz, "D:\\50%\\Games\\10%")));
+        let got = read_windows_shell_folder_from(
+            Some(&source),
+            Some(&runner),
+            WindowsShellFolder::Desktop,
+            &env(&[("USERPROFILE", "C:\\U")]),
+        )
+        .await;
+        assert_eq!(got, Ok(PathBuf::from("D:\\50%\\Games\\10%")));
+        assert!(runner.spawns().is_empty());
+        // The same data typed REG_EXPAND_SZ reads `%\Games\10%` as an unset variable.
+        let expand =
+            FakeSource::answering(Some(value(RegValueType::ExpandSz, "D:\\50%\\Games\\10%")));
+        let got = read_windows_shell_folder_from(
+            Some(&expand),
+            Some(&runner),
+            WindowsShellFolder::Desktop,
+            &env(&[("USERPROFILE", "C:\\U")]),
+        )
+        .await;
+        assert_eq!(got, Err(ShellFolderMiss::UnsetVariable));
+        // A REG_SZ `%USERPROFILE%\Desktop` is not expanded, so it is not absolute.
+        let relative =
+            FakeSource::answering(Some(value(RegValueType::Sz, "%USERPROFILE%\\Desktop")));
+        let got = read_windows_shell_folder_from(
+            Some(&relative),
+            Some(&runner),
+            WindowsShellFolder::Desktop,
+            &env(&[("USERPROFILE", "C:\\U")]),
+        )
+        .await;
+        assert_eq!(got, Err(ShellFolderMiss::NotAbsolute));
+    }
+
+    #[tokio::test]
+    async fn the_reg_exe_path_expands_only_a_reg_expand_sz_value() {
+        let e = env(&[("USERPROFILE", "C:\\U")]);
+        let sz = ScriptedRunner::answering(reg_stdout("D:\\50%\\Games\\10%"));
+        assert_eq!(
+            read_windows_shell_folder(&sz, WindowsShellFolder::Desktop, &e).await,
+            Some(PathBuf::from("D:\\50%\\Games\\10%"))
+        );
+        let sz_var = ScriptedRunner::answering(reg_stdout("%USERPROFILE%\\Desktop"));
+        assert_eq!(
+            read_windows_shell_folder_from(None, Some(&sz_var), WindowsShellFolder::Desktop, &e)
+                .await,
+            Err(ShellFolderMiss::NotAbsolute)
+        );
+        let expand =
+            ScriptedRunner::answering(reg_stdout_typed("REG_EXPAND_SZ", "%USERPROFILE%\\Desktop"));
+        assert_eq!(
+            read_windows_shell_folder(&expand, WindowsShellFolder::Desktop, &e).await,
+            Some(PathBuf::from("C:\\U\\Desktop"))
+        );
+        let expand_pair =
+            ScriptedRunner::answering(reg_stdout_typed("REG_EXPAND_SZ", "D:\\50%\\Games\\10%"));
+        assert_eq!(
+            read_windows_shell_folder_from(
+                None,
+                Some(&expand_pair),
+                WindowsShellFolder::Desktop,
+                &e
+            )
+            .await,
+            Err(ShellFolderMiss::UnsetVariable)
+        );
     }
 
     #[tokio::test]
@@ -666,13 +810,21 @@ mod tests {
     #[tokio::test]
     async fn a_rejected_native_answer_does_not_fall_back() {
         let runner = ScriptedRunner::answering(reg_stdout("Z:\\GameLibOracle\\Desktop"));
-        for (raw, miss) in [
-            ("Desktop", ShellFolderMiss::NotAbsolute),
-            ("", ShellFolderMiss::NotAbsolute),
-            ("%NOPE%\\Desktop", ShellFolderMiss::UnsetVariable),
-            ("C:\\Users\\\u{FFFD}\\Desktop", ShellFolderMiss::Mangled),
+        for (raw, kind, miss) in [
+            ("Desktop", RegValueType::Sz, ShellFolderMiss::NotAbsolute),
+            ("", RegValueType::Sz, ShellFolderMiss::NotAbsolute),
+            (
+                "%NOPE%\\Desktop",
+                RegValueType::ExpandSz,
+                ShellFolderMiss::UnsetVariable,
+            ),
+            (
+                "C:\\Users\\\u{FFFD}\\Desktop",
+                RegValueType::Sz,
+                ShellFolderMiss::Mangled,
+            ),
         ] {
-            let source = FakeSource::answering(Some(raw));
+            let source = FakeSource::answering(Some(value(kind, raw)));
             let got = read_windows_shell_folder_from(
                 Some(&source),
                 Some(&runner),
@@ -738,14 +890,25 @@ mod tests {
     fn the_real_registry_answers_desktop_and_documents() {
         for folder in [WindowsShellFolder::Desktop, WindowsShellFolder::Personal] {
             let got = Win32ShellFolders.read(folder);
-            let value = got.unwrap_or_else(|| panic!("no value for {}", folder.value_name()));
-            assert!(!value.is_empty());
+            let read = got.unwrap_or_else(|| panic!("no value for {}", folder.value_name()));
+            let data = &read.data;
+            assert!(!data.is_empty());
             assert!(
-                win32_is_absolute(&value) || value.starts_with('%'),
+                win32_is_absolute(data) || data.starts_with('%'),
                 "{}: not absolute or %-prefixed",
                 folder.value_name()
             );
-            assert!(!value.contains('\u{FFFD}') && !value.contains('\0'));
+            assert!(!data.contains('\u{FFFD}') && !data.contains('\0'));
+            // A `%`-prefixed value is stored unexpanded, so the type is REG_EXPAND_SZ (the Windows default
+            // `%USERPROFILE%\Desktop`); RRF_NOEXPAND keeps the reported type the stored one.
+            if data.starts_with('%') {
+                assert_eq!(
+                    read.value_type,
+                    RegValueType::ExpandSz,
+                    "{}",
+                    folder.value_name()
+                );
+            }
         }
     }
 
