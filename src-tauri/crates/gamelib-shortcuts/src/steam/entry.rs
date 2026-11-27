@@ -6,16 +6,19 @@
 //! The crate reads no environment: the shell supplies the executable, working folder, Flatpak id, AppImage
 //! path and portable-exe paths in [`ShortcutsCtx`].
 //!
-//! `LaunchOptions` carries the app name and runner as they are, unencoded and inside double quotes, as the
-//! TS wrote them (the 94-07 `add-launch-options-hostile-app-name` golden pins it; the `.lnk` and `run.sh`
-//! writers percent-encode, this one never did). A name holding a double quote ends the quoted argument early.
-//! That is filed as a todo; it is not changed here because the goldens require these bytes.
+//! `LaunchOptions` percent-encodes the app name and runner with `launch_url(.., true)` inside its double
+//! quotes, as the `.lnk` and `run.sh` writers do (quick 261128-4j2). The TS wrote them raw, so a name holding a
+//! double quote ended the quoted argument early. A shortcut written earlier keeps its raw line, because Add
+//! never rewrites an entry already titled like the game, and `proves_app_name` still proves the raw form, so
+//! Remove from Steam still removes it. The `appid` comes from `Exe` and `AppName` only, so it does not move.
+//! The one golden whose bytes differ is recorded in `tests/fixtures/golden/steam/deltas.json`.
 
 use gamelib_store::json::Json;
 use gamelib_store::table::row_for_key;
 
 use crate::ctx::{EntryField, Platform, ShortcutsCtx};
 use crate::game::ShortcutGame;
+use crate::launch_url::launch_url;
 
 /// The quoted program and start folder of a new entry.
 pub struct Program {
@@ -45,16 +48,16 @@ pub fn program(ctx: &ShortcutsCtx) -> Program {
     Program { exe, start_dir }
 }
 
-/// `LaunchOptions`: `--no-gui`, `--no-sandbox` off Windows, then the quoted launch URL; `run <id>` first
-/// under Flatpak.
+/// `LaunchOptions`: `--no-gui`, `--no-sandbox` off Windows, then the quoted, percent-encoded launch URL;
+/// `run <id>` first under Flatpak.
 pub fn launch_options(ctx: &ShortcutsCtx, game: &ShortcutGame) -> String {
     let mut args = vec!["--no-gui".to_string()];
     if ctx.platform != Platform::Windows {
         args.push("--no-sandbox".to_string());
     }
     args.push(format!(
-        "\"gamelib://launch?appName={}&runner={}\"",
-        game.app_name, game.runner
+        "\"{}\"",
+        launch_url(&game.app_name, &game.runner, true)
     ));
     let joined = args.join(" ");
     match &ctx.flatpak_id {

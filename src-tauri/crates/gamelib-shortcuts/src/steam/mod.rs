@@ -18,7 +18,8 @@
 //!   disk (the TS joined it onto the working folder);
 //! - the user folders are visited in name order;
 //! - an unparseable `lastPlayed` means now (see [`entry::last_play_time`]);
-//! - a folder that cannot be created is that user's error, not a crash.
+//! - a folder that cannot be created is that user's error, not a crash;
+//! - `LaunchOptions` percent-encodes the app name and runner (quick 261128-4j2).
 //!
 //! Removal proves the entry is GameLib's first (quick 261125-uzz). The TS removed the first entry whose
 //! `AppName` equals the game's title, whoever wrote it; here an entry goes only when its `LaunchOptions` carry
@@ -28,7 +29,7 @@
 //! (the user's own, or another launcher's) stays with its grid art, and the outcome is reported as not removed
 //! (a log note and the corrupt notice), never as success. The removed entry's own `Exe` and `AppName` (as
 //! `shortcuts.vdf` held them) name the grid art that goes with it. The removal goldens replay against
-//! `tests/fixtures/golden/steam/deltas.json` for the entries the TS removed that carry no GameLib launch URL.
+//! `tests/fixtures/golden/steam/deltas.json` for the entries the TS removed that carry no GameLib launch URL, and also holds the one add golden whose name encodes.
 
 pub mod art;
 pub mod entry;
@@ -256,8 +257,9 @@ fn has_title(summary: &ShortcutsSummary, title: &str) -> bool {
 const LAUNCH_URL_PREFIX: &str = "gamelib://launch?appName=";
 
 /// Whether `launch_options` carry GameLib's launch URL for `app_name`: the proof that GameLib wrote the
-/// entry for this game. It accepts the URL [`entry::launch_options`] writes, with the app name raw, and the
-/// one `launch_url(app_name, runner, true)` writes, with it percent-encoded. Anything else is refused: a
+/// entry for this game. It accepts the URL [`entry::launch_options`] writes now, with the app name
+/// percent-encoded, and the raw form the TS, and this port before quick 261128-4j2, wrote into entries that
+/// are still in users' files. Anything else is refused: a
 /// different app name, a pre-rebrand `heroic://` URL, a value that percent-decodes to invalid UTF-8, an
 /// empty app name. The runner is not compared.
 fn proves_app_name(launch_options: &str, app_name: &str) -> bool {
@@ -728,6 +730,108 @@ mod tests {
             crate::launch_url::launch_url(hostile, "gog", true)
         );
         assert!(proves_app_name(&encoded, hostile), "{encoded}");
+    }
+
+    /// The (app name, runner) pair of the hostile add golden, read from its recorded `input`.
+    fn hostile_golden_pair() -> (String, String) {
+        let golden: Value = serde_json::from_str(include_str!(
+            "../../tests/fixtures/golden/steam/add-launch-options-hostile-app-name.json"
+        ))
+        .expect("the hostile golden is JSON");
+        let field = |key: &str| {
+            golden["input"][key]
+                .as_str()
+                .unwrap_or_else(|| panic!("input.{key} is a string"))
+                .to_string()
+        };
+        (field("appName"), field("runner"))
+    }
+
+    #[test]
+    fn the_launch_options_hold_one_quoted_url_that_decodes_to_the_inputs() {
+        use crate::ctx::Platform;
+        use crate::launch_url::launch_url;
+        let (hostile_app, hostile_runner) = hostile_golden_pair();
+        let hostile_pairs = [
+            (hostile_app, hostile_runner),
+            ("a b&c\"d%25e".to_string(), "legendary".to_string()),
+        ];
+        let control_pairs = [
+            ("oracle-app".to_string(), "legendary".to_string()),
+            ("jorg".to_string(), "gog".to_string()),
+        ];
+        let flatpak_id = "com.example.GameLib";
+        let mut failures = Vec::new();
+        for (index, (app, runner)) in hostile_pairs.iter().chain(&control_pairs).enumerate() {
+            let hostile = index < hostile_pairs.len();
+            let game = proof_game(app, runner);
+            let contexts = [
+                (
+                    "linux",
+                    proof_ctx(Platform::Linux),
+                    "--no-gui --no-sandbox ".to_string(),
+                ),
+                (
+                    "windows",
+                    proof_ctx(Platform::Windows),
+                    "--no-gui ".to_string(),
+                ),
+                (
+                    "flatpak",
+                    proof_ctx(Platform::Linux).with_launch_env(
+                        Some(flatpak_id.to_string()),
+                        None,
+                        None,
+                    ),
+                    format!("run {flatpak_id} --no-gui --no-sandbox "),
+                ),
+            ];
+            for (name, ctx, prefix) in contexts {
+                let case = format!("{app:?}/{runner:?} on {name}");
+                let options = launch_options(&ctx, &game);
+                let quotes = options.matches('"').count();
+                if quotes != 2 {
+                    failures.push(format!("{case}: {quotes} double quotes in {options}"));
+                }
+                let encoded = format!("{prefix}\"{}\"", launch_url(app, runner, true));
+                if options != encoded {
+                    failures.push(format!("{case}: {options} is not {encoded}"));
+                }
+                if let Some(quoted) = options.split('"').nth(1) {
+                    let pairs: Vec<(String, String)> = match url::Url::parse(quoted) {
+                        Ok(parsed) => parsed
+                            .query_pairs()
+                            .map(|(k, v)| (k.into_owned(), v.into_owned()))
+                            .collect(),
+                        Err(error) => {
+                            failures.push(format!("{case}: the URL does not parse: {error}"));
+                            Vec::new()
+                        }
+                    };
+                    let wanted = vec![
+                        ("appName".to_string(), app.clone()),
+                        ("runner".to_string(), runner.clone()),
+                    ];
+                    if !quoted.starts_with("gamelib://launch?") || pairs != wanted {
+                        failures.push(format!("{case}: {quoted} decodes to {pairs:?}"));
+                    }
+                }
+                if !proves_app_name(&options, app) {
+                    failures.push(format!("{case}: the proof refuses {options}"));
+                }
+                let old = format!("{prefix}\"{}\"", launch_url(app, runner, false));
+                if hostile {
+                    // A shortcut written before the fix stays removable.
+                    if !proves_app_name(&old, app) {
+                        failures.push(format!("{case}: the proof refuses the old line {old}"));
+                    }
+                } else if options != old {
+                    // A name the encoder leaves alone writes the bytes it always wrote.
+                    failures.push(format!("{case}: {options} differs from the old {old}"));
+                }
+            }
+        }
+        assert!(failures.is_empty(), "{}", failures.join("\n"));
     }
 
     #[test]
