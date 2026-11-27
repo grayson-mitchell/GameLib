@@ -177,7 +177,8 @@ pub fn never_redeemed(_gamekey: &str, _machine_name: &str) -> bool {
 /// mark. `redeemed_key_value_present` means REVEALED, not REDEEMED: REDEEMED is a local-only
 /// overlay, produced solely by the user's explicit "Mark as redeemed".
 ///
-/// `new Date(tpk.expiration)` is read in `zone` when the string carries none of its own.
+/// `new Date(tpk.expiration)` is read in `zone` when the string carries none of its own; the shell's
+/// `zone` is `HumbleCtx::local_zone()`, which resolves it at the offset in force on that date.
 pub fn classify_tpk(
     tpk: &TpkSignals,
     is_locally_revealed: bool,
@@ -298,6 +299,9 @@ fn is_blank(value: &str) -> bool {
 /// - a relative, strictly positive `num_days_until_expired` number: `now + N days` as ISO (0 or
 ///   negative means "no expiry window").
 ///
+/// `zone` is the host zone, the shell's being `HumbleCtx::local_zone()`, which resolves every zone-less or
+/// date-only value at its own date's offset.
+///
 /// `None` when no recognised, parseable expiration is present. Never panics.
 pub fn extract_expiration(tpk: &JsValue, now_ms: i64, zone: LocalZone<'_>) -> Option<String> {
     for field in ABSOLUTE_EXPIRATION_FIELDS {
@@ -371,6 +375,9 @@ fn all_tpks(order: &JsValue) -> &[JsValue] {
 /// `raw_order` must always be the freshly fetched response, never a cached record merged forward.
 /// The only locally carried-forward state is the two predicates: `is_revealed` is keyed by machine
 /// name, `is_locally_redeemed` by `(gamekey, machine_name)` (the composite key).
+///
+/// `zone` is the host zone, the shell's being `HumbleCtx::local_zone()`, which resolves every zone-less or
+/// date-only value at its own date's offset. The library port passes exactly that.
 pub fn classify_order(
     raw_order: &JsValue,
     is_revealed: impl Fn(&str) -> bool,
@@ -1080,6 +1087,27 @@ mod tests {
             }
         }
 
+        /// 261128-22q: under a host zone the deadline takes its own date's offset (December is EST even
+        /// though the suite's "now" is July).
+        #[test]
+        fn a_date_only_deadline_under_a_host_zone_takes_its_own_dates_offset() {
+            use crate::js_date::test_zones::NewYork2026;
+            let mut bare = fixture("unpickedChoiceMonthOrder");
+            set_in(
+                &mut bare,
+                &["product", "deadline_date"],
+                JsValue::String("2026-12-15".to_string()),
+            );
+            let zone = LocalZone::host(&NewYork2026);
+            let entry = classify_order(&bare, never_revealed, now(), zone, never_redeemed);
+            assert_eq!(entry.keys.len(), 1);
+            assert_eq!(first(&entry).state, HumbleKeyState::Unpicked);
+            assert_eq!(
+                first(&entry).expiration.as_deref(),
+                Some("2026-12-15T05:00:00.000Z")
+            );
+        }
+
         /// D-27: unpicked Choice month missing choice_url -> never throws, omits pseudo-entry
         #[test]
         fn an_unpicked_month_missing_choice_url_omits_the_pseudo_entry() {
@@ -1638,6 +1666,63 @@ mod tests {
                     .expect("a date");
                 assert_eq!(local_date(&out, zone), (2026, 8, 1));
             }
+        }
+
+        /// 261128-22q: a date-only expiry across a daylight-saving change takes ITS OWN date's offset.
+        /// The offset in force at the sync (the old rule) reads the winter date a day early.
+        #[test]
+        fn a_date_only_expiry_across_a_daylight_saving_change_takes_its_own_dates_offset() {
+            use crate::js_date::test_zones::{Auckland2026, NewYork2026};
+            // New York, synced in July (EDT), expiring in December (EST).
+            let ny = LocalZone::host(&NewYork2026);
+            let out = extract_expiration(&js(r#"{"expiry_date":"2026-12-15"}"#), now(), ny)
+                .expect("a date");
+            assert_eq!(out, "2026-12-15T05:00:00.000Z");
+            assert_eq!(local_date(&out, ny), (2026, 12, 15));
+            let at_sync = extract_expiration(
+                &js(r#"{"expiry_date":"2026-12-15"}"#),
+                now(),
+                LocalZone::from_east_secs(-4 * 3600),
+            )
+            .expect("a date");
+            assert_eq!(at_sync, "2026-12-15T04:00:00.000Z");
+            assert_eq!(local_date(&at_sync, ny), (2026, 12, 14));
+
+            // Auckland, synced in November (NZDT), expiring in July (NZST).
+            let nz = LocalZone::host(&Auckland2026);
+            let sync = at("2026-11-24T12:00:00Z");
+            let out = extract_expiration(&js(r#"{"expiry_date":"2026-07-01"}"#), sync, nz)
+                .expect("a date");
+            assert_eq!(out, "2026-06-30T12:00:00.000Z");
+            assert_eq!(local_date(&out, nz), (2026, 7, 1));
+            let at_sync = extract_expiration(
+                &js(r#"{"expiry_date":"2026-07-01"}"#),
+                sync,
+                LocalZone::from_east_secs(13 * 3600),
+            )
+            .expect("a date");
+            assert_eq!(at_sync, "2026-06-30T11:00:00.000Z");
+            assert_eq!(local_date(&at_sync, nz), (2026, 6, 30));
+        }
+
+        /// 261128-22q: a zone-less date-time reads at its own date's offset too.
+        #[test]
+        fn a_zone_less_expiry_time_takes_its_own_dates_offset() {
+            use crate::js_date::test_zones::NewYork2026;
+            let ny = LocalZone::host(&NewYork2026);
+            let out = extract_expiration(&js(r#"{"expiration":"2026-12-15 00:30"}"#), now(), ny);
+            assert_eq!(out.as_deref(), Some("2026-12-15T05:30:00.000Z"));
+        }
+
+        /// 261128-22q: the expired-by-date comparison uses the same own-date offset.
+        #[test]
+        fn a_host_zone_expiry_compares_against_now_at_its_own_offset() {
+            use crate::js_date::test_zones::NewYork2026;
+            let ny = LocalZone::host(&NewYork2026);
+            let tpk = signals(false, Some("2026-12-15 00:30"), None);
+            let state = |now_iso: &str| classify_tpk(&tpk, false, false, at(now_iso), ny);
+            assert_ne!(state("2026-12-15T05:29:59Z"), HumbleKeyState::Unredeemable);
+            assert_eq!(state("2026-12-15T05:30:00Z"), HumbleKeyState::Unredeemable);
         }
 
         /// i31: NEGATIVE CONTROL, a full instant round-trips byte-identically (guard is scoped, not
