@@ -131,7 +131,7 @@ result: pass. Run 2026-11-28 on the dev build (`pnpm tauri:dev`, main at c8dd0b0
 
 ### 4. Known fix and scripts
 expected: A title with a known-fix overlay and an env or exe override applies both on launch (the overlay present under `overlays/`, the override visible in the launch evidence and the exe override named relative), and the pre-launch script, the game and the after-launch script run in that order with each script's output in the per-game log, scored from `script-order.txt` and the per-game log.
-result: pending
+result: pass. Run 2026-11-28 on the dev build (`pnpm tauri:dev`, main at c8dd0b0b3), not the signed build, with Caravan SandWitch (Amazon via nile, CrossOver 26.3). The operator approved a local fix pair under `fixes/local/` (tier 1: `envVariables` `GAMELIB_UAT_KNOWN_FIX=item4`, at first also `exeOverride`; tier 2: `overlays` `gst-libav-1.24.13`), removed after the run. `gamelib.log` printed `overlay gst-libav-1.24.13 already installed, verified` and `known-fix env applied: GAMELIB_UAT_KNOWN_FIX=item4 (tier-1); GST_PLUGIN_PATH=~/…/overlays/gst-libav-1.24.13/…`. On the first run the exe override was named relative (`known-fix launchArgs [], exeOverride CaravanSandWitch.exe`), but nile has no `--override-exe`, so the game did not start (`No game match`, todo filed, pre-existing since 261029-mbl). The second run had no exe override. `script-order.txt` reads: before at 18:28:08, then the game (spawned 18:28:12, first match 18:28:13), then after at 18:31:29 at the game's exit. The per-game log has `UAT before-launch script output` before the launch and `UAT after-launch script output` before its end marker.
 
 ## Run order
 
