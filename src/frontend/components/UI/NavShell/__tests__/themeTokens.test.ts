@@ -2702,14 +2702,16 @@ describe('Button .is-link / .is-text families: render-site census and contrast i
   const globals = globalTokens()
   const themeClasses = themeSelectors.map((s) => s.replace(/^body\./, ''))
 
-  // Census moves, each a deliberate change: the pin was 39 (27 is-link) until Phase 100 plan 09 deleted
+  // Census moves, each a deliberate change: 13 -> 14 when quick 261128-1gz (22cfe62cb) gave the CrossOver trial
+  // notice its own Dismiss, a PURE `button is-text` in EngineNotices.tsx beside the notice's other four (4 -> 5).
+  // The pin was 39 (27 is-link) until Phase 100 plan 09 deleted
   // the game page's ⋮ menu (GameSubMenu), which carried 26 of the is-link sites; 39 - 26 = 13. Earlier moves
   // (quick 261115-szs, 261117-p38, 261117-q1t) only touched that deleted file.
   // Phase 82 plan 01 re-derived the pin from 34 to 39 site by site: five PURE `button is-text` sites
   // (no `.link`, no `.is-link`) were added and none escaped the contrast census, so all five count
   // in the pure family: NativePortInfo.tsx x3 (quick 261117-r4c, 20e70fdc1), ThemeEditor/index.tsx
   // Back (phase 64-07, eb33e8668) and Rename (phase 64-09, 1f9c0efa1). The is-link subset was 27 at that point.
-  it('render-site census: re-derived F1 counts match exactly (13 total, 1 is-link, 1 MainButton, 1 pure DownloadManager, 2 pure SteamManagedItemView, 4 pure EngineNotices, 3 pure NativePortInfo, 2 pure ThemeEditor)', () => {
+  it('render-site census: re-derived F1 counts match exactly (14 total, 1 is-link, 1 MainButton, 1 pure DownloadManager, 2 pure SteamManagedItemView, 5 pure EngineNotices, 3 pure NativePortInfo, 2 pure ThemeEditor)', () => {
     const allFiles = walkTsxFiles(FRONTEND_DIR)
     expect(allFiles.length).toBeGreaterThan(100) // walk sanity, same floor as navTourAnchorCensus
 
@@ -2718,7 +2720,7 @@ describe('Button .is-link / .is-text families: render-site census and contrast i
       const matches = text.match(/className="[^"]*is-text[^"]*"/g) ?? []
       return matches.map(() => path)
     })
-    expect(isTextSites).toHaveLength(13)
+    expect(isTextSites).toHaveLength(14)
 
     // The is-link subset re-derived directly from file contents, not from
     // isTextSites, so a non-is-link site is never miscounted as one.
@@ -2742,16 +2744,16 @@ describe('Button .is-link / .is-text families: render-site census and contrast i
     ).toHaveLength(2)
     expect(
       isTextSites.filter((path) => path === STEAM_ENGINE_NOTICES_TSX)
-    ).toHaveLength(4)
+    ).toHaveLength(5)
     expect(
       isTextSites.filter((path) => path === NATIVE_PORT_INFO_TSX)
     ).toHaveLength(3)
     expect(
       isTextSites.filter((path) => path === THEME_EDITOR_TSX)
     ).toHaveLength(2)
-    // Every site is accounted for by name: 1 is-link + 12 pure = 13, so a new site that is in
+    // Every site is accounted for by name: 1 is-link + 13 pure = 14, so a new site that is in
     // neither list fails here instead of being absorbed by a bumped total.
-    expect(isLinkOccurrences.length + 1 + 2 + 4 + 3 + 2).toBe(
+    expect(isLinkOccurrences.length + 1 + 2 + 5 + 3 + 2).toBe(
       isTextSites.length
     )
   })
