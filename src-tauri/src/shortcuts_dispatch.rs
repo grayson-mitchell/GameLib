@@ -37,7 +37,7 @@ use gamelib_shortcuts::ctx::{
 use gamelib_shortcuts::http::ReqwestHttp;
 #[cfg(windows)]
 use gamelib_shortcuts::registry::Win32ShellFolders;
-use gamelib_shortcuts::registry::{RegValue, RegValueType, ShellFolderSource, WindowsShellFolder};
+use gamelib_shortcuts::registry::{ShellFolderSource, WindowsShellFolder};
 use gamelib_store::host::StoreHost;
 
 /// The one context, set once by [`install`].
@@ -471,6 +471,7 @@ pub(crate) fn rpc_windows_shell_folder_read(args: &[Value]) -> Result<Value, Str
 #[cfg(test)]
 mod tests {
     use super::*;
+    use gamelib_shortcuts::registry::{RegValue, RegValueType};
     use gamelib_testutil::FakeHome;
     use serde_json::json;
     use std::sync::Mutex;
