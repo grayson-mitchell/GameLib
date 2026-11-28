@@ -210,7 +210,14 @@ export async function kill(
     }
   }
   if (!delegated) {
-    deps.aborts.call(appName)
+    // This abort is best-effort for every runner, because each store's stop()
+    // below is what ends a running game (quick 261128-935). A running Steam
+    // bridge title registers no controller by design (gameBridgeWineLaunch.ts),
+    // and its wine run's Rust abort id is `wine-<serial>`, so a miss here is the
+    // normal case and is not an ERROR. A download or maintenance job that holds a
+    // controller under the app id is still aborted, and the forward to Rust still
+    // runs for the runner launches that answer to it (legendary, gog, nile).
+    deps.aborts.call(appName, { ifMissing: 'info' })
   }
   return deps.managers.library[runner].getGame(appName).stop()
 }

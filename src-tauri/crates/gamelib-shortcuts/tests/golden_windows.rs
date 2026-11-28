@@ -8,6 +8,8 @@
 //! the `.lnk` per the case; nothing starts PowerShell, and nothing is written outside a fresh `FakeHome`.
 //! The one real run (Windows only) writes a `.lnk` into a temp profile and reads its bytes.
 //!
+//! `deltas.json` (quick 261128-810) is not a case, and `golden_paths` replays its REG_SZ arm.
+//!
 //! Every slice has a floor: a manifest count the directory does not match, a family nobody replays, or a
 //! count under the floor fails the test instead of letting an empty or truncated case set pass.
 
@@ -64,7 +66,7 @@ fn load(slice: &str) -> Cases {
             .file_name()
             .and_then(|n| n.to_str())
             .unwrap_or_default();
-        if !name.ends_with(".json") || name == "MANIFEST.json" {
+        if !name.ends_with(".json") || name == "MANIFEST.json" || name == "deltas.json" {
             continue;
         }
         let text = fs::read_to_string(&path).expect("a golden is readable");

@@ -74,7 +74,9 @@ const managerMocks = {
 // The connectivity slice: `isOnlineMock` is read at call time so a case can flip it.
 const isOnlineMock = jest.fn()
 const dispatchDeps = {
-  aborts: { call: (id: string) => callAbortControllerMock(id) },
+  aborts: {
+    call: (id: string, opts?: unknown) => callAbortControllerMock(id, opts)
+  },
   onlineMonitor: { isOnline: () => isOnlineMock() as boolean },
   managers: { library: managerMocks },
   stores: { kvs: { configStore: {} } }
@@ -158,6 +160,7 @@ import {
   getAvailableCyberpunkMods,
   setCyberpunkModConfig
 } from '../dispatch'
+import { createAbortRegistry } from '../../utils/aborthandler/aborthandler'
 import { setGameMetadataOverride, createMetadataOverrides } from '../overrides'
 
 const OTHER_RUNNERS_FOR_LEGENDARY = [
@@ -365,7 +368,9 @@ describe('backend/gamedetails/dispatch.ts (REQ-34.2-01/REQ-34.2-09)', () => {
 
     const result = await kill(dispatchDeps, '440', 'steam')
 
-    expect(callAbortControllerMock).toHaveBeenCalledWith('440')
+    expect(callAbortControllerMock).toHaveBeenCalledWith('440', {
+      ifMissing: 'info'
+    })
     expect(gameDouble.stop).toHaveBeenCalled()
     expect(result).toBe(stopResult)
     expect(logWarningMock).toHaveBeenCalled()
@@ -377,8 +382,84 @@ describe('backend/gamedetails/dispatch.ts (REQ-34.2-01/REQ-34.2-09)', () => {
 
     await kill(dispatchDeps, 'x', 'legendary')
 
-    expect(callAbortControllerMock).toHaveBeenCalledWith('x')
+    expect(callAbortControllerMock).toHaveBeenCalledWith('x', {
+      ifMissing: 'info'
+    })
     expect(isDelegatedInstallPollingMock).not.toHaveBeenCalled()
+  })
+
+  it.each(['steam', 'legendary', 'gog', 'nile', 'sideload'] as const)(
+    "quick 261128-935 kill aborts best-effort for %s: { ifMissing: 'info' }",
+    async (runner) => {
+      isDelegatedInstallPollingMock.mockReturnValue(false)
+      managerMocks[runner].getGame.mockReturnValue(makeGameDouble({}))
+
+      await kill(dispatchDeps, 'app-1', runner)
+
+      expect(callAbortControllerMock).toHaveBeenCalledWith('app-1', {
+        ifMissing: 'info'
+      })
+    }
+  )
+
+  // quick 261128-935: a REAL registry, so the miss line the user saw is produced by the real code path. Rust answers
+  // `false` for a running Steam game (its wine run is `wine-<serial>`), which is the live condition.
+  const realRegistryDeps = (forwardAbort: (id: string) => Promise<boolean>) =>
+    ({
+      aborts: createAbortRegistry({ forwardAbort }),
+      onlineMonitor: { isOnline: () => true },
+      managers: { library: managerMocks },
+      stores: { kvs: { configStore: {} } }
+    }) as never
+
+  it('quick 261128-935 Stop on a running Steam bridge title (206060) with no abort controller logs no ERROR and still stops it', async () => {
+    isDelegatedInstallPollingMock.mockResolvedValue(false)
+    const forwardAbort = jest.fn().mockResolvedValue(false)
+    const stopResult = Symbol('stopped')
+    const gameDouble = makeGameDouble({
+      stop: jest.fn().mockResolvedValue(stopResult)
+    })
+    managerMocks.steam.getGame.mockReturnValue(gameDouble)
+
+    const result = await kill(realRegistryDeps(forwardAbort), '206060', 'steam')
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(forwardAbort).toHaveBeenCalledWith('206060')
+    expect(logErrorMock).not.toHaveBeenCalled()
+    expect(logInfoMock).toHaveBeenCalledTimes(1)
+    expect(logInfoMock).toHaveBeenCalledWith(
+      ['No abort controller for', '206060', '- nothing to abort'],
+      'Backend'
+    )
+    expect(managerMocks.steam.getGame).toHaveBeenCalledWith('206060')
+    expect(gameDouble.stop).toHaveBeenCalled()
+    expect(result).toBe(stopResult)
+  })
+
+  it('quick 261128-935 Stop still aborts a download/maintenance controller held under the app id, before stop() runs, and logs no abort line', async () => {
+    isDelegatedInstallPollingMock.mockResolvedValue(false)
+    const forwardAbort = jest.fn().mockResolvedValue(false)
+    const deps = realRegistryDeps(forwardAbort) as unknown as {
+      aborts: ReturnType<typeof createAbortRegistry>
+    }
+    const controller = deps.aborts.create('206060')
+    let abortedWhenStopRan: boolean | undefined
+    const gameDouble = makeGameDouble({
+      stop: jest.fn().mockImplementation(() => {
+        abortedWhenStopRan = controller.signal.aborted
+        return Promise.resolve(undefined)
+      })
+    })
+    managerMocks.steam.getGame.mockReturnValue(gameDouble)
+
+    await kill(deps as never, '206060', 'steam')
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(abortedWhenStopRan).toBe(true)
+    expect(logInfoMock).not.toHaveBeenCalled()
+    expect(logErrorMock).not.toHaveBeenCalled()
   })
 
   // ── repair ──────────────────────────────────────────────────────────

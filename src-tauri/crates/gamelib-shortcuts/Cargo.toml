@@ -48,6 +48,13 @@ image = { version = "0.25", default-features = false, features = ["png", "jpeg"]
 # decoder is linked. The one new crate of Phase 94; needs Rust 1.87, hence this crate's `rust-version`.
 icns = { version = "0.5", default-features = false }
 
+[target.'cfg(windows)'.dependencies]
+# The native `User Shell Folders` read (RegGetValueW, UTF-16), so a redirected Desktop outside the console
+# code page is not mangled by `reg.exe`. The version gamelib-steamfiles and gamelib-info already lock, so
+# no new crate is fetched. It is a registry read, not a spawn: the "child process only through the
+# SpecRunner" rule above still holds.
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_System_Registry"] }
+
 [features]
 # Replay seams for the golden tests and any CLI (later plans add theirs).
 testing = []

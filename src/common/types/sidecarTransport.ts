@@ -1351,6 +1351,16 @@ export const RUST_SHORTCUTS_STEAM_REMOVE = 'shortcuts_steam_remove' as const
  * `{ game, settings }`. Resolves a boolean; a game with no title resolves `false`.
  */
 export const RUST_SHORTCUTS_STEAM_IS_ADDED = 'shortcuts_steam_is_added' as const
+
+/**
+ * Quick 261128-7wv: the raw, unexpanded `User Shell Folders` value, read by the shell through RegGetValueW (UTF-16).
+ * One object arg `{ name: 'Desktop' | 'Personal' }`. Resolves `{ type: 'REG_SZ' | 'REG_EXPAND_SZ', data }`, the raw
+ * unexpanded value with its registry type (quick 261128-810), or `null` off Windows or when the value cannot be read.
+ * The one caller is `readWindowsShellFolder` in `backend/sidecar/knownFolders.ts`, which expands `%VAR%` only for a
+ * REG_EXPAND_SZ value, validates the result and falls back to `reg.exe`.
+ */
+export const RUST_WINDOWS_SHELL_FOLDER_READ =
+  'windows_shell_folder_read' as const
 /**
  * Phase 87 (87-54, D-03, D-15): the Steam bridge's engine-state writes, reached through the shims in
  * `enginewine/state.ts`. `engine_state_record_decision` takes `{runner, appName, bottleName, override, selection?,
@@ -2155,7 +2165,8 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_SHORTCUTS_REMOVE,
   RUST_SHORTCUTS_STEAM_ADD,
   RUST_SHORTCUTS_STEAM_REMOVE,
-  RUST_SHORTCUTS_STEAM_IS_ADDED
+  RUST_SHORTCUTS_STEAM_IS_ADDED,
+  RUST_WINDOWS_SHELL_FOLDER_READ
 ] as const
 
 /** Phase 63 (D-03): the scanner channels, a subset of {@link RUST_INVOKE_CHANNELS}. */

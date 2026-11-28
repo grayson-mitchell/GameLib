@@ -533,7 +533,8 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     // Phase 88.3 plan 12: 222 -> 223, launch_readopted_announce.
     // Phase 88.3 plan 13: 223 -> 224, launch_window_raise.
     // Phase 88.3 plan 19: 224 -> 223, launch_script_run, which no TS caller reaches any more (the Rust funnel runs the launch scripts).
-    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(223)
+    // Quick 261128-7wv: 223 -> 224, windows_shell_folder_read.
+    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(224)
     expect(router).not.toContain('_ =>')
   })
 
@@ -1157,7 +1158,10 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       'shortcuts_remove',
       'shortcuts_steam_add',
       'shortcuts_steam_remove',
-      'shortcuts_steam_is_added'
+      'shortcuts_steam_is_added',
+      // Quick 261128-7wv: the raw Windows shell-folder read (`readWindowsShellFolder`). PROVEN: `shortcuts_dispatch::tests` drives the arm's decode,
+      // its fixed bad-args and the fake-source answers; `gamelib-shortcuts`' `registry` tests drive the real read on Windows.
+      'windows_shell_folder_read'
     ]
     const newArms = armNames.filter(
       (name) => name && !preExistingArms.includes(name)

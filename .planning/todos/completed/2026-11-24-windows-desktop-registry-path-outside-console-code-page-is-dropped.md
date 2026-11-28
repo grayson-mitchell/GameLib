@@ -29,3 +29,26 @@ Read the value without the console code page: query through `reg.exe` with `chcp
 a shell, so the choices are the Windows registry API (`RegGetValueW`, a new dependency and an `unsafe` surface) or
 `reg.exe export` to a UTF-16 file. Decide with the operator who has a non-ASCII profile. Until then the silent skip
 should at least log one line so a missing Desktop shortcut is explainable.
+
+## Resolution
+
+Closed 2026-11-28 by quick 261128-7wv (commits 8f2bc794c, cb43bf5f9, abf105efd).
+
+**Read.** Both values go through RegGetValueW, which is UTF-16, in the Rust shell. The Desktop is read through the
+`ShellFolderSource` seam on `ShortcutsCtx`. Documents is read over rustInvoke `windows_shell_folder_read`. reg.exe
+remains the fallback when no native answer comes back.
+
+**Decision.** The Direction's "decide with the operator" was settled by the user choosing RegGetValueW. The "new
+dependency" worry did not apply: windows-sys 0.61 was already locked.
+
+**Diagnostic.** A Desktop miss now logs one `shortcuts desktop: no Windows Desktop folder (<reason>)` line. It never
+carries the path.
+
+**Goldens.** The reg.exe goldens, `reg-replacement-character` included, replay unchanged, because the seam is
+injected.
+
+**Accepted residual.** A real non-ASCII redirected Desktop was not live-tested. The proof is fake-source unit tests
+plus a real-registry read on this Windows host.
+
+**Related.** The REG_SZ expansion todo stays open. The native read returns data without the value type, so that fix
+needs RegGetValueW's type out-parameter.

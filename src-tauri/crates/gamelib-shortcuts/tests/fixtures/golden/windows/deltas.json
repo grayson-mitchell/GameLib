@@ -1,0 +1,3 @@
+{
+  "reg-sz-keeps-percent-literal": "quick 261128-810: a REG_SZ value is read literally, as Windows reads it, and only a REG_EXPAND_SZ value has its %VAR% expanded; the TS that recorded golden/windows (94-07) expanded REG_SZ too, but this case's single percent sign is literal under both rules, so its recorded folder replays unchanged; the delta is a second arm, the recorded stdout with the REG_SZ data plus \\10%, which holds the pair %\\Desktop\\10% that the recorded TS read as the unset variable \\Desktop\\10 and answered undefined, where the port answers the data itself; the TS oracle was deleted in 94-24, so the case is never re-recorded and this delta is its record"
+}
