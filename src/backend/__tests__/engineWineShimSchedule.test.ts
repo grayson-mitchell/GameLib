@@ -1210,8 +1210,8 @@ export const SCHEDULE: readonly ScheduleRow[] = [
   },
   // 88.2-17 (D-02, D-19): the rest of the runner transport. `wineCommandRun` is `runWineCommand` (the wine command core with the
   // game and helper spawn classes) and goes with the Steam bridge's wine launch, which 97 moves into Rust; `winePathGet` is
-  // `getWinePath`, which the store managers' wine path use leaves with their move in 92; `scriptRun` is `runScriptForGame`, the
-  // launcher's before and after scripts, which the Rust launcher (88.3) runs itself. Same file as `runnerCall`, so the same
+  // `getWinePath`, which the store managers' wine path use leaves with their move in 92. (A third row, `scriptRun`, the
+  // launcher's before and after scripts, left with its shim in 88.3-19: the Rust funnel runs them itself.) Same file as `runnerCall`, so the same
   // `callers`: the adapter (88.2-16, 88.2-17) is the one importer until the boot wiring (88.2-21).
   {
     name: 'wineCommandRun',
@@ -1228,14 +1228,6 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     channel: 'RUST_LAUNCH_WINE_PATH',
     callers: RUNNER_SHIM_IMPORTERS,
     deletedBy: 92
-  },
-  {
-    name: 'scriptRun',
-    file: 'src/backend/launchrust/runner.ts',
-    shape: 'shim',
-    channel: 'RUST_LAUNCH_SCRIPT_RUN',
-    callers: RUNNER_SHIM_IMPORTERS,
-    deletedBy: 88.3
   },
   // 88.2-17 (D-02, D-07, D-19): spawnAsync, the tracked kills and the running-game query. `spawnAsyncRun` is `spawnAsync` over a
   // stream, and `trackedKillAll` and `gamesRunning` are the quit handler's reads of the Rust registry; all three go with the shell
@@ -2191,6 +2183,8 @@ describe('engineWineShimSchedule detector (planted fixtures)', () => {
       expect(rowsDueIn(SCHEDULE, 88.1)).toEqual([])
       // 88.2-24 deleted `createCommandRunner` and the `validWine` shim, the last two rows 88.2 owned: nothing is due in 88.2 now.
       expect(rowsDueIn(SCHEDULE, 88.2)).toEqual([])
+      // 88.3-19 deleted `scriptRun`, the one row 88.3 owned (the Rust funnel runs the launch scripts in process): nothing is due in 88.3.
+      expect(rowsDueIn(SCHEDULE, 88.3)).toEqual([])
     })
 
     it('noIntraPhaseRowsLeft fails while a row has deletedBy 87 and passes once none does', () => {

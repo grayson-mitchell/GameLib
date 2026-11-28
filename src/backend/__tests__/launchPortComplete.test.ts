@@ -986,10 +986,10 @@ describe('commandRunnerSurvivors', () => {
     (RUNNER_SURVIVOR_FILES as readonly string[]).includes(r.file)
   )
 
-  it('anti-vacuity: the runner shim file is read and 11 rows are scheduled, and the glue table names 5 survivors in 3 files', () => {
-    // 11 rows (runnerCall, runnerKill, runnerAbort, wineCommandRun, winePathGet, scriptRun, spawnAsyncRun, trackedKill,
-    // trackedKillAll, gamesRunning, askForceUninstall) and two wiring helpers, measured on 2026-11-27.
-    assertAtOrAboveFloor('runner shim rows', shimRows.length, 11)
+  it('anti-vacuity: the runner shim file is read and 10 rows are scheduled, and the glue table names 5 survivors in 3 files', () => {
+    // 10 rows (runnerCall, runnerKill, runnerAbort, wineCommandRun, winePathGet, spawnAsyncRun, trackedKill, trackedKillAll,
+    // gamesRunning, askForceUninstall) and two wiring helpers; `scriptRun` left in 88.3-19 (was 11, measured 2026-11-27).
+    assertAtOrAboveFloor('runner shim rows', shimRows.length, 10)
     for (const file of RUNNER_SURVIVOR_FILES) {
       expect(tsWalk.files.some((f) => f.path === file)).toBe(true)
       expect(shimRows.some((r) => r.file === file)).toBe(true)

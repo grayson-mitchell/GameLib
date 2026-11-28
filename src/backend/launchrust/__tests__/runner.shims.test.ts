@@ -13,7 +13,6 @@ import {
   RUST_LAUNCH_RUNNER_ABORT,
   RUST_LAUNCH_RUNNER_CALL,
   RUST_LAUNCH_RUNNER_KILL,
-  RUST_LAUNCH_SCRIPT_RUN,
   RUST_LAUNCH_SPAWN_ASYNC,
   RUST_LAUNCH_TRACKED_KILL,
   RUST_LAUNCH_TRACKED_KILL_ALL,
@@ -32,7 +31,6 @@ import {
   runnerCall,
   runnerKill,
   gamesRunning,
-  scriptRun,
   spawnAsyncRun,
   trackedKill,
   trackedKillAll,
@@ -41,7 +39,6 @@ import {
 } from '../runner'
 import type {
   RunnerCallRequest,
-  ScriptRunRequest,
   SpawnAsyncRequest,
   WineCommandRequest
 } from '../runner'
@@ -396,7 +393,7 @@ describe('the spawned handle', () => {
   })
 })
 
-describe('wineCommandRun, winePathGet and scriptRun (88.2-17)', () => {
+describe('wineCommandRun and winePathGet (88.2-17)', () => {
   const wineCall: WineCommandRequest = {
     streamId: 'runner-stream-2',
     gameSettings: { winePrefix: '/prefix' },
@@ -453,34 +450,6 @@ describe('wineCommandRun, winePathGet and scriptRun (88.2-17)', () => {
     expect(() => schema.parse([{ ...request, variant: 'posix' }])).toThrow()
     expect(() => schema.parse([{ ...request, extra: 1 }])).toThrow()
     expect(() => schema.parse([{ path: 'x' }])).toThrow()
-  })
-
-  it('scriptRun sends one launch_script_run call, passes the error text through and the schema takes the two stages only', async () => {
-    const request: ScriptRunRequest = {
-      scriptPath: '/s.sh',
-      stage: 'after',
-      appName: 'a',
-      runner: 'gog',
-      title: 'T',
-      settingsJson: '{"a":1}',
-      infoJson: '{"b":2}',
-      verbose: true,
-      logTarget: { target: { kind: 'runner', runner: 'gog' }, rotate: true }
-    }
-    const deps = fakeTransport(true)
-    expect(await scriptRun(deps, request)).toBe(true)
-    expect(deps.calls).toEqual([[RUST_LAUNCH_SCRIPT_RUN, [request]]])
-    expect(RUST_LAUNCH_SCRIPT_RUN).toBe('launch_script_run')
-    const schema = rustInvokeArgs[RUST_LAUNCH_SCRIPT_RUN]
-    expect(() => schema.parse([request])).not.toThrow()
-    expect(() => schema.parse([{ ...request, stage: 'during' }])).toThrow()
-    expect(() => schema.parse([{ ...request, extra: 1 }])).toThrow()
-    expect(() => schema.parse([{ ...request, settingsJson: {} }])).toThrow()
-
-    const failed = fakeTransport(new Error('No such file (os error 2)'))
-    await expect(scriptRun(failed, request)).rejects.toThrow(
-      'No such file (os error 2)'
-    )
   })
 })
 

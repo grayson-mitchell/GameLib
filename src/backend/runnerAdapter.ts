@@ -1,12 +1,10 @@
 import {
   runnerCall,
-  scriptRun,
   winePathGet,
   wineCommandRun
 } from 'backend/launchrust/runner'
 import type {
   RunnerCallRequest,
-  ScriptRunRequest,
   WineCommandRequest
 } from 'backend/launchrust/runner'
 import type { RunnerStreams } from 'backend/runnerStream'
@@ -97,12 +95,6 @@ export interface RunnerAdapter {
     gameSettings: GameSettings
     variant?: 'win' | 'unix'
   }) => Promise<string>
-  runScriptForGame: (
-    gameInfo: GameInfo,
-    gameSettings: GameSettings,
-    scriptStage: 'before' | 'after',
-    logWriter: LogWriter
-  ) => Promise<boolean | string>
 }
 
 /**
@@ -324,53 +316,5 @@ export function createRunnerAdapter(deps: RunnerAdapterDeps): RunnerAdapter {
     return reply
   }
 
-  async function runScriptForGame(
-    gameInfo: GameInfo,
-    gameSettings: GameSettings,
-    scriptStage: 'before' | 'after',
-    logWriter: LogWriter
-  ): Promise<boolean | string> {
-    const scriptPath = gameSettings[`${scriptStage}LaunchScriptPath`]
-    if (typeof scriptPath !== 'string') {
-      throw new Error('runScriptForGame: the settings name no script')
-    }
-    const verbose = !!gameSettings.verboseLogs
-
-    // The writer is read only when verbose logs are on (Rust drops the script's output otherwise), so it is handed off, and
-    // its rotation claimed, only then.
-    let logTarget: ScriptRunRequest['logTarget']
-    if (verbose) {
-      await deps.flushLogs()
-      logTarget = logWriter.handOff() ?? undefined
-    }
-
-    const request: ScriptRunRequest = {
-      scriptPath,
-      stage: scriptStage,
-      appName: gameInfo.app_name,
-      runner: gameInfo.runner,
-      title: gameInfo.title,
-      // The TS text, verbatim: Rust hands both to the script as they are, never re-serialised.
-      settingsJson: JSON.stringify(gameSettings),
-      infoJson: JSON.stringify(gameInfo)
-    }
-    if (typeof gameInfo.install?.executable === 'string')
-      request.executable = gameInfo.install.executable
-    if (typeof gameSettings.winePrefix === 'string')
-      request.prefix = gameSettings.winePrefix
-    if (typeof gameInfo.install?.install_path === 'string')
-      request.installPath = gameInfo.install.install_path
-    if (verbose) request.verbose = true
-    if (logTarget) request.logTarget = logTarget
-
-    try {
-      await scriptRun(deps, request)
-    } catch (error) {
-      // A script that could not be started: the text Rust answered, as an Error, as the TS rethrew the spawn error.
-      throw new Error(error instanceof Error ? error.message : String(error))
-    }
-    return true
-  }
-
-  return { callRunner, runWineCommand, getWinePath, runScriptForGame }
+  return { callRunner, runWineCommand, getWinePath }
 }

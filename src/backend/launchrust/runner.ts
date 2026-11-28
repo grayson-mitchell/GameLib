@@ -4,7 +4,6 @@ import {
   RUST_LAUNCH_RUNNER_CALL,
   RUST_LAUNCH_GAMES_RUNNING,
   RUST_LAUNCH_RUNNER_KILL,
-  RUST_LAUNCH_SCRIPT_RUN,
   RUST_LAUNCH_SPAWN_ASYNC,
   RUST_LAUNCH_TRACKED_KILL,
   RUST_LAUNCH_TRACKED_KILL_ALL,
@@ -116,23 +115,6 @@ export async function winePathGet(
   args: WinePathRequest
 ): Promise<unknown> {
   return deps.requestRustInvoke(RUST_LAUNCH_WINE_PATH, [args])
-}
-
-/** One launch script run, as the `launch_script_run` zod schema takes it. */
-export type ScriptRunRequest = RustInvokeArgsOf<
-  typeof RUST_LAUNCH_SCRIPT_RUN
->[0]
-
-/**
- * `runScriptForGame` (88.2-17, D-02): a game's before or after launch script, run to its exit. Resolves `true` once it has
- * exited, whatever its code, as `unknown`. A script that could not be started rejects with the OS's text. A script runs as
- * long as the user wrote it to, so the channel is unbounded.
- */
-export async function scriptRun(
-  deps: RustInvokeDeps,
-  args: ScriptRunRequest
-): Promise<unknown> {
-  return deps.requestRustInvoke(RUST_LAUNCH_SCRIPT_RUN, [args])
 }
 
 /** One spawnAsync call, as the `launch_spawn_async` zod schema takes it. */
