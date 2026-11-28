@@ -1121,7 +1121,7 @@ Plans:
   3. A game launched from the UI starts and runs on macOS (live, signed 88.3 build over the signed 87 gap build) and on Windows and Linux (CI plus Phase 99)
   4. `launcher.ts` and every remaining ported TS and registration are deleted, leaving only scheduled shims
 
-**Plans:** 19/22 plans executed in 16 waves; planned 2026-11-27 (goldens are recorded from the TS before each Rust slice, D-25; every plan fits the 100k budget and stays below 15 files; no 88.3 commit outside .planning/ lands before the 88.1-24 and 88.2-25 pushes)
+**Plans:** 20/22 plans executed in 16 waves; planned 2026-11-27 (goldens are recorded from the TS before each Rust slice, D-25; every plan fits the 100k budget and stays below 15 files; no 88.3 commit outside .planning/ lands before the 88.1-24 and 88.2-25 pushes)
 
 Plans:
 **Wave 1**
@@ -1170,7 +1170,7 @@ Plans:
 - [x] 88.3-19-PLAN.md — Retire the scriptRun shim and the launch_script_run channel; nothing left due in 88.3
 
 **Wave 14** *(blocked on Wave 13 completion)*
-- [ ] 88.3-20-PLAN.md — Delete the TS window raiser; launchSurvivors, the census of every shim and glue piece left and why
+- [x] 88.3-20-PLAN.md — Delete the TS window raiser; launchSurvivors, the census of every shim and glue piece left and why
 
 **Wave 15** *(blocked on Wave 14 completion)*
 - [ ] 88.3-21-PLAN.md — Clean-worktree proof, push checkpoint, three-OS CI, Phase 99 handoff, the signed Phase 88 build

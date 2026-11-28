@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: "88.3"
 current_phase_name: Launch funnel, re-adoption and the live gate
 status: executing
-stopped_at: Completed 88.3-19-PLAN.md
-last_updated: "2026-11-28T01:50:44.929Z"
+stopped_at: Completed 88.3-20-PLAN.md
+last_updated: "2026-11-28T02:07:35.178Z"
 last_activity: 2026-11-27
 last_activity_desc: Phase 88.3 execution started
-state_head: 656b212bfbac7c9e19a6ffdef905dcc50e54c82c
+state_head: 4b7f9d44c5ad686f8f30522b0515a861f9ad8f36
 progress:
   total_phases: 26
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-25)
 ## Current Position
 
 Phase: 88.3 (Launch funnel, re-adoption and the live gate) — EXECUTING
-Plan: 20 of 22
+Plan: 21 of 22
 Status: Ready to execute
 Last activity: 2026-11-27 — Phase 88.3 execution started
 Progress: [████████████████░░░░] 204/257 plans ([█████████░] 88%)
@@ -596,6 +596,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 88.3 P17 | 40min | 2 tasks | 25 files |
 | Phase 88.3 P18 | 60min | 2 tasks | 15 files |
 | Phase 88.3 P19 | 25min | 2 tasks | 19 files |
+| Phase 88.3 P20 | ~40min | 2 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -1345,6 +1346,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 88.3]: 88.3-17: raise shim takes its warning line as a dep and funnel.shims spies the logger, so backend-di-ceilings needs no baseline entry; gates that read launcher.ts follow the launcher to launchrust/launcher.ts
 - [Phase 88.3]: 88.3-18: the Steam dispatch's single flight is the glue over the Rust table; a refused begin rejects the caller, no TS fallback
 - [Phase 88.3]: 88.3-19: launch_script_run sidecar channel retired end to end; the crate op stays for the goldens. Channel pins 224 -> 223.
+- [Phase 88.3]: 88.3-20: windowsExeNameFromCommand is a twin in launchrust/raise.ts (deletedBy 96), pinned by golden/window_raise name vectors; settleLaunchStatus is scheduled for 98 with launchRun
 
 ### Pending Todos
 
@@ -1638,8 +1640,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-28T01:50:30.668Z
-Stopped at: Completed 88.3-19-PLAN.md
+Last session: 2026-11-28T02:07:29.802Z
+Stopped at: Completed 88.3-20-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
