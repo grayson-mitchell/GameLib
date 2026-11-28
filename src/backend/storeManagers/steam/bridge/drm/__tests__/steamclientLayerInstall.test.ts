@@ -520,6 +520,7 @@ describe('module hygiene', () => {
   )
   it('imports nothing it must not and logs no reserved tokens', () => {
     expect(src).not.toContain("from 'backend/launcher'")
+    expect(src).not.toContain("from 'backend/launchrust/launcher'")
     expect(src).not.toContain("from 'backend/utils'")
     expect(src).not.toContain('constants/paths')
     for (const t of ['[bridge-notice]', '[bridge-drm]', '[drm-trace]']) {
