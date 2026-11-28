@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: "88.3"
 current_phase_name: Launch funnel, re-adoption and the live gate
 status: executing
-stopped_at: Completed 88.3-10-PLAN.md
-last_updated: "2026-11-27T23:40:01.620Z"
+stopped_at: Completed 88.3-11-PLAN.md
+last_updated: "2026-11-28T00:00:16.867Z"
 last_activity: 2026-11-27
 last_activity_desc: Phase 88.3 execution started
-state_head: 9b8bf58cf393e514e7d27000f5087c04849bbacd
+state_head: 1f0155bc58c9f41a3e7ffd2971bccda4095d5b7f
 progress:
   total_phases: 26
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-25)
 ## Current Position
 
 Phase: 88.3 (Launch funnel, re-adoption and the live gate) — EXECUTING
-Plan: 13 of 22
+Plan: 14 of 22
 Status: Ready to execute
 Last activity: 2026-11-27 — Phase 88.3 execution started
 Progress: [████████████████░░░░] 204/257 plans ([█████████░] 88%)
@@ -589,6 +589,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 88.3 P08 | 50 min | 2 tasks | 10 files |
 | Phase 88.3 P09 | 100min | 3 tasks | 13 files |
 | Phase 88.3 P10 | 35min | 2 tasks | 8 files |
+| Phase 88.3 P11 | 60min | 2 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -1332,6 +1333,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 88.3]: 88.3-08: launchManagerCall boundary schema is a tuple [op, unknown] refined by a per-op union (the channel table takes tuples); the launch hand-off must name the call's own game and the launch log type
 - [Phase 88.3]: 88.3-09: a re-adopted game is a registry entry holding an AdoptProof, ended only through kill_adopted_tree; its play time is recorded through the same function as a quit-kill's (launch-start totalPlayed); 88.3-12 should call readopt::start_with_host with the shell's RunnerHost so owed after-scripts inherit an environment
 - [Phase 88.3]: 88.3-10: settleLaunchStatus lives in launchBuilderReply.ts (schedule discovery scope), launchRun takes the schema's request type, the Launcher copies LaunchParams through toLaunchRunRequest
+- [Phase 88.3]: 88.3-11: launch_flight_wait answers the leader's value or the string abandoned, and rejects with launch_flight_wait:shutdown at app shutdown; begin answers {lead:id}|{join:true}; end answers a boolean
 
 ### Pending Todos
 
@@ -1625,8 +1627,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-27T23:39:56.268Z
-Stopped at: Completed 88.3-10-PLAN.md
+Last session: 2026-11-28T00:00:11.659Z
+Stopped at: Completed 88.3-11-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
