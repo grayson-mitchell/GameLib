@@ -78,6 +78,8 @@ shlex = "2"
 # The tree snapshot of the prepare_wine replay hashes files the way the TS snapshot does. Already locked
 # (gamelib-engine, gamelib-wine and gamelib-knownfix hash with it), so no new crate enters the tree.
 sha2 = "0.10"
+# The window-raise replay runs the raiser on a paused tokio clock (88.3-13), as the other crates's replays do.
+tokio = { version = "1", features = ["test-util"] }
 
 [lints.clippy]
 dbg_macro = "deny"

@@ -578,7 +578,14 @@ function windowRaiseCases(): WindowRaiseCase[] {
 }
 
 /** The documented Rust-side differences (D-19): delta name -> why the Rust raiser does not copy the TS here. */
-const DELTAS: Record<string, string> = {}
+const DELTAS: Record<string, string> = {
+  'construct-has-no-rust-object':
+    'The TS built a raiser object (`createWineWindowRaiser`) holding a cancel flag and its live timers, and the construct case checks that building one, and stopping one, arms no timer. Rust has no raiser object: `raise_wine_window` is one function over the launch context and nothing is armed until it is called, so the case replays as a stop with nothing in flight spawning nothing.',
+  'spawn-failure-text':
+    "The TS logged a failed `osascript` as a two-part warning, the fixed line `raiseWineGameWindow [<context>]: osascript raise failed` and the rejection (`Error: boom`, Node's text). Rust logs the fixed line only: the OS's error text is its own wording and can carry a path. A recorded two-part warning is compared on its first part.",
+  'stop-is-the-shutdown-token':
+    "The TS `stop()` cleared the pending timer, so the loop's promise stayed pending forever (a D-20 candidate), and a later raise on the same raiser reset the flag and ran normally. Rust has no stop: the wait between attempts ends on the app's shutdown token and the raise returns, and the token stays cancelled. A replayed stop cancels the context's shutdown token, so each raise pending at the stop settles at that instant, and a raise after it runs on a fresh context (a new app run)."
+}
 
 const json = (value: unknown): string => `${JSON.stringify(value, null, 2)}\n`
 

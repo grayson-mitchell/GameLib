@@ -17,6 +17,7 @@ pub mod funnel;
 pub mod game;
 pub mod hooks;
 pub mod prepare;
+pub mod raise;
 pub mod runner;
 
 /// The cancel token a long op takes, re-exported so the shell, which owns the renderer's cancel, needs
@@ -78,6 +79,7 @@ pub const OPS: &[&str] = &[
     "launch_tracked_kill",
     "launch_tracked_kill_all",
     "launch_verify_wine_prefix",
+    "launch_window_raise",
     "launch_wine_command",
     "launch_wine_path",
 ];
@@ -380,6 +382,18 @@ async fn route(op: &str, args: &[Value], ctx: &LaunchCtx) -> Result<Value, Strin
             let call: WinePathArgs = serde_json::from_value(call.clone()).map_err(|_| bad())?;
             let host = host_arg(host).ok_or_else(bad)?;
             Ok(Value::String(wine_path(ctx, call, &host).await))
+        }
+        // The Wine window raiser (88.3-13, D-21). Arguments `[{ context, pids?, processNames? }]`. Answers `null` once the
+        // raise is over: a hit and its settle re-raise, twelve misses, a no-op (off macOS, no valid pid or name) or the
+        // app shutdown. At most about 21 s (twelve attempts 1.5 s apart and one 2.5 s settle), inside the sidecar's 60 s
+        // bound. A failed `osascript` is a warning line, never an error.
+        "launch_window_raise" => {
+            let [call @ Value::Object(_)] = args else {
+                return Err(bad());
+            };
+            let call: raise::RaiseArgs = serde_json::from_value(call.clone()).map_err(|_| bad())?;
+            raise::raise_wine_window(ctx, call).await;
+            Ok(Value::Null)
         }
         // Whether a game run is registered (D-07): the answer the quit check reads. Arguments `[]`.
         "launch_games_running" => {
@@ -887,7 +901,7 @@ mod tests {
 
     #[test]
     fn the_twenty_one_launch_ops_are_in_the_table() {
-        assert_eq!(OPS.len(), 27);
+        assert_eq!(OPS.len(), 28);
         assert!(OPS.iter().all(|op| op.starts_with("launch_")));
         assert!(
             OPS.windows(2).all(|pair| pair[0] < pair[1]),
@@ -1221,6 +1235,23 @@ mod tests {
                 "{args:?}"
             );
         }
+    }
+
+    #[tokio::test]
+    async fn the_window_raise_op_answers_null_and_is_a_no_op_off_macos() {
+        let home = FakeHome::new("launch-lib-");
+        // `ctx` is a Linux context: nothing is spawned (the engine has no spawn seam of its own to answer),
+        // a valid call answers `null`, and a pid that is not digits is not an error.
+        let ctx = ctx(&home);
+        let call = json!({ "context": "c", "pids": ["12", "x"], "processNames": ["a.exe"] });
+        assert_eq!(
+            dispatch("launch_window_raise", &[call], &ctx).await,
+            Ok(Value::Null)
+        );
+        assert_eq!(
+            dispatch("launch_window_raise", &[json!({ "pids": ["1"] })], &ctx).await,
+            Err("launch_window_raise:bad-args".to_string())
+        );
     }
 
     fn prepare_args(extra: Value) -> Value {
