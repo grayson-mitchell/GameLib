@@ -104,18 +104,35 @@ pub struct GameSettingsView {
     pub wine_version: WineInstallation,
 }
 
+/// A present `null` reads as the field's default, as the TS did: it tested `nvidiaPrime`, `showFps` and
+/// `enviromentOptions` for truthiness, so `null` was absent and the launch went on. A value of the wrong
+/// type (a string where a list belongs) still fails.
+fn null_as_default<'de, D, T>(deserializer: D) -> Result<T, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: Deserialize<'de> + Default,
+{
+    Option::<T>::deserialize(deserializer).map(Option::unwrap_or_default)
+}
+
 /// The three `GameSettings` fields the pre-port TS `setupEnvVars` read
 /// (`33405c885~1:src/backend/launcher.ts:1304`): GPU offload, the HUD and the user's own variables.
 /// It carries no wine, because Windows game settings carry none, so a settings object without a
 /// `wineVersion` (or with a legacy-keyed one) still answers (CR-01). Every other field of the settings
 /// object is ignored: the caller passes the whole object, the same leniency as [`GameSettingsView`].
-#[derive(Debug, Clone, Default, Deserialize)]
+/// A `null` field reads as absent, as the TS truthiness tests did (IN-04); a wrongly typed value is
+/// still refused rather than guessed at.
+#[derive(Debug, Clone, Deserialize)]
 pub struct SetupEnvView {
-    #[serde(rename = "nvidiaPrime", default)]
+    #[serde(rename = "nvidiaPrime", default, deserialize_with = "null_as_default")]
     pub nvidia_prime: bool,
-    #[serde(rename = "showFps", default)]
+    #[serde(rename = "showFps", default, deserialize_with = "null_as_default")]
     pub show_fps: bool,
-    #[serde(rename = "enviromentOptions", default)]
+    #[serde(
+        rename = "enviromentOptions",
+        default,
+        deserialize_with = "null_as_default"
+    )]
     pub environment_options: Vec<EnvEntry>,
 }
 
@@ -492,4 +509,41 @@ pub fn setup_wine_env_vars(
     exists: &dyn Fn(&Path) -> bool,
 ) -> BTreeMap<String, String> {
     build_wine_env_vars(settings, game_id, platform, env, paths, exists).vars
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn setup_env_view_reads_null_as_absent() {
+        let view: SetupEnvView = serde_json::from_value(serde_json::json!({
+            "nvidiaPrime": null,
+            "showFps": null,
+            "enviromentOptions": null,
+        }))
+        .expect("null fields decode");
+        assert!(!view.nvidia_prime);
+        assert!(!view.show_fps);
+        assert!(view.environment_options.is_empty());
+    }
+
+    #[test]
+    fn setup_env_view_keeps_set_values_and_refuses_wrong_types() {
+        let view: SetupEnvView = serde_json::from_value(serde_json::json!({
+            "nvidiaPrime": true,
+            "showFps": true,
+            "enviromentOptions": [{"key": "A", "value": "1"}],
+        }))
+        .expect("set fields decode");
+        assert!(view.nvidia_prime && view.show_fps);
+        assert_eq!(view.environment_options.len(), 1);
+        assert!(
+            serde_json::from_value::<SetupEnvView>(serde_json::json!({"showFps": "true"})).is_err()
+        );
+        assert!(serde_json::from_value::<SetupEnvView>(
+            serde_json::json!({"enviromentOptions": [{"key": "A"}]})
+        )
+        .is_err());
+    }
 }
