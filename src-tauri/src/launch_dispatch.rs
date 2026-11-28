@@ -3710,10 +3710,12 @@ mod tests {
 
     // ---- re-adoption at boot and its announcement (88.3-12) ------------------------------------------
 
-    /// What the renderer would have been pushed.
+    /// What the renderer would have been pushed. Unix only, like the one test that reads it.
+    #[cfg(unix)]
     #[derive(Default)]
     struct Pushed(std::sync::Mutex<Vec<(String, Vec<Value>)>>);
 
+    #[cfg(unix)]
     impl Pushed {
         fn statuses(&self) -> Vec<Value> {
             self.0
@@ -3726,6 +3728,7 @@ mod tests {
         }
     }
 
+    #[cfg(unix)]
     impl gamelib_core::emitter::FrontendEmitter for Pushed {
         fn emit(&self, channel: &str, args: Vec<Value>) {
             self.0
