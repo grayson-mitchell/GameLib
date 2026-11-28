@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: "88.3"
 current_phase_name: Launch funnel, re-adoption and the live gate
 status: executing
-stopped_at: Completed 88.3-12-PLAN.md
-last_updated: "2026-11-28T00:13:17.916Z"
+stopped_at: Completed 88.3-13-PLAN.md
+last_updated: "2026-11-28T00:40:29.718Z"
 last_activity: 2026-11-27
 last_activity_desc: Phase 88.3 execution started
-state_head: fe586987b73c7beb242a44c18d98fb00b54fedfb
+state_head: f50dfa85f04ac37668d39e0f68895f19254a33c8
 progress:
   total_phases: 26
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-25)
 ## Current Position
 
 Phase: 88.3 (Launch funnel, re-adoption and the live gate) — EXECUTING
-Plan: 15 of 22
+Plan: 16 of 22
 Status: Ready to execute
 Last activity: 2026-11-27 — Phase 88.3 execution started
 Progress: [████████████████░░░░] 204/257 plans ([█████████░] 88%)
@@ -591,6 +591,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 88.3 P10 | 35min | 2 tasks | 8 files |
 | Phase 88.3 P11 | 60min | 2 tasks | 13 files |
 | Phase 88.3 P12 | 50m | 2 tasks | 14 files |
+| Phase 88.3 P13 | 1h45m | 2 tasks | 20 files |
 
 ## Accumulated Context
 
@@ -1336,6 +1337,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 88.3]: 88.3-10: settleLaunchStatus lives in launchBuilderReply.ts (schedule discovery scope), launchRun takes the schema's request type, the Launcher copies LaunchParams through toLaunchRunRequest
 - [Phase 88.3]: 88.3-11: launch_flight_wait answers the leader's value or the string abandoned, and rejects with launch_flight_wait:shutdown at app shutdown; begin answers {lead:id}|{join:true}; end answers a boolean
 - [Phase 88.3]: 88.3-12: the boot scan runs start_with_host over the shell's own runner host on the launch-readopt thread, and frontendReady announces re-adopted games on every delivery outside the one-shot boot-work guard
+- [Phase 88.3]: 88.3-13: the Rust window raise has no stop; its waits end on the shutdown token and the call returns (the TS stop() left it pending forever). A failed osascript logs the fixed line only, and osascript has no per-attempt time limit (the Automation consent prompt).
 
 ### Pending Todos
 
@@ -1629,8 +1631,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-28T00:13:12.669Z
-Stopped at: Completed 88.3-12-PLAN.md
+Last session: 2026-11-28T00:40:24.434Z
+Stopped at: Completed 88.3-13-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
