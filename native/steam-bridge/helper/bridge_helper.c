@@ -214,7 +214,8 @@
 // Phase 81 (D-08): --steam-appstate subcommand (BLoggedOn + GetAppInstallState).
 #include "gamelib_appstate.h"
 // Debug bridged-launch-kicks-other-session: --steam-playing-session subcommand
-// (IClientUser::BIsOtherSessionPlaying, read-only, registers no game).
+// (IClientUser::BIsOtherSessionPlaying, read-only, registers no game); debug
+// play-here-other-device adds --steam-kick-other-session (BKickOtherPlayingSession).
 #include "gamelib_playingsession.h"
 // quick 261117-ubb: the compiled-in libsteam_api.dylib pin and the validator that gates a
 // caller-handed --steam-api-dylib path.
@@ -3145,6 +3146,11 @@ int main(int argc, char **argv) {
   // session of the account is playing, same isolation. Registers no game.
   if (argc > 1 && strcmp(argv[1], "--steam-playing-session") == 0) {
     return gamelib_playingsession_main(argc, argv);
+  }
+  // Debug play-here-other-device: one-shot "Play here" (BKickOtherPlayingSession),
+  // same isolation, guarded on a signed-in Steam that reports another session playing.
+  if (argc > 1 && strcmp(argv[1], "--steam-kick-other-session") == 0) {
+    return gamelib_kickothersession_main(argc, argv);
   }
 
   // WR-03: load the per-launch secret from env, never argv (argv is

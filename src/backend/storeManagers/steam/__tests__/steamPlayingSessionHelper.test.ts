@@ -4,6 +4,12 @@
  * isolated arm of the two-profile rule. The real-profile arm is the live gate, which runs the
  * bundled helper against the operator's live Steam while another device plays (BLoggedOn and
  * BIsOtherSessionPlaying only arm under a real, signed-in client).
+ *
+ * Debug play-here-other-device adds `--steam-kick-other-session` (BKickOtherPlayingSession, the
+ * "Play here" call). Its isolated arm is the same shape: with no steamclient.dylib under the fake
+ * HOME it must report `steamclient-missing` and call nothing, and its argument parser must reject
+ * anything but `--dry-run` and `--wait 0..30` before it attaches. The kick itself only arms under
+ * a signed-in Steam with another device playing: that is the live measurement, not this file.
  */
 import { execFileSync, spawnSync } from 'node:child_process'
 import { chmodSync, mkdtempSync } from 'node:fs'
@@ -88,6 +94,58 @@ describeDarwinOnly(
       expect(oneLine(res.stdout)).toEqual({
         result: 'usage',
         error: 'unknown-argument'
+      })
+    })
+
+    describe('--steam-kick-other-session (play-here-other-device)', () => {
+      it.each([
+        ['no flags', ['--steam-kick-other-session']],
+        ['--dry-run', ['--steam-kick-other-session', '--dry-run']],
+        ['--wait 0', ['--steam-kick-other-session', '--wait', '0']],
+        ['--wait 30', ['--steam-kick-other-session', '--wait', '30']],
+        [
+          '--dry-run --wait 5',
+          ['--steam-kick-other-session', '--dry-run', '--wait', '5']
+        ]
+      ])(
+        'reports steamclient-missing under a fresh HOME for %s, one line, exit 2, nothing called',
+        (_name, args) => {
+          const res = run(...args)
+          expect(res.status).toBe(2)
+          expect(oneLine(res.stdout)).toEqual({
+            result: 'unavailable',
+            reason: 'steamclient-missing'
+          })
+          expect(res.stderr).not.toMatch(/^(AUTH|LISTEN|INIT|READY)/m)
+        }
+      )
+
+      it.each([
+        ['a positional argument', ['--steam-kick-other-session', '440']],
+        ['an unknown flag', ['--steam-kick-other-session', '--force']],
+        ['--wait with no value', ['--steam-kick-other-session', '--wait']]
+      ])('rejects %s as unknown-argument, exit 64', (_name, args) => {
+        const res = run(...args)
+        expect(res.status).toBe(64)
+        expect(oneLine(res.stdout)).toEqual({
+          result: 'usage',
+          error: 'unknown-argument'
+        })
+      })
+
+      it.each([
+        ['above the 30 s cap', '31'],
+        ['three digits', '100'],
+        ['negative', '-1'],
+        ['non-numeric', 'abc'],
+        ['empty', '']
+      ])('rejects --wait %s as bad-wait, exit 64', (_name, value) => {
+        const res = run('--steam-kick-other-session', '--wait', value)
+        expect(res.status).toBe(64)
+        expect(oneLine(res.stdout)).toEqual({
+          result: 'usage',
+          error: 'bad-wait'
+        })
       })
     })
   }
