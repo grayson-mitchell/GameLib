@@ -30,7 +30,7 @@ export async function raiseWineWindow(
 }
 
 /** What the callers' deps hand `raise`: kept for the call shape the callers already use; the Rust raise spawns for itself and reads none of it. */
-export interface WindowRaiseDeps {
+interface WindowRaiseDeps {
   spawnAsync: SpawnAsync
 }
 

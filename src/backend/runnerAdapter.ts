@@ -13,7 +13,6 @@ import type { LogPrefix } from 'backend/logger/constants'
 import type {
   CallRunnerOptions,
   ExecResult,
-  GameInfo,
   GameSettings,
   Runner,
   WineCommandArgs
