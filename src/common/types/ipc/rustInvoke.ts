@@ -178,6 +178,7 @@ import {
   RUST_LAUNCH_FLIGHT_BEGIN,
   RUST_LAUNCH_FLIGHT_END,
   RUST_LAUNCH_FLIGHT_WAIT,
+  RUST_LAUNCH_READOPTED_ANNOUNCE,
   RUST_LAUNCH_SETUP_ENV_VARS,
   RUST_LAUNCH_SETUP_WINE_ENV_VARS,
   RUST_LAUNCH_SETUP_WRAPPER_ENV_VARS,
@@ -1527,7 +1528,9 @@ export const rustInvokeArgs = {
         result: z.unknown().meta({ title: 'result', 'x-rust-value': true })
       })
       .strict()
-  ])
+  ]),
+  // Phase 88.3 (SVC-03, 88.3-12, D-19): the announcement of the games the boot scan re-adopted. No argument; answers how many it announced.
+  [RUST_LAUNCH_READOPTED_ANNOUNCE]: empty
 } satisfies Record<RustInvokeChannel, z.ZodTuple>
 
 /** The positional args a `rustInvoke` call for channel `C` sends (input side of the schema). */

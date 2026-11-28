@@ -18,6 +18,7 @@ import {
   RUST_LAUNCH_FLIGHT_BEGIN,
   RUST_LAUNCH_FLIGHT_END,
   RUST_LAUNCH_FLIGHT_WAIT,
+  RUST_LAUNCH_READOPTED_ANNOUNCE,
   RUST_LAUNCH_RUN,
   RUST_SHORTCUTS_ADD,
   RUST_SHORTCUTS_EXIST,
@@ -89,7 +90,8 @@ describe('rustInvokeArgs', () => {
     // Phase 88.2 plan 20: 217 -> 218, launch_ask_force_uninstall.
     // Phase 88.3 plan 06: 218 -> 219, launch_run.
     // Phase 88.3 plan 11: 219 -> 222, launch_flight_begin, launch_flight_wait and launch_flight_end.
-    expect(RUST_INVOKE_CHANNELS).toHaveLength(222)
+    // Phase 88.3 plan 12: 222 -> 223, launch_readopted_announce.
+    expect(RUST_INVOKE_CHANNELS).toHaveLength(223)
   })
 
   it('parses the store-embed wire fixtures', () => {
@@ -226,6 +228,14 @@ describe('rustInvokeArgs', () => {
       [{ flightId, result: true }, {}]
     ]) {
       expect(end.safeParse(bad).success).toBe(false)
+    }
+  })
+
+  it('accepts only an empty argument list for launch_readopted_announce (Phase 88.3 plan 12)', () => {
+    const announce = rustInvokeArgs[RUST_LAUNCH_READOPTED_ANNOUNCE]
+    expect(announce.safeParse([]).success).toBe(true)
+    for (const bad of [[{}], [null], ['x'], [1, 2], [[]]]) {
+      expect(announce.safeParse(bad).success).toBe(false)
     }
   })
 

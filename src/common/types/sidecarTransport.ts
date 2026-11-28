@@ -1679,6 +1679,15 @@ export const RUST_LAUNCH_FLIGHT_WAIT = 'launch_flight_wait' as const
  * sidecar EOF) releases nothing and answers `false`. A lookup, so the channel stays inside the 60 s bound.
  */
 export const RUST_LAUNCH_FLIGHT_END = 'launch_flight_end' as const
+/**
+ * Phase 88.3 (SVC-03, 88.3-12, D-19, Pitfall 9): `launch_readopted_announce` takes `[]`, sends `gameStatusUpdate { status: 'playing' }` for
+ * every game the shell's boot scan re-adopted (a game that outlived a GameLib crash) and marks the launch context frontend-ready, so a
+ * game adopted after that is announced as it is adopted. Answers the number of games it announced. The sidecar's `frontendReady` handler
+ * sends it on every delivery. A registry read and a few pushes, so the channel stays inside the 60 s bound; before the install it
+ * answers `launch_readopted_announce:not-ready`.
+ */
+export const RUST_LAUNCH_READOPTED_ANNOUNCE =
+  'launch_readopted_announce' as const
 export const RUST_ENGINE_STATE_RECORD_DECISION =
   'engine_state_record_decision' as const
 export const RUST_ENGINE_STATE_PUBLISH_OVERLAY_NOTICE =
@@ -2140,6 +2149,7 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_LAUNCH_FLIGHT_BEGIN,
   RUST_LAUNCH_FLIGHT_WAIT,
   RUST_LAUNCH_FLIGHT_END,
+  RUST_LAUNCH_READOPTED_ANNOUNCE,
   RUST_SHORTCUTS_EXIST,
   RUST_SHORTCUTS_ADD,
   RUST_SHORTCUTS_REMOVE,

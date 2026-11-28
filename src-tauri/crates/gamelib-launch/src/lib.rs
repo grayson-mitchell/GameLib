@@ -64,6 +64,7 @@ pub const OPS: &[&str] = &[
     "launch_prepare",
     "launch_prepare_wine_begin",
     "launch_prepare_wine_finish",
+    "launch_readopted_announce",
     "launch_run",
     "launch_runner_abort",
     "launch_runner_call",
@@ -386,6 +387,16 @@ async fn route(op: &str, args: &[Value], ctx: &LaunchCtx) -> Result<Value, Strin
                 return Err(bad());
             };
             Ok(Value::Bool(ctx.registry.games_running()))
+        }
+        // Re-adoption's announcement (88.3-12, Pitfall 9): `gameStatusUpdate { status: 'playing' }` for every game the
+        // boot scan adopted, and the mark that tells a later adoption to announce itself. Arguments `[]`. Answers how
+        // many games it announced. The sidecar calls it on every `frontendReady`; it takes no argument, so it can only
+        // re-send the status of entries the registry already proved.
+        "launch_readopted_announce" => {
+            let [] = args else {
+                return Err(bad());
+            };
+            Ok(Value::from(game::readopt::announce(ctx)))
         }
         // `killAllTracked`: ends every registered run, games through their own handles and helpers through their
         // tokens. Arguments `[]`. Answers how many it ended. Bounded by the exit budget's child grace.
@@ -876,7 +887,7 @@ mod tests {
 
     #[test]
     fn the_twenty_one_launch_ops_are_in_the_table() {
-        assert_eq!(OPS.len(), 26);
+        assert_eq!(OPS.len(), 27);
         assert!(OPS.iter().all(|op| op.starts_with("launch_")));
         assert!(
             OPS.windows(2).all(|pair| pair[0] < pair[1]),
@@ -979,7 +990,11 @@ mod tests {
             .all(|c| !matches!(c, crate::hooks::testing::HookCall::ForceUninstall { .. })));
     }
 
-    const ZERO_ARG_OPS: &[&str] = &["launch_games_running", "launch_tracked_kill_all"];
+    const ZERO_ARG_OPS: &[&str] = &[
+        "launch_games_running",
+        "launch_readopted_announce",
+        "launch_tracked_kill_all",
+    ];
 
     #[tokio::test]
     async fn every_op_answers_a_fixed_bad_args_and_never_echoes_what_it_was_sent() {
@@ -994,7 +1009,7 @@ mod tests {
                 vec![json!({"appName": secret, "bogus": secret})],
                 vec![json!(1), json!(2), json!(3)],
             ] {
-                // The two ops with no argument answer to `[]`; anything else is refused like the rest.
+                // The ops with no argument answer to `[]`; anything else is refused like the rest.
                 if args.is_empty() && ZERO_ARG_OPS.contains(op) {
                     continue;
                 }

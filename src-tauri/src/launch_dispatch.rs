@@ -1097,6 +1097,58 @@ pub(crate) fn release_sidecar_flights() {
     release_sidecar_flights_over(launch_ctx());
 }
 
+/// The boot scan over a given context and host (88.3-12, D-08, D-10): re-adopts the games a crashed GameLib left running and
+/// writes the one fixed line that reports the counts (adopted, removed, owed scripts, skipped), never an app name, a path or a
+/// pid list. The scan is bounded by `READOPT_BOOT_BOUND` and `READOPT_RECORD_CAP` in the crate.
+fn readopt_over(ctx: &LaunchCtx, host: &gamelib_launch::runner::call_runner::RunnerHost) {
+    let report = gamelib_launch::game::readopt::start_with_host(ctx, host);
+    shell_log(&format!(
+        "launch re-adoption: {} adopted, {} removed, {} owed scripts, {} skipped",
+        report.adopted, report.removed, report.owed_scripts, report.skipped
+    ));
+}
+
+/// Starts re-adoption once per boot (88.3-12, D-08, D-10), right after [`install`]: the store host is open and the one
+/// context exists. The scan runs on its own named thread (`launch-readopt`), so setup never waits for it; it is synchronous
+/// and bounded in the crate, and everything it leaves waiting (an exit watch, an owed script) is a task holding a shutdown
+/// registrant. A no-op when the context was not installed (no home directory). An after-script a re-adopted game owes runs over
+/// the shell's own environment, as a launch's does.
+pub(crate) fn start_readoption() {
+    let Some(ctx) = launch_ctx() else {
+        return;
+    };
+    let ctx = Arc::clone(ctx);
+    let started = std::thread::Builder::new()
+        .name("launch-readopt".to_string())
+        .spawn(move || {
+            let host = serde_json::from_value(runner_host()).unwrap_or_default();
+            readopt_over(&ctx, &host);
+        });
+    if started.is_err() {
+        shell_log("launch re-adoption: the scan thread could not be started");
+    }
+}
+
+/// The body of the `launch_readopted_announce` arm over a given context: the generated decode (no argument) and an arity check
+/// first, so a bad call is rejected the same fixed `<op>:bad-args` literal before and after the install and never echoes the
+/// sidecar's value, then the crate's announcement.
+fn readopted_announce_over(ctx: Option<&Arc<LaunchCtx>>, args: &[Value]) -> Result<Value, String> {
+    LaunchReadoptedAnnounceArgs::from_args(args)?;
+    if !args.is_empty() {
+        return Err("launch_readopted_announce:bad-args".to_string());
+    }
+    rpc_launch_op(ctx, "launch_readopted_announce", args)
+}
+
+/// The `launch_readopted_announce` `rustInvoke` arm (88.3-12, D-19, Pitfall 9): the sidecar sends it on every `frontendReady`.
+/// It re-sends `gameStatusUpdate { status: 'playing' }` for each game the boot scan adopted, marks the context so a game adopted
+/// later announces itself, and answers how many it announced. It takes no argument, so it only re-sends the status of entries
+/// the registry already proved. A registry read and a few pushes, so the sidecar keeps it inside the 60 s
+/// `RUST_INVOKE_TIMEOUT_MS`; before [`install`] the answer is `launch_readopted_announce:not-ready`.
+pub(crate) fn rpc_launch_readopted_announce(args: &[Value]) -> Result<Value, String> {
+    readopted_announce_over(launch_ctx(), args)
+}
+
 /// The body of the `launch_runner_kill` arm over a given context: the generated decode (`[streamId]`) and an arity
 /// check first, then the crate, which bounds the id (a name with no path separator or control character) and ends the
 /// run of the call that watches that stream. The crate answers how many runs it ended; the sidecar is told whether one
@@ -1338,6 +1390,15 @@ mod tests {
         home: &FakeHome,
         log: Option<Arc<dyn gamelib_engine::sinks::EngineLog>>,
     ) -> LaunchCtx {
+        ctx_built_with(home, log, None)
+    }
+
+    /// [`ctx_built`] with the emitter the renderer's pushes go to, when one is given.
+    fn ctx_built_with(
+        home: &FakeHome,
+        log: Option<Arc<dyn gamelib_engine::sinks::EngineLog>>,
+        emitter: Option<Arc<dyn gamelib_core::emitter::FrontendEmitter>>,
+    ) -> LaunchCtx {
         let root = home.root().to_path_buf();
         let engine = EngineCtx::new(
             Arc::new(StoreHost::new()),
@@ -1352,8 +1413,12 @@ mod tests {
             },
             Shutdown::new(),
         );
-        let engine = Arc::new(match log {
+        let engine = match log {
             Some(log) => engine.with_log(log),
+            None => engine,
+        };
+        let engine = Arc::new(match emitter {
+            Some(emitter) => engine.with_emitter(emitter),
             None => engine,
         });
         let knownfix = Arc::new(KnownFixCtx::new(
@@ -3732,5 +3797,194 @@ mod tests {
             assert_eq!(err, "launch_flight_end:bad-args");
             assert!(!err.contains(secret));
         }
+    }
+
+    // ---- re-adoption at boot and its announcement (88.3-12) ------------------------------------------
+
+    /// What the renderer would have been pushed.
+    #[derive(Default)]
+    struct Pushed(std::sync::Mutex<Vec<(String, Vec<Value>)>>);
+
+    impl Pushed {
+        fn statuses(&self) -> Vec<Value> {
+            self.0
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner())
+                .iter()
+                .filter(|(channel, _)| channel == "gameStatusUpdate")
+                .flat_map(|(_, args)| args.clone())
+                .collect()
+        }
+    }
+
+    impl gamelib_core::emitter::FrontendEmitter for Pushed {
+        fn emit(&self, channel: &str, args: Vec<Value>) {
+            self.0
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner())
+                .push((channel.to_string(), args));
+        }
+    }
+
+    /// Ends the game it names when dropped, on a pass or a panic.
+    #[cfg(unix)]
+    struct Stray(u32, Option<u64>);
+
+    #[cfg(unix)]
+    impl Drop for Stray {
+        fn drop(&mut self) {
+            if let Some(stamp) = self.1 {
+                let _ = gamelib_proc::kill_tree::kill_game_tree(
+                    self.0,
+                    stamp,
+                    std::time::Duration::from_millis(500),
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn the_readoption_arm_is_not_ready_before_the_install_and_rejects_a_wrong_call_the_same_way_after(
+    ) {
+        let home = FakeHome::new("launch-shell-");
+        let ctx = ctx_over(&home);
+        assert_eq!(
+            readopted_announce_over(None, &[]),
+            Err("launch_readopted_announce:not-ready".to_string())
+        );
+        // Nothing adopted: the announcement says so and marks the context.
+        assert_eq!(readopted_announce_over(Some(&ctx), &[]), Ok(json!(0)));
+        let secret = "/Users/someone/secret-profile-path";
+        for args in [
+            vec![json!(secret)],
+            vec![json!({ "appName": secret })],
+            vec![Value::Null],
+        ] {
+            for ctx in [None, Some(&ctx)] {
+                let err = readopted_announce_over(ctx, &args).unwrap_err();
+                assert_eq!(err, "launch_readopted_announce:bad-args", "{args:?}");
+                assert!(!err.contains(secret));
+            }
+        }
+    }
+
+    #[test]
+    fn the_boot_call_is_one_named_thread_started_right_after_the_install() {
+        let main = include_str!("main.rs");
+        let setup = main
+            .split("fn run_setup(")
+            .nth(1)
+            .expect("run_setup is in main.rs");
+        assert_eq!(
+            setup.matches("launch_dispatch::start_readoption()").count(),
+            1
+        );
+        let install = setup
+            .find("launch_dispatch::install(app.handle())")
+            .expect("run_setup installs the launch context");
+        let start = setup
+            .find("launch_dispatch::start_readoption()")
+            .expect("run_setup starts re-adoption");
+        assert!(install < start, "re-adoption starts after the install");
+        // Setup never waits for the scan: it runs on its own named thread.
+        let source = include_str!("launch_dispatch.rs");
+        let body = source
+            .split("pub(crate) fn start_readoption()")
+            .nth(1)
+            .and_then(|rest| rest.split("\n}\n").next())
+            .expect("start_readoption is in launch_dispatch.rs");
+        assert!(body.contains("\"launch-readopt\""), "{body}");
+        assert!(body.contains(".spawn("), "{body}");
+        assert!(!body.contains(".join("), "setup must not wait for the scan");
+    }
+
+    #[test]
+    fn the_boot_scan_without_an_install_does_nothing() {
+        // The shell's context is a process-wide static no unit test installs, so the call is a no-op here.
+        assert!(launch_ctx().is_none());
+        start_readoption();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_surviving_game_is_adopted_at_boot_announced_and_killed_by_the_quit() {
+        use gamelib_launch::game::record::{
+            read_record, record_path, write_atomic, LaunchRecord, RecordState, RECORD_VERSION,
+        };
+        let home = FakeHome::new("launch-shell-");
+        let pushed = Arc::new(Pushed::default());
+        let ctx = Arc::new(ctx_built_with(&home, None, Some(pushed.clone())));
+
+        // The game an earlier GameLib started: its own session, its leader and start stamp the proof. The handle is
+        // dropped without waiting, as a crash drops it.
+        let mut cmd = std::process::Command::new("sleep");
+        cmd.arg("300")
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null());
+        let handle = gamelib_proc::spawn_game_tracked(cmd, None).expect("spawn the game");
+        let (pid, stamp) = (handle.pid, handle.stamp.expect("the game's start stamp"));
+        let _stray = Stray(pid, Some(stamp));
+        drop(handle);
+
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("clock")
+            .as_millis() as u64;
+        let app_folder = home.root().join("app");
+        let path = record_path(&app_folder, RunnerName::Sideload, "survivor");
+        write_atomic(
+            &path,
+            &LaunchRecord {
+                version: RECORD_VERSION,
+                runner: "sideload".to_string(),
+                app_name: "survivor".to_string(),
+                pid,
+                stamp,
+                pgid: pid,
+                members: Vec::new(),
+                launch_started_at_ms: now.saturating_sub(5_000),
+                start_playing_at_ms: now.saturating_sub(4_000),
+                state: RecordState::Running,
+                killed_at_ms: None,
+                after_script: None,
+            },
+        )
+        .expect("the record is written");
+
+        // The boot scan, the way `start_readoption` runs it (on a plain thread, as the named one is).
+        let scan = {
+            let ctx = Arc::clone(&ctx);
+            std::thread::spawn(move || readopt_over(&ctx, &Default::default()))
+        };
+        scan.join().expect("the scan thread");
+
+        // Nothing is announced before the renderer listens; then the announce answers one game, as Playing.
+        assert!(pushed.statuses().is_empty(), "{:?}", pushed.statuses());
+        assert_eq!(readopted_announce_over(Some(&ctx), &[]), Ok(json!(1)));
+        assert_eq!(
+            pushed.statuses(),
+            vec![json!({ "appName": "survivor", "runner": "sideload", "status": "playing" })]
+        );
+        // The quit dialog sees it.
+        assert_eq!(games_running_over(Some(&ctx), &[]), Ok(json!(true)));
+        assert!(gamelib_proc::probe::is_alive(pid));
+
+        // The quit's kill ends it through its proof, and its record is owed (`quitKilled`).
+        assert_eq!(tracked_kill_all_over(Some(&ctx), &[]), Ok(json!(1)));
+        assert!(
+            wait_until(|| !gamelib_proc::probe::is_alive(pid)),
+            "the game was not ended"
+        );
+        assert!(
+            wait_until(
+                || read_record(&path).is_ok_and(|record| record.state == RecordState::QuitKilled)
+            ),
+            "the record never read quitKilled"
+        );
+        assert!(
+            wait_until(|| games_running_over(Some(&ctx), &[]) == Ok(json!(false))),
+            "the registry still holds the game"
+        );
     }
 }

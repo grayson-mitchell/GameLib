@@ -342,6 +342,9 @@ pub(crate) fn dispatch_rust_channel(
         RustInvokeChannel::LaunchFlightBegin => launch_dispatch::rpc_launch_flight_begin(args),
         RustInvokeChannel::LaunchFlightWait => launch_dispatch::rpc_launch_flight_wait(args),
         RustInvokeChannel::LaunchFlightEnd => launch_dispatch::rpc_launch_flight_end(args),
+        RustInvokeChannel::LaunchReadoptedAnnounce => {
+            launch_dispatch::rpc_launch_readopted_announce(args)
+        }
         RustInvokeChannel::LaunchRunnerCall => launch_dispatch::rpc_launch_runner_call(args),
         RustInvokeChannel::LaunchRunnerKill => launch_dispatch::rpc_launch_runner_kill(args),
         RustInvokeChannel::LaunchRunnerAbort => launch_dispatch::rpc_launch_runner_abort(args),

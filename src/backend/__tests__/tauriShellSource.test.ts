@@ -530,7 +530,8 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     // Phase 88.2 plan 20: 217 -> 218, launch_ask_force_uninstall.
     // Phase 88.3 plan 06: 218 -> 219, launch_run.
     // Phase 88.3 plan 11: 219 -> 222, launch_flight_begin, launch_flight_wait and launch_flight_end.
-    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(222)
+    // Phase 88.3 plan 12: 222 -> 223, launch_readopted_announce.
+    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(223)
     expect(router).not.toContain('_ =>')
   })
 
@@ -1138,6 +1139,10 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       'launch_flight_begin',
       'launch_flight_wait',
       'launch_flight_end',
+      // Phase 88.3 plan 12: the announcement of the games the shell re-adopted at boot (`announceReadoptedGames`, called from the sidecar's `frontendReady` on every delivery).
+      // PROVEN: `launch_dispatch::tests` drives the arm's not-ready and fixed bad-args and, over a real surviving game, the boot scan, the announce answering 1 with a `playing` push, `launch_games_running` reading
+      // true and the quit's kill ending it by its proof; `gamelib-launch`'s `readopt.rs` tests drive the crate.
+      'launch_readopted_announce',
       // Phase 94 plan 11: the shortcut exists check (`shortcutsResolvers.ts` resolver). PROVEN: `shortcuts_dispatch::tests`
       // drives the arm's decode, not-ready and a real exists answer on a FakeHome; `golden_paths.rs` replays the TS goldens.
       'shortcuts_exist',

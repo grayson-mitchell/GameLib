@@ -239,6 +239,7 @@ pub(crate) enum RustInvokeChannel {
     LaunchFlightBegin,
     LaunchFlightWait,
     LaunchFlightEnd,
+    LaunchReadoptedAnnounce,
     ShortcutsExist,
     ShortcutsAdd,
     ShortcutsRemove,
@@ -465,6 +466,7 @@ impl RustInvokeChannel {
         RustInvokeChannel::LaunchFlightBegin,
         RustInvokeChannel::LaunchFlightWait,
         RustInvokeChannel::LaunchFlightEnd,
+        RustInvokeChannel::LaunchReadoptedAnnounce,
         RustInvokeChannel::ShortcutsExist,
         RustInvokeChannel::ShortcutsAdd,
         RustInvokeChannel::ShortcutsRemove,
@@ -691,6 +693,7 @@ impl RustInvokeChannel {
             "launch_flight_begin" => Some(RustInvokeChannel::LaunchFlightBegin),
             "launch_flight_wait" => Some(RustInvokeChannel::LaunchFlightWait),
             "launch_flight_end" => Some(RustInvokeChannel::LaunchFlightEnd),
+            "launch_readopted_announce" => Some(RustInvokeChannel::LaunchReadoptedAnnounce),
             "shortcuts_exist" => Some(RustInvokeChannel::ShortcutsExist),
             "shortcuts_add" => Some(RustInvokeChannel::ShortcutsAdd),
             "shortcuts_remove" => Some(RustInvokeChannel::ShortcutsRemove),
@@ -919,6 +922,7 @@ impl RustInvokeChannel {
             RustInvokeChannel::LaunchFlightBegin => "launch_flight_begin",
             RustInvokeChannel::LaunchFlightWait => "launch_flight_wait",
             RustInvokeChannel::LaunchFlightEnd => "launch_flight_end",
+            RustInvokeChannel::LaunchReadoptedAnnounce => "launch_readopted_announce",
             RustInvokeChannel::ShortcutsExist => "shortcuts_exist",
             RustInvokeChannel::ShortcutsAdd => "shortcuts_add",
             RustInvokeChannel::ShortcutsRemove => "shortcuts_remove",
@@ -5075,6 +5079,15 @@ impl LaunchFlightEndArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let first = args.first().ok_or_else(|| "launch_flight_end:bad-args".to_string())?;
         serde_json::from_value(first.clone()).map_err(|_| "launch_flight_end:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct LaunchReadoptedAnnounceArgs;
+
+impl LaunchReadoptedAnnounceArgs {
+    pub(crate) fn from_args(_args: &[Value]) -> Result<Self, String> {
+        Ok(Self)
     }
 }
 
