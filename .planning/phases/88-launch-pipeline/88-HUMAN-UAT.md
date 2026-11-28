@@ -1,11 +1,11 @@
 ---
-status: pending
+status: complete
 phase: 88-launch-pipeline
 source: [88-CONTEXT.md D-05 D-08 D-09 D-16 D-17 D-27 D-29 D-30 D-31]
 authored_by: 88-01
 run_by: "the 88.3 live-gate plan (named when 88.3 is planned; never 88-01)"
 started:
-updated: 2026-11-25T00:00:00Z
+updated: 2026-11-28T07:22:21.091Z
 ---
 
 This is the live macOS gate contract for SVC-03 (launching any game builds the same command line and environment from Rust and
@@ -351,8 +351,8 @@ Each gesture was traced to the component that renders its control, in the state 
 ## Summary
 
 total: 4
-passed: 0
+passed: 4
 issues: 0
-pending: 4
+pending: 0
 skipped: 0
 blocked: 0
