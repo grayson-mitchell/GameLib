@@ -309,10 +309,14 @@ const LAUNCHER_IMPORTERS: readonly string[] = [
 ]
 
 // 88.3-13: the importers of `launchrust/raise.ts`, every one counted per file. The sidecar bootstrap builds the raiser, and the
-// service types name its interface.
+// service types name its interface. 88.3-20: the Steam bottle monitor imports the exe-name twin and the raiser's type, and the
+// bottled-Steam launch the type, now that `utils/wineWindowRaise.ts` is deleted, and the test services' recording fake names the type.
 const RAISE_SHIM_IMPORTERS: readonly string[] = [
   'src/backend/services/types.ts',
-  'src/backend/sidecar/bootstrap.ts'
+  'src/backend/sidecar/bootstrap.ts',
+  'src/backend/storeManagers/steam/bottleProcessMonitor.ts',
+  'src/backend/storeManagers/steam/bottledSteam.ts',
+  'src/backend/testUtils/testAbortRegistry.ts'
 ]
 
 // 88.2-16: the importers of `launchrust/runner.ts`, every one counted per file. The adapter calls `runnerCall`. 88.2-19: the
@@ -1389,6 +1393,17 @@ export const SCHEDULE: readonly ScheduleRow[] = [
   },
   {
     name: 'createRustWindowRaiser',
+    file: 'src/backend/launchrust/raise.ts',
+    shape: 'twin',
+    vectors: 'src/backend/launchrust/__tests__/raise.shims.test.ts',
+    callers: RAISE_SHIM_IMPORTERS,
+    deletedBy: 96
+  },
+  // 88.3-20 (D-24): `windowsExeNameFromCommand`, moved here unchanged from the deleted `utils/wineWindowRaise.ts`. The Steam bottle
+  // monitor calls it inline to name a bottle's Windows process, so it cannot be an async shim; `raise.shims.test.ts` replays the
+  // name vectors of `golden/window_raise` against it. It leaves with the bottle lifecycle in Phase 96.
+  {
+    name: 'windowsExeNameFromCommand',
     file: 'src/backend/launchrust/raise.ts',
     shape: 'twin',
     vectors: 'src/backend/launchrust/__tests__/raise.shims.test.ts',

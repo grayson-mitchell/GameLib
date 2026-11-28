@@ -15,7 +15,7 @@ import type {
 import type { RunsForMeDeps } from 'backend/runsForMe'
 import type { SpawnDeps } from './provisionBottle'
 import type { BottleProcessMonitors } from './bottleProcessMonitor'
-import type { WineWindowRaiser } from 'backend/utils/wineWindowRaise'
+import type { WineWindowRaiser } from 'backend/launchrust/raise'
 
 /** SpawnDeps plus the window-yield the raise fallback uses (66.3-08). */
 export type BottledRaiseDeps = SpawnDeps & {

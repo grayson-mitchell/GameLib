@@ -1,13 +1,20 @@
 /**
  * The window raiser transport (Phase 88.3, 88.3-13): the shim sends one `launch_window_raise` call, the glue the boot builds swallows a rejection
  * (the TS raise never rejected) and sends the pids and names as given (Rust filters them). The raise loop itself is replayed in Rust
- * (`gamelib-launch`'s `golden_window_raise.rs`).
+ * (`gamelib-launch`'s `golden_window_raise.rs`). `windowsExeNameFromCommand`, the exe-name twin the bottle monitor still calls, is
+ * pinned here to the name vectors of the same golden (88.3-20), which the TS driver recorded before it was deleted.
  */
 import { RUST_LAUNCH_WINDOW_RAISE } from 'common/types/sidecarTransport'
 import { rustInvokeArgs } from 'common/types/ipc/rustInvoke'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
+import { readFileSync } from 'fs'
+import { join } from 'path'
 
-import { createRustWindowRaiser, raiseWineWindow } from '../raise'
+import {
+  createRustWindowRaiser,
+  raiseWineWindow,
+  windowsExeNameFromCommand
+} from '../raise'
 
 // 88.3-17: the warning line is injected, so a plain jest.fn is the seam (no `jest.mock` of the logger).
 const logWarning = jest.fn()
@@ -153,4 +160,45 @@ describe('createRustWindowRaiser', () => {
     expect(() => raiser.stop()).not.toThrow()
     expect(sent).toEqual([])
   })
+})
+
+// The golden's name vectors: recorded from the TS helper by the 88.3-02 driver (now deleted), kept as the one record of its behaviour.
+const GOLDEN = join(
+  __dirname,
+  '..',
+  '..',
+  '..',
+  '..',
+  'src-tauri',
+  'crates',
+  'gamelib-launch',
+  'tests',
+  'fixtures',
+  'golden',
+  'window_raise'
+)
+const EXE_NAME_CASE =
+  'wineWindowRaise--winewindowraise-windowsexenamefromcommand'
+
+describe('windowsExeNameFromCommand', () => {
+  const cases = JSON.parse(
+    readFileSync(join(GOLDEN, 'cases.json'), 'utf8')
+  ) as { id: string; kind: string; inputs?: string[] }[]
+  const recorded = JSON.parse(
+    readFileSync(join(GOLDEN, 'expected', EXE_NAME_CASE, 'result.json'), 'utf8')
+  ) as { rows: { input: string; output: string | null }[] }
+
+  it('anti-vacuity: the golden names a dozen inputs and each has a recorded row', () => {
+    const exeCase = cases.find((c) => c.id === EXE_NAME_CASE)
+    expect(exeCase?.kind).toBe('exe-names')
+    expect(exeCase?.inputs?.length).toBeGreaterThanOrEqual(12)
+    expect(recorded.rows.map((r) => r.input)).toEqual(exeCase?.inputs)
+  })
+
+  it.each(recorded.rows.map((r) => [r.input, r.output] as const))(
+    'replays the golden name vector %j as %j',
+    (input, output) => {
+      expect(windowsExeNameFromCommand(input)).toBe(output)
+    }
+  )
 })

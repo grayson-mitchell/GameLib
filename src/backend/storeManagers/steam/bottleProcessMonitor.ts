@@ -48,7 +48,7 @@ import { isMac } from 'backend/constants/environment'
 import {
   windowsExeNameFromCommand,
   type WineWindowRaiser
-} from 'backend/utils/wineWindowRaise'
+} from 'backend/launchrust/raise'
 import type { Clock, TimerHandle } from 'backend/process/types'
 import type { SpawnDeps } from './provisionBottle'
 import type { RunsForMeDeps } from 'backend/runsForMe'

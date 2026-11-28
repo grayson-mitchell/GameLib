@@ -906,6 +906,41 @@ describe('singleFlightPortComplete', () => {
   runSlice(SINGLE_FLIGHT)
 })
 
+/**
+ * 88.3-20, D-18, D-25 and ROADMAP 88.3 SC4: the TypeScript Wine window raiser is deleted. `utils/wineWindowRaise.ts` held
+ * `createWineWindowRaiser` (the `osascript` loop with its cancel flag and live timers), the exe-name helper and the
+ * `WineWindowRaiser` type; the raise itself is Rust's (88.3-13, `gamelib-launch`'s `raise_wine_window`) and the boot builds
+ * `createRustWindowRaiser` over it. The unit test and the golden driver that recorded `golden/window_raise` (88.3-02) go with
+ * it, and the golden and its Rust replay (`gamelib-launch/tests/golden_window_raise.rs`) stay on purpose: they are what the
+ * Rust raise is held to.
+ *
+ * `windowsExeNameFromCommand`, which the Steam bottle monitor still calls, is not deleted: it moved to `launchrust/raise.ts` as a
+ * scheduled twin (`deletedBy: 96`) pinned by the golden's name vectors in `raise.shims.test.ts`, and the `WineWindowRaiser` type
+ * comes from the same file everywhere.
+ *
+ * `forbiddenIdentifiers` is `createWineWindowRaiser`, checked with `git grep -w` on 2026-11-28: only the deleted files and
+ * `testAbortRegistry.ts` (rewritten here as a recording fake) named it. `WindowRaiseDeps` is not listed: `launchrust/raise.ts`
+ * keeps a private interface of that name.
+ */
+const WINDOW_RAISER: SliceSpec = {
+  deleted: [
+    'src/backend/utils/wineWindowRaise.ts',
+    'src/backend/utils/__tests__/wineWindowRaise.test.ts',
+    'src/backend/__tests__/oracle/windowRaise.oracle.test.ts'
+  ],
+  kept: [
+    'src-tauri/crates/gamelib-launch/tests/fixtures/golden/window_raise',
+    'src/backend/launchrust/raise.ts'
+  ],
+  forbiddenIdentifiers: ['createWineWindowRaiser'],
+  identifierRoot: 'src/backend',
+  flag: 'GAMELIB_LAUNCH'
+}
+
+describe('windowRaiserPortComplete', () => {
+  runSlice(WINDOW_RAISER)
+})
+
 /** The one file 88.2 leaves as scheduled shims: the runner, the wine command, the script, the spawnAsync and the tracked-kill transport calls. */
 const RUNNER_SURVIVOR_FILES = ['src/backend/launchrust/runner.ts'] as const
 

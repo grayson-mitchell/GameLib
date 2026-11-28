@@ -29,6 +29,21 @@ export async function raiseWineWindow(
   return deps.requestRustInvoke(RUST_LAUNCH_WINDOW_RAISE, [args])
 }
 
+/**
+ * `C:\Games\X\X.exe -arg` -> `X.exe`; null when there is no `.exe`. A twin (D-24, 88.3-20): the Steam bottle monitor calls it
+ * inline to name the Windows process a bottle's matched commands belong to, so it cannot be an async shim. Moved here unchanged
+ * from the deleted `utils/wineWindowRaise.ts`, and pinned by the name vectors of `golden/window_raise` (`raise.shims.test.ts`).
+ * Its last caller moves with the bottle lifecycle in Phase 96, which deletes it.
+ */
+export function windowsExeNameFromCommand(command: string): string | null {
+  const idx = command.toLowerCase().indexOf('.exe')
+  if (idx === -1) return null
+  const upToExe = command.slice(0, idx + 4)
+  const lastSep = upToExe.lastIndexOf('\\')
+  const name = lastSep === -1 ? upToExe : upToExe.slice(lastSep + 1)
+  return name || null
+}
+
 /** What the callers' deps hand `raise`: kept for the call shape the callers already use; the Rust raise spawns for itself and reads none of it. */
 interface WindowRaiseDeps {
   spawnAsync: SpawnAsync
