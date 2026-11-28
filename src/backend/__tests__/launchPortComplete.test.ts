@@ -24,6 +24,7 @@
  */
 import { assertAtOrAboveFloor } from 'backend/testUtils/censusFloor'
 import {
+  assertDeleted,
   findExportedValues,
   findRollbackFlag,
   walkStripped
@@ -1150,6 +1151,366 @@ describe('commandRunnerSurvivors', () => {
           .filter((r) => !RUNNER_INTERIM_GLUE_DELETED_BY.includes(r.deletedBy))
           .map((r) => r.name)
       ).toEqual(['a'])
+    })
+  })
+})
+
+/** One piece of interim glue Phase 88 leaves in TypeScript: the file, the value exports that are glue, who deletes them and why they stay. */
+interface GlueRow {
+  file: string
+  exports: readonly string[]
+  /** The phase that deletes these exports, an integer in 90..99 or an inserted decimal phase the roadmap declares. */
+  deletedBy: number
+  reason: string
+}
+
+/**
+ * 88.3-20, D-25 and ROADMAP 88.3 SC4: the named, dated glue the launch area keeps once every ported module is gone. A glue
+ * row is not a shim: a shim is one typed Rust call and is a `SCHEDULE` row; glue is the TypeScript around the shims (the
+ * Launcher object, the reply narrowing, the adapters the managers still call) and leaves with the managers or the bottle
+ * lifecycle that call it. Four rows name exports of a file under `launchrust/` that are also schedule rows (twins), kept
+ * here too so the SUMMARY's table of survivors is one list; the other rows name files outside the shim directory, whose
+ * every export must be a row here.
+ */
+const LAUNCH_GLUE: readonly GlueRow[] = [
+  {
+    file: 'src/backend/launchrust/launcher.ts',
+    exports: ['createLauncher'],
+    deletedBy: 98,
+    reason:
+      'The Launcher the TS managers call, built once per boot: every member is one shim behind a reply narrowing. Its last member, launchRun, leaves with the launch channel and the gamelib://launch deep link.'
+  },
+  {
+    file: 'src/backend/launchrust/funnelHooks.ts',
+    exports: ['answerFunnelHook'],
+    deletedBy: 92,
+    reason:
+      'Answers the eight ManagerHooks ops the Rust funnel sends back for the managers that are still TypeScript; it leaves when the three launchers move out of TypeScript.'
+  },
+  {
+    file: 'src/backend/launchrust/flights.ts',
+    exports: ['createRustLaunchFlights'],
+    deletedBy: 90.2,
+    reason:
+      'The boot launchFlights over the three flight shims, keeping the interface the Steam dispatch calls; the Steam dispatch moves into Rust in 90.2.'
+  },
+  {
+    file: 'src/backend/launchrust/raise.ts',
+    exports: ['createRustWindowRaiser'],
+    deletedBy: 96,
+    reason:
+      'The boot window raiser the bottle monitor, the bottled-Steam launch and the common launch call through services.windowRaiser; they move with the bottle lifecycle in 96.'
+  },
+  {
+    file: 'src/backend/launchAdapters.ts',
+    exports: ['writeLaunchLog', 'prepareLaunch', 'prepareWineLaunch'],
+    deletedBy: 92,
+    reason:
+      'Gathers the TS-only facts, makes the one prepare shim call and applies the writes the reply carries (the launch log, the wine self-heal settings); the three launchers own it until their launch() moves.'
+  },
+  {
+    file: 'src/backend/launchAdapters.ts',
+    exports: ['checkWineBeforeLaunch'],
+    deletedBy: 96,
+    reason:
+      'The check-wine adapter over checkWineBeforeLaunchRust; the Steam bottle provisioning behind it moves in 96.'
+  },
+  {
+    file: 'src/backend/launchBuilderReply.ts',
+    exports: [
+      'settleEnvMap',
+      'settleWordList',
+      'settleKnownFixEnv',
+      'settleVerifyPrefixReply'
+    ],
+    deletedBy: 92,
+    reason:
+      'Narrows the builder shims answers (an env map, a word list, the prefix check) before a manager spreads them; the managers that spread them leave in 92.'
+  },
+  {
+    file: 'src/backend/launchBuilderReply.ts',
+    exports: ['settleLaunchStatus'],
+    deletedBy: 98,
+    reason:
+      'Narrows the launchRun answer for the Launcher; it stays as long as launchRun does (the launch channel and the deep link, 98).'
+  },
+  {
+    file: 'src/backend/knownFixLaunchReply.ts',
+    exports: [
+      'settleKnownFixLaunchOverrides',
+      'settleKnownFixRegistry',
+      'settleKnownFixOverlayEnv'
+    ],
+    deletedBy: 97,
+    reason:
+      'Turns a rejected known-fix reply into the warning the TS used to log, for the Steam bridge, which is the last caller (88-VERIFICATION warning W-5).'
+  },
+  {
+    file: 'src/backend/launchEngineStep.ts',
+    exports: ['runLaunchEngineStep', 'launchSettingsFor'],
+    deletedBy: 92,
+    reason:
+      'Narrows the engine step answer and overlays the running launch engine on the stored settings; the GOG and Amazon setup and the managers launch() call it until 92.'
+  }
+]
+
+/** Every file the glue table covers: four twins' files under `launchrust/` and the four glue files outside it. */
+const LAUNCH_GLUE_FILES: readonly string[] = [
+  'src/backend/launchrust/launcher.ts',
+  'src/backend/launchrust/funnelHooks.ts',
+  'src/backend/launchrust/flights.ts',
+  'src/backend/launchrust/raise.ts',
+  'src/backend/launchAdapters.ts',
+  'src/backend/launchBuilderReply.ts',
+  'src/backend/knownFixLaunchReply.ts',
+  'src/backend/launchEngineStep.ts'
+]
+
+/** The glue files outside the shim directory: every export of these is a glue row, and none is a schedule row. */
+const LAUNCH_GLUE_ONLY_FILES: readonly string[] = LAUNCH_GLUE_FILES.filter(
+  (f) => !f.startsWith('src/backend/launchrust/')
+)
+
+/** The phases that may delete launch glue: the Steam dispatch (90.2), the managers (92), the bottle lifecycle (96), the bridge (97), the deep link and `frontendReady` (98). */
+const LAUNCH_GLUE_DELETED_BY: readonly number[] = [90.2, 92, 96, 97, 98]
+
+/** The TS Phase 88 deleted, one path per deleted module family; each slice's own describe holds its whole list. */
+const PHASE_88_DELETED_TS: readonly string[] = [
+  'src/backend/launcher.ts',
+  'src/backend/launchSingleFlight.ts',
+  'src/backend/commandRunner.ts',
+  'src/backend/knownFixes.ts',
+  'src/backend/gamescopeCommand.ts',
+  'src/backend/utils/epicServiceStatus.ts',
+  'src/backend/utils/systeminfo/index.ts',
+  'src/backend/utils/wineWindowRaise.ts'
+]
+
+/** Every file the shim census reads: each `launchrust/*.ts` and `enginewine/launch.ts` the walk found. */
+function launchShimFiles(files: readonly StrippedFile[]): string[] {
+  return files
+    .map((f) => f.path)
+    .filter(
+      (p) =>
+        /^src\/backend\/launchrust\/[^/]+\.ts$/.test(p) ||
+        p === 'src/backend/enginewine/launch.ts'
+    )
+    .sort()
+}
+
+const flattenGlue = (glue: readonly GlueRow[]): SurvivorRow[] =>
+  glue.flatMap((g) =>
+    g.exports.map((name) => ({ file: g.file, name, deletedBy: g.deletedBy }))
+  )
+
+/**
+ * Both directions over everything Phase 88 leaves in TypeScript: every value export of the shim files is a schedule row (or the
+ * `register*` helper a row names) or a glue export; every glue-only file's exports are all glue; and no schedule row or glue
+ * row names an export that is not there.
+ */
+function launchCensus(
+  files: readonly StrippedFile[],
+  schedule: readonly (SurvivorRow & { wiring?: readonly string[] })[],
+  glue: readonly GlueRow[]
+): { unscheduled: string[]; orphaned: string[] } {
+  const shimFiles = launchShimFiles(files)
+  const glueOnly = [
+    ...new Set(glue.map((g) => g.file).filter((f) => !shimFiles.includes(f)))
+  ]
+  return survivorDiff(
+    files,
+    [...rowsWithWiring(schedule, shimFiles), ...flattenGlue(glue)],
+    [...shimFiles, ...glueOnly]
+  )
+}
+
+describe('launchSurvivors', () => {
+  const shimFiles = launchShimFiles(tsWalk.files)
+  const shimRows = SCHEDULE.filter((r) => shimFiles.includes(r.file))
+  const glueExports = flattenGlue(LAUNCH_GLUE)
+
+  it('anti-vacuity: 12 shim files are read, 51 rows are scheduled in them, and the glue table names 18 exports in 8 files', () => {
+    // 11 files under launchrust/ plus enginewine/launch.ts; 51 schedule rows in them and 18 glue exports, measured on 2026-11-28.
+    assertAtOrAboveFloor('launch shim files', shimFiles.length, 12)
+    assertAtOrAboveFloor('launch shim schedule rows', shimRows.length, 51)
+    assertAtOrAboveFloor('launch glue exports', glueExports.length, 18)
+    assertAtOrAboveFloor(
+      'launch glue files',
+      new Set(LAUNCH_GLUE.map((g) => g.file)).size,
+      LAUNCH_GLUE_FILES.length
+    )
+    for (const file of [...shimFiles, ...LAUNCH_GLUE_FILES]) {
+      expect(tsWalk.files.some((f) => f.path === file)).toBe(true)
+    }
+  })
+
+  it('every export of launchrust/*.ts and enginewine/launch.ts is a schedule row or a glue export, every export of a glue-only file is a glue export, and every row names an export that exists', () => {
+    expect(launchCensus(tsWalk.files, SCHEDULE, LAUNCH_GLUE)).toEqual({
+      unscheduled: [],
+      orphaned: []
+    })
+  })
+
+  it('every glue row is in a listed file, gives a reason and names a deletion phase from 90.2, 92, 96, 97 or 98', () => {
+    expect(
+      LAUNCH_GLUE.filter((g) => !LAUNCH_GLUE_FILES.includes(g.file)).map(
+        (g) => g.file
+      )
+    ).toEqual([])
+    expect(
+      LAUNCH_GLUE.filter((g) => g.reason.trim().length < 40).map(
+        (g) => `${g.file}: ${g.exports.join(',')}`
+      )
+    ).toEqual([])
+    expect(
+      LAUNCH_GLUE.filter((g) => !LAUNCH_GLUE_DELETED_BY.includes(g.deletedBy))
+        .map((g) => `${g.file}: ${String(g.deletedBy)}`)
+        .sort()
+    ).toEqual([])
+  })
+
+  it('a glue export that is also a schedule row, or an interim glue row, names the same deletion phase', () => {
+    const others: SurvivorRow[] = [
+      ...SCHEDULE.map((r) => ({
+        file: r.file,
+        name: r.name,
+        deletedBy: r.deletedBy
+      })),
+      ...INTERIM_GLUE
+    ]
+    expect(
+      glueExports
+        .flatMap((g) =>
+          others
+            .filter(
+              (o) =>
+                o.file === g.file &&
+                o.name === g.name &&
+                o.deletedBy !== g.deletedBy
+            )
+            .map(
+              (o) =>
+                `${g.file}#${g.name}: glue ${String(g.deletedBy)} against ${String(o.deletedBy)}`
+            )
+        )
+        .sort()
+    ).toEqual([])
+    // The two files the 88.1 table also names are covered both ways by it, so this table may not drop one of its exports.
+    const pinned = INTERIM_GLUE.filter((r) =>
+      LAUNCH_GLUE_ONLY_FILES.includes(r.file)
+    )
+    expect(
+      pinned
+        .filter(
+          (r) =>
+            !glueExports.some((g) => g.file === r.file && g.name === r.name)
+        )
+        .map((r) => `${r.file}#${r.name}`)
+    ).toEqual([])
+  })
+
+  it('no export of a glue-only file is also a schedule row', () => {
+    expect(
+      SCHEDULE.filter((r) => LAUNCH_GLUE_ONLY_FILES.includes(r.file)).map(
+        (r) => `${r.file}#${r.name}`
+      )
+    ).toEqual([])
+  })
+
+  it('the TS Phase 88 deleted is absent, and no row is due in 88.3', () => {
+    assertAtOrAboveFloor(
+      'phase 88 deleted TS paths',
+      PHASE_88_DELETED_TS.length,
+      8
+    )
+    expect(() => assertDeleted(PHASE_88_DELETED_TS)).not.toThrow()
+    expect(rowsDueIn(SCHEDULE, 88.3)).toEqual([])
+  })
+
+  describe('planted violations', () => {
+    const planted = (path: string, code: string): StrippedFile => ({
+      path,
+      raw: code,
+      code
+    })
+    const shim = 'src/backend/launchrust/raise.ts'
+    const glueFile = 'src/backend/launchEngineStep.ts'
+    const row = (file: string, name: string, deletedBy = 96): SurvivorRow => ({
+      file,
+      name,
+      deletedBy
+    })
+    const glue = (file: string, exports: string[]): GlueRow => ({
+      file,
+      exports,
+      deletedBy: 92,
+      reason: 'a planted reason that is long enough to count as one'
+    })
+
+    it('self-test: an export of a shim file with no schedule row and no glue row is reported unscheduled', () => {
+      const files = [
+        planted(shim, 'export function a() {}\nexport function stray() {}'),
+        planted(glueFile, 'export function g() {}')
+      ]
+      expect(
+        launchCensus(files, [row(shim, 'a')], [glue(glueFile, ['g'])])
+      ).toEqual({ unscheduled: [`${shim}#stray`], orphaned: [] })
+    })
+
+    it('self-test: an export of a glue-only file that its glue row does not name is reported unscheduled', () => {
+      const files = [
+        planted(shim, 'export function a() {}'),
+        planted(glueFile, 'export function g() {}\nexport function h() {}')
+      ]
+      expect(
+        launchCensus(files, [row(shim, 'a')], [glue(glueFile, ['g'])])
+      ).toEqual({ unscheduled: [`${glueFile}#h`], orphaned: [] })
+    })
+
+    it('self-test: a glue row naming an export the file does not have is reported orphaned', () => {
+      const files = [
+        planted(shim, 'export function a() {}'),
+        planted(glueFile, 'export function g() {}')
+      ]
+      expect(
+        launchCensus(
+          files,
+          [row(shim, 'a')],
+          [glue(glueFile, ['g', 'gone']), glue(shim, ['a', 'alsoGone'])]
+        )
+      ).toEqual({
+        unscheduled: [],
+        orphaned: [`${glueFile}#gone`, `${shim}#alsoGone`].sort()
+      })
+    })
+
+    it('self-test: a glue row in a file the table does not list, and a glue phase outside the allowed set, are found', () => {
+      const stray = glue('src/backend/strayGlue.ts', ['x'])
+      expect(
+        [stray].filter((g) => !LAUNCH_GLUE_FILES.includes(g.file))
+      ).toHaveLength(1)
+      expect(
+        [{ ...stray, deletedBy: 88.3 }].filter(
+          (g) => !LAUNCH_GLUE_DELETED_BY.includes(g.deletedBy)
+        )
+      ).toHaveLength(1)
+      expect(rowsDueIn([row(shim, 'a', 88.3)], 88.3)).toHaveLength(1)
+    })
+
+    it('self-test: a revived deleted file is found', () => {
+      const dir = mkdtempSync(join(tmpdir(), 'launch-survivors-'))
+      try {
+        mkdirSync(join(dir, 'src', 'backend', 'utils'), { recursive: true })
+        writeFileSync(
+          join(dir, 'src', 'backend', 'utils', 'wineWindowRaise.ts'),
+          'export const revived = 1\n'
+        )
+        expect(() => assertDeleted(PHASE_88_DELETED_TS, dir)).toThrow(
+          /src\/backend\/utils\/wineWindowRaise\.ts/
+        )
+      } finally {
+        rmSync(dir, { recursive: true, force: true })
+      }
     })
   })
 })
