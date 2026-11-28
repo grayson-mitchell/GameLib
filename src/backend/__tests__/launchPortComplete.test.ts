@@ -878,6 +878,34 @@ describe('funnelPortComplete', () => {
   runSlice(FUNNEL)
 })
 
+/**
+ * 88.3-18, D-04, D-18 and ROADMAP 88.3 SC4: the TypeScript launch single-flight table is deleted. `launchSingleFlight.ts` held
+ * `createLaunchFlights` and the `LaunchFlights` interface; the table now has one owner, Rust's (88.3-11), and the boot's
+ * `appRuntime.launchFlights` is `createRustLaunchFlights` over the three flight shims in `launchrust/flights.ts`, which keeps the
+ * interface. The golden `single_flight` cases and their Rust replay stay on purpose: they are what the Rust table is held to.
+ *
+ * `forbiddenIdentifiers` is `createLaunchFlights`, checked with `git grep -w` on 2026-11-28: only the deleted file, its test and
+ * the three importers this plan moved (`appRuntime.ts`, `adoptionStatus.test.ts`, a comment) named it. `LaunchFlights` is not listed:
+ * the glue's interface in `launchrust/flights.ts` keeps the name.
+ */
+const SINGLE_FLIGHT: SliceSpec = {
+  deleted: [
+    'src/backend/launchSingleFlight.ts',
+    'src/backend/__tests__/launchSingleFlight.test.ts'
+  ],
+  kept: [
+    'src-tauri/crates/gamelib-launch/tests/fixtures/golden/single_flight',
+    'src/backend/launchrust/flights.ts'
+  ],
+  forbiddenIdentifiers: ['createLaunchFlights'],
+  identifierRoot: 'src/backend',
+  flag: 'GAMELIB_LAUNCH'
+}
+
+describe('singleFlightPortComplete', () => {
+  runSlice(SINGLE_FLIGHT)
+})
+
 /** The one file 88.2 leaves as scheduled shims: the runner, the wine command, the script, the spawnAsync and the tracked-kill transport calls. */
 const RUNNER_SURVIVOR_FILES = ['src/backend/launchrust/runner.ts'] as const
 
