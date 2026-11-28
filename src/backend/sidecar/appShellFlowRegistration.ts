@@ -212,6 +212,7 @@ import {
 } from '../../common/trayIconVariant'
 import { logSendHandlerReached } from './sendChannelObservable'
 import { engineDialogDisplayed } from '../enginewine/launch'
+import { announceReadoptedGames } from '../launchrust/funnel'
 
 /** The prefix of an ack id Rust's engine dialogs issue (`gamelib-engine` `launch::dialogs`); the TS table's ids never start with it. */
 const ENGINE_ACK_PREFIX = 'engine:'
@@ -575,6 +576,22 @@ export function registerAppShellFlows(deps: AppShellFlowDeps): void {
       logInfo('Frontend Ready', LogPrefix.Backend)
       // Cold-start vs warm discriminator for gamelib:// links (quick 261108-kpc).
       deps.appRuntime.protocol.markFrontendReady()
+
+      // Phase 88.3 (88.3-12, D-19, Pitfall 9): tell Rust the renderer is listening, so it re-sends `Playing` for each game it
+      // re-adopted at boot (and announces a later adoption at once). OUTSIDE the one-shot boot-work guard below: a renderer
+      // reload delivers `frontendReady` again and its status listeners start empty. A quick bounded call, no timer or handle
+      // (sidecar exit contract); its own try/catch and one fixed warning, so a failed announce never skips the work below.
+      try {
+        void Promise.resolve(announceReadoptedGames(deps)).catch(() =>
+          console.warn(
+            '[appShellFlowRegistration] frontendReady -> announceReadoptedGames failed'
+          )
+        )
+      } catch {
+        console.warn(
+          '[appShellFlowRegistration] frontendReady -> announceReadoptedGames failed'
+        )
+      }
 
       if (isSnap) {
         const showSnapWarning = deps.stores.kvs.configStore.get(

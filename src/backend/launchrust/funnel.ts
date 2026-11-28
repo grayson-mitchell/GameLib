@@ -1,4 +1,7 @@
-import { RUST_LAUNCH_RUN } from 'common/types/sidecarTransport'
+import {
+  RUST_LAUNCH_READOPTED_ANNOUNCE,
+  RUST_LAUNCH_RUN
+} from 'common/types/sidecarTransport'
 import type { RustInvokeArgsOf } from 'common/types/ipc/rustInvoke'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 
@@ -27,4 +30,18 @@ export async function launchRun(
   params: LaunchRunRequest
 ): Promise<unknown> {
   return deps.requestRustInvoke(RUST_LAUNCH_RUN, [params])
+}
+
+/**
+ * Tells the renderer about the games the shell re-adopted at boot (Phase 88.3, 88.3-12, D-19, Pitfall 9): a game that
+ * outlived a GameLib crash is found by the shell's boot scan, but nothing listens for its status until the renderer's
+ * `frontendReady`. The sidecar's `frontendReady` handler calls this on every delivery, so a reopened GameLib shows the game
+ * as Playing once the renderer listens, and the shell announces a game adopted after that at once. Resolves the number of
+ * games Rust announced, as `unknown`. A quick registry read: the channel stays inside the 60 s bound. Rejects with Rust's
+ * category word when the call could not be made (the caller logs one fixed warning and carries on).
+ */
+export async function announceReadoptedGames(
+  deps: RustInvokeDeps
+): Promise<unknown> {
+  return deps.requestRustInvoke(RUST_LAUNCH_READOPTED_ANNOUNCE, [])
 }

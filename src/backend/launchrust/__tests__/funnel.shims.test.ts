@@ -16,7 +16,10 @@ jest.mock('backend/logger', () => ({
 }))
 
 import { rustInvokeArgs } from 'common/types/ipc/rustInvoke'
-import { RUST_LAUNCH_RUN } from 'common/types/sidecarTransport'
+import {
+  RUST_LAUNCH_READOPTED_ANNOUNCE,
+  RUST_LAUNCH_RUN
+} from 'common/types/sidecarTransport'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import { createLauncher } from 'backend/launcher'
 import { createGameLogWriter } from 'backend/logger'
@@ -25,7 +28,7 @@ import { createTestOnlineMonitor } from 'backend/testUtils/testOnlineMonitor'
 
 import { settleLaunchStatus } from 'backend/launchBuilderReply'
 
-import { launchRun } from '../funnel'
+import { announceReadoptedGames, launchRun } from '../funnel'
 
 type Sent = { channel: string; args: unknown[] }
 
@@ -211,5 +214,37 @@ describe("createLauncher's launchEventCallback (D-01, D-04, D-25)", () => {
       'launch_run:not-ready'
     )
     expect(getGame).not.toHaveBeenCalled()
+  })
+})
+
+describe('announceReadoptedGames', () => {
+  it('sends exactly [RUST_LAUNCH_READOPTED_ANNOUNCE, []] and answers the count untouched', async () => {
+    const { deps, sent } = recordingDeps(1)
+
+    await expect(announceReadoptedGames(deps)).resolves.toBe(1)
+
+    expect(sent).toEqual([
+      { channel: RUST_LAUNCH_READOPTED_ANNOUNCE, args: [] }
+    ])
+    expect(RUST_LAUNCH_READOPTED_ANNOUNCE).toBe('launch_readopted_announce')
+  })
+
+  it('sends arguments that pass the schema the sidecar checks before the frame is written', () => {
+    expect(
+      rustInvokeArgs[RUST_LAUNCH_READOPTED_ANNOUNCE].safeParse([]).success
+    ).toBe(true)
+    expect(
+      rustInvokeArgs[RUST_LAUNCH_READOPTED_ANNOUNCE].safeParse([{}]).success
+    ).toBe(false)
+  })
+
+  it("rejects with the call's own error when the shell is not ready", async () => {
+    const { deps } = recordingDeps(
+      new Error('launch_readopted_announce:not-ready')
+    )
+
+    await expect(announceReadoptedGames(deps)).rejects.toThrow(
+      'launch_readopted_announce:not-ready'
+    )
   })
 })

@@ -290,6 +290,13 @@ const DEADLINE_SHIM_IMPORTERS: readonly string[] = [
   'src/backend/storeManagers/steam/engine/bridgeDeadline.ts',
   'src/backend/storeManagers/steam/gameBridgeWineLaunch.ts'
 ]
+// 88.3-12: the importers of `launchrust/funnel.ts`, every one counted per file. The Launcher's `launchEventCallback` calls
+// `launchRun`; the sidecar's `frontendReady` handler calls `announceReadoptedGames`.
+const FUNNEL_SHIM_IMPORTERS: readonly string[] = [
+  'src/backend/launcher.ts',
+  'src/backend/sidecar/appShellFlowRegistration.ts'
+]
+
 // 88.2-16: the importers of `launchrust/runner.ts`, every one counted per file. The adapter calls `runnerCall`. 88.2-19: the
 // sidecar bootstrap imports `gamesRunning` and `trackedKillAll` for the quit handler (D-27). 88.2-20: `handlers.ts` imports
 // `registerLaunchManagerHooks` to answer the shell's hook calls. 88.2-21: the bootstrap also builds the kill-aware stream
@@ -1293,7 +1300,18 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     file: 'src/backend/launchrust/funnel.ts',
     shape: 'shim',
     channel: 'RUST_LAUNCH_RUN',
-    callers: ['src/backend/launcher.ts'],
+    callers: FUNNEL_SHIM_IMPORTERS,
+    deletedBy: 98
+  },
+  // 88.3-12 (D-19, Pitfall 9): the announcement of the games the shell re-adopted at boot. `announceReadoptedGames` is the one typed
+  // `RUST_LAUNCH_READOPTED_ANNOUNCE` call, reached from the sidecar's `frontendReady` handler on every delivery (outside the one-shot
+  // boot-work guard). `frontendReady` itself moves out of the sidecar in Phase 98, which is the phase that deletes the shim.
+  {
+    name: 'announceReadoptedGames',
+    file: 'src/backend/launchrust/funnel.ts',
+    shape: 'shim',
+    channel: 'RUST_LAUNCH_READOPTED_ANNOUNCE',
+    callers: FUNNEL_SHIM_IMPORTERS,
     deletedBy: 98
   },
   // 88-13 (87 D-24): the synchronous known-fix twins, for callers 88 cannot make async. The launcher's `installFixes`
