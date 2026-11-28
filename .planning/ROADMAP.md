@@ -190,7 +190,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 86: Pure leaf services** — 27/27 plans in 21 waves (26 + 1 gap closure); completed 2026-11-23
 - [x] **Phase 87: Engine, Wine and tools** — 59 plans in 38 waves; planned 2026-11-23 (executes after Phase 86 closes)
 - [x] **Phase 88: Launch scaffolding and known fixes** — 17/17 plans in 14 waves; completed 2026-11-25 (SVC-03 part 1 of 4; split 2026-11-25, 88-CONTEXT D-30)
-- [ ] **Phase 88.1: Launch builders and prepare steps** — 24 plans (20 in 15 waves + 4 gap closure for CR-01, planned 2026-11-26); planned 2026-11-25 (SVC-03 part 2 of 4; D-30)
+- [x] **Phase 88.1: Launch builders and prepare steps** — 24/24 plans (20 in 15 waves + 4 gap closure for CR-01); completed 2026-11-28, re-verified passed 8/8 after gap closure (SVC-03 part 2 of 4; D-30)
 - [ ] **Phase 88.2: Command runner and game processes** — 25 plans in 18 waves; planned 2026-11-26, re-sliced the same day to fit the smart-zone budget and file cap (SVC-03 part 3 of 4; D-30); gap closure 88.2-26..31 (G-88.2-1, G-88.2-2) planned 2026-11-27
 - [ ] **Phase 88.3: Launch funnel, re-adoption and the live gate** — not planned (runs the Phase 88 live gate)
 - [ ] **Phase 89: Steam library state** — not planned
@@ -951,7 +951,7 @@ Plans:
   2. Anti-cheat at launch, `check_wine_before_launch`, `download_default_wine` (D-28), `isMacSonomaOrHigher`, `isEpicServiceOffline`, `removeQuoteIfNecessary` and system info behave as before
   3. The builder TS, `gamescopeCommand.ts`, `utils/systeminfo` and the replaced `utils.ts` rows are deleted; closes on goldens, three-OS CI and a Linux stub-gamescope smoke
 
-**Plans:** 24/24 plans executed (20 in 15 waves + 4 gap closure); planned 2026-11-25 (goldens are recorded from the TS before each Rust slice, D-25); gap closure planned 2026-11-26 from 88.1-VERIFICATION (CR-01, WR-01, the truth-2 decision)
+**Plans:** 24/24 plans complete (20 in 15 waves + 4 gap closure); planned 2026-11-25 (goldens are recorded from the TS before each Rust slice, D-25); gap closure planned 2026-11-26 from 88.1-VERIFICATION (CR-01, WR-01, the truth-2 decision)
 
 Plans:
 **Wave 1**
