@@ -2,38 +2,10 @@
  * The launch single-flight transport shims (Phase 88.3, 88.3-18, D-04, SC4): `launchrust/flights.ts`. The shape of the shims and
  * the phase that deletes them are pinned by `engineWineShimSchedule.test.ts`; this file pins the channel and the arguments that
  * cross (they pass the same zod schema the sidecar checks before the frame is written), the glue's semantics over a fake of the
- * Rust table (`fakeLaunchFlightTransport.ts`, which models the reply shapes 88.3-11 recorded), and the tracer: two concurrent
- * `dispatchSteamLaunch` calls over `createRustLaunchFlights` launch once, record one recent game and notify once.
+ * Rust table (`fakeLaunchFlightTransport.ts`, which models the reply shapes 88.3-11 recorded). The tracer, two concurrent
+ * `dispatchSteamLaunch` calls over `createRustLaunchFlights` launching once, records one recent game and notifying once, is in
+ * `storeManagers/steam/__tests__/launchDispatch.test.ts` (it owns the dispatch's module mocks, which the DI ceiling keeps from this file).
  */
-const getGameMock = jest.fn()
-const deps = {
-  libraryManagers: {
-    steam: { getGame: (...args: unknown[]) => getGameMock(...args) }
-  },
-  appRuntime: undefined
-} as unknown as Parameters<typeof dispatchSteamLaunch>[0]
-
-const addRecentGameMock = jest.fn()
-jest.mock('backend/info/recentGames', () => ({
-  addRecentGame: (...args: unknown[]) => addRecentGameMock(...args)
-}))
-
-jest.mock('backend/logger', () => ({
-  logWarning: jest.fn(),
-  logInfo: jest.fn(),
-  LogPrefix: { Steam: 'Steam' }
-}))
-
-const notifyMock = jest.fn()
-jest.mock('backend/dialog/dialog', () => ({
-  notify: (_deps: unknown, ...args: unknown[]) => notifyMock(...args)
-}))
-
-jest.mock('i18next', () => ({
-  __esModule: true,
-  default: { t: (k: string, d?: string) => d ?? k }
-}))
-
 import { rustInvokeArgs } from 'common/types/ipc/rustInvoke'
 import {
   RUST_LAUNCH_FLIGHT_BEGIN,
@@ -42,11 +14,6 @@ import {
 } from 'common/types/sidecarTransport'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import { createFakeLaunchFlightTransport } from 'backend/testUtils/fakeLaunchFlightTransport'
-import { createTestAppRuntime } from 'backend/testUtils/testAppRuntime'
-import {
-  dispatchSteamLaunch,
-  dispatchSteamLaunchWithoutSteamOnce
-} from 'backend/storeManagers/steam/launchDispatch'
 
 import {
   createRustLaunchFlights,
@@ -119,81 +86,6 @@ describe('the three flight shims', () => {
     await expect(launchFlightBegin(d, KEY)).rejects.toThrow(
       'launch_flight_begin:not-ready'
     )
-  })
-})
-
-describe('tracer: two concurrent dispatchSteamLaunch calls over the Rust table', () => {
-  const appId = '999005'
-  let launchMock: jest.Mock
-
-  beforeEach(() => {
-    jest.clearAllMocks()
-    deps.appRuntime = createTestAppRuntime()
-    launchMock = jest.fn()
-    getGameMock.mockReturnValue({
-      launch: (...args: unknown[]) => launchMock(...args),
-      getSettings: () => Promise.resolve({}),
-      getGameInfo: () => ({
-        app_name: appId,
-        title: 'Some Steam Game',
-        runner: 'steam',
-        is_installed: true
-      })
-    })
-    addRecentGameMock.mockResolvedValue(undefined)
-  })
-
-  it('launches once, records one recent game, notifies once, and a later dispatch leads again', async () => {
-    let resolveLaunch!: (v: boolean) => void
-    launchMock.mockReturnValue(
-      new Promise<boolean>((res) => {
-        resolveLaunch = res
-      })
-    )
-
-    const a = dispatchSteamLaunch(deps, appId)
-    const b = dispatchSteamLaunch(deps, appId)
-    await new Promise(setImmediate)
-    resolveLaunch(true)
-
-    await expect(a).resolves.toBe(true)
-    await expect(b).resolves.toBe(true)
-    await new Promise(setImmediate)
-
-    expect(launchMock).toHaveBeenCalledTimes(1)
-    expect(addRecentGameMock).toHaveBeenCalledTimes(1)
-    expect(notifyMock).toHaveBeenCalledTimes(1)
-
-    launchMock.mockResolvedValue(true)
-    await dispatchSteamLaunch(deps, appId)
-    expect(launchMock).toHaveBeenCalledTimes(2)
-  })
-
-  it('the Without-Steam one-shot joins the same Steam flight', async () => {
-    let resolveLaunch!: (v: boolean) => void
-    launchMock.mockReturnValue(
-      new Promise<boolean>((res) => {
-        resolveLaunch = res
-      })
-    )
-    const without = jest.fn()
-    getGameMock.mockReturnValue({
-      launch: (...args: unknown[]) => launchMock(...args),
-      launchWithoutSteam: without,
-      getDirectLaunchVerdict: () => Promise.resolve({ applies: true }),
-      getSettings: () => Promise.resolve({}),
-      getGameInfo: () => ({ app_name: appId, title: 'T', runner: 'steam' })
-    })
-
-    const play = dispatchSteamLaunch(deps, appId)
-    const once = dispatchSteamLaunchWithoutSteamOnce(deps, appId)
-    await new Promise(setImmediate)
-    resolveLaunch(true)
-
-    await expect(play).resolves.toBe(true)
-    await expect(once).resolves.toBe(true)
-    expect(without).not.toHaveBeenCalled()
-    expect(notifyMock).toHaveBeenCalledTimes(1)
   })
 })
 

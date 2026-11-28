@@ -8,7 +8,8 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { initHeadless } from 'backend/logger'
-import { createLaunchFlights } from 'backend/launchSingleFlight'
+import { createRustLaunchFlights } from 'backend/launchrust/flights'
+import { createFakeLaunchFlightTransport } from 'backend/testUtils/fakeLaunchFlightTransport'
 import type { Clock } from 'backend/process/types'
 import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 import * as backendUtils from 'backend/utils'
@@ -245,7 +246,7 @@ interface Harness {
   openExternal: jest.Mock
   rust: Array<{ channel: string; args: unknown[] }>
   sendFrontendMessage: jest.Mock
-  flights: ReturnType<typeof createLaunchFlights>
+  flights: ReturnType<typeof createRustLaunchFlights>
   /** Hold the running-app read until released, to keep the restart in flight. */
   hold: { release: () => void } | null
   macSteam: {
@@ -276,7 +277,9 @@ function harness(
   const store = new Map<string, unknown>()
   if (options.withRecord !== false) store.set(APP_ID, record())
   const rust: Harness['rust'] = []
-  const flights = createLaunchFlights()
+  // The single flight is Rust's table (88.3-18): the glue over a fake of it, one per harness, as one per boot.
+  const flightTable = createFakeLaunchFlightTransport()
+  const flights = createRustLaunchFlights({ transport: () => flightTable.deps })
   let release: () => void = () => undefined
   const gate = options.holdRestart
     ? new Promise<void>((resolve) => {

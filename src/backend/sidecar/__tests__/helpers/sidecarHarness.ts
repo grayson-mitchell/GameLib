@@ -319,6 +319,32 @@ export function answerPollStatus(input: PassThrough, frames: Frame[]): void {
 }
 const answeredPollStatus = new Set<string>()
 
+/**
+ * The Steam launch dispatch leads its single flight in Rust (88.3-18): `launch_flight_begin` before the launch and
+ * `launch_flight_end` after it, both rustInvokes the host must answer. Answers each one not yet answered, `begin` as the
+ * leader (`{ lead }`) and `end` as held (`true`); a `wait` is never sent, because no test here starts a second launch of
+ * a key. Call after a flush and flush again, twice: the `end` is sent once the `begin` answer has let the launch run.
+ */
+export function answerLaunchFlights(input: PassThrough, frames: Frame[]): void {
+  for (const f of frames) {
+    if (f.kind !== 'rustInvoke') continue
+    if (
+      f.channel !== 'launch_flight_begin' &&
+      f.channel !== 'launch_flight_end'
+    ) {
+      continue
+    }
+    if (answeredLaunchFlights.has(f.id as string)) continue
+    answeredLaunchFlights.add(f.id as string)
+    const result =
+      f.channel === 'launch_flight_begin'
+        ? { lead: `${answeredLaunchFlights.size}`.padStart(32, '0') }
+        : true
+    input.write(`${JSON.stringify({ id: f.id, ok: true, result })}\n`)
+  }
+}
+const answeredLaunchFlights = new Set<string>()
+
 /** Finds the response frame matching a request id. */
 export function findResponse(
   frames: Frame[],

@@ -647,7 +647,6 @@ describe('66.4 end state: long tail at zero, census is a test, path shim gone', 
     'src/backend/dialog/dialog.ts',
     'src/backend/dialog/displayAck.ts',
     'src/backend/gamedetails/overrides.ts',
-    'src/backend/launchSingleFlight.ts',
     'src/backend/macArch/recovery.ts',
     'src/backend/protocol.ts',
     'src/backend/runsForMe/index.ts',
@@ -755,7 +754,8 @@ describe('66.4 end state: long tail at zero, census is a test, path shim gone', 
     // Phase 94 Plan 22 deleted sidecar/shortcutsFlowRegistration.ts with the shortcuts registration (D-27, SC4): 54 -> 53.
     // Both, after the 88/94 merge: 54 - 2 - 1 = 51.
     // Phase 88.1 Plan 18 deleted utils/systeminfo/gpu/pci_ids.ts and utils/systeminfo/index.ts with the TS system-information tree (D-25): 51 -> 49.
-    assertAtOrAboveFloor('66.4 owned list', OWNED_66_4.length, 49)
+    // Phase 88.3 Plan 18 deleted launchSingleFlight.ts with the TS launch single-flight table (D-04, D-18, SC4): 49 -> 48.
+    assertAtOrAboveFloor('66.4 owned list', OWNED_66_4.length, 48)
   })
 
   it.each(OWNED_66_4)('%s is absent from the census', (file) => {

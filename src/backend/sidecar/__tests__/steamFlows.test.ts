@@ -104,7 +104,11 @@ jest.mock('../../launchrust/launcher', () => ({
 }))
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────────────────
-import { bootFresh, writeInvoke } from './helpers/sidecarHarness'
+import {
+  answerLaunchFlights,
+  bootFresh,
+  writeInvoke
+} from './helpers/sidecarHarness'
 import type { SteamGameInfo } from 'common/types/steam'
 import {
   RUST_INFO_RECENT_ADD,
@@ -257,6 +261,11 @@ describe('sidecar Steam flows — runner-aware launch dispatch (gap cycle 6, pla
       { appName: '999002', runner: 'steam' }
     ])
     await flush()
+    // The Steam dispatch leads its flight in Rust: answer the begin, let the launch run, answer the end (88.3-18).
+    answerLaunchFlights(input, frames)
+    await flush()
+    answerLaunchFlights(input, frames)
+    await flush()
 
     expect(launchEventCallbackMock).not.toHaveBeenCalled()
 
@@ -302,6 +311,11 @@ describe('sidecar Steam flows — runner-aware launch dispatch (gap cycle 6, pla
     writeInvoke(input, 'launch-steam-recent-1', 'launch', [
       { appName: '999003', runner: 'steam' }
     ])
+    await flush()
+    // The Steam dispatch leads its flight in Rust: answer the begin, let the launch run, answer the end (88.3-18).
+    answerLaunchFlights(input, frames)
+    await flush()
+    answerLaunchFlights(input, frames)
     await flush()
 
     const response = frames.find(
