@@ -65,7 +65,7 @@
   },
   {
     "id": "add-over-empty-appname-entry",
-    "note": "TS quirk: the filter drops an entry whose appName is empty",
+    "note": "an entry whose appName is empty is kept behind the new head: add drops only the game's own entry (quick 261127-wem, rule: keep); the expected files are hand-derived from that rule and the before-state, not recorded from the TS, because the TS filter dropped the entry and its oracle was deleted in 86-24",
     "ops": [
       {
         "op": "add",
@@ -122,8 +122,8 @@
     ]
   },
   {
-    "id": "remove-drops-empty-appname-entry",
-    "note": "TS quirk: remove also drops an entry whose appName is empty",
+    "id": "remove-keeps-empty-appname-entry",
+    "note": "remove drops only the game, and an entry whose appName is empty and that has no runner stays where it was (quick 261127-wem, rule: keep); the expected files are hand-derived from that rule and the before-state, not recorded from the TS, because the TS filter dropped the entry and its oracle was deleted in 86-24",
     "ops": [
       {
         "op": "remove",

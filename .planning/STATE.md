@@ -79,7 +79,7 @@ See: .planning/PROJECT.md (updated 2026-11-25)
 Phase: 88.3 (Launch funnel, re-adoption and the live gate) — EXECUTING
 Plan: 21 of 22
 Status: Ready to execute
-Last activity: 2026-11-27 — Phase 88.3 execution started
+Last activity: 2026-11-28 — Phase 88.3 plans 01-20 executed (21 release and 22 UAT await the operator); quick task 261127-wem merged in
 Progress: [████████████████░░░░] 204/257 plans ([█████████░] 88%)
 
 ## Native-Install Arc Phase Map (21–25)
@@ -1441,6 +1441,9 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261127-vna | Treat a PCGamingWiki cargoquery error body as no GOG id and fall through to title search | 2026-11-27 | 41f920566 | — | [261127-vna-treat-a-pcgamingwiki-cargoquery-error-bo](./quick/261127-vna-treat-a-pcgamingwiki-cargoquery-error-bo/) |
 | 261127-vy3 | Offline dev tool to import umu-protonfixes as candidate local fixes | 2026-11-27 | 1c80bc9c2 | — | [261127-vy3-offline-dev-tool-to-import-umu-protonfix](./quick/261127-vy3-offline-dev-tool-to-import-umu-protonfix/) |
 | 261127-w77 | Humble expiry digest: the date layout follows the UI language instead of always en-US M/D/YYYY | 2026-11-27 | b784475dc | — | [261127-w77-humble-expiry-digest-date-layout-follows](./quick/261127-w77-humble-expiry-digest-date-layout-follows/) |
+| 261127-v8b | GOG Windows elevation live check closed (2026-11-27, tauri:dev on Windows 11): one UAC prompt for setup (3 steps batched), decline warns with no further prompts, uninstall one prompt and no keep-saves dialog, path with a space works, inner PowerShell hidden; uninstall elevation kept (Inno self-elevates, setup writes HKLM). Fixed: GOG uninstall deleted save folders inside the install folder after unins000.exe /KEEPSAVES; it now deletes around stored gogSaves and cached <?INSTALL?> save folders (new gog/keepSaves.ts, per-entry guarded deletes under the install trust root). Two follow-up todos filed. | 2026-11-27 | fc573a723, 60f03419c, e4e2269d1 | targeted jest 45/45 pass on Windows; codecheck, backend-di-ceilings, boundaries, find-deadcode, planning gates green; live re-check PASSED 2026-11-27 (Balrum filessaves kept, game files removed) | [261127-v8b-gog-elevation-live-check-closeout-and-wi](./quick/261127-v8b-gog-elevation-live-check-closeout-and-wi/) |
+| 261127-wa3 | gamelib-log golden Windows backslash (chunks-wine-header): already fixed by 1c70a61c1 (84-14, G-84-1); todo closed, no code change | 2026-11-27 | — | cargo test -p gamelib-log --test golden 4/4 on Windows; CI windows-latest golden ok in 46052246559 | [261127-wa3-gamelib-log-golden-fails-on-windows-chun](./quick/261127-wa3-gamelib-log-golden-fails-on-windows-chun/) |
+| 261127-wem | Recent games add/remove no longer silently drop entries with an empty/missing/non-string appName or non-object values: `recent::keeps` drops only an object whose appName is the game. Goldens add-over-empty-appname-entry and remove-keeps-empty-appname-entry (renamed) re-derived by hand; concurrent tests updated; new end-to-end survival test. Todo closed. | 2026-11-27 | 48cd1e575, 3f5119a81 | golden_recent 13/13, lib recent:: 3/3, shell info_dispatch::tests:: 54/54 on Windows; clippy -D warnings and rustfmt clean; guard mutation fails the new test | [261127-wem-recent-games-add-remove-keeps-entries-wi](./quick/261127-wem-recent-games-add-remove-keeps-entries-wi/) |
 | 261128-9fj | macOS run.sh escapes apostrophe in launch URL | 2026-11-28 | 5bc0831be | — | [261128-9fj-macos-run-sh-escapes-apostrophe-in-launc](./quick/261128-9fj-macos-run-sh-escapes-apostrophe-in-launc/) |
 
 ## Deferred Items

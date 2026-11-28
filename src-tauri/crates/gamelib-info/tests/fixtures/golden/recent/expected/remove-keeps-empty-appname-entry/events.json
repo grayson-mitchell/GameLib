@@ -4,6 +4,10 @@
     "args": [
       [
         {
+          "appName": "",
+          "title": "ghost entry"
+        },
+        {
           "appName": "app2",
           "title": "Game 2",
           "runner": "gog"

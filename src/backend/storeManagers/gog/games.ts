@@ -1,4 +1,6 @@
 import { parseGogdlProgress } from './resumeProgress'
+import { installSaveLocations, planKeptSaves } from './keepSaves'
+import type { KeptSavesPlan } from './keepSaves'
 import { join } from 'path'
 import {
   getFileSize,
@@ -1130,12 +1132,29 @@ export default class GOGGame implements Game {
   /**
    * Phase 82 (D-10, D-16): the install folder and the support folder are checked together by the
    * Rust guard. Another store's known install inside either folder refuses naming that game.
+   *
+   * 261127-v8b: with a `around` plan (save folders kept inside the install folder) the install
+   * target becomes one target per entry to delete, each under the canonical install folder as its
+   * trust root. The pre-check passes no plan: the whole folder is checked before unins000.exe runs
+   * (Phase 82 D-10).
    */
-  private removalRequest(installPath: string): SafetyRequest {
+  private removalRequest(
+    installPath: string,
+    plan?: KeptSavesPlan
+  ): SafetyRequest {
     const { gogSupportPath } = this.gogPaths
+    const installTargets: SafetyRequest['targets'] =
+      plan?.kind === 'around'
+        ? plan.remove.map((path, index) => ({
+            id: `install-${index}`,
+            path,
+            kind: 'game-install' as const,
+            trustRoot: plan.root
+          }))
+        : [{ id: 'install', path: installPath, kind: 'game-install' }]
     return {
       targets: [
-        { id: 'install', path: installPath, kind: 'game-install' },
+        ...installTargets,
         {
           id: 'support',
           path: join(gogSupportPath, this.id),
@@ -1212,10 +1231,10 @@ export default class GOGGame implements Game {
     const uninstallerPath = join(object.install_path, 'unins000.exe')
 
     const res: ExecResult = { stdout: '', stderr: '' }
+    // Also supplies the stored save folders that uninstall keeps (261127-v8b).
+    // overlay census: install/metadata read (uninstall path translation), stored settings
+    const gameSettings = await this.getSettings()
     if (existsSync(uninstallerPath)) {
-      // overlay census: install/metadata read (uninstall path translation), stored settings
-      const gameSettings = await this.getSettings()
-
       const installDirectory = isWindows
         ? object.install_path
         : await this.deps.commandRunner.getWinePath({
@@ -1257,11 +1276,40 @@ export default class GOGGame implements Game {
         ])
       }
     }
+    // 261127-v8b: unins000.exe /KEEPSAVES keeps saves, and the delete below must not undo that for
+    // a save folder inside the install folder.
+    const plan = planKeptSaves(object.install_path, [
+      ...(gameSettings.gogSaves ?? []),
+      ...installSaveLocations(
+        object.install_path,
+        this.getGameInfo().gog_save_location ?? []
+      )
+    ])
+    if (plan.kind === 'unreadable') {
+      logWarning(
+        [
+          'Could not list a folder on the way to a save folder, so nothing more was deleted from',
+          object.install_path
+        ],
+        LogPrefix.Gog
+      )
+      this.pushRefusal('failed', 'canonicalize-failed')
+      return { stdout: '', stderr: 'canonicalize-failed', failed: true }
+    }
+    if (plan.kind === 'whole-tree' && plan.rootSave) {
+      logWarning(
+        [
+          'A save location is the install folder itself and cannot be kept apart from the game files:',
+          object.install_path
+        ],
+        LogPrefix.Gog
+      )
+    }
     // One guarded delete over both folders. unins000.exe may already have removed files, so a
     // non-removed outcome is reported as failed, never as "nothing was deleted".
     const removed = await guardedRemoveTree(
       this.deps,
-      this.removalRequest(object.install_path)
+      this.removalRequest(object.install_path, plan)
     )
     if (removed.outcome !== 'removed') {
       this.pushRefusal(
@@ -1274,6 +1322,15 @@ export default class GOGGame implements Game {
         stderr: removed.reason ?? 'bad-reply',
         failed: true
       }
+    }
+    if (plan.kind === 'around') {
+      logInfo(
+        [
+          `Kept ${plan.kept.length} save folder(s) inside the install folder:`,
+          plan.kept.join(', ')
+        ],
+        LogPrefix.Gog
+      )
     }
     const manifestPath = join(
       this.gogPaths.gogdlConfigPath,

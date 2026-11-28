@@ -1,10 +1,12 @@
 //! Recent games against the TS goldens (86-04, SC3 and D-18): every case in
 //! `tests/fixtures/golden/recent/cases.json` runs over a copy of its before-state in a FakeHome,
 //! and the bytes of every file it left must equal the TS oracle's `after/` tree, and the sink must
-//! have seen exactly the payloads the TS `recentGamesChanged` push carried. `sixty-entry-list` is the
-//! one case that is not a TS recording: it is hand-derived from the 50-entry cap (quick 261123-bax,
-//! operator ruling 2026-11-23), because the TS original never trimmed and its oracle was deleted in
-//! 86-24; its note in cases.json says so.
+//! have seen exactly the payloads the TS `recentGamesChanged` push carried. Three cases are not TS
+//! recordings and are hand-derived instead: `sixty-entry-list` (the 50-entry cap, quick 261123-bax,
+//! operator ruling 2026-11-23, because the TS original never trimmed), and
+//! `add-over-empty-appname-entry` and `remove-keeps-empty-appname-entry` (the keep rule, quick
+//! 261127-wem: the TS filter dropped an entry with an empty appName). The TS oracle was deleted in
+//! 86-24; their notes in cases.json say so.
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -491,7 +493,8 @@ fn bad_args_are_rejected_with_a_fixed_literal_and_write_nothing() {
 #[test]
 fn a_concurrent_add_and_remove_both_take_effect() {
     let before = fixtures().join("state/recent/add-over-empty-appname-entry");
-    // [ghost (empty appName), app2]: a remove of app2 and an add of app1 must give [app1].
+    // [ghost (empty appName), app2]: a remove of app2 and an add of app1 must give [app1, ghost],
+    // whichever runs first.
     for round in 0..100 {
         let p = Arc::new(profile(Some(&before)));
         let barrier = Arc::new(std::sync::Barrier::new(2));
@@ -526,10 +529,69 @@ fn a_concurrent_add_and_remove_both_take_effect() {
             .iter()
             .map(|e| e["appName"].as_str().unwrap())
             .collect();
-        assert_eq!(names, ["app1"], "round {round}: an effect was lost");
+        assert_eq!(names, ["app1", ""], "round {round}: an effect was lost");
         // The file agrees with the list, and every change was announced.
         assert_eq!(p.sink.0.lock().unwrap().len(), 2, "round {round}");
     }
+}
+
+/// Quick 261127-wem (rule: keep): "a stored entry that is not the game being added or removed
+/// survives an add and a remove". Every shape the todo names (an empty, `null`, `false`, `0` or
+/// missing `appName`, a truthy non-string, a bare string, an array) goes through one add and two
+/// removes, and must come out the same on disk, in the list and in the sink payloads.
+#[test]
+fn every_entry_that_is_not_the_game_survives_add_and_remove() {
+    let p = profile(None);
+    let stored = vec![
+        json!({ "appName": "" }),
+        json!({ "appName": null }),
+        json!({ "appName": false }),
+        json!({ "appName": 0 }),
+        json!({ "title": "no name" }),
+        json!("just a string"),
+        json!({ "appName": 7 }),
+        json!(["a"]),
+        json!({ "appName": "keep" }),
+        json!({ "appName": "gone" }),
+    ];
+    let store_dir = p.user_data.join("store");
+    std::fs::create_dir_all(&store_dir).unwrap();
+    std::fs::write(
+        store_dir.join("config.json"),
+        serde_json::to_vec(&json!({ "games": { "recent": stored } })).unwrap(),
+    )
+    .unwrap();
+
+    let new = json!({ "appName": "new", "title": "New", "runner": "gog" });
+    dispatch_sync("info_recent_add", std::slice::from_ref(&new), &p.ctx).unwrap();
+    // `{"appName":7}` is not the string "7", so nothing leaves on the second remove.
+    for name in ["gone", "7"] {
+        dispatch_sync("info_recent_remove", &[json!({ "appName": name })], &p.ctx).unwrap();
+    }
+
+    let want = json!([
+        new,
+        { "appName": "" },
+        { "appName": null },
+        { "appName": false },
+        { "appName": 0 },
+        { "title": "no name" },
+        "just a string",
+        { "appName": 7 },
+        ["a"],
+        { "appName": "keep" }
+    ]);
+    assert_eq!(recent::list(&p.ctx).unwrap().to_value(), want, "list");
+    assert_eq!(
+        read_json(&p.user_data.join("store/config.json"))["games"]["recent"],
+        want,
+        "disk"
+    );
+    let seen = p.sink.0.lock().unwrap().clone();
+    assert_eq!(seen.len(), 3, "the sink is told after every op");
+    assert_eq!(seen[0].as_array().unwrap().len(), 11, "after the add");
+    assert_eq!(seen[0][0], new);
+    assert_eq!(seen[2], want, "last payload");
 }
 
 #[test]

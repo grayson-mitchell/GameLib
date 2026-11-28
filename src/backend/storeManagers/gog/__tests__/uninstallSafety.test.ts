@@ -4,9 +4,9 @@
  * runs, and deletes both through one guarded call. Real tmp folders, an injected safety
  * transport (fakeSafetyRustInvoke), no module mocked.
  */
-import { existsSync, mkdirSync, rmSync, writeFileSync } from 'fs'
+import { existsSync, mkdirSync, realpathSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
-import { join } from 'path'
+import { join, sep } from 'path'
 import { initHeadless } from 'backend/logger'
 import GOGGame from '../games'
 import { elevatedStartProcessArgs, gogUninstallStep } from '../windowsElevation'
@@ -15,6 +15,8 @@ import { createTestAppPaths } from 'backend/testUtils/testAppPaths'
 import { fakeSafetyRustInvoke } from 'backend/testUtils/fakeSafetyRust'
 import type { RequestRustInvoke } from 'backend/host'
 import type { GOGManagerDeps } from '../library'
+import type { GOGCloudSavesLocation } from 'common/types/gog'
+import { RUST_SAFETY_REMOVE_TREE } from 'common/types/sidecarTransport'
 
 // Phase 94 Plan 22: an uninstall also asks Rust to remove the game's desktop and Steam shortcuts (`shortcuts_remove` and
 // `shortcuts_steam_remove`, resolvers in `humbleshortcuts/shortcuts.ts`); the safety fake answers every other channel
@@ -43,14 +45,25 @@ interface Harness {
 
 function build(
   requestRustInvoke: RequestRustInvoke,
-  other?: { runner: 'legendary'; appName: string; installPath: string }
+  other?: { runner: 'legendary'; appName: string; installPath: string },
+  saves?: {
+    gogSaves?: GOGCloudSavesLocation[]
+    gogSaveLocation?: GOGCloudSavesLocation[]
+  }
 ): Harness {
   const installedList = [{ appName: ID, install_path: installDir }]
   const installedSet: unknown[] = []
   const sent: [string, unknown][] = []
   const unins = { wine: 0, spawn: 0, winePath: 0 }
   const spawnCalls: Harness['spawnCalls'] = []
-  const info = { app_name: ID, title: 'Some Game', is_installed: true }
+  const info = {
+    app_name: ID,
+    title: 'Some Game',
+    is_installed: true,
+    ...(saves?.gogSaveLocation
+      ? { gog_save_location: saves.gogSaveLocation }
+      : {})
+  }
   const libraryManagers = {
     gog: {
       getGameInfo: () => info,
@@ -102,8 +115,15 @@ function build(
     },
     gameConfigs: {
       get: () => ({
-        config: { winePrefix: join(root, 'pfx') },
-        getSettings: () => Promise.resolve({ winePrefix: join(root, 'pfx') })
+        config: {
+          winePrefix: join(root, 'pfx'),
+          ...(saves?.gogSaves ? { gogSaves: saves.gogSaves } : {})
+        },
+        getSettings: () =>
+          Promise.resolve({
+            winePrefix: join(root, 'pfx'),
+            ...(saves?.gogSaves ? { gogSaves: saves.gogSaves } : {})
+          })
       })
     },
     commandRunner: {
@@ -343,6 +363,143 @@ describe('GOGGame.uninstall guard (82-07)', () => {
       kind: 'uninstall',
       outcome: 'failed',
       reason: 'rust-invoke-failed'
+    })
+  })
+})
+
+describe('GOGGame.uninstall keeps save folders inside the install folder (261127-v8b)', () => {
+  const savesDir = join(installDir, 'files', 'saves')
+  const slot = join(savesDir, 'slot1.sav')
+  const pak = join(installDir, 'files', 'data.pak')
+  const wholeTreePair = () => [
+    { id: 'install', path: installDir, kind: 'game-install' },
+    {
+      id: 'support',
+      path: supportDir,
+      kind: 'game-support',
+      trustRoot: gogSupportPath
+    }
+  ]
+  const removeCall = (calls: { channel: string; args: unknown[] }[]) => {
+    const removes = calls.filter((c) => c.channel === RUST_SAFETY_REMOVE_TREE)
+    return removes[removes.length - 1]?.args[0] as {
+      targets: { id: string; path: string; kind: string; trustRoot?: string }[]
+    }
+  }
+  const foldPath = (p: string) =>
+    process.platform === 'win32' || process.platform === 'darwin'
+      ? p.normalize('NFC').toLowerCase()
+      : p
+  const makeSave = () => {
+    mkdirSync(savesDir, { recursive: true })
+    writeFileSync(slot, 'save')
+    writeFileSync(pak, 'pak')
+  }
+
+  it('keeps a stored save folder and deletes everything else, each target under the install trust root', async () => {
+    makeSave()
+    const { requestRustInvoke, calls } = fakeSafetyRustInvoke({
+      base: shortcutsReply
+    })
+    const h = build(requestRustInvoke, undefined, {
+      gogSaves: [{ name: 'saves', location: savesDir }]
+    })
+
+    const res = await h.game.uninstall({ shouldRemovePrefix: false })
+
+    expect(res).toEqual({ stdout: '', stderr: '' })
+    expect(existsSync(slot)).toBe(true)
+    expect(existsSync(join(installDir, 'game.exe'))).toBe(false)
+    expect(existsSync(join(installDir, 'unins000.exe'))).toBe(false)
+    expect(existsSync(pak)).toBe(false)
+    expect(existsSync(supportDir)).toBe(false)
+    expect(existsSync(manifest)).toBe(false)
+    expect(h.installedSet).toEqual([[]])
+    expect(notices(h)).toEqual([])
+
+    const req = removeCall(calls)
+    const canonicalInstall = realpathSync.native(installDir)
+    const canonicalSaves = foldPath(realpathSync.native(savesDir))
+    const installTargets = req.targets.filter((t) => t.id !== 'support')
+    expect(installTargets.length).toBeGreaterThan(0)
+    for (const target of installTargets) {
+      expect(target.kind).toBe('game-install')
+      expect(target.trustRoot).toBe(canonicalInstall)
+      const folded = foldPath(target.path)
+      expect(folded === canonicalSaves).toBe(false)
+      expect(canonicalSaves.startsWith(folded + sep)).toBe(false)
+    }
+    expect(req.targets[req.targets.length - 1]).toEqual(wholeTreePair()[1])
+  })
+
+  it('keeps a template-declared <?INSTALL?> save folder when no save location is stored', async () => {
+    makeSave()
+    const { requestRustInvoke } = fakeSafetyRustInvoke({ base: shortcutsReply })
+    const h = build(requestRustInvoke, undefined, {
+      gogSaveLocation: [{ name: 'saves', location: '<?INSTALL?>/files/saves' }]
+    })
+
+    const res = await h.game.uninstall({ shouldRemovePrefix: false })
+
+    expect(res).toEqual({ stdout: '', stderr: '' })
+    expect(existsSync(slot)).toBe(true)
+    expect(existsSync(pak)).toBe(false)
+    expect(existsSync(join(installDir, 'game.exe'))).toBe(false)
+    expect(h.installedSet).toEqual([[]])
+  })
+
+  it('a save folder outside the install folder leaves the whole-tree request unchanged', async () => {
+    const elsewhere = join(root, 'elsewhere', 'saves')
+    mkdirSync(elsewhere, { recursive: true })
+    writeFileSync(join(elsewhere, 'a.sav'), 'x')
+    const { requestRustInvoke, calls } = fakeSafetyRustInvoke({
+      base: shortcutsReply
+    })
+    const h = build(requestRustInvoke, undefined, {
+      gogSaves: [{ name: 'saves', location: elsewhere }]
+    })
+
+    const res = await h.game.uninstall({ shouldRemovePrefix: false })
+
+    expect(res).toEqual({ stdout: '', stderr: '' })
+    expect(removeCall(calls).targets).toEqual(wholeTreePair())
+    expect(existsSync(installDir)).toBe(false)
+    expect(existsSync(join(elsewhere, 'a.sav'))).toBe(true)
+  })
+
+  it('a stored save path inside the install folder that does not exist leaves the whole-tree request unchanged', async () => {
+    const { requestRustInvoke, calls } = fakeSafetyRustInvoke({
+      base: shortcutsReply
+    })
+    const h = build(requestRustInvoke, undefined, {
+      gogSaves: [{ name: 'saves', location: join(installDir, 'nope', 'saves') }]
+    })
+
+    const res = await h.game.uninstall({ shouldRemovePrefix: false })
+
+    expect(res).toEqual({ stdout: '', stderr: '' })
+    expect(removeCall(calls).targets).toEqual(wholeTreePair())
+    expect(existsSync(installDir)).toBe(false)
+  })
+
+  it('a delete that rejects with a kept save reports failed and keeps the installed store', async () => {
+    makeSave()
+    const { requestRustInvoke } = fakeSafetyRustInvoke({ rejectRemove: true })
+    const h = build(requestRustInvoke, undefined, {
+      gogSaves: [{ name: 'saves', location: savesDir }]
+    })
+
+    const res = await h.game.uninstall({ shouldRemovePrefix: false })
+
+    expect(res).toEqual({
+      stdout: '',
+      stderr: 'rust-invoke-failed',
+      failed: true
+    })
+    expect(h.installedSet).toEqual([])
+    expect(notices(h)[0]?.[1]).toMatchObject({
+      kind: 'uninstall',
+      outcome: 'failed'
     })
   })
 })

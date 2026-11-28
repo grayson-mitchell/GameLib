@@ -16,6 +16,11 @@
 				"runner": "gog"
 			},
 			{
+				"appName": "",
+				"title": "ghost entry",
+				"runner": "gog"
+			},
+			{
 				"appName": "app2",
 				"title": "Game 2",
 				"runner": "gog"
