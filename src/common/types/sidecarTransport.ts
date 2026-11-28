@@ -1603,15 +1603,6 @@ export const RUST_LAUNCH_WINE_COMMAND = 'launch_wine_command' as const
  */
 export const RUST_LAUNCH_WINE_PATH = 'launch_wine_path' as const
 /**
- * Phase 88.2 (SVC-03, 88.2-17, D-02, D-19): `runScriptForGame`, a game's before or after launch script. `launch_script_run` takes
- * `[args]` (`{ scriptPath, stage, appName, executable?, prefix?, runner, title, installPath?, settingsJson, infoJson,
- * verbose?, logTarget? }`: `settingsJson` and `infoJson` are `JSON.stringify(gameSettings)` and `JSON.stringify(gameInfo)`,
- * handed to the script verbatim; the shell appends the process environment) and answers `true` once the script has exited,
- * whatever its code. A script that could not be started is an error carrying the OS's text, which the dispatch error passes
- * through. A script runs as long as the user wrote it to, so the channel is unbounded.
- */
-export const RUST_LAUNCH_SCRIPT_RUN = 'launch_script_run' as const
-/**
  * Phase 88.2 (SVC-03, 88.2-17, D-02, D-19): `spawnAsync`, one program run to its end. `launch_spawn_async` takes `[args]` only
  * (`{ streamId?, command, args?, cwd?, env?, timeoutMs?, windowsHide?, observe? }`: `env` is the whole environment when the
  * caller passes one, `timeoutMs` is `null` for a timeout the TS held as `NaN` or `Infinity`, which JSON cannot carry) and
@@ -2148,7 +2139,6 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_LAUNCH_RUNNER_ABORT,
   RUST_LAUNCH_WINE_COMMAND,
   RUST_LAUNCH_WINE_PATH,
-  RUST_LAUNCH_SCRIPT_RUN,
   RUST_LAUNCH_SPAWN_ASYNC,
   RUST_LAUNCH_TRACKED_KILL,
   RUST_LAUNCH_TRACKED_KILL_ALL,

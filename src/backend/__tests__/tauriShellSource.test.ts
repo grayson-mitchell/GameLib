@@ -532,7 +532,8 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     // Phase 88.3 plan 11: 219 -> 222, launch_flight_begin, launch_flight_wait and launch_flight_end.
     // Phase 88.3 plan 12: 222 -> 223, launch_readopted_announce.
     // Phase 88.3 plan 13: 223 -> 224, launch_window_raise.
-    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(224)
+    // Phase 88.3 plan 19: 224 -> 223, launch_script_run, which no TS caller reaches any more (the Rust funnel runs the launch scripts).
+    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(223)
     expect(router).not.toContain('_ =>')
   })
 
@@ -1115,12 +1116,11 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       // the false answer for an id no run holds and a real `/bin/sh` run ended by its stream id and by its abort id.
       'launch_runner_kill',
       'launch_runner_abort',
-      // Phase 88.2 plan 17: the wine command, the winepath translation and a game's launch script (`wineCommandRun`, `winePathGet` and `scriptRun` in `launchrust/runner.ts`). PROVEN:
-      // `launch_dispatch::tests` drives each arm's decode, not-ready and the fixed bad-args, a wine that is not installed refused without a spawn, and a real script run over the shell's host
-      // that answers `true` whatever its code and an error that carries the OS's text; `gamelib-launch`'s `golden_wine_launch.rs`, `golden_wine_path.rs` and `script_real.rs` drive the crate.
+      // Phase 88.2 plan 17: the wine command and the winepath translation (`wineCommandRun` and `winePathGet` in `launchrust/runner.ts`). PROVEN:
+      // `launch_dispatch::tests` drives each arm's decode, not-ready and the fixed bad-args, and a wine that is not installed refused without a spawn; `gamelib-launch`'s
+      // `golden_wine_launch.rs` and `golden_wine_path.rs` drive the crate. (`launch_script_run`, a game's launch script, was retired in 88.3-19: the Rust funnel runs it in process.)
       'launch_wine_command',
       'launch_wine_path',
-      'launch_script_run',
       // Phase 88.2 plan 17: `spawnAsync`, the tracked kill, the kill of every tracked run and the running-game query (`spawnAsyncRun`, `trackedKill`, `trackedKillAll` and `gamesRunning` in
       // `launchrust/runner.ts`). PROVEN: `launch_dispatch::tests` drives each arm's decode, not-ready and the fixed bad-args, a real `/bin/sh` spawnAsync that answers its result and the OS's text
       // for a program that cannot start, a tracked kill that ends a real run by its key and a kill-all that ends the rest; `gamelib-launch`'s `golden_spawn_async.rs` drives the crate.

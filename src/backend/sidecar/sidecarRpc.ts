@@ -84,7 +84,6 @@ import {
   RUST_LAUNCH_RUNNER_CALL,
   RUST_LAUNCH_WINE_COMMAND,
   RUST_LAUNCH_WINE_PATH,
-  RUST_LAUNCH_SCRIPT_RUN,
   RUST_LAUNCH_SPAWN_ASYNC,
   RUST_LAUNCH_ASK_FORCE_UNINSTALL,
   RUST_LAUNCH_RUN,
@@ -261,9 +260,9 @@ const RUST_INVOKE_TIMEOUT_MS = 60_000
  *
  * Twenty-fourth (Phase 88.2, 88.2-17): `launch_wine_command` runs one wine command for as long as the game or installer it hosts
  * takes (the TS `runWineCommand` it replaces had no timeout either), `launch_wine_path` runs `winepath` through that same
- * command core and `launch_script_run` runs a game's before or after launch script for as long as the user wrote it to. Rust
- * bounds each by the tracked kill and the app shutdown (the registrant and the shutdown token), so no entry can outlive the
- * sidecar.
+ * command core (88.3-19 retired `launch_script_run`, which ran a game's before or after launch script: the Rust funnel runs
+ * those in process and nothing in the sidecar called it). Rust bounds each by the tracked kill and the app shutdown (the
+ * registrant and the shutdown token), so no entry can outlive the sidecar.
  *
  * Twenty-fifth (Phase 88.2, 88.2-17): `launch_spawn_async` runs one program to its end (an installer, an archive move) for as
  * long as it takes, as the TS `spawnAsync` it replaces did; the stream-id kill, the caller's timeout when it passes one and the
@@ -335,7 +334,6 @@ const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_LAUNCH_RUNNER_CALL,
   RUST_LAUNCH_WINE_COMMAND,
   RUST_LAUNCH_WINE_PATH,
-  RUST_LAUNCH_SCRIPT_RUN,
   RUST_LAUNCH_SPAWN_ASYNC,
   RUST_LAUNCH_ASK_FORCE_UNINSTALL,
   RUST_LAUNCH_RUN,

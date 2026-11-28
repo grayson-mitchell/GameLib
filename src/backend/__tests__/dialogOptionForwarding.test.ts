@@ -282,11 +282,10 @@ describe('sidecarRpc UNBOUNDED_RUST_CHANNELS covers every human-gated dialog cha
     // (the TS callRunner it replaces had no timeout); ended by its abort id, launch_runner_kill or the shutdown. Not a dialog channel.
     'RUST_LAUNCH_RUNNER_CALL',
     // Phase 88.2 plan 17: launch_wine_command runs one wine command for as long as the game or installer it hosts takes, launch_wine_path
-    // runs winepath through the same core and launch_script_run runs a game's launch script for as long as the user wrote it to (the TS
-    // each replaces had no timeout); ended by the tracked kill or the shutdown. Not dialog channels.
+    // runs winepath through the same core (the TS each replaces had no timeout); ended by the tracked kill or the shutdown. Not dialog
+    // channels. (launch_script_run, a game's launch script, was retired in 88.3-19: the Rust funnel runs the scripts in process.)
     'RUST_LAUNCH_WINE_COMMAND',
     'RUST_LAUNCH_WINE_PATH',
-    'RUST_LAUNCH_SCRIPT_RUN',
     // Phase 88.2 plan 17: launch_spawn_async runs one program (an installer, an archive move) to its end, as long as it takes (the TS
     // spawnAsync it replaces had no timeout unless the caller passed one); ended by the stream-id kill or the shutdown. The three registry
     // channels (launch_tracked_kill, launch_tracked_kill_all, launch_games_running) are bounded and are not listed.

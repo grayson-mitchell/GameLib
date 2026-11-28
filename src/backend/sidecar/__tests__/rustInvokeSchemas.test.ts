@@ -93,7 +93,8 @@ describe('rustInvokeArgs', () => {
     // Phase 88.3 plan 11: 219 -> 222, launch_flight_begin, launch_flight_wait and launch_flight_end.
     // Phase 88.3 plan 12: 222 -> 223, launch_readopted_announce.
     // Phase 88.3 plan 13: 223 -> 224, launch_window_raise.
-    expect(RUST_INVOKE_CHANNELS).toHaveLength(224)
+    // Phase 88.3 plan 19: 224 -> 223, launch_script_run, which no TS caller reaches any more (the Rust funnel runs the launch scripts).
+    expect(RUST_INVOKE_CHANNELS).toHaveLength(223)
   })
 
   it('parses the store-embed wire fixtures', () => {

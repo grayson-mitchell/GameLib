@@ -1265,31 +1265,6 @@ pub(crate) fn rpc_launch_wine_path(args: &[Value]) -> Result<Value, String> {
     wine_path_over(launch_ctx(), args, wine_dispatch::wine_run_host)
 }
 
-/// The body of the `launch_script_run` arm over a given context and host: the generated decode (one object) and an arity
-/// check first, then the crate over `[call, host]`, which decodes the object strictly again. `host` is the shell's own
-/// facts ([`runner_host`]), taken only once the context is there. A script that could not be started is the crate's `Err`
-/// text, which passes through as the dispatch error.
-fn script_run_over(
-    ctx: Option<&Arc<LaunchCtx>>,
-    args: &[Value],
-    host: impl FnOnce() -> Value,
-) -> Result<Value, String> {
-    LaunchScriptRunArgs::from_args(args)?;
-    if args.len() != 1 {
-        return Err("launch_script_run:bad-args".to_string());
-    }
-    let ctx = ctx.ok_or_else(|| "launch_script_run:not-ready".to_string())?;
-    rpc_launch_op(Some(ctx), "launch_script_run", &[args[0].clone(), host()])
-}
-
-/// The `launch_script_run` `rustInvoke` arm (88.2-17, D-02, D-19): `runScriptForGame`, a game's before or after launch
-/// script, run as a Helper and answered `true` once it has exited (whatever its code). The shell appends [`runner_host`]:
-/// the environment the script inherits, laid over the `HEROIC_GAME_*` block. A script runs as long as the user wrote it
-/// to, so the sidecar lists the channel as unbounded; the crate's `guarded` registrant and the shutdown token end it.
-pub(crate) fn rpc_launch_script_run(args: &[Value]) -> Result<Value, String> {
-    script_run_over(launch_ctx(), args, runner_host)
-}
-
 /// The body of the `launch_spawn_async` arm over a given context: the generated decode (`[args]` only, one object) and an
 /// arity check first, so a bad call is rejected the same fixed `<op>:bad-args` literal before and after the install and
 /// never echoes the sidecar's value, then the crate, which decodes the object strictly again and bounds the stream id. The
@@ -2350,20 +2325,8 @@ mod tests {
         })
     }
 
-    fn script_run_args(script: &str) -> Value {
-        json!({
-            "scriptPath": script,
-            "stage": "before",
-            "appName": "app-1",
-            "runner": "gog",
-            "title": "Title",
-            "settingsJson": "{\"a\":1}",
-            "infoJson": "{\"b\":2}"
-        })
-    }
-
     #[test]
-    fn the_wine_command_path_and_script_arms_are_not_ready_before_the_install_and_reject_a_wrong_call_the_same_way_after(
+    fn the_wine_command_and_path_arms_are_not_ready_before_the_install_and_reject_a_wrong_call_the_same_way_after(
     ) {
         let home = FakeHome::new("launch-shell-");
         let ctx = ctx_over(&home);
@@ -2380,10 +2343,6 @@ mod tests {
                 host
             ),
             Err("launch_wine_path:not-ready".to_string())
-        );
-        assert_eq!(
-            script_run_over(None, &[script_run_args("/bin/true")], host),
-            Err("launch_script_run:not-ready".to_string())
         );
 
         let mut command_settings_text = wine_command_args(&prefix);
@@ -2419,31 +2378,11 @@ mod tests {
                 assert!(!err.contains(secret), "{args:?}");
             }
         }
-        let mut script_stage = script_run_args("/bin/true");
-        script_stage["stage"] = json!(secret);
-        let wrong_script: Vec<Vec<Value>> = vec![
-            vec![],
-            vec![json!(secret)],
-            vec![json!({"scriptPath": secret})],
-            vec![script_run_args("/bin/true"), json!(secret)],
-            vec![script_stage],
-        ];
-        for args in &wrong_script {
-            for ctx in [None, Some(&ctx)] {
-                let err = script_run_over(ctx, args, host).unwrap_err();
-                assert_eq!(err, "launch_script_run:bad-args", "{args:?}");
-                assert!(!err.contains(secret), "{args:?}");
-            }
-        }
         // An unknown key passes the generated decode and is the crate's to refuse, which needs the context: the same literal.
         let mut extra = wine_command_args(&prefix);
         extra["extra"] = json!(secret);
         let err = wine_command_over(Some(&ctx), &[extra], host).unwrap_err();
         assert_eq!(err, "launch_wine_command:bad-args");
-        let mut extra = script_run_args("/bin/true");
-        extra["extra"] = json!(secret);
-        let err = script_run_over(Some(&ctx), &[extra], host).unwrap_err();
-        assert_eq!(err, "launch_script_run:bad-args");
         assert!(!err.contains(secret));
     }
 
@@ -2479,56 +2418,6 @@ mod tests {
         assert_eq!(got, json!(""));
     }
 
-    #[cfg(unix)]
-    #[test]
-    fn the_script_arm_runs_the_script_over_the_shells_host_and_answers_true_whatever_its_code() {
-        use std::os::unix::fs::PermissionsExt;
-        let home = FakeHome::new("launch-shell-");
-        let ctx = ctx_over(&home);
-        let dir = home.root().join("scripts");
-        std::fs::create_dir_all(&dir).unwrap();
-        let out = dir.join("out.txt");
-        let script = dir.join("before.sh");
-        std::fs::write(
-            &script,
-            format!(
-                "#!/bin/sh\nprintf '%s|%s|%s' \"$HOST_ONLY\" \"$HEROIC_GAME_SETTINGS\" \"$HEROIC_GAME_INFO\" > '{}'\nexit 7\n",
-                out.display()
-            ),
-        )
-        .unwrap();
-        std::fs::set_permissions(&script, std::fs::Permissions::from_mode(0o755)).unwrap();
-        let got = script_run_over(
-            Some(&ctx),
-            &[script_run_args(&script.to_string_lossy())],
-            || json!({"env": {"HOST_ONLY": "h", "PATH": "/usr/bin:/bin"}, "path": "/usr/bin:/bin"}),
-        )
-        .unwrap();
-        assert_eq!(got, json!(true));
-        // The settings and info text arrive exactly as the sidecar stringified them.
-        assert_eq!(
-            std::fs::read_to_string(&out).unwrap(),
-            "h|{\"a\":1}|{\"b\":2}"
-        );
-    }
-
-    #[test]
-    fn a_script_that_cannot_start_is_the_dispatch_error_with_the_crates_text() {
-        let home = FakeHome::new("launch-shell-");
-        let ctx = ctx_over(&home);
-        let missing = home.root().join("no-such-script");
-        let err = script_run_over(
-            Some(&ctx),
-            &[script_run_args(&missing.to_string_lossy())],
-            host,
-        )
-        .unwrap_err();
-        assert!(!err.is_empty());
-        assert!(
-            !err.ends_with(":bad-args") && !err.ends_with(":not-ready"),
-            "{err}"
-        );
-    }
     /// A spawnAsync call as the sidecar sends it: `/bin/sh -c <script>` with a `PATH` and nothing else in its environment.
     fn spawn_async_args(script: &str) -> Value {
         json!({

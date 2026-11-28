@@ -229,7 +229,6 @@ pub(crate) enum RustInvokeChannel {
     LaunchRunnerAbort,
     LaunchWineCommand,
     LaunchWinePath,
-    LaunchScriptRun,
     LaunchSpawnAsync,
     LaunchTrackedKill,
     LaunchTrackedKillAll,
@@ -457,7 +456,6 @@ impl RustInvokeChannel {
         RustInvokeChannel::LaunchRunnerAbort,
         RustInvokeChannel::LaunchWineCommand,
         RustInvokeChannel::LaunchWinePath,
-        RustInvokeChannel::LaunchScriptRun,
         RustInvokeChannel::LaunchSpawnAsync,
         RustInvokeChannel::LaunchTrackedKill,
         RustInvokeChannel::LaunchTrackedKillAll,
@@ -685,7 +683,6 @@ impl RustInvokeChannel {
             "launch_runner_abort" => Some(RustInvokeChannel::LaunchRunnerAbort),
             "launch_wine_command" => Some(RustInvokeChannel::LaunchWineCommand),
             "launch_wine_path" => Some(RustInvokeChannel::LaunchWinePath),
-            "launch_script_run" => Some(RustInvokeChannel::LaunchScriptRun),
             "launch_spawn_async" => Some(RustInvokeChannel::LaunchSpawnAsync),
             "launch_tracked_kill" => Some(RustInvokeChannel::LaunchTrackedKill),
             "launch_tracked_kill_all" => Some(RustInvokeChannel::LaunchTrackedKillAll),
@@ -915,7 +912,6 @@ impl RustInvokeChannel {
             RustInvokeChannel::LaunchRunnerAbort => "launch_runner_abort",
             RustInvokeChannel::LaunchWineCommand => "launch_wine_command",
             RustInvokeChannel::LaunchWinePath => "launch_wine_path",
-            RustInvokeChannel::LaunchScriptRun => "launch_script_run",
             RustInvokeChannel::LaunchSpawnAsync => "launch_spawn_async",
             RustInvokeChannel::LaunchTrackedKill => "launch_tracked_kill",
             RustInvokeChannel::LaunchTrackedKillAll => "launch_tracked_kill_all",
@@ -4823,98 +4819,6 @@ impl LaunchWinePathArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let first = args.first().ok_or_else(|| "launch_wine_path:bad-args".to_string())?;
         serde_json::from_value(first.clone()).map_err(|_| "launch_wine_path:bad-args".to_string())
-    }
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub(crate) struct LaunchScriptRunArgs {
-    #[serde(rename = "scriptPath")]
-    pub(crate) script_path: String,
-    pub(crate) stage: LaunchScriptRunArgsStage,
-    #[serde(rename = "appName")]
-    pub(crate) app_name: String,
-    #[serde(default)]
-    pub(crate) executable: Option<String>,
-    #[serde(default)]
-    pub(crate) prefix: Option<String>,
-    pub(crate) runner: String,
-    pub(crate) title: String,
-    #[serde(rename = "installPath")]
-    #[serde(default)]
-    pub(crate) install_path: Option<String>,
-    #[serde(rename = "settingsJson")]
-    pub(crate) settings_json: String,
-    #[serde(rename = "infoJson")]
-    pub(crate) info_json: String,
-    #[serde(default)]
-    pub(crate) verbose: Option<bool>,
-    #[serde(rename = "logTarget")]
-    #[serde(default)]
-    pub(crate) log_target: Option<LaunchScriptRunArgsLogTarget>,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
-pub(crate) enum LaunchScriptRunArgsStage {
-    #[serde(rename = "before")]
-    Before,
-    #[serde(rename = "after")]
-    After,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
-pub(crate) enum LaunchScriptRunArgsLogTargetTargetKind {
-    #[serde(rename = "general")]
-    General,
-    #[serde(rename = "gogRedist")]
-    GogRedist,
-    #[serde(rename = "runner")]
-    Runner,
-    #[serde(rename = "game")]
-    Game,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
-pub(crate) enum LaunchScriptRunArgsLogTargetTargetType {
-    #[serde(rename = "launch")]
-    Launch,
-    #[serde(rename = "install")]
-    Install,
-    #[serde(rename = "import")]
-    Import,
-    #[serde(rename = "repair")]
-    Repair,
-    #[serde(rename = "update")]
-    Update,
-    #[serde(rename = "setup")]
-    Setup,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub(crate) struct LaunchScriptRunArgsLogTargetTarget {
-    pub(crate) kind: LaunchScriptRunArgsLogTargetTargetKind,
-    #[serde(rename = "appName")]
-    #[serde(default)]
-    pub(crate) app_name: Option<String>,
-    #[serde(default)]
-    pub(crate) runner: Option<String>,
-    #[serde(rename = "type")]
-    #[serde(default)]
-    pub(crate) type_: Option<LaunchScriptRunArgsLogTargetTargetType>,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub(crate) struct LaunchScriptRunArgsLogTarget {
-    pub(crate) target: LaunchScriptRunArgsLogTargetTarget,
-    #[serde(default)]
-    pub(crate) disabled: Option<bool>,
-    #[serde(default)]
-    pub(crate) rotate: Option<bool>,
-}
-
-impl LaunchScriptRunArgs {
-    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
-        let first = args.first().ok_or_else(|| "launch_script_run:bad-args".to_string())?;
-        serde_json::from_value(first.clone()).map_err(|_| "launch_script_run:bad-args".to_string())
     }
 }
 

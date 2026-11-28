@@ -168,7 +168,6 @@ import {
   RUST_LAUNCH_RUNNER_ABORT,
   RUST_LAUNCH_WINE_COMMAND,
   RUST_LAUNCH_WINE_PATH,
-  RUST_LAUNCH_SCRIPT_RUN,
   RUST_LAUNCH_SPAWN_ASYNC,
   RUST_LAUNCH_TRACKED_KILL,
   RUST_LAUNCH_TRACKED_KILL_ALL,
@@ -1430,27 +1429,6 @@ export const rustInvokeArgs = {
         path: z.string(),
         gameSettings: knownFixGameSettings,
         variant: z.enum(['win', 'unix']).optional()
-      })
-      .strict()
-  ]),
-  // Phase 88.2 (SVC-03, 88.2-17, D-02, D-19): a game's before or after launch script. One strict object; `settingsJson` and
-  // `infoJson` are the TS's own `JSON.stringify` text, handed to the script verbatim. The shell appends the process
-  // environment, which is laid over the `HEROIC_GAME_*` block. `logTarget` is the game's log writer, read when `verbose` is on.
-  [RUST_LAUNCH_SCRIPT_RUN]: z.tuple([
-    z
-      .object({
-        scriptPath: z.string(),
-        stage: z.enum(['before', 'after']),
-        appName: z.string(),
-        executable: z.string().optional(),
-        prefix: z.string().optional(),
-        runner: z.string(),
-        title: z.string(),
-        installPath: z.string().optional(),
-        settingsJson: z.string(),
-        infoJson: z.string(),
-        verbose: z.boolean().optional(),
-        logTarget: runnerLogHandOff.optional()
       })
       .strict()
   ]),

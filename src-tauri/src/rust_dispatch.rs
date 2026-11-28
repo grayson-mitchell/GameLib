@@ -351,7 +351,6 @@ pub(crate) fn dispatch_rust_channel(
         RustInvokeChannel::LaunchRunnerAbort => launch_dispatch::rpc_launch_runner_abort(args),
         RustInvokeChannel::LaunchWineCommand => launch_dispatch::rpc_launch_wine_command(args),
         RustInvokeChannel::LaunchWinePath => launch_dispatch::rpc_launch_wine_path(args),
-        RustInvokeChannel::LaunchScriptRun => launch_dispatch::rpc_launch_script_run(args),
         RustInvokeChannel::LaunchSpawnAsync => launch_dispatch::rpc_launch_spawn_async(args),
         RustInvokeChannel::LaunchTrackedKill => launch_dispatch::rpc_launch_tracked_kill(args),
         RustInvokeChannel::LaunchTrackedKillAll => {
