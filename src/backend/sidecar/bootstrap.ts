@@ -1792,12 +1792,18 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
     },
     {
       name: 'app-runtime',
-      // Builds the app runtime of this boot (D-05, 66.4-17): event bus, frontend-ready flag, launch
-      // single-flight, overlay install single-flight.
+      // Builds the app runtime of this boot (D-05, 66.4-17): event bus, frontend-ready flag and the launch
+      // single-flight glue. The flight table itself is Rust's (88.3-18, D-04): the glue reads the host's
+      // transport at call time, so no TS table exists.
       // Construction only: no I/O, no timer, no listener. After 'abort-registry', before
       // 'store-managers' (and every consumer of the bus, flags and flights).
       run: (_ctx, _io, state) => {
-        state.services.appRuntime = prebuilt.appRuntime ?? createAppRuntime()
+        state.services.appRuntime =
+          prebuilt.appRuntime ??
+          createAppRuntime({
+            transport: () => requireHost(state),
+            warn: (message) => logWarning(message, LogPrefix.Steam)
+          })
       }
     },
     {

@@ -296,6 +296,10 @@ const FUNNEL_SHIM_IMPORTERS: readonly string[] = [
   'src/backend/sidecar/appShellFlowRegistration.ts'
 ]
 
+// 88.3-18: the importers of `launchrust/flights.ts`, every one counted per file. The app runtime builds the boot's launch
+// single-flight with `createRustLaunchFlights`; the three flight shims are called only from inside that glue.
+const FLIGHTS_SHIM_IMPORTERS: readonly string[] = ['src/backend/appRuntime.ts']
+
 // 88.3-16: the importers of `launchrust/launcher.ts`, every one counted per file. `createStoreManagers` builds the launcher, the
 // service types name its interface and the prepare adapters read its deps (88.3-17 deleted the test-facing TS funnel that extended them).
 const LAUNCHER_IMPORTERS: readonly string[] = [
@@ -1339,6 +1343,44 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     channel: 'RUST_LAUNCH_READOPTED_ANNOUNCE',
     callers: FUNNEL_SHIM_IMPORTERS,
     deletedBy: 98
+  },
+  // 88.3-18 (D-04, SC4): the one launch single-flight table is Rust's (88.3-11); the TS Steam dispatch joins it through three
+  // typed calls, `RUST_LAUNCH_FLIGHT_BEGIN`, `_WAIT` and `_END`, reached only through the glue `createRustLaunchFlights` (the boot's
+  // `appRuntime.launchFlights`). Its three Steam callers are `dispatchSteamLaunch`, `dispatchSteamLaunchWithoutSteamOnce` and
+  // `restartSteamNowForAdoption`; 90.2 moves the Steam dispatch into Rust, the phase that deletes the shims and the glue. The glue is
+  // the same kind as `createRustWindowRaiser`: a twin of the TS table's `singleFlightLaunch` call shape, pinned by
+  // `flights.shims.test.ts` over a fake of the Rust table.
+  {
+    name: 'launchFlightBegin',
+    file: 'src/backend/launchrust/flights.ts',
+    shape: 'shim',
+    channel: 'RUST_LAUNCH_FLIGHT_BEGIN',
+    callers: FLIGHTS_SHIM_IMPORTERS,
+    deletedBy: 90.2
+  },
+  {
+    name: 'launchFlightWait',
+    file: 'src/backend/launchrust/flights.ts',
+    shape: 'shim',
+    channel: 'RUST_LAUNCH_FLIGHT_WAIT',
+    callers: FLIGHTS_SHIM_IMPORTERS,
+    deletedBy: 90.2
+  },
+  {
+    name: 'launchFlightEnd',
+    file: 'src/backend/launchrust/flights.ts',
+    shape: 'shim',
+    channel: 'RUST_LAUNCH_FLIGHT_END',
+    callers: FLIGHTS_SHIM_IMPORTERS,
+    deletedBy: 90.2
+  },
+  {
+    name: 'createRustLaunchFlights',
+    file: 'src/backend/launchrust/flights.ts',
+    shape: 'twin',
+    vectors: 'src/backend/launchrust/__tests__/flights.shims.test.ts',
+    callers: FLIGHTS_SHIM_IMPORTERS,
+    deletedBy: 90.2
   },
   // 88.3-13 (D-19, D-21): the Wine window raiser. `raiseWineWindow` is the one typed `RUST_LAUNCH_WINDOW_RAISE` call; its glue,
   // `createRustWindowRaiser`, is the raiser the boot's 'abort-registry' step builds (`bootstrap.ts`) and the bottle monitor, the
