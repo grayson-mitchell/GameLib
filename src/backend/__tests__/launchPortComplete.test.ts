@@ -836,6 +836,47 @@ describe('funnelOraclePortComplete', () => {
   runSlice(FUNNEL_ORACLE)
 })
 
+/**
+ * 88.3-17, D-18, D-25 and ROADMAP 88.3 SC4: the TypeScript launch funnel is deleted. `launcher.ts` held only the funnel
+ * body and `createTsLaunchFunnel` after 88.3-16 moved the boot's launcher into `launchrust/launcher.ts`; its two test
+ * files, `launcher.engineStep.test.ts` and `launcher_launchSingleFlight.test.ts`, drove it. Their titles live on as
+ * `golden/funnel` (`launcher.engineStep--*`) and `golden/single_flight` (`launcher_launchSingleFlight--*`) cases that
+ * `gamelib-launch/tests/funnel.rs` and `single_flight.rs` replay in Rust, so the goldens and both replays are kept on
+ * purpose.
+ *
+ * `forbiddenIdentifiers` is the funnel body's names that something else could still name, each checked with `git grep -w`
+ * on 2026-11-28: only `launcher.ts` and tests named them (`launchrust/funnelHooks.ts` mentions `runLaunchEventCallback`
+ * in a comment, which this walk strips; `launcherOverlayCensus.test.ts` and `engineWineShimSchedule.test.ts` are tests).
+ */
+const FUNNEL: SliceSpec = {
+  deleted: [
+    'src/backend/launcher.ts',
+    'src/backend/__tests__/launcher.engineStep.test.ts',
+    'src/backend/__tests__/launcher_launchSingleFlight.test.ts'
+  ],
+  kept: [
+    'src-tauri/crates/gamelib-launch/tests/fixtures/golden/funnel',
+    'src-tauri/crates/gamelib-launch/tests/fixtures/golden/single_flight',
+    'src-tauri/crates/gamelib-launch/tests/funnel.rs',
+    'src-tauri/crates/gamelib-launch/tests/single_flight.rs',
+    'src/backend/launchrust/launcher.ts'
+  ],
+  forbiddenIdentifiers: [
+    'runLaunchEventCallback',
+    'createTsLaunchFunnel',
+    'TsLaunchFunnelDeps',
+    'releaseDisplaySleepBlock',
+    'runBeforeLaunchScript',
+    'runAfterLaunchScript'
+  ],
+  identifierRoot: 'src/backend',
+  flag: 'GAMELIB_LAUNCH'
+}
+
+describe('funnelPortComplete', () => {
+  runSlice(FUNNEL)
+})
+
 /** The one file 88.2 leaves as scheduled shims: the runner, the wine command, the script, the spawnAsync and the tracked-kill transport calls. */
 const RUNNER_SURVIVOR_FILES = ['src/backend/launchrust/runner.ts'] as const
 
