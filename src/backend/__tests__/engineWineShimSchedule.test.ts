@@ -297,6 +297,13 @@ const FUNNEL_SHIM_IMPORTERS: readonly string[] = [
   'src/backend/sidecar/appShellFlowRegistration.ts'
 ]
 
+// 88.3-13: the importers of `launchrust/raise.ts`, every one counted per file. The sidecar bootstrap builds the raiser, and the
+// service types name its interface.
+const RAISE_SHIM_IMPORTERS: readonly string[] = [
+  'src/backend/services/types.ts',
+  'src/backend/sidecar/bootstrap.ts'
+]
+
 // 88.2-16: the importers of `launchrust/runner.ts`, every one counted per file. The adapter calls `runnerCall`. 88.2-19: the
 // sidecar bootstrap imports `gamesRunning` and `trackedKillAll` for the quit handler (D-27). 88.2-20: `handlers.ts` imports
 // `registerLaunchManagerHooks` to answer the shell's hook calls. 88.2-21: the bootstrap also builds the kill-aware stream
@@ -1313,6 +1320,27 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     channel: 'RUST_LAUNCH_READOPTED_ANNOUNCE',
     callers: FUNNEL_SHIM_IMPORTERS,
     deletedBy: 98
+  },
+  // 88.3-13 (D-19, D-21): the Wine window raiser. `raiseWineWindow` is the one typed `RUST_LAUNCH_WINDOW_RAISE` call; its glue,
+  // `createRustWindowRaiser`, is the raiser the boot's 'abort-registry' step builds (`bootstrap.ts`) and the bottle monitor, the
+  // bottled-Steam launch and the common launch call through `services.windowRaiser`. `services/types.ts` imports the interface.
+  // The glue is a twin of the TS raiser's call shape (`raise(deps, opts)`, never rejects), pinned by `raise.shims.test.ts`. Their last
+  // callers move with the bottle lifecycle in Phase 96, which deletes both.
+  {
+    name: 'raiseWineWindow',
+    file: 'src/backend/launchrust/raise.ts',
+    shape: 'shim',
+    channel: 'RUST_LAUNCH_WINDOW_RAISE',
+    callers: RAISE_SHIM_IMPORTERS,
+    deletedBy: 96
+  },
+  {
+    name: 'createRustWindowRaiser',
+    file: 'src/backend/launchrust/raise.ts',
+    shape: 'twin',
+    vectors: 'src/backend/launchrust/__tests__/raise.shims.test.ts',
+    callers: RAISE_SHIM_IMPORTERS,
+    deletedBy: 96
   },
   // 88-13 (87 D-24): the synchronous known-fix twins, for callers 88 cannot make async. The launcher's `installFixes`
   // and `getKnownFixesEnvVariables` read the tier-1 fix inline until 88.1-17 deleted them; the Steam bridge keeps its own

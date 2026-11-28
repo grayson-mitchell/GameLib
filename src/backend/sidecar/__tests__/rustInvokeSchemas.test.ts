@@ -20,6 +20,7 @@ import {
   RUST_LAUNCH_FLIGHT_WAIT,
   RUST_LAUNCH_READOPTED_ANNOUNCE,
   RUST_LAUNCH_RUN,
+  RUST_LAUNCH_WINDOW_RAISE,
   RUST_SHORTCUTS_ADD,
   RUST_SHORTCUTS_EXIST,
   RUST_SHORTCUTS_REMOVE,
@@ -91,7 +92,8 @@ describe('rustInvokeArgs', () => {
     // Phase 88.3 plan 06: 218 -> 219, launch_run.
     // Phase 88.3 plan 11: 219 -> 222, launch_flight_begin, launch_flight_wait and launch_flight_end.
     // Phase 88.3 plan 12: 222 -> 223, launch_readopted_announce.
-    expect(RUST_INVOKE_CHANNELS).toHaveLength(223)
+    // Phase 88.3 plan 13: 223 -> 224, launch_window_raise.
+    expect(RUST_INVOKE_CHANNELS).toHaveLength(224)
   })
 
   it('parses the store-embed wire fixtures', () => {
@@ -236,6 +238,31 @@ describe('rustInvokeArgs', () => {
     expect(announce.safeParse([]).success).toBe(true)
     for (const bad of [[{}], [null], ['x'], [1, 2], [[]]]) {
       expect(announce.safeParse(bad).success).toBe(false)
+    }
+  })
+
+  it('accepts the launch_window_raise message and rejects drift (Phase 88.3 plan 13)', () => {
+    const raise = rustInvokeArgs[RUST_LAUNCH_WINDOW_RAISE]
+    for (const ok of [
+      [{ context: 'bridge:1' }],
+      [{ context: 'c', pids: [] }],
+      [{ context: 'c', pids: ['1', 'x'], processNames: ['A.exe'] }]
+    ]) {
+      expect(raise.safeParse(ok).success).toBe(true)
+    }
+    for (const bad of [
+      [],
+      [{}],
+      [{ pids: ['1'] }],
+      [{ context: 1 }],
+      [{ context: 'c', pids: 'x' }],
+      [{ context: 'c', pids: [1] }],
+      [{ context: 'c', processNames: [null] }],
+      [{ context: 'c', script: 'x' }],
+      [{ context: 'c' }, { context: 'c' }],
+      ['c']
+    ]) {
+      expect(raise.safeParse(bad).success).toBe(false)
     }
   })
 

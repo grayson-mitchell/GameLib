@@ -257,7 +257,7 @@ import {
   createAbortRegistry,
   type AbortRegistry
 } from '../utils/aborthandler/aborthandler'
-import { createWineWindowRaiser } from '../utils/wineWindowRaise'
+import { createRustWindowRaiser } from '../launchrust/raise'
 
 // ---- Step 3: start the RPC server, wire the transport, signal READY -------
 
@@ -1765,11 +1765,11 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
     {
       name: 'abort-registry',
       // Builds the abort-controller registry and the Wine window raiser of this boot (D-05, 66.4-13).
-      // No I/O, no timer, no handle: the raiser arms its (unref'd, ctx.clock) timers only when a game
-      // launches. After 'steam-bottle', before 'command-runner' (which registers its commands in it).
+      // No I/O, no timer, no handle: the raiser is the Rust shim (88.3-13) and arms nothing here.
+      // After 'steam-bottle', before 'command-runner' (which registers its commands in it).
       // Stdin EOF aborts the registry
       // ('rpc-server' wires releaseOnStdinEof) after pausing the download queue.
-      run: (ctx, _io, state) => {
+      run: (_ctx, _io, state) => {
         // An abort of an id no local controller holds is forwarded to Rust's runner (88.2-21, D-02): a runner run's abort id
         // answers there. Read the host lazily, it exists only after boot.
         state.services.aborts =
@@ -1781,8 +1781,10 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
                 id
               ).then(Boolean)
           })
+        // The window raiser is Rust's (88.3-13, D-21): the raise loop runs in the shell as a Helper, this is its sidecar end.
         state.services.windowRaiser =
-          prebuilt.windowRaiser ?? createWineWindowRaiser({ clock: ctx.clock })
+          prebuilt.windowRaiser ??
+          createRustWindowRaiser({ transport: () => requireHost(state) })
       }
     },
     {

@@ -240,6 +240,7 @@ pub(crate) enum RustInvokeChannel {
     LaunchFlightWait,
     LaunchFlightEnd,
     LaunchReadoptedAnnounce,
+    LaunchWindowRaise,
     ShortcutsExist,
     ShortcutsAdd,
     ShortcutsRemove,
@@ -467,6 +468,7 @@ impl RustInvokeChannel {
         RustInvokeChannel::LaunchFlightWait,
         RustInvokeChannel::LaunchFlightEnd,
         RustInvokeChannel::LaunchReadoptedAnnounce,
+        RustInvokeChannel::LaunchWindowRaise,
         RustInvokeChannel::ShortcutsExist,
         RustInvokeChannel::ShortcutsAdd,
         RustInvokeChannel::ShortcutsRemove,
@@ -694,6 +696,7 @@ impl RustInvokeChannel {
             "launch_flight_wait" => Some(RustInvokeChannel::LaunchFlightWait),
             "launch_flight_end" => Some(RustInvokeChannel::LaunchFlightEnd),
             "launch_readopted_announce" => Some(RustInvokeChannel::LaunchReadoptedAnnounce),
+            "launch_window_raise" => Some(RustInvokeChannel::LaunchWindowRaise),
             "shortcuts_exist" => Some(RustInvokeChannel::ShortcutsExist),
             "shortcuts_add" => Some(RustInvokeChannel::ShortcutsAdd),
             "shortcuts_remove" => Some(RustInvokeChannel::ShortcutsRemove),
@@ -923,6 +926,7 @@ impl RustInvokeChannel {
             RustInvokeChannel::LaunchFlightWait => "launch_flight_wait",
             RustInvokeChannel::LaunchFlightEnd => "launch_flight_end",
             RustInvokeChannel::LaunchReadoptedAnnounce => "launch_readopted_announce",
+            RustInvokeChannel::LaunchWindowRaise => "launch_window_raise",
             RustInvokeChannel::ShortcutsExist => "shortcuts_exist",
             RustInvokeChannel::ShortcutsAdd => "shortcuts_add",
             RustInvokeChannel::ShortcutsRemove => "shortcuts_remove",
@@ -5088,6 +5092,23 @@ pub(crate) struct LaunchReadoptedAnnounceArgs;
 impl LaunchReadoptedAnnounceArgs {
     pub(crate) fn from_args(_args: &[Value]) -> Result<Self, String> {
         Ok(Self)
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct LaunchWindowRaiseArgs {
+    pub(crate) context: String,
+    #[serde(default)]
+    pub(crate) pids: Option<Vec<String>>,
+    #[serde(rename = "processNames")]
+    #[serde(default)]
+    pub(crate) process_names: Option<Vec<String>>,
+}
+
+impl LaunchWindowRaiseArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "launch_window_raise:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "launch_window_raise:bad-args".to_string())
     }
 }
 

@@ -1688,6 +1688,15 @@ export const RUST_LAUNCH_FLIGHT_END = 'launch_flight_end' as const
  */
 export const RUST_LAUNCH_READOPTED_ANNOUNCE =
   'launch_readopted_announce' as const
+/**
+ * Phase 88.3 (SVC-03, 88.3-13, D-19, D-21): `launch_window_raise` takes `[{ context, pids?, processNames? }]` and brings a Wine or
+ * CrossOver game's window to the front on macOS (`osascript` as a Helper, the AppleScript constant, the pids and names only argv):
+ * at most 12 attempts 1.5 s apart, stopping at the first raise, then one 2.5 s settle re-raise. It answers `null` once the raise is
+ * over (a no-op off macOS and for empty input, and a failed `osascript` is a warning line, never an error). The raise is bounded at
+ * about 21 s, so the channel stays inside the 60 s bound; the app shutdown ends it. The Steam bottle monitor, the bottled-Steam
+ * launch and the common launch call it through `launchrust/raise.ts` until their bottle lifecycle moves (Phase 96).
+ */
+export const RUST_LAUNCH_WINDOW_RAISE = 'launch_window_raise' as const
 export const RUST_ENGINE_STATE_RECORD_DECISION =
   'engine_state_record_decision' as const
 export const RUST_ENGINE_STATE_PUBLISH_OVERLAY_NOTICE =
@@ -2150,6 +2159,7 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_LAUNCH_FLIGHT_WAIT,
   RUST_LAUNCH_FLIGHT_END,
   RUST_LAUNCH_READOPTED_ANNOUNCE,
+  RUST_LAUNCH_WINDOW_RAISE,
   RUST_SHORTCUTS_EXIST,
   RUST_SHORTCUTS_ADD,
   RUST_SHORTCUTS_REMOVE,

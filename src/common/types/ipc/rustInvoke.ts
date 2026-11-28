@@ -179,6 +179,7 @@ import {
   RUST_LAUNCH_FLIGHT_END,
   RUST_LAUNCH_FLIGHT_WAIT,
   RUST_LAUNCH_READOPTED_ANNOUNCE,
+  RUST_LAUNCH_WINDOW_RAISE,
   RUST_LAUNCH_SETUP_ENV_VARS,
   RUST_LAUNCH_SETUP_WINE_ENV_VARS,
   RUST_LAUNCH_SETUP_WRAPPER_ENV_VARS,
@@ -1530,7 +1531,18 @@ export const rustInvokeArgs = {
       .strict()
   ]),
   // Phase 88.3 (SVC-03, 88.3-12, D-19): the announcement of the games the boot scan re-adopted. No argument; answers how many it announced.
-  [RUST_LAUNCH_READOPTED_ANNOUNCE]: empty
+  [RUST_LAUNCH_READOPTED_ANNOUNCE]: empty,
+  // Phase 88.3 (SVC-03, 88.3-13, D-19, D-21): the Wine window raiser. The pids are the process table's text (Rust keeps the all-digit ones) and the
+  // names are argv elements of a constant AppleScript; neither is ever part of the script. Answers null when the raise is over.
+  [RUST_LAUNCH_WINDOW_RAISE]: z.tuple([
+    z
+      .object({
+        context: z.string(),
+        pids: z.array(z.string()).optional(),
+        processNames: z.array(z.string()).optional()
+      })
+      .strict()
+  ])
 } satisfies Record<RustInvokeChannel, z.ZodTuple>
 
 /** The positional args a `rustInvoke` call for channel `C` sends (input side of the schema). */

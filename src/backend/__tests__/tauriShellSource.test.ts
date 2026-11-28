@@ -531,7 +531,8 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     // Phase 88.3 plan 06: 218 -> 219, launch_run.
     // Phase 88.3 plan 11: 219 -> 222, launch_flight_begin, launch_flight_wait and launch_flight_end.
     // Phase 88.3 plan 12: 222 -> 223, launch_readopted_announce.
-    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(223)
+    // Phase 88.3 plan 13: 223 -> 224, launch_window_raise.
+    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(224)
     expect(router).not.toContain('_ =>')
   })
 
@@ -1143,6 +1144,9 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       // PROVEN: `launch_dispatch::tests` drives the arm's not-ready and fixed bad-args and, over a real surviving game, the boot scan, the announce answering 1 with a `playing` push, `launch_games_running` reading
       // true and the quit's kill ending it by its proof; `gamelib-launch`'s `readopt.rs` tests drive the crate.
       'launch_readopted_announce',
+      // Phase 88.3 plan 13: the Wine window raiser (`raiseWineWindow`, the boot's `windowRaiser`). PROVEN: `launch_dispatch::tests` drives the arm's
+      // not-ready, its fixed bad-args and the no-op answer off macOS; `gamelib-launch`'s `golden_window_raise.rs` replays every recorded TS case.
+      'launch_window_raise',
       // Phase 94 plan 11: the shortcut exists check (`shortcutsResolvers.ts` resolver). PROVEN: `shortcuts_dispatch::tests`
       // drives the arm's decode, not-ready and a real exists answer on a FakeHome; `golden_paths.rs` replays the TS goldens.
       'shortcuts_exist',

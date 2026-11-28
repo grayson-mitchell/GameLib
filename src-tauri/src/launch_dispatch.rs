@@ -1149,6 +1149,26 @@ pub(crate) fn rpc_launch_readopted_announce(args: &[Value]) -> Result<Value, Str
     readopted_announce_over(launch_ctx(), args)
 }
 
+/// The body of the `launch_window_raise` arm over a given context: the generated decode (`[{ context, pids?, processNames? }]`) and an
+/// arity check first, so a bad call is rejected the same fixed `<op>:bad-args` literal before and after the install and never
+/// echoes the sidecar's value, then the crate, which decodes the object strictly again and runs the raise.
+fn window_raise_over(ctx: Option<&Arc<LaunchCtx>>, args: &[Value]) -> Result<Value, String> {
+    LaunchWindowRaiseArgs::from_args(args)?;
+    if args.len() != 1 {
+        return Err("launch_window_raise:bad-args".to_string());
+    }
+    rpc_launch_op(ctx, "launch_window_raise", args)
+}
+
+/// The `launch_window_raise` `rustInvoke` arm (88.3-13, D-19, D-21): brings a Wine game's window to the front on macOS. The raise
+/// runs `osascript` as a Helper through the context's spawn seam, at most 12 attempts 1.5 s apart and one 2.5 s settle re-raise
+/// (about 21 s), so the sidecar keeps it inside the 60 s `RUST_INVOKE_TIMEOUT_MS`; the app shutdown ends it. It answers `null`, and a
+/// failed `osascript` is a warning line, never an error. There is no sidecar fallback: before [`install`] the answer is
+/// `launch_window_raise:not-ready`.
+pub(crate) fn rpc_launch_window_raise(args: &[Value]) -> Result<Value, String> {
+    window_raise_over(launch_ctx(), args)
+}
+
 /// The body of the `launch_runner_kill` arm over a given context: the generated decode (`[streamId]`) and an arity
 /// check first, then the crate, which bounds the id (a name with no path separator or control character) and ends the
 /// run of the call that watches that stream. The crate answers how many runs it ended; the sidecar is told whether one
@@ -3841,6 +3861,46 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn the_window_raise_arm_is_not_ready_before_the_install_and_rejects_a_wrong_call_the_same_way_after(
+    ) {
+        let home = FakeHome::new("launch-shell-");
+        let ctx = ctx_over(&home);
+        let call = json!({ "context": "bridge:1", "pids": ["12", "x"], "processNames": ["a.exe"] });
+        assert_eq!(
+            window_raise_over(None, std::slice::from_ref(&call)),
+            Err("launch_window_raise:not-ready".to_string())
+        );
+        // A Linux context: the raise is the no-op the TS had off macOS, and the answer is null.
+        assert_eq!(
+            window_raise_over(Some(&ctx), std::slice::from_ref(&call)),
+            Ok(Value::Null)
+        );
+        let secret = "SECRET-RAISE-CONTEXT";
+        let wrong: Vec<Vec<Value>> = vec![
+            vec![],
+            vec![json!(secret)],
+            vec![json!({})],
+            vec![json!({ "pids": [secret] })],
+            vec![json!({ "context": 1, "pids": [secret] })],
+            vec![json!({ "context": "c", "pids": secret })],
+            vec![json!({ "context": "c", "pids": [1] })],
+            vec![call.clone(), json!(secret)],
+        ];
+        for args in &wrong {
+            for ctx in [None, Some(&ctx)] {
+                let err = window_raise_over(ctx, args).unwrap_err();
+                assert_eq!(err, "launch_window_raise:bad-args", "{args:?}");
+                assert!(!err.contains(secret), "{args:?}");
+            }
+        }
+        // An unknown key passes the generated decode (it ignores unknown keys) and is the crate's strict decode to refuse.
+        let err = window_raise_over(Some(&ctx), &[json!({ "context": "c", "script": secret })])
+            .unwrap_err();
+        assert_eq!(err, "launch_window_raise:bad-args");
+        assert!(!err.contains(secret));
     }
 
     #[test]
