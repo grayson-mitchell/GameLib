@@ -671,6 +671,14 @@ const FIXTURE_DIFF_LINES = [
  * (86-23) and `hooks/useMinimumSpin.ts` (quick 261123-bbi), 0 violations in audit mode.
  * DECLARED DEBT +1: `testUtils/tauriIpcRoute.ts` (86-25), whose two hits are the Tauri IPC
  * command names `plugin:event|listen` and `plugin:event|unlisten`, not rendered text.
+ *
+ * 2026-11-28 (Phase 88.1 regression gate): fork-touched 476 -> 484, scope 352 -> 358
+ * (`pnpm gen-i18n-scope:rewrite`, which refreshed only the fork-touched snapshot). SCANNED, 0
+ * violations in audit mode: `UI/Dialog/dialogCloseClock.ts` (87-74), `Game/GamePage/GamePageGate.tsx`
+ * (quick 261125-r0j), and `Settings/sections/SystemInfo/{cpu,index,memory,os}.tsx` (88.1-10).
+ * DECLARED DEBT +2: `Game/GamePage/actions/rowActivation.ts` (87-74), whose nine hits are
+ * diagnostic log-line arguments, and `Settings/sections/SystemInfo/gpu.tsx` (88.1-10), whose four
+ * hits are the PCI id labels `DID=`, `VID=`, `DSID=`, `VSID=`, not translatable copy.
  */
 const DECLARED_UNSCANNED_DEBT = [
   'src/frontend/__mocks__/svgReactStub.tsx',
@@ -813,7 +821,11 @@ const DECLARED_UNSCANNED_DEBT = [
   'src/frontend/testUtils/storeHookReact.ts',
   // Phase 86 R5: tauriIpcRoute.ts holds two Tauri IPC command names (:26, :32), not rendered text
   'src/frontend/testUtils/tauriIpcRoute.ts',
-  'src/frontend/testUtils/tauriWindow.ts'
+  'src/frontend/testUtils/tauriWindow.ts',
+  // Phase 88.1 regression gate: nine diagnostic log-line arguments (:81-:83, :113-:115, :125-:127)
+  'src/frontend/screens/Game/GamePage/actions/rowActivation.ts',
+  // Phase 88.1 regression gate: PCI id labels DID=, VID=, DSID=, VSID= (:46), not rendered copy
+  'src/frontend/screens/Settings/sections/SystemInfo/gpu.tsx'
 ]
 
 /**
@@ -1530,9 +1542,9 @@ describe('--rewrite-scope guard', () => {
     }
   })
 
-  it('A0 fixture sanity: the seeded scope is the REAL 352-file hand-curated snapshot, and the fresh-snapshot fixture carries the committed 476-file fork-touched set verbatim', () => {
-    expect(scopeSnapshot.files.length).toBe(352)
-    expect(forkTouchedSnapshot.files.length).toBe(476)
+  it('A0 fixture sanity: the seeded scope is the REAL 358-file hand-curated snapshot, and the fresh-snapshot fixture carries the committed 484-file fork-touched set verbatim', () => {
+    expect(scopeSnapshot.files.length).toBe(358)
+    expect(forkTouchedSnapshot.files.length).toBe(484)
     // `freshSnapshot()` is a FIXTURE built from the committed artifact
     // (`files: [...forkTouchedSnapshot.files]`) -- NOT a live git derivation,
     // despite what this assertion used to claim. The live derivation is
@@ -1573,7 +1585,7 @@ describe('--rewrite-scope guard', () => {
     expect(result.refusal).toBeNull()
   })
 
-  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 352 -> 476 diff and writes nothing', () => {
+  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 358 -> 484 diff and writes nothing', () => {
     const { outDir, scopePath, seededBytes } = seedScope()
 
     const result = writeArtifacts({
@@ -1596,7 +1608,7 @@ describe('--rewrite-scope guard', () => {
     expect(refusal.provenance).toBe(scopeSnapshot.generatedBy)
   })
 
-  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 476', () => {
+  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 484', () => {
     // The load-bearing spec. Without it, A1/A2's "the file did not change"
     // would be satisfied just as well by a writer that cannot write at all —
     // a guard that refuses everything is not a fix, it is a different bug.
@@ -1609,12 +1621,12 @@ describe('--rewrite-scope guard', () => {
     })
 
     const rewritten = JSON.parse(readFileSync(scopePath, 'utf-8'))
-    expect(rewritten.files.length).toBe(476)
+    expect(rewritten.files.length).toBe(484)
     expect(result.wroteScope).toBe(scopePath)
     expect(result.refusal).toBeNull()
   })
 
-  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 476 files', () => {
+  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 484 files', () => {
     const outDir = makeTmpDir()
     const scopePath = join(outDir, 'i18nGateScope.json')
     expect(existsSync(scopePath)).toBe(false)
@@ -1627,7 +1639,7 @@ describe('--rewrite-scope guard', () => {
 
     expect(result.refusal).toBeNull()
     expect(result.wroteScope).toBe(scopePath)
-    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(476)
+    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(484)
   })
 
   it('A5 PROVENANCE RATCHET ON THE REAL ARTIFACT: the committed marker still reads as hand-curated', () => {
