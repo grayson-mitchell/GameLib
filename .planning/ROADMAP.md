@@ -191,7 +191,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 87: Engine, Wine and tools** — 59 plans in 38 waves; planned 2026-11-23 (executes after Phase 86 closes)
 - [x] **Phase 88: Launch scaffolding and known fixes** — 17/17 plans in 14 waves; completed 2026-11-25 (SVC-03 part 1 of 4; split 2026-11-25, 88-CONTEXT D-30)
 - [x] **Phase 88.1: Launch builders and prepare steps** — 24/24 plans (20 in 15 waves + 4 gap closure for CR-01); completed 2026-11-28, re-verified passed 8/8 after gap closure (SVC-03 part 2 of 4; D-30)
-- [ ] **Phase 88.2: Command runner and game processes** — 25 plans in 18 waves; planned 2026-11-26, re-sliced the same day to fit the smart-zone budget and file cap (SVC-03 part 3 of 4; D-30); gap closure 88.2-26..31 (G-88.2-1, G-88.2-2) planned 2026-11-27
+- [x] **Phase 88.2: Command runner and game processes** — 31/31 plans (25 in 18 waves + 6 gap closure for G-88.2-1, G-88.2-2); completed 2026-11-28, UAT complete and re-verified passed 13/13 after gap closure (SVC-03 part 3 of 4; D-30)
 - [ ] **Phase 88.3: Launch funnel, re-adoption and the live gate** — not planned (runs the Phase 88 live gate)
 - [ ] **Phase 89: Steam library state** — not planned
 - [ ] **Phase 90: Steam services and TypeScript depot path** — not planned (session, sign-in and redeem; split 2026-11-24, 90-CONTEXT D-01)
@@ -1030,7 +1030,7 @@ Plans:
   3. The quit dialog gains a "game running" condition (D-27, a recorded behaviour change) read from the Rust running-game registry
   4. `commandRunner.ts` is deleted; closes on goldens, three-OS CI and a stub-game smoke (launch, quit-kill, survival of parent SIGKILL)
 
-**Plans:** 31/31 plans executed: 25/25 executed in 18 waves; planned 2026-11-26, re-sliced the same day so every plan fits the 100k smart-zone budget and stays below 15 files (goldens are recorded from the TS before each Rust slice, D-25; the quit prompt lands before games become Game-class). Gap closure 88.2-26..31 planned 2026-11-27 from 88.2-UAT.md (G-88.2-1, G-88.2-2), six plans in six sequential waves (each sets its findings to fixed in the one 88.2-REVIEW-DISPOSITION.md)
+**Plans:** 31/31 plans complete (25 in 18 waves + 6 gap closure); completed 2026-11-28, re-verified passed 13/13; planned 2026-11-26, re-sliced the same day so every plan fits the 100k smart-zone budget and stays below 15 files (goldens are recorded from the TS before each Rust slice, D-25; the quit prompt lands before games become Game-class). Gap closure 88.2-26..31 planned 2026-11-27 from 88.2-UAT.md (G-88.2-1, G-88.2-2), six plans in six sequential waves (each sets its findings to fixed in the one 88.2-REVIEW-DISPOSITION.md)
 
 Plans:
 **Wave 1**
