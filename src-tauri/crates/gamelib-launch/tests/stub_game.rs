@@ -1550,6 +1550,12 @@ async fn force_quit_survival_then_re_adopt() {
 /// Pitfall 10: a Wine launch's loader leaves and the game lives on in the group. The stub game's leader exits
 /// first while its child lives; the record keeps the child as a member; after the stand-in is killed the next
 /// start adopts the game through that member's proof, and the child's exit ends the session.
+///
+/// Unix only. On Windows the member proof is the Game Job, and a Job's name goes with its last handle
+/// (88.2-25), so once GameLib is gone and the leader has exited there is nothing left to prove a member by:
+/// only a live leader is re-adopted there (88.3-03 SUMMARY, "Left open"). windows-latest proved it in run
+/// 46097389463 (`adopted: 0`).
+#[cfg(unix)]
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn force_quit_of_a_wine_shaped_game_re_adopts_by_its_member() {
     let home = FakeHome::new("stub-game-readopt-wine-");
