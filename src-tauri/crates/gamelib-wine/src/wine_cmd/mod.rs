@@ -37,11 +37,14 @@ pub enum WineKind {
 ///
 /// An unknown key, such as a stored wine's legacy key, is ignored on decode and so dropped on
 /// re-serialisation, as `wine_valid`'s `persisted_wine` and `check_wine`'s `wine_of` already treat it
-/// (WR-01); an unknown `type` or a missing `bin` still fails. The renderer-facing six-key check is the
-/// shell's `parse_wine_installation` (T-87-22), which is unchanged.
+/// (WR-01); an unknown `type` or a missing `bin` still fails. A missing `name` reads as empty, the same
+/// rule `check_wine`'s `wine_of` applies, so a stored wine that passes the Wine check decodes at every
+/// later step (IN-05). The renderer-facing six-key check is the shell's `parse_wine_installation`
+/// (T-87-22), which is unchanged.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct WineInstallation {
     pub bin: String,
+    #[serde(default)]
     pub name: String,
     #[serde(rename = "type")]
     pub kind: WineKind,
@@ -157,5 +160,13 @@ mod tests {
         assert!(serde_json::from_value::<WineInstallation>(kind).is_err());
         let no_bin = serde_json::json!({"name": "n", "type": "wine"});
         assert!(serde_json::from_value::<WineInstallation>(no_bin).is_err());
+    }
+
+    #[test]
+    fn a_wine_installation_without_a_name_decodes_with_an_empty_one() {
+        let nameless = serde_json::json!({"bin": "/b", "type": "wine"});
+        let wine: WineInstallation = serde_json::from_value(nameless).unwrap();
+        assert_eq!(wine.name, "");
+        assert_eq!(wine.bin, "/b");
     }
 }
