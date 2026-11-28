@@ -1,9 +1,6 @@
 import type { Dialogs } from 'backend/host/dialogs'
 import {
   GameInfo,
-  Runner,
-  WrapperEnv,
-  ExecResult,
   GameSettings,
   LaunchParams,
   StatusPromise
@@ -19,9 +16,7 @@ import { existsSync } from 'graceful-fs'
 
 import { sendGameStatusUpdate } from './utils'
 import { askForceUninstall as askForceUninstallShim } from './launchrust/runner'
-import { launchRun } from './launchrust/funnel'
-import type { LaunchRunRequest } from './launchrust/funnel'
-import type { StoreLaunchHooks } from 'backend/storeManagers'
+import type { LauncherDeps } from './launchrust/launcher'
 import { hasCapability, isStore } from 'common/storeCapabilities'
 import {
   createGameLogWriter,
@@ -31,56 +26,32 @@ import {
   logWarning
 } from './logger'
 import type { GameCommandSource } from './services/gameCommandFacts'
-import type {
-  CommandRunner,
-  SpawnAsync,
-  StoreManagers,
-  Stores
-} from './services/types'
+import type { CommandRunner, SpawnAsync, Stores } from './services/types'
 import type { ProcessRunner } from './process/types'
 import type { OnlineMonitor } from './online_monitor'
 import type { DialogBoxDeps } from './dialog/dialog'
 import { recordPlaySession } from './runsForMe'
 import { addRecentGame } from './info/recentGames'
-import {
-  getKnownFixesEnvVariables as getKnownFixesEnvVariablesShim,
-  setupEnvVars as setupEnvVarsShim,
-  setupWineEnvVars as setupWineEnvVarsShim,
-  setupWrapperEnvVars as setupWrapperEnvVarsShim,
-  setupWrappers as setupWrappersShim,
-  verifyWinePrefix as verifyWinePrefixShim
-} from './launchrust/builders'
-import {
-  settleEnvMap,
-  settleKnownFixEnv,
-  settleLaunchStatus,
-  settleVerifyPrefixReply,
-  settleWordList
-} from './launchBuilderReply'
 import { isCLINoGui, isMac } from './constants/environment'
 import { endEngineLaunch } from './enginewine/launch'
 import { runLaunchEngineStep } from './launchEngineStep'
 
 import type { AppRuntimeSlice } from './appRuntime'
 import type LogWriter from './logger/targetWriter'
-import type { RustInvokeDeps } from './host/rustInvokeDeps'
-import {
-  checkWineBeforeLaunch,
-  prepareLaunch as prepareLaunchAdapter,
-  prepareWineLaunch as prepareWineLaunchAdapter
-} from './launchAdapters'
+import { checkWineBeforeLaunch } from './launchAdapters'
 
-/** What the launcher is built from (66.1, D-02): constructed once per boot by createStoreManagers. */
-export interface LauncherDeps
+/**
+ * What the TS funnel body reads, on top of what the boot's launcher is built from (88.3-16): the launcher's own
+ * `LauncherDeps` (the Rust transport, the library managers, the store hooks) and the rest the sequence below needs.
+ * TEST-FACING ONLY, with `createTsLaunchFunnel`; deleted with this file in 88.3-17.
+ */
+export interface TsLaunchFunnelDeps
   extends
+    LauncherDeps,
     DialogBoxDeps,
-    RustInvokeDeps,
     AppRuntimeSlice<'events' | 'launchFlights'> {
   /** Also the boot's display-ack table (the engine step's refused-launch dialogs, 66.4-18). */
   dialogs: DialogBoxDeps['dialogs'] & Pick<Dialogs, 'displayAcks'>
-  /** Late-bound: filled by createStoreManagers after the launcher is built, read at call time only. */
-  libraryManagers: StoreManagers['library']
-  launchHooks: Record<Runner, StoreLaunchHooks>
   commandRunner: CommandRunner
   /** The boot process runner: the gamescope --help probe runs through it. */
   runner: Pick<ProcessRunner, 'run'>
@@ -134,7 +105,7 @@ interface PowerState {
   displayId: number | null
 }
 
-type LaunchCtx = LauncherDeps & { power: PowerState }
+type LaunchCtx = TsLaunchFunnelDeps & { power: PowerState }
 
 /**
  * Ends the display sleep blocker this launcher holds, once, and clears the held id so the next launch starts its own.
@@ -507,7 +478,7 @@ const launchEventCallback = (
   )
 
 async function runBeforeLaunchScript(
-  deps: Pick<LauncherDeps, 'commandRunner'>,
+  deps: Pick<TsLaunchFunnelDeps, 'commandRunner'>,
   gameInfo: GameInfo,
   gameSettings: GameSettings,
   logWriter: LogWriter
@@ -529,7 +500,7 @@ async function runBeforeLaunchScript(
 }
 
 async function runAfterLaunchScript(
-  deps: Pick<LauncherDeps, 'commandRunner'>,
+  deps: Pick<TsLaunchFunnelDeps, 'commandRunner'>,
   gameInfo: GameInfo,
   gameSettings: GameSettings,
   logWriter: LogWriter
@@ -549,47 +520,6 @@ async function runAfterLaunchScript(
   )
 }
 
-/** Launcher members; pure helpers stay module-level because they need no deps. */
-export interface Launcher {
-  prepareLaunch(
-    ...a: DropFirst<Parameters<typeof prepareLaunchAdapter>>
-  ): ReturnType<typeof prepareLaunchAdapter>
-  prepareWineLaunch(
-    ...a: DropFirst<Parameters<typeof prepareWineLaunchAdapter>>
-  ): ReturnType<typeof prepareWineLaunchAdapter>
-  setupEnvVars(
-    gameSettings: GameSettings,
-    installPath?: string
-  ): Promise<Record<string, string>>
-  setupWrapperEnvVars(wrapperEnv: WrapperEnv): Promise<Record<string, string>>
-  setupWineEnvVars(
-    gameSettings: GameSettings,
-    gameId?: string
-  ): Promise<Record<string, string>>
-  setupWrappers(
-    gameSettings: GameSettings,
-    mangoHudCommand?: string[],
-    gameModeBin?: string,
-    gameScopeCommand?: string[]
-  ): Promise<string[]>
-  launchEventCallback(params: LaunchParams): StatusPromise
-  getKnownFixesEnvVariables(
-    appName: string,
-    runner: Runner
-  ): Promise<Record<string, string>>
-  verifyWinePrefix(gameSettings: GameSettings): Promise<{ res: ExecResult }>
-  /**
-   * The boot's sidecar -> Rust request leg, which the launcher already holds (LauncherDeps extends
-   * RustInvokeDeps). Exposed so a flow that builds `RustInvokeDeps` for a Rust-backed shim (the
-   * recent-games writes in the Steam launch dispatch) reads it from the launcher it already receives.
-   */
-  readonly requestRustInvoke: RustInvokeDeps['requestRustInvoke']
-}
-
-type DropFirst<T extends unknown[]> = T extends [unknown, ...infer R]
-  ? R
-  : never
-
 /**
  * The TS launch funnel, as `createLauncher`'s `launchEventCallback` member ran it before the Rust funnel took every Play
  * (88.3-10): the single-flight wrapper over `runLaunchEventCallback`, with its own display-sleep state.
@@ -599,74 +529,11 @@ type DropFirst<T extends unknown[]> = T extends [unknown, ...infer R]
  * with this file in 88.3-17 (the 88.2-21 then 88.2-24 shape).
  */
 export function createTsLaunchFunnel(
-  deps: LauncherDeps
+  deps: TsLaunchFunnelDeps
 ): (params: LaunchParams) => StatusPromise {
   // Inherits deps (not a copy), so a getter-backed deps object stays call-time.
-  const ctx = Object.assign(Object.create(deps) as LauncherDeps, {
+  const ctx = Object.assign(Object.create(deps) as TsLaunchFunnelDeps, {
     power: { displayId: null } as PowerState
   }) as LaunchCtx
   return (params) => launchEventCallback(ctx, params)
-}
-
-/** The Play as the `launch_run` schema takes it: the chosen launch option copied to a plain object, an absent one left out. */
-function toLaunchRunRequest(params: LaunchParams): LaunchRunRequest {
-  const { launchArguments, ...rest } = params
-  return launchArguments
-    ? { ...rest, launchArguments: { ...launchArguments } }
-    : rest
-}
-
-/** The launcher, built once per boot with its own deps (D-02). */
-export function createLauncher(deps: LauncherDeps): Launcher {
-  return {
-    prepareLaunch: (...a) => prepareLaunchAdapter(deps, ...a),
-    prepareWineLaunch: (...a) => prepareWineLaunchAdapter(deps, ...a),
-    setupEnvVars: async (gameSettings, installPath) =>
-      settleEnvMap(
-        await setupEnvVarsShim(deps, gameSettings, installPath),
-        'setupEnvVars'
-      ),
-    setupWrapperEnvVars: async (wrapperEnv) =>
-      settleEnvMap(
-        await setupWrapperEnvVarsShim(deps, wrapperEnv),
-        'setupWrapperEnvVars'
-      ),
-    setupWineEnvVars: async (gameSettings, gameId) =>
-      settleEnvMap(
-        await setupWineEnvVarsShim(deps, gameSettings, gameId),
-        'setupWineEnvVars'
-      ),
-    setupWrappers: async (
-      gameSettings,
-      mangoHudCommand,
-      gameModeBin,
-      gameScopeCommand
-    ) =>
-      settleWordList(
-        await setupWrappersShim(
-          deps,
-          gameSettings,
-          mangoHudCommand,
-          gameModeBin,
-          gameScopeCommand
-        ),
-        'setupWrappers'
-      ),
-    // D-01, D-04, D-25: every non-Steam Play runs in the Rust funnel; nothing of the TS sequence runs here.
-    launchEventCallback: async (params) =>
-      settleLaunchStatus(await launchRun(deps, toLaunchRunRequest(params))),
-    getKnownFixesEnvVariables: async (appName, runner) =>
-      settleKnownFixEnv(
-        await getKnownFixesEnvVariablesShim(deps, appName, runner)
-      ),
-    verifyWinePrefix: async (gameSettings) =>
-      settleVerifyPrefixReply(
-        await verifyWinePrefixShim(deps, gameSettings),
-        'verifyWinePrefix'
-      ),
-    // A getter, so a getter-backed deps object stays call-time like the members above.
-    get requestRustInvoke() {
-      return deps.requestRustInvoke
-    }
-  }
 }

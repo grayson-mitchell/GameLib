@@ -14,7 +14,7 @@ import {
   RUST_LAUNCH_PREPARE
 } from 'common/types/sidecarTransport'
 import type LogWriter from 'backend/logger/targetWriter'
-import type { LauncherDeps } from 'backend/launcher'
+import type { LauncherDeps } from 'backend/launchrust/launcher'
 import {
   checkWineBeforeLaunch,
   prepareLaunch,

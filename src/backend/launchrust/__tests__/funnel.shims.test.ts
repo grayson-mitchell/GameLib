@@ -3,7 +3,7 @@
  * `launchEventCallback` member over it. The shape of the shim and the phase that deletes it are pinned by
  * `engineWineShimSchedule.test.ts`; this file pins the channel and the arguments that cross, that the arguments pass the same
  * zod schema the sidecar checks before the frame is written, the narrowing of the answer, and (the tracer) that a Play through
- * the Launcher runs nothing of the TS sequence: one request, no per-game log writer, no wake lock, no single-flight entry.
+ * the Launcher runs nothing of the TS sequence: one request, no per-game log writer, no single-flight entry (and the launcher holds no wake lock to start: its deps have no app state).
  */
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -18,13 +18,13 @@ jest.mock('backend/logger', () => ({
 import { rustInvokeArgs } from 'common/types/ipc/rustInvoke'
 import {
   RUST_LAUNCH_READOPTED_ANNOUNCE,
-  RUST_LAUNCH_RUN
+  RUST_LAUNCH_RUN,
+  RUST_LAUNCH_SETUP_ENV_VARS
 } from 'common/types/sidecarTransport'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
-import { createLauncher } from 'backend/launcher'
+import { createLauncher } from 'backend/launchrust/launcher'
+import type { GameSettings } from 'common/types'
 import { createGameLogWriter } from 'backend/logger'
-import { createTestToolsSlices } from 'backend/testUtils/testServices'
-import { createTestOnlineMonitor } from 'backend/testUtils/testOnlineMonitor'
 
 import { settleLaunchStatus } from 'backend/launchBuilderReply'
 
@@ -113,29 +113,17 @@ describe('settleLaunchStatus', () => {
   })
 })
 
-// The tracer: a Play through the Launcher member.
-const tsStore = { has: () => true, get: () => 0, set: jest.fn() }
+// The tracer: a Play through the Launcher member, built the way `createStoreManagers` builds it (88.3-16): the library
+// managers, the store hooks, the global settings and the Rust transport, and nothing else.
 function buildLauncher(requestRustInvoke: RustInvokeDeps['requestRustInvoke']) {
-  const slices = createTestToolsSlices()
-  const wakeLock = {
-    start: jest.fn(() => 1),
-    stop: jest.fn(),
-    isStarted: jest.fn(() => false)
-  }
   const getGame = jest.fn()
   const launcher = createLauncher({
-    ...slices,
-    appState: { ...slices.appState, wakeLock },
     requestRustInvoke,
-    onlineMonitor: createTestOnlineMonitor({ online: false }),
     libraryManagers: { legendary: { getGame } } as never,
     launchHooks: { legendary: {} } as never,
-    commandRunner: {} as never,
-    runner: { run: () => Promise.reject(new Error('unscripted run')) } as never,
-    spawnAsync: (() => Promise.reject(new Error('unscripted spawn'))) as never,
-    stores: { kvs: { tsStore }, wineManager: {}, runsForMe: {} } as never
+    config: { getSettings: () => ({}) } as never
   })
-  return { launcher, wakeLock, getGame }
+  return { launcher, getGame }
 }
 
 describe("createLauncher's launchEventCallback (D-01, D-04, D-25)", () => {
@@ -145,7 +133,7 @@ describe("createLauncher's launchEventCallback (D-01, D-04, D-25)", () => {
 
   it("a Play makes exactly one RUST_LAUNCH_RUN request, settles on Rust's status and runs nothing of the TS sequence", async () => {
     const sent: Sent[] = []
-    const { launcher, wakeLock, getGame } = buildLauncher(((
+    const { launcher, getGame } = buildLauncher(((
       channel: string,
       args: unknown[]
     ) => {
@@ -159,8 +147,24 @@ describe("createLauncher's launchEventCallback (D-01, D-04, D-25)", () => {
 
     expect(sent).toEqual([{ channel: RUST_LAUNCH_RUN, args: [PARAMS] }])
     expect(createGameLogWriter).not.toHaveBeenCalled()
-    expect(wakeLock.start).not.toHaveBeenCalled()
     expect(getGame).not.toHaveBeenCalled()
+  })
+
+  it('a setupEnvVars makes exactly one RUST_LAUNCH_SETUP_ENV_VARS request and answers its string map', async () => {
+    const sent: Sent[] = []
+    const { launcher } = buildLauncher(((channel: string, args: unknown[]) => {
+      sent.push({ channel, args })
+      return Promise.resolve({ GAMEID: '0' })
+    }) as RustInvokeDeps['requestRustInvoke'])
+    const settings = { winePrefix: '/p' } as unknown as GameSettings
+
+    await expect(launcher.setupEnvVars(settings, '/games/q')).resolves.toEqual({
+      GAMEID: '0'
+    })
+
+    expect(sent).toEqual([
+      { channel: RUST_LAUNCH_SETUP_ENV_VARS, args: [settings, '/games/q'] }
+    ])
   })
 
   it("two Plays of one game each go to Rust (the single flight is the funnel's, not a TS table)", async () => {

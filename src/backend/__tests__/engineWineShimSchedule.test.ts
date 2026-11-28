@@ -157,12 +157,12 @@ const TOOLS_SHIM_IMPORTERS: readonly string[] = [
 ]
 /**
  * Every non-test importer of `launchrust/builders.ts` (the check is per file, so every row of that file lists them
- * all): the launcher binds the shims into its members, which the three managers' `launch()` call (88.1-07). The command
+ * all): the launcher (`launchrust/launcher.ts` since 88.3-16) binds the shims into its members, which the three managers' `launch()` call (88.1-07). The command
  * runner's `wine` binding called three of them from `bootstrap.ts` (88.1-08) until the boot stopped building the TS runner
  * (88.2-21).
  */
 const LAUNCH_BUILDER_SHIM_IMPORTERS: readonly string[] = [
-  'src/backend/launcher.ts'
+  'src/backend/launchrust/launcher.ts'
 ]
 /** Every non-test importer of `launchrust/prepare.ts` (the check is per file): the interim prepare adapters (88.1-15). */
 const LAUNCH_PREPARE_SHIM_IMPORTERS: readonly string[] = [
@@ -290,11 +290,20 @@ const DEADLINE_SHIM_IMPORTERS: readonly string[] = [
   'src/backend/storeManagers/steam/engine/bridgeDeadline.ts',
   'src/backend/storeManagers/steam/gameBridgeWineLaunch.ts'
 ]
-// 88.3-12: the importers of `launchrust/funnel.ts`, every one counted per file. The Launcher's `launchEventCallback` calls
-// `launchRun`; the sidecar's `frontendReady` handler calls `announceReadoptedGames`.
+// 88.3-12: the importers of `launchrust/funnel.ts`, every one counted per file. The Launcher's `launchEventCallback` (in
+// `launchrust/launcher.ts` since 88.3-16) calls `launchRun`; the sidecar's `frontendReady` handler calls `announceReadoptedGames`.
 const FUNNEL_SHIM_IMPORTERS: readonly string[] = [
-  'src/backend/launcher.ts',
+  'src/backend/launchrust/launcher.ts',
   'src/backend/sidecar/appShellFlowRegistration.ts'
+]
+
+// 88.3-16: the importers of `launchrust/launcher.ts`, every one counted per file. `createStoreManagers` builds the launcher, the
+// service types name its interface and the prepare adapters read its deps; `launcher.ts` extends the deps for the test-facing TS funnel.
+const LAUNCHER_IMPORTERS: readonly string[] = [
+  'src/backend/launcher.ts',
+  'src/backend/launchAdapters.ts',
+  'src/backend/services/types.ts',
+  'src/backend/storeManagers/index.ts'
 ]
 
 // 88.3-13: the importers of `launchrust/raise.ts`, every one counted per file. The sidecar bootstrap builds the raiser, and the
@@ -1308,6 +1317,19 @@ export const SCHEDULE: readonly ScheduleRow[] = [
     shape: 'shim',
     channel: 'RUST_LAUNCH_RUN',
     callers: FUNNEL_SHIM_IMPORTERS,
+    deletedBy: 98
+  },
+  // 88.3-16 (D-01, D-25): the Launcher the TS managers call, built once per boot by `createStoreManagers`. Every member is one of the
+  // shims above (the builders, the prepare adapters over `prepare.ts`, `launchRun`) behind a `launchBuilderReply.ts` narrowing, so
+  // the module holds no launch logic; it was `createLauncher` in `backend/launcher.ts` until the Rust funnel took every Play. It is
+  // glue over shims, the same kind as `createRustWindowRaiser`, pinned by the builder shim tests. Its last member leaves with the
+  // `launch` channel and the deep link in 98, the phase that deletes `launchRun`.
+  {
+    name: 'createLauncher',
+    file: 'src/backend/launchrust/launcher.ts',
+    shape: 'twin',
+    vectors: 'src/backend/__tests__/launcher.builderShims.test.ts',
+    callers: LAUNCHER_IMPORTERS,
     deletedBy: 98
   },
   // 88.3-12 (D-19, Pitfall 9): the announcement of the games the shell re-adopted at boot. `announceReadoptedGames` is the one typed

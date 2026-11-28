@@ -157,13 +157,14 @@ describe('createStoreManagers: nothing is constructed at import (source gate)', 
     expect(src).toMatch(/export function createStoreManagers/)
   })
 
-  it("the launcher reads the boot's one monitor: createLauncher and the managers get the same `deps.onlineMonitor` (87-63, F1)", () => {
+  it("the boot's one monitor goes to the managers only: the launcher holds none, and no second monitor is built (87-63, F1, 88.3-16)", () => {
     const src = read('../index.ts')
-    // The launcher's offline answer for the engine step and the connectivity log lines the monitor writes must be one
-    // object: a second monitor would keep a status of its own that no log line reports.
+    // The launcher's offline answer for the engine step was the TS funnel's; every Play now runs in the Rust funnel, which reads
+    // connectivity itself, so the launcher is given no monitor. The connectivity log lines the monitor writes must still come from
+    // one object: a second monitor would keep a status of its own that no log line reports.
     const launcherCall = src.slice(src.indexOf('createLauncher({'))
-    expect(launcherCall.slice(0, launcherCall.indexOf('})'))).toMatch(
-      /onlineMonitor: deps\.onlineMonitor/
+    expect(launcherCall.slice(0, launcherCall.indexOf('})'))).not.toMatch(
+      /onlineMonitor/
     )
     const managerDeps = src.slice(
       src.indexOf('const managerDeps'),
@@ -178,8 +179,8 @@ describe('createStoreManagers: nothing is constructed at import (source gate)', 
     expect(src).not.toMatch(/createOnlineMonitor/)
   })
 
-  it('launcher.ts keeps no module-level `let` (the power blocker lives in the factory closure)', () => {
-    const src = read('../../launcher.ts')
+  it('launchrust/launcher.ts keeps no module-level `let` (the power blocker lives in the factory closure)', () => {
+    const src = read('../../launchrust/launcher.ts')
     const topLevelLets = src.split('\n').filter((line) => /^let\s/.test(line))
     // The two legacy command functions keep theirs until plan 24 deletes them.
     expect(topLevelLets.some((line) => /powerDisplayId/.test(line))).toBe(false)

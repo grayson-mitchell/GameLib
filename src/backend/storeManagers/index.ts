@@ -9,8 +9,8 @@ import nileSetup from 'backend/storeManagers/nile/setup'
 import { legendarySetup } from 'backend/storeManagers/legendary/setup'
 import gogPresence from 'backend/storeManagers/gog/presence'
 import { isEnabled as isEosOverlayEnabled } from 'backend/storeManagers/legendary/eos_overlay/eos_overlay'
-import { createLauncher } from 'backend/launcher'
-import type { Launcher } from 'backend/launcher'
+import { createLauncher } from 'backend/launchrust/launcher'
+import type { Launcher } from 'backend/launchrust/launcher'
 import type { ManagerDeps, StoreManagers } from 'backend/services/types'
 
 import { logInfo, logWarning, RunnerToLogPrefixMap } from 'backend/logger'
@@ -205,24 +205,8 @@ export function createStoreManagers(
   const launcher = createLauncher({
     libraryManagers: library,
     launchHooks,
-    storeRoot: deps.storeRoot,
-    commandRunner: deps.commandRunner,
-    runner: deps.runner,
-    spawnAsync: deps.spawnAsync,
-    stores: deps.stores,
     config: deps.config,
-    gameConfigs: deps.gameConfigs,
-    appInfo: deps.appInfo,
-    dialogs: deps.dialogs,
-    sendFrontendMessage: deps.sendFrontendMessage,
-    requestRustInvoke: deps.requestRustInvoke,
-    appState: deps.appState,
-    notifications: deps.notifications,
-    onlineMonitor: deps.onlineMonitor,
-    paths: deps.paths,
-    appRuntime: deps.appRuntime,
-    steamBottle: deps.steamBottle,
-    steamLaunchRuntime: deps.steamLaunchRuntime
+    requestRustInvoke: deps.requestRustInvoke
   })
   Object.assign(library, {
     sideload: new SideloadLibraryManager(managerDeps),
