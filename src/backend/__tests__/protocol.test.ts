@@ -217,11 +217,6 @@ describe('protocol.ts --no-gui behavior', () => {
     test('should launch game directly regardless of --no-gui flag', async () => {
       mockIsCLINoGui.mockReturnValue(true)
 
-      // Mock launchEventCallback to avoid complex setup
-      const mockLaunchEventCallback = jest.fn()
-      jest.doMock('../launcher', () => ({
-        launchEventCallback: mockLaunchEventCallback
-      }))
       launchEventCallback.mockResolvedValue({ status: 'done' })
       await handleProtocol(deps, ['gamelib://launch/test-game'])
 

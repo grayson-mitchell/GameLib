@@ -3,20 +3,18 @@
  * (the TS raise never rejected) and sends the pids and names as given (Rust filters them). The raise loop itself is replayed in Rust
  * (`gamelib-launch`'s `golden_window_raise.rs`).
  */
-jest.mock('backend/logger', () => ({
-  logWarning: jest.fn(),
-  logInfo: jest.fn(),
-  logError: jest.fn(),
-  logDebug: jest.fn(),
-  LogPrefix: { Steam: 'Steam' }
-}))
-
 import { RUST_LAUNCH_WINDOW_RAISE } from 'common/types/sidecarTransport'
 import { rustInvokeArgs } from 'common/types/ipc/rustInvoke'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
-import { logWarning } from 'backend/logger'
 
 import { createRustWindowRaiser, raiseWineWindow } from '../raise'
+
+// 88.3-17: the warning line is injected, so a plain jest.fn is the seam (no `jest.mock` of the logger).
+const logWarning = jest.fn()
+
+beforeEach(() => {
+  logWarning.mockClear()
+})
 
 type Sent = { channel: string; args: unknown[] }
 
@@ -74,7 +72,10 @@ describe('raiseWineWindow', () => {
 describe('createRustWindowRaiser', () => {
   it('sends one RUST_LAUNCH_WINDOW_RAISE with the pids and names as given and resolves', async () => {
     const { deps, sent } = recordingDeps(null)
-    const raiser = createRustWindowRaiser({ transport: () => deps })
+    const raiser = createRustWindowRaiser({
+      transport: () => deps,
+      warn: logWarning
+    })
 
     await expect(
       raiser.raise(spawnDeps, {
@@ -104,7 +105,10 @@ describe('createRustWindowRaiser', () => {
     const { deps, sent } = recordingDeps(
       new Error('launch_window_raise:not-ready')
     )
-    const raiser = createRustWindowRaiser({ transport: () => deps })
+    const raiser = createRustWindowRaiser({
+      transport: () => deps,
+      warn: logWarning
+    })
 
     await expect(
       raiser.raise(spawnDeps, { context: 'bridge:1', pids: ['1'] })
@@ -112,7 +116,7 @@ describe('createRustWindowRaiser', () => {
 
     expect(sent).toHaveLength(1)
     expect(logWarning).toHaveBeenCalledTimes(1)
-    expect((logWarning as jest.Mock).mock.calls[0][0][0]).toBe(
+    expect(logWarning.mock.calls[0][0][0]).toBe(
       'raiseWineGameWindow [bridge:1]: raise failed'
     )
   })
@@ -124,7 +128,8 @@ describe('createRustWindowRaiser', () => {
       transport: () => {
         if (!ready) throw new Error('host not ready')
         return deps
-      }
+      },
+      warn: logWarning
     })
 
     // Building the raiser touches nothing.
@@ -141,7 +146,10 @@ describe('createRustWindowRaiser', () => {
 
   it('keeps stop() for the type and it does nothing', () => {
     const { deps, sent } = recordingDeps(null)
-    const raiser = createRustWindowRaiser({ transport: () => deps })
+    const raiser = createRustWindowRaiser({
+      transport: () => deps,
+      warn: logWarning
+    })
     expect(() => raiser.stop()).not.toThrow()
     expect(sent).toEqual([])
   })

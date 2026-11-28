@@ -42,7 +42,6 @@ jest.mock('../../utils', () => ({
   getFileSize: jest.fn(),
   axiosClient: { get: jest.fn() }
 }))
-jest.mock('../../launcher', () => ({ callRunner: jest.fn() }))
 jest.mock('../legendary/stores', () => ({
   libraryStore: { get: jest.fn(() => []), set: jest.fn() },
   installStore: {

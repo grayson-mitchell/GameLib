@@ -230,7 +230,6 @@ const BOTTLES_SHIM_IMPORTERS: readonly string[] = [
 /** Every non-test importer of `enginewine/launch.ts` (the check is per file, so every row of that file lists them all). */
 const LAUNCH_SHIM_IMPORTERS: readonly string[] = [
   'src/backend/launchEngineStep.ts',
-  'src/backend/launcher.ts',
   'src/backend/sidecar/appShellFlowRegistration.ts',
   'src/backend/storeManagers/gog/setup.ts',
   'src/backend/storeManagers/nile/setup.ts'
@@ -298,9 +297,8 @@ const FUNNEL_SHIM_IMPORTERS: readonly string[] = [
 ]
 
 // 88.3-16: the importers of `launchrust/launcher.ts`, every one counted per file. `createStoreManagers` builds the launcher, the
-// service types name its interface and the prepare adapters read its deps; `launcher.ts` extends the deps for the test-facing TS funnel.
+// service types name its interface and the prepare adapters read its deps (88.3-17 deleted the test-facing TS funnel that extended them).
 const LAUNCHER_IMPORTERS: readonly string[] = [
-  'src/backend/launcher.ts',
   'src/backend/launchAdapters.ts',
   'src/backend/services/types.ts',
   'src/backend/storeManagers/index.ts'
@@ -320,7 +318,6 @@ const RAISE_SHIM_IMPORTERS: readonly string[] = [
 // and the spawnAsync adapter calls `spawnAsyncRun` and `runnerKill`. 88.2-22: the legendary, nile and sideload managers' `stop()`
 // calls `trackedKill`, and gog's launch and the launcher's folder-missing prompt call `askForceUninstall`.
 const RUNNER_SHIM_IMPORTERS: readonly string[] = [
-  'src/backend/launcher.ts',
   'src/backend/runnerAdapter.ts',
   'src/backend/sidecar/bootstrap.ts',
   'src/backend/sidecar/handlers.ts',

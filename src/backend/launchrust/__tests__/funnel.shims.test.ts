@@ -5,16 +5,6 @@
  * zod schema the sidecar checks before the frame is written, the narrowing of the answer, and (the tracer) that a Play through
  * the Launcher runs nothing of the TS sequence: one request, no per-game log writer, no single-flight entry (and the launcher holds no wake lock to start: its deps have no app state).
  */
-jest.mock('backend/logger', () => ({
-  logInfo: jest.fn(),
-  logError: jest.fn(),
-  logWarning: jest.fn(),
-  logDebug: jest.fn(),
-  LogPrefix: { Backend: 'Backend' },
-  getRunnerLogWriter: jest.fn(),
-  createGameLogWriter: jest.fn()
-}))
-
 import { rustInvokeArgs } from 'common/types/ipc/rustInvoke'
 import {
   RUST_LAUNCH_READOPTED_ANNOUNCE,
@@ -24,7 +14,7 @@ import {
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import { createLauncher } from 'backend/launchrust/launcher'
 import type { GameSettings } from 'common/types'
-import { createGameLogWriter } from 'backend/logger'
+import * as logger from 'backend/logger'
 
 import { settleLaunchStatus } from 'backend/launchBuilderReply'
 
@@ -127,8 +117,13 @@ function buildLauncher(requestRustInvoke: RustInvokeDeps['requestRustInvoke']) {
 }
 
 describe("createLauncher's launchEventCallback (D-01, D-04, D-25)", () => {
+  // 88.3-17: a spy over the real module, not a `jest.mock` of it (the backend-di ceilings forbid a new mock).
+  let createGameLogWriter: jest.SpyInstance
   beforeEach(() => {
-    ;(createGameLogWriter as jest.Mock).mockReset()
+    createGameLogWriter = jest.spyOn(logger, 'createGameLogWriter')
+  })
+  afterEach(() => {
+    createGameLogWriter.mockRestore()
   })
 
   it("a Play makes exactly one RUST_LAUNCH_RUN request, settles on Rust's status and runs nothing of the TS sequence", async () => {

@@ -17,7 +17,7 @@
  *
  * `backend/storeManagers` and `storeManagers/steam/games` are DELIBERATELY left unmocked —
  * mocking either would erase the very dispatch this test exists to observe. Only
- * `backend/launcher`'s `launchEventCallback` is mocked, to keep the assertion about
+ * `backend/launchrust/launcher`'s `launchEventCallback` is mocked, to keep the assertion about
  * DISPATCH (was the right function called, with the right runner) rather than about a real
  * non-Steam launch succeeding end to end.
  */
@@ -86,12 +86,12 @@ jest.mock('../../storeManagers/steam/user', () => ({
   createSteamUser: () => mockSteamUser
 }))
 
-// ── backend/launcher mock — the ONLY store-manager-adjacent mock in this file. Isolates
+// ── backend/launchrust/launcher mock (88.3-17: the launcher module moved there in 88.3-16) — the ONLY store-manager-adjacent mock in this file. Isolates
 // the assertion to DISPATCH (was launchEventCallback called, with runner='gog') rather than
 // a real GOG launch succeeding — a real launch would need a real install path, wine
 // version, etc. that this test has no business constructing.
 const launchEventCallbackMock = jest.fn()
-jest.mock('../../launcher', () => ({
+jest.mock('../../launchrust/launcher', () => ({
   // The boot builds the launcher through createLauncher (66.1-23); the mock hands back only the
   // member this file asserts on.
   // `requestRustInvoke` is the one real member: the Steam launch dispatch reads it from the launcher

@@ -2,7 +2,6 @@ import { RUST_LAUNCH_WINDOW_RAISE } from 'common/types/sidecarTransport'
 import type { RustInvokeArgsOf } from 'common/types/ipc/rustInvoke'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import type { SpawnAsync } from 'backend/spawnAsync'
-import { logWarning, LogPrefix } from 'backend/logger'
 
 /**
  * The Wine window raiser transport (Phase 88.3, 88.3-13, D-19, D-21): the raise itself (the `osascript` Helper loop of at most 12
@@ -57,6 +56,8 @@ export interface WineWindowRaiser {
  */
 export function createRustWindowRaiser(deps: {
   transport: () => RustInvokeDeps
+  /** The boot's warning line, injected (88.3-17) so the module reaches no logger of its own. */
+  warn: (message: unknown[]) => void
 }): WineWindowRaiser {
   return {
     async raise(_spawnDeps, opts) {
@@ -67,10 +68,10 @@ export function createRustWindowRaiser(deps: {
           processNames: opts.processNames
         })
       } catch (error) {
-        logWarning(
-          [`raiseWineGameWindow [${opts.context}]: raise failed`, error],
-          LogPrefix.Steam
-        )
+        deps.warn([
+          `raiseWineGameWindow [${opts.context}]: raise failed`,
+          error
+        ])
       }
     },
     stop() {

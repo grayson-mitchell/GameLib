@@ -391,8 +391,9 @@ const codeOf = (path: string): string => {
 describe('buildersPortComplete', () => {
   runSlice(BUILDERS)
 
-  it('launcher.ts defines none of the builder or prepare functions (the Launcher members are bound to shims and adapters)', () => {
-    const code = codeOf('src/backend/launcher.ts')
+  it('the boot launcher module defines none of the builder or prepare functions (the Launcher members are bound to shims and adapters)', () => {
+    // 88.3-17: `src/backend/launcher.ts` is deleted; the Launcher is `launchrust/launcher.ts` since 88.3-16.
+    const code = codeOf('src/backend/launchrust/launcher.ts')
     expect(
       [
         'setupEnvVars',

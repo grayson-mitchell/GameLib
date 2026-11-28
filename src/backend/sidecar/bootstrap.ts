@@ -1784,7 +1784,10 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         // The window raiser is Rust's (88.3-13, D-21): the raise loop runs in the shell as a Helper, this is its sidecar end.
         state.services.windowRaiser =
           prebuilt.windowRaiser ??
-          createRustWindowRaiser({ transport: () => requireHost(state) })
+          createRustWindowRaiser({
+            transport: () => requireHost(state),
+            warn: (message) => logWarning(message, LogPrefix.Steam)
+          })
       }
     },
     {

@@ -173,7 +173,7 @@ describe('dependency-cruiser boundary rules (seeded violations)', () => {
   test('launcher-only-via-store-managers-index fires on a deep static import', () => {
     withSeededRoot(
       {
-        'src/backend/launcher.ts': `import './storeManagers/gog/setup'\n`,
+        'src/backend/launchrust/launcher.ts': `import '../storeManagers/gog/setup'\n`,
         [`${SM}/gog/setup.ts`]: `export const x = 1\n`
       },
       ({ cruise }) => {
@@ -187,7 +187,7 @@ describe('dependency-cruiser boundary rules (seeded violations)', () => {
   test('launcher-only-via-store-managers-index fires on a dynamic import', () => {
     withSeededRoot(
       {
-        'src/backend/launcher.ts': `export async function f() { await import('./storeManagers/steam/bottle') }\n`,
+        'src/backend/launchrust/launcher.ts': `export async function f() { await import('../storeManagers/steam/bottle') }\n`,
         [`${SM}/steam/bottle.ts`]: `export const x = 1\n`
       },
       ({ cruise }) => {
@@ -201,7 +201,7 @@ describe('dependency-cruiser boundary rules (seeded violations)', () => {
   test('launcher importing the storeManagers index is allowed', () => {
     withSeededRoot(
       {
-        'src/backend/launcher.ts': `import './storeManagers'\n`,
+        'src/backend/launchrust/launcher.ts': `import '../storeManagers'\n`,
         [`${SM}/index.ts`]: `export const x = 1\n`
       },
       ({ cruise }) => {
