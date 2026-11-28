@@ -1121,7 +1121,7 @@ Plans:
   3. A game launched from the UI starts and runs on macOS (live, signed 88.3 build over the signed 87 gap build) and on Windows and Linux (CI plus Phase 99)
   4. `launcher.ts` and every remaining ported TS and registration are deleted, leaving only scheduled shims
 
-**Plans:** 13/22 plans executed in 16 waves; planned 2026-11-27 (goldens are recorded from the TS before each Rust slice, D-25; every plan fits the 100k budget and stays below 15 files; no 88.3 commit outside .planning/ lands before the 88.1-24 and 88.2-25 pushes)
+**Plans:** 14/22 plans executed in 16 waves; planned 2026-11-27 (goldens are recorded from the TS before each Rust slice, D-25; every plan fits the 100k budget and stays below 15 files; no 88.3 commit outside .planning/ lands before the 88.1-24 and 88.2-25 pushes)
 
 Plans:
 **Wave 1**
@@ -1152,7 +1152,7 @@ Plans:
 - [x] 88.3-11-PLAN.md — Sidecar-led flights in the Rust table (begin, wait, end), released at sidecar EOF
 
 **Wave 8** *(blocked on Wave 7 completion)*
-- [ ] 88.3-12-PLAN.md — Re-adoption at boot in the shell and the Playing announcement on every frontendReady
+- [x] 88.3-12-PLAN.md — Re-adoption at boot in the shell and the Playing announcement on every frontendReady
 
 **Wave 9** *(blocked on Wave 8 completion)*
 - [ ] 88.3-13-PLAN.md — The Wine window raiser in Rust, golden/window_raise replayed, its channel and shim
