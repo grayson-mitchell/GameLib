@@ -50,14 +50,14 @@ Filled in by the planner/executor per task. Requirement-level map; the Sub-phase
 | SVC-03 / SC1 | 88.1 | spawn traces: native, Wine/Proton/CrossOver, gamescope/mangohud, overlay, pre/post (argv, full env, cwd, class, order) | Rust replay of TS traces | `cargo test -p gamelib-launch --test golden_launch` | ✅ | ✅ green (P `ab7876c01`, 88.1-20); three-OS CI green at P' `5a3f55564` (rust-test.yml run 46052246559: 3 passed on windows-latest, 4 on ubuntu-latest and macos-latest); re-run green at `887a0564c` (4 passed, validate-phase 88.1, 2026-11-28) |
 | SVC-03 / SC1 | 88 | known-fix reader, layering, registry, overlay archive/install, fetch | replay + ported incident tests | `cargo test -p gamelib-knownfix` | ✅ | ✅ green (P `68979200f`, 88-17; three-OS CI green at P' `c5ae345ae`) |
 | SVC-03 / SC1 | 88.2 | runner command argv/env, redacted log line, streamed line sequence | replay | `cargo test -p gamelib-launch --test golden_runner` | ✅ | ✅ green at P `6a2265258` (golden_runner 93 of 93, redaction 88, wine_launch 41 plus 16 wine_command, wine_path 16, script 18, spawn_async 33, error_handler 108; three-OS CI green at P' `25bc3b526`: rust-test.yml run 45959503130, all three legs, see `## CI proof (88.2)`) |
-| SVC-03 / SC2 | 88.3 | funnel order, status events, single-flight join, release on failure | funnel oracle replay | `cargo test -p gamelib-launch --test funnel` | ❌ W0 | ⬜ pending |
+| SVC-03 / SC2 | 88.3 | funnel order, status events, single-flight join, release on failure | funnel oracle replay | `cargo test -p gamelib-launch --test funnel` | ✅ | ✅ green at P `e448f5a0a759ee349f934e4c36307fff406130d0` on macOS (funnel 5 passed, `golden funnel: compared 59 floor 59`; single_flight 13 passed, `golden single_flight: compared 24 floor 24`; runs_for_me `compared 58 floor 58`; window_raise `compared 25 floor 25`), see `## Phase proof (88.3)`; three-OS CI pending the push |
 | SVC-03 / SC2 | 88.2 | stub game: start, quit-kill, survives parent SIGKILL (three OS) | CI smoke + orphan harness | `cargo test -p gamelib-proc` ; `cargo test -p gamelib-launch --test stub_game` | ✅ | ✅ green at P `6a2265258` on macOS (gamelib-proc 60 passed; stub_game 5 passed) and on three-OS CI at P' `25bc3b526` (rust-test.yml run 45959503130: stub_game 5 passed on each leg; gamelib-proc orphans 9 on windows-latest including the A5 arm, 13 on macos-latest and ubuntu-latest); green at P `0e8778606` after the 88.2 gap closure (macOS clean-worktree proof, re-recorded from `9001fbbe8` after the macOS clippy ratchet went green again; three-OS CI green at P' `5a3f55564` after the 88.2 gap closure: rust-test.yml run 46052246559, all three legs, the thirteen windows-latest arms and five unix arms `ok`; the first push at `0f3d39f16` raced two tests, fixed in `0e8778606`, see `## CI proof (88.2 gap closure)`) |
-| SVC-03 / SC2 | 88.3 | stub game: single-flight join through the funnel (three OS, D-04, D-16) | CI smoke | `cargo test -p gamelib-launch --test stub_game` | ❌ W0 | ⬜ pending |
+| SVC-03 / SC2 | 88.3 | stub game: single-flight join through the funnel (three OS, D-04, D-16) | CI smoke | `cargo test -p gamelib-launch --test stub_game` | ✅ | ✅ green at P `e448f5a0a759ee349f934e4c36307fff406130d0` on macOS (stub_game 16 passed, incl. `two_plays_through_the_funnel_spawn_one_game`); three-OS CI pending the push |
 | SVC-03 / SC2 | 88.2 | Windows quoting against a real exe | Windows-leg cross-check | `cargo test -p gamelib-launch --test windows_quoting` | ✅ | ✅ green on windows-latest at P' `25bc3b526` (2 passed, rust-test.yml run 45959503130); the binary runs 0 tests on macOS and Linux by design, so Windows CI is the only evidence |
 | SVC-03 / SC2 | 88.3 | live: launches, single flight + quit (D-27 game-running prompt), Force Quit survival + re-adopt, known fix + scripts | operator, signed build | `88-HUMAN-UAT.md` | ✅ authored by 88-01 (not yet run) | ⬜ pending |
 | SVC-03 / SC3 | 88.1 | anti-cheat at launch; utils pieces (`errorHandler`, `askForceUninstall`, `isEpicServiceOffline`, `isMacSonomaOrHigher` both ways, `removeQuoteIfNecessary`, D-28 `check_wine_before_launch`/`download_default_wine`; `errorHandler` and `askForceUninstall` land with 88.2's runner, per the 82 amendment) | replay + unit | `cargo test -p gamelib-launch --test utils_pieces` | ✅ | ✅ green (P `ab7876c01`, 88.1-20); three-OS CI green at P' `5a3f55564` (rust-test.yml run 46052246559: 6 passed on each leg); re-run green at `887a0564c` (6 passed, validate-phase 88.1, 2026-11-28) |
-| SVC-03 / SC4 | 88.3 | TS and registrations deleted, only scheduled shims remain | Jest gate | `pnpm jest src/backend/__tests__/launchPortComplete.test.ts src/backend/__tests__/engineWineShimSchedule.test.ts` | ❌ (gate new) | ⬜ pending |
-| D-08/D-10 | 88.3 | re-adoption (pid + start match, reused pid no match, stale record removed, exit playtime + after-script) | Rust tests | `cargo test -p gamelib-launch --test readopt` | ❌ W0 | ⬜ pending |
+| SVC-03 / SC4 | 88.3 | TS and registrations deleted, only scheduled shims remain | Jest gate | `pnpm jest src/backend/__tests__/launchPortComplete.test.ts src/backend/__tests__/engineWineShimSchedule.test.ts` | ✅ | ✅ green at P `e448f5a0a759ee349f934e4c36307fff406130d0` (2 suites, 373 tests; `funnelOraclePortComplete`, `funnelPortComplete`, `singleFlightPortComplete`, `windowRaiserPortComplete`, `launchSurvivors`, `noRollbackFlag` pass, `rowsDueIn(SCHEDULE, 88.3)` is empty) |
+| D-08/D-10 | 88.3 | re-adoption (pid + start match, reused pid no match, stale record removed, exit playtime + after-script) | Rust tests | `cargo test -p gamelib-launch --test readopt` | ✅ | ✅ green at P `e448f5a0a759ee349f934e4c36307fff406130d0` on macOS (readopt 20 passed; gamelib-proc `adopted_*` orphan arms 6 passed in `orphans` 23; stub_game `force_quit_survival_then_re_adopt` and `force_quit_of_a_wine_shaped_game_re_adopts_by_its_member` ok); three-OS CI pending the push |
 | D-19 | all | channel parity and IPC snapshot | gen + Jest | `pnpm check:ipc-contract` | ✅ | ✅ green at 88 (P `68979200f`, 88-17); stays a per-sub-phase row |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
@@ -852,6 +852,140 @@ Not shown by CI, as in 88.2-25's proof: a passing test captures its stdout, so w
 the pass shows.
 
 ---
+
+## Phase proof (88.3)
+
+Measured by plan 88.3-21 Task 1, 2026-11-28, from a clean `git worktree add --detach` checkout (under the session scratchpad, removed
+afterwards) with its own `pnpm install --frozen-lockfile`, `pnpm exec vite build` and `pnpm build:sidecar-sea` (and `.build-tools/zig`
+copied in from the main tree, as 88.1-20 did), macOS arm64 only (Windows and Linux are proven by CI, D-30). The candidate head P is main's
+HEAD when the plan began (`e448f5a0a`, the 88.2 review-fix report); the 88.3 code is every commit of the SUMMARYs below. The 61 commits after
+the last one (`4b7f9d44c`, 88.3-20) are not 88.3's (`.planning/`, the Humble crate and its goldens, the i18n gate scope files, the Steam
+bridge helper and gamelib-engine notices work); they are in P and so in every command's result.
+
+P: e448f5a0a759ee349f934e4c36307fff406130d0
+
+Ancestry: the SUMMARYs 88.3-01..88.3-20 all exist (20 files). 94 distinct tokens in them resolve to commits in this repository and every
+one is an ancestor of P (`git merge-base --is-ancestor`, 0 exceptions), including all `plan_head_after` values.
+
+| Step | Command (run in the clean worktree) | Exit | Outcome at P |
+|------|--------------------------------------|------|--------------|
+| 1 | `pnpm install --frozen-lockfile` | 0 | pass |
+| 2 | `pnpm exec vite build` | 0 | pass |
+| 3 | `pnpm build:sidecar-sea` | 0 | pass, arm64 SEA sidecar built |
+| 4 | `cargo test -p gamelib-proc -- --nocapture` (from `src-tauri`) | 0 | pass, 87 passed, 0 failed, 0 ignored (6 test binaries; `orphans` 23 of which 6 are `adopted_*`, `spec_runner` 16, `runner` 1, lib 47) |
+| 5 | `cargo test -p gamelib-launch -p gamelib-launch-cli -p gamelib-wine -p gamelib-engine -p gamelib-knownfix -p gamelib-info -- --nocapture` | 0 | pass, 1604 passed, 0 failed, 0 ignored (summed over 94 test binaries) |
+| 6 | `cargo test --bin gamelib-shell` | 0 | pass, 1065 passed, 0 failed, 2 ignored |
+| 7 | darwin clippy ratchet: `cargo +1.99.1 clippy --workspace --all-targets --message-format=json` then `node ../meta/clippyRatchet.cjs` | 0 | `PASS (darwin, toolchain 1.99.1)`, every lint at its ceiling |
+| 8 | `pnpm check:ipc-contract` | 0 | pass (ipc_contract.rs and ipcSchemaSnapshot.json up to date) |
+| 9 | `pnpm planning-gates` | 0 | pass, 12/12 (re-run after the two Phase 99 todos landed, see the verify of this task) |
+| 10 | `pnpm codecheck` (main and meta projects) | 0 | pass |
+| 11 | `pnpm lint` | 0 | pass: production 772 warnings against a ceiling of 1130, tests 577 against 661, 0 errors |
+| 12 | `pnpm find-deadcode` | 0 | pass (308 baselined knip findings) |
+| 13 | `pnpm backend-di-ceilings` | 0 | pass (childProcess=1, jestMock=1555, sanctioned=1) |
+| 14 | `pnpm smoke:sidecar` | 0 | pass, built, started, wrote `__GAMELIB_SIDECAR_READY__`, exited 0 on stdin EOF |
+| 15 | `pnpm smoke:exit-check -- --mode eof` | 0 | pass, exit latency 7 ms, no survivors |
+| 16 | `pnpm test:ci` | 1 | 1113 suites passed, 5 skipped, 2 failed; 26060 tests passed, 39 skipped, 6 failed. Not green; the two suites are listed below and neither is 88.3's |
+| 17 | `pnpm jest src/backend/__tests__/launchPortComplete.test.ts src/backend/__tests__/engineWineShimSchedule.test.ts` | 0 | pass, 2 suites, 373 tests (and inside step 16) |
+
+`pnpm test:ci` is **red at P** and this plan does not claim it green. The two red suites are on the known-unrelated list 88.1 and 88.2
+carried, both pre-existing and outside 88.3's files: `src/backend/storeManagers/steam/bridge/drm/__tests__/valveClient` (1 test, `rejects a
+symlink entry`; todo `2026-11-28-valve-client-symlink-test-gets-unzip-failure-not-regular-file.md`) and
+`src/backend/testUtils/shortcutsIconGeometry/__tests__/iconGeometry.oracle` (5 tests, the macOS `sips` geometry oracle: `golden is missing,
+record it with GAMELIB_WRITE_SHORTCUTS_GOLDEN=1`; todo `2026-11-24-record-macos-icon-geometry-goldens-on-a-mac.md`). They are named in
+`.planning/phases/88.3-launch-funnel-re-adoption-and-the-live-gate/deferred-items.md`. The two further suites 88.2's proof listed red
+(`genI18nGateScope`, `humbleFixtureRedaction`) passed here. Every 88.3 gate and every other suite passed.
+
+Test binaries observed running in steps 4 and 5 (all `test result: ok`, 0 failed): `funnel` (5), `single_flight` (13), `readopt` (20),
+`stub_game` (16: among them `two_plays_through_the_funnel_spawn_one_game`, `quit_kill_through_the_funnel_records_playtime_and_owes_the_after_script`,
+`quit_kill_ends_the_game_tree_and_reads_as_abort`, `force_quit_survival_then_re_adopt` and
+`force_quit_of_a_wine_shaped_game_re_adopts_by_its_member`), `golden_runs_for_me` (2), `golden_window_raise` (6), gamelib-proc `orphans` (23:
+`adopted_leader_matches_after_parent_sigkill`, `adopted_member_matches_after_the_leader_exits_and_the_parent_is_sigkilled`,
+`adopted_member_outside_the_recorded_group_is_gone`, `adopted_member_with_a_wrong_stamp_is_gone`, `adopted_proof_with_a_wrong_stamp_is_not_ours`,
+`adopted_proof_with_an_older_stamp_is_not_ours`). `windows_quoting` ran 0 tests on this macOS leg, as it must.
+
+Golden replays at P (the cargo output of steps 4 and 5; the compared count and the floor are the two numbers each test printed). 88.3's four:
+
+golden funnel: compared 59 floor 59
+golden single_flight: compared 24 floor 24
+golden runs_for_me: compared 58 floor 58
+golden window_raise: compared 25 floor 25
+
+and every 88.1 and 88.2 replay still prints its line at its floor (`golden window_raise tracer` printed `compared 1 floor 1`):
+
+golden builders: compared 124 floor 124
+golden check_wine: compared 49 floor 49
+golden epic_status: compared 70 floor 70
+golden gamescope: compared 65 floor 65
+golden prepare_launch: compared 582 (linux 379) of 582 floor 582
+golden prepare_wine: compared 391 (linux 207, mac 184) of 391 floor 391
+golden sysinfo: compared 94 floor 94
+golden runner: compared 93 floor 93
+golden redaction: compared 88 floor 88
+golden wine_launch: compared 41 floor 41
+golden wine_command: compared 16 floor 16
+golden wine_path: compared 16 floor 16
+golden script: compared 18 floor 18
+golden spawn_async: compared 33 floor 33
+golden error_handler: compared 108 floor 108
+
+### Sub-phase 88.3 sweep at P
+
+- `src/backend/launcher.ts`, `src/backend/launchSingleFlight.ts`, `src/backend/utils/wineWindowRaise.ts` and `src/backend/commandRunner.ts` do not
+  exist (`test ! -e`, checked in the main tree at P and held by the gates). `src/backend/launchrust/launcher.ts` exists on purpose: it is the boot's
+  Launcher shim since 88.3-16 (88.3-17 deleted `src/backend/launcher.ts`).
+- `funnelOraclePortComplete`, `funnelPortComplete`, `singleFlightPortComplete`, `windowRaiserPortComplete`, `launchSurvivors` and
+  `noRollbackFlag` (all in `launchPortComplete.test.ts`) pass (step 17), as does `engineWineShimSchedule.test.ts`, and `rowsDueIn(SCHEDULE, 88.3)`
+  is `[]` (asserted at `launchPortComplete.test.ts:1427`).
+- gamelib.log lines 88.3 added, under `gamelib-launch/src/funnel`, `src/game`, `gamelib-proc/src/adopt.rs` and the shell's launch lines.
+  `adopt.rs` has no logging call. The shell's launch lines (`launch_dispatch.rs`) are fixed text or counts only: `launch funnel: the main window could
+  not be hidden`, `... the display wake lock could not be taken`, `... could not be released`, `released {n} launch flight(s) led from the sidecar`,
+  `launch re-adoption: {adopted} adopted, {removed} removed, {owed} owed scripts, {skipped} skipped` and `launch re-adoption: the scan thread could
+  not be started`. `game/record.rs` and `game/readopt.rs` write fixed text plus a `&'static str` word from a closed vocabulary (`io`,
+  `not-regular`, `too-large`, `insecure`, `decode`, `version`, `unreadable`) or a count: `Launch record not written (...)`, `Launch record
+  not updated (...)`, `Launch record refused and left in place (...)`, `Launch re-adoption left {n} launch records for the next start`, and the two
+  after-script lines. `funnel/run.rs` and `funnel/playtime.rs` carry the ported TS lines: fixed text (`Stopping Display Power Saver Blocker`, `Preventing
+  display from sleep`, `Recording play time failed`, `Posting playtime session to server skipped - playtime sync disabled`, `Saves sync did not run
+  ({word})`, `The launch hook failed ({word})`, `Setting presence failed ({word})`), lines naming the game (`Launching {title} ({app_name})`,
+  `Launch of {app_name} ({runner}) already in progress; joining it (WR-03)`, `Downloading|Uploading saves for {title}`, `{title} ({app_name}) was ended
+  by the quit; its after script is owed to the next start`, `Lost the sidecar while {title} ({app_name}) runs; ...`, `Was not possible to launch using
+  {name}`), and two that carry text from another module: `Engine: {key} {line}` (the engine step's `logLines`, ported from the TS and written by the
+  engine crate) and `Recording recent game failed: {reason}` (`recent::add`'s fixed op reason). No line formats a URL, query, token, account
+  name or profile path, the title and app name being the ported TS lines' own content (D-20). The `Engine: {key} {line}` lines are not
+  re-audited here beyond that they come from the engine crate's own fixed messages. The prohibition stays `unresolved` in the plan (no wired check
+  descriptor).
+
+### Per-task map: 88.3 rows
+
+The funnel, stub_game join, readopt and SC4 gate rows above are set to green for local (macOS) evidence at P, each with "three-OS CI pending
+the push" where CI is part of the claim. The live row (`88-HUMAN-UAT.md`) stays `pending` for 88.3-22.
+
+### Decisions proven by this plan's evidence, and what is deferred
+
+D-01 (funnel), D-04 (single flight), D-08, D-10 and D-31 (re-adoption, playtime and after-script on exit), D-09, D-23 (funnel events), D-26's
+hooks, D-29's single per-game log writer and D-18 (the TS deletions) are carried by the goldens, the stub-game arms and the gates above on
+macOS; their Windows and Linux halves wait for CI (D-16) and real titles on those two OSes are Phase 99's. D-17's live run is 88.3-22's. Owned by
+other sub-phases and not claimed here, each closed there: D-03 and D-24 (88), D-28 (88.1), D-02's `commandRunner.ts` deletion, D-05, D-06 as
+amended by D-27, and D-07 (88.2); 88.3 builds on them (the adopted entries of D-07's registry, 88.3-09) without re-proving them.
+
+Flagged assumption (spec-less edge probe): SVC-03's edge-coverage row is `unclassified` and unresolved; the D-14 matrix stands in for edge
+coverage and is not claimed as a verified edge.
+
+## Phase 99 handoff (88.3)
+
+88.3 proves Windows and Linux with CI and a stub game only (D-16); injection and CI cannot show the following, and none of it is claimed.
+Each item is for Phase 99 (the two todos `2026-11-27-phase-99-real-title-launches-through-the-rust-funnel-on-windows.md` and
+`...-on-linux.md` point here):
+
+1. **A real title launched from the UI through the Rust funnel** on Windows and on Linux: Play, status events, the quit prompt and kill, play
+   time recorded, the after-script.
+2. **A real Windows Game Job re-adopted after a crash**: Force Quit GameLib with a real game running, start it again, and the game is adopted by
+   its recorded member with play time and after-script on its exit (CI proves the `adopted_*` orphan arms and the stub-game arms only).
+3. **PowerShell `Start-Process -Wait` waiting for a game's descendants (A7)**: a real launcher-style game that hands off to a child keeps the run
+   open until the whole tree has ended.
+4. **Real `gamescope`, `umu-run`, `mangohud` and `gamemoderun`** on Linux (CI has a stub `gamescope` script and injected probe results).
+5. **A Linux Wine or Proton launch**: prefix, runner environment, and member-based re-adoption of a Wine-shaped game with a real runner.
+
+macOS is not on this list: its real-title launches are 88.3-22's live gate.
 
 ## Validation Sign-Off
 
